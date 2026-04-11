@@ -1,4 +1,4 @@
-# @testchimp /audit
+# /testchimp audit
 
 Audit test coverage vs plans using TestChimp data.
 

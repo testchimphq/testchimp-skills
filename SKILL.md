@@ -1,6 +1,6 @@
 ---
 name: testchimp
-description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans, coverage, and MCP tools. Use when the user mentions TestChimp, @testchimp commands, SmartTests, agent-driven test authoring, or updating this skill from Git.
+description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans, coverage, and MCP tools. Use when the user mentions TestChimp, /testchimp commands, SmartTests, agent-driven test authoring, or updating this skill from Git.
 compatibility: Requires Node.js for Playwright tooling; TESTCHIMP_API_KEY for MCP and ai-wright. Network access for TestChimp APIs when using MCP or AI steps.
 ---
 
@@ -32,9 +32,9 @@ The MCP server exposes tools: `get_requirement_coverage`, `get_execution_history
 
 | User says | Read |
 |-----------|------|
-| `@testchimp /init` | [`references/init-testchimp.md`](references/init-testchimp.md) |
-| `@testchimp /test` | [`references/write-smarttests.md`](references/write-smarttests.md) |
-| `@testchimp /audit` | [`references/audit-coverage.md`](references/audit-coverage.md) |
+| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) |
+| `/testchimp test` | [`references/write-smarttests.md`](references/write-smarttests.md) |
+| `/testchimp audit` | [`references/audit-coverage.md`](references/audit-coverage.md) |
 
 If the user asks semantically similar requests ("Setup TestChimp", "Write Tests for the PR", "Analyze requirement coverage" etc.) — open the matching reference file above.
 

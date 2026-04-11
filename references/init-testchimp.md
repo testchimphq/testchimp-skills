@@ -1,4 +1,4 @@
-# @testchimp /init
+# /testchimp init
 
 Initialize the repo for TestChimp: reporter, MCP client, env vars, folder markers, and CI hints. This doc is written for **AI agents** executing setup in a codebase—follow it literally and surface blockers (missing keys, unmapped integrations) to the human.
 

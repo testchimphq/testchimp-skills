@@ -1,4 +1,4 @@
-# @testchimp /test
+# /testchimp test
 
 This document explains **how to write SmartTests** for agents. SmartTests are "Playwright with intelligent steps". Here are the key points:
 - Playwright tests in a **tests** folder mapped in TestChimp platform,
@@ -237,4 +237,4 @@ test.describe('Checkout (illustrative)', () => {
 ## Further reading in this bundle
 
 - **[`ai-wright-usage.md`](./ai-wright-usage.md)** — Full `ai-wright` install, options, env vars, and hybrid vs fully-agentic tradeoffs.
-- **[`SKILL.md`](../SKILL.md)** — Overview and command routing for `@testchimp` flows.
+- **[`SKILL.md`](../SKILL.md)** — Overview and command routing for `/testchimp` flows.
