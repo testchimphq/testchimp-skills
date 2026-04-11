@@ -156,7 +156,8 @@ These tools are provided by the **`testchimp-mcp-client`** package when it is in
 - Asserting *how* something looks (layout-only) vs *what* the user sees can force non-semantic selectors.
 
 ### AI steps (`ai.act`, `ai.verify`, `ai.extract`)
-Refer the ai-wright-usage.md file in this skill pack for detailed guidance on writing AI steps.
+
+See **[`ai-wright-usage.md`](./ai-wright-usage.md)** for detailed guidance on writing AI steps.
 
 **Pros:**
 
@@ -236,4 +237,4 @@ test.describe('Checkout (illustrative)', () => {
 ## Further reading in this bundle
 
 - **[`ai-wright-usage.md`](./ai-wright-usage.md)** — Full `ai-wright` install, options, env vars, and hybrid vs fully-agentic tradeoffs.
-- **[`SKILL.md`](./SKILL.md)** — Overview and command routing for `@testchimp` flows.
+- **[`SKILL.md`](../SKILL.md)** — Overview and command routing for `@testchimp` flows.

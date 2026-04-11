@@ -1,6 +1,7 @@
 ---
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans, coverage, and MCP tools. Use when the user mentions TestChimp, @testchimp commands, SmartTests, or agent-driven test authoring.
+compatibility: Requires Node.js for Playwright tooling; TESTCHIMP_API_KEY for MCP and ai-wright. Network access for TestChimp APIs when using MCP or AI steps.
 ---
 
 # TestChimp
@@ -16,7 +17,7 @@ TestChimp is a **QA workflow orchestration layer for AI agents**. It provides:
 
 1. Create a project in TestChimp and connect the Git repo. Map 2 folders in the repo to the project created in TestChimp platform **`tests`** (SmartTests) and **`plans`** (test plans). Those can be mapped after logging in to TestChimp -> Select Project -> Project Settings -> Integrations -> GitHub.
 2. Use **folder marker files** (empty): `.testchimp-tests` under tests root, `.testchimp-plans` under plans root so paths are recognizable.
-3. Run SmartTests with Playwright; install **`playwright-testchimp-reporter`** and add **`ai-wright`** + reporter **runtime** imports in specs as documented in `write-smarttests.md`.
+3. Run SmartTests with Playwright; install **`playwright-testchimp-reporter`** and add **`ai-wright`** + reporter **runtime** imports in specs as documented in [`references/write-smarttests.md`](references/write-smarttests.md).
 4. Authenticate integration with env var **`TESTCHIMP_API_KEY`**.
 
 ## MCP client (agents)
@@ -29,13 +30,13 @@ The MCP server exposes tools: `get_requirement_coverage`, `get_execution_history
 
 ## Command routing
 
-| User says | Open |
+| User says | Read |
 |-----------|------|
-| `@testchimp /init` | `init-testchimp.md` |
-| `@testchimp /test` | `write-smarttests.md` |
-| `@testchimp /audit` | `audit-coverage.md` |
+| `@testchimp /init` | [`references/init-testchimp.md`](references/init-testchimp.md) |
+| `@testchimp /test` | [`references/write-smarttests.md`](references/write-smarttests.md) |
+| `@testchimp /audit` | [`references/audit-coverage.md`](references/audit-coverage.md) |
 
-If the user asks semantically similar requests ("Setup TestChimp", "Write Tests for the PR", "Analyze requirement coverage" etc.) - use the proper skills referring the sub documents.
+If the user asks semantically similar requests ("Setup TestChimp", "Write Tests for the PR", "Analyze requirement coverage" etc.) — open the matching reference file above.
 
 ## Coverage scope note
 
@@ -43,9 +44,18 @@ If the user asks semantically similar requests ("Setup TestChimp", "Write Tests 
 When a `plans/...` folder is provided, coverage resolves SmartTests linked to scenarios in that plan scope.
 `scope.folderPath` should be provided using **platform paths** (rooted at `tests` or `plans`), even when the mapped repo folders use different names (for example, if mapped repo folder for `tests` in the repo is `ui_tests` then to ask for coverage for `ui_tests/checkout`, the scope you request should be for `tests/checkout`).
 
-## References
+## Progressive disclosure
 
-- `init-testchimp.md` — bootstrap repo + CI + MCP setup
-- `write-smarttests.md` — authoring SmartTests.
-- `audit-coverage.md` — coverage gaps and execution history
-- `template_playwright.config.js` — sample Playwright config with TestChimp reporter installed.
+Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/audit`). Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
+
+## References (this skill)
+
+| Path | Purpose |
+|------|---------|
+| [`references/init-testchimp.md`](references/init-testchimp.md) | Bootstrap repo, markers, CI, MCP |
+| [`references/write-smarttests.md`](references/write-smarttests.md) | Authoring SmartTests, MCP shapes, examples |
+| [`references/audit-coverage.md`](references/audit-coverage.md) | Coverage and execution audit playbook |
+| [`references/ai-wright-usage.md`](references/ai-wright-usage.md) | `ai-wright` install, env, API depth |
+| [`assets/template_playwright.config.js`](assets/template_playwright.config.js) | Sample Playwright config (copy into SmartTests root) |
+
+When copying the template into an app repo, copy **only** `assets/template_playwright.config.js` (or its contents) into the directory that contains **`.testchimp-tests`** — do not require the app to vendor the whole skill tree.

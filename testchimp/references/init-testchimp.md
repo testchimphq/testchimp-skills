@@ -42,7 +42,7 @@ Ask user to configure the above as an environment variable in the Git provider i
 - **Plans root** — Humans author **user stories** and **test scenarios** (with stable ids such as `#TS-…`) in the TestChimp platform. That content is **synced into the mapped plans directory** in git as markdown. **Code agents should read these files** to see what must be covered, pull scenario titles and ids for `// @Scenario:` links, and **implement or extend tests guided by the plan**—not by guessing requirements from the UI alone.
 - **Tests root** — This is where **SmartTests** live: Playwright-based specs and supporting code (`playwright.config.js`, page objects, fixtures, etc.). Tests may be written **by humans in the TestChimp platform** (synced into the repo), **by humans directly in the repo**, and **by code agents in the IDE**—all targeting the same mapped **tests** tree. When you author or refactor automation, **do your work under the directory marked with `.testchimp-tests`** so it stays aligned with TestChimp execution, coverage, and sync.
 
-**Git wiring:** The product still expects **two distinct folders** in the repository, each registered as its own mapping under **TestChimp → Project Settings → Integrations → Git** (wording may vary slightly by UI version):
+**Git wiring:** The product expects **two distinct folders** in the repository, each registered as its own mapping under **TestChimp → Project Settings → Integrations → Git** (wording may vary slightly by UI version):
 
 | Integration type in TestChimp | Role in the workflow | Typical repo contents |
 |--------------------------------|----------------------|------------------------|
@@ -64,7 +64,7 @@ Ask user to configure the above as an environment variable in the Git provider i
 - Search the repo for `.testchimp-plans` and `.testchimp-tests`. The **directory that contains each marker** is the canonical root for that integration type.
 - If the user wants TestChimp but markers are missing: create the empty marker files at the chosen roots, then **tell the user** to go to TestChimp Platform -> Project Settings → Integrations and map **both** folders (plans mapping → plans root, tests mapping → tests root).
 
-**Creating structure from scratch:** Pick two directories (prefer tests and plans as names), add the two marker files at those roots (`.testchimp-tests` and `.testchimp-plans`), then ensure the human completes **both** mappings in TestChimp (and syncs from TestChimp platform side - to create the folder scaffolds correctly).
+**Creating structure from scratch:** Pick two directories (prefer tests and plans as names), add the two marker files at those roots (`.testchimp-tests` and `.testchimp-plans`), then ensure the human completes **both** mappings in TestChimp (and syncs from TestChimp platform side - to populate the folder scaffolds correctly).
 
 ---
 
@@ -72,14 +72,14 @@ Ask user to configure the above as an environment variable in the Git provider i
 
 - Keep `playwright.config.js` in the same directory as **`.testchimp-tests`** (the SmartTests root).
 - Enable **`playwright-testchimp-reporter`**, trace **retain-on-failure**, screenshots on failure.
-- Use **`template_playwright.config.js`** in this skill pack as a starting point.
+- Use **[`../assets/template_playwright.config.js`](../assets/template_playwright.config.js)** in this skill pack as a starting point (copy that file into the SmartTests root, or merge its options into an existing config).
 - Important: Note that the config file should be directly inside the mapped `tests` folder.
 
 ---
 
 ## 5. CI
 
-- Run Playwright from the **tests** integration root (the path containing **`.testchimp-tests`**), with the env vars in [§2](#2-environment-variables).
+- Run Playwright from the **tests** integration root (the path containing **`.testchimp-tests`**), with the env vars in [§2](#2-environment-variables-for-interaction-with-testchimp-platform).
 - Provision a preview-url to run the tests on, and then set that as the `BASE_URL` env variable. Playwright config file specifies this as the base path via `use` block. So relative paths specified in tests get resolved to access the PR specific preview-url.
 - If test executions are configured to be triggered on PR merge requests in the CI action, exlude TestChimp plan sync PRs (since they don't change system behaviour - just documentation). Title for those PRs is exactly `TestChimp Platform Sync [Plans]`.
 
@@ -89,4 +89,4 @@ Ask user to configure the above as an environment variable in the Git provider i
 
 Register **`testchimp-mcp-client`** in MCP config with **`TESTCHIMP_API_KEY`**. See the package README for a JSON snippet.
 
-After install, agents can call coverage and execution tools; those APIs still scope by **platform** paths (`tests/...`, `plans/...`)—see **`write-smarttests.md`** for how that relates to the mapped folder on disk.
+After install, agents can call coverage and execution tools; those APIs still scope by **platform** paths (`tests/...`, `plans/...`)—see **[`write-smarttests.md`](./write-smarttests.md)** for how that relates to the mapped folder on disk.

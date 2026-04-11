@@ -16,7 +16,7 @@ Audit test coverage vs plans using TestChimp data.
 
 3. **Plan** — From missing scenarios, failures, and story priority, propose an ordered list of fixes (new tests, updates, data setup).
 
-4. **Execute** — Implement changes as SmartTests (see `write-smarttests.md`), then re-run locally or in CI.
+4. **Execute** — Implement changes as SmartTests (see [`write-smarttests.md`](./write-smarttests.md)), then re-run locally or in CI.
 
 ## Notes
 
