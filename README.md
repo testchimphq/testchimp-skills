@@ -2,20 +2,24 @@
 
 TestChimp skill for **`/testchimp`** flows: `/init`, `/test`, `/audit`. Use with **`testchimp-mcp-client`** and **`TESTCHIMP_API_KEY`**.
 
-**Entrypoint:** `testchimp/SKILL.md` — route from there to `references/*.md` and `assets/` as needed.
+Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environments-skill](https://github.com/bunnyshell/bunnyshell-environments-skill)): **`SKILL.md` at the repository root**, with **`references/`** and **`assets/`** beside it. **`name` in `SKILL.md` is `testchimp`**, so the folder you install into must be named **`testchimp`** (see [Agent Skills spec — `name` matches directory](https://agentskills.io/specification)).
+
+**Entrypoint:** `SKILL.md` — then `references/*.md` and `assets/` as needed.
+
+## Project structure
 
 ```text
 testchimp-skills/
-  README.md
-  testchimp/
-    SKILL.md
-    references/
-      init-testchimp.md
-      write-smarttests.md
-      audit-coverage.md
-      ai-wright-usage.md
-    assets/
-      template_playwright.config.js
+├── SKILL.md              # Skill entrypoint (routing + overview)
+├── README.md             # Install notes (this file)
+├── LICENSE
+├── references/
+│   ├── init-testchimp.md
+│   ├── write-smarttests.md
+│   ├── audit-coverage.md
+│   └── ai-wright-usage.md
+└── assets/
+    └── template_playwright.config.js
 ```
 
 Product: [testchimp.io](https://testchimp.io)
@@ -24,76 +28,72 @@ Product: [testchimp.io](https://testchimp.io)
 
 ## Installation
 
-Copy the **`testchimp/`** subtree (not the repo root) so you end up with **`<skills-parent>/testchimp/SKILL.md`** plus **`references/`** and **`assets/`**.
+Install by copying this repository into **`<skills-parent>/testchimp/`** so **`SKILL.md`** ends up at **`<skills-parent>/testchimp/SKILL.md`**. Exclude **`.git`** unless you intend to nest a full clone.
 
-Replace **`<repo-url>`** with this repository’s clone URL (or use a local path to a checkout).
+Replace **`<repo-url>`** with this repository’s URL (or path to a local checkout).
 
 ### Option 1 — Global (user home)
-
-Pick the skills parent for your host, then run:
 
 ```bash
 git clone <repo-url> /tmp/testchimp-skills-tmp
 mkdir -p <skills-parent>
-cp -R /tmp/testchimp-skills-tmp/testchimp <skills-parent>/testchimp
+rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ <skills-parent>/testchimp/
 rm -rf /tmp/testchimp-skills-tmp
 ```
 
-Examples — set **`<skills-parent>`** to one of:
+**`<skills-parent>`** examples:
 
-| Host | `<skills-parent>` (global) |
-|------|----------------------------|
+| Host | Global `<skills-parent>` |
+|------|---------------------------|
 | Claude Code | `~/.claude/skills` |
 | Amazon Kiro | `~/.kiro/skills` |
 | Cursor | `~/.cursor/skills` |
 | OpenAI Codex | `~/.agents/skills` |
 | GitHub Copilot (user) | `~/.copilot/skills` or `~/.claude/skills` or `~/.agents/skills` |
 
-Concrete example for **Claude Code**:
+**Claude Code (copy-paste):**
 
 ```bash
 git clone <repo-url> /tmp/testchimp-skills-tmp
 mkdir -p ~/.claude/skills
-cp -R /tmp/testchimp-skills-tmp/testchimp ~/.claude/skills/testchimp
+rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ ~/.claude/skills/testchimp/
 rm -rf /tmp/testchimp-skills-tmp
 ```
 
-Concrete example for **Amazon Kiro**:
+**Amazon Kiro (copy-paste):**
 
 ```bash
 git clone <repo-url> /tmp/testchimp-skills-tmp
 mkdir -p ~/.kiro/skills
-cp -R /tmp/testchimp-skills-tmp/testchimp ~/.kiro/skills/testchimp
+rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ ~/.kiro/skills/testchimp/
 rm -rf /tmp/testchimp-skills-tmp
 ```
 
-### Option 2 — Project (workspace / repo)
+### Option 2 — Project (workspace)
 
 From the **application repository root**:
 
 ```bash
 git clone <repo-url> /tmp/testchimp-skills-tmp
 mkdir -p <skills-parent>
-cp -R /tmp/testchimp-skills-tmp/testchimp <skills-parent>/testchimp
+rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ <skills-parent>/testchimp/
 rm -rf /tmp/testchimp-skills-tmp
 ```
 
-Examples — set **`<skills-parent>`** to one of:
-
-| Host | `<skills-parent>` (project) |
-|------|-----------------------------|
+| Host | Project `<skills-parent>` |
+|------|---------------------------|
 | Claude Code | `.claude/skills` |
 | Amazon Kiro | `.kiro/skills` |
 | Cursor | `.cursor/skills` |
 | OpenAI Codex | `.agents/skills` |
 | GitHub Copilot | `.github/skills` or `.claude/skills` or `.agents/skills` |
 
-Concrete example for **Kiro workspace**:
+**Kiro workspace (copy-paste):**
 
 ```bash
 git clone <repo-url> /tmp/testchimp-skills-tmp
 mkdir -p .kiro/skills
-cp -R /tmp/testchimp-skills-tmp/testchimp .kiro/skills/testchimp
+rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ .kiro/skills/testchimp/
 rm -rf /tmp/testchimp-skills-tmp
 ```
 
@@ -102,18 +102,18 @@ rm -rf /tmp/testchimp-skills-tmp
 ```bash
 SOURCE=/path/to/testchimp-skills
 mkdir -p <skills-parent>/testchimp
-rsync -a "$SOURCE/testchimp/" <skills-parent>/testchimp/
+rsync -a --exclude='.git' "$SOURCE/" <skills-parent>/testchimp/
 ```
 
 ### After install
 
 Restart the IDE or CLI session if the skill does not appear.
 
-**Amazon Kiro — skills vs steering:** Install this pack as a **skill** under **`.kiro/skills`** (workspace) or **`~/.kiro/skills`** (global). **Steering** (always-on markdown directives) lives under **`.kiro/steering/`** / **`~/.kiro/steering/`**—that is separate; see [Steering](https://kiro.dev/docs/cli/steering/) vs [Agent Skills](https://kiro.dev/docs/skills/).
+**Amazon Kiro — skills vs steering:** This pack is a **skill** under **`.kiro/skills`** / **`~/.kiro/skills`**. **Steering** directives use **`.kiro/steering/`** / **`~/.kiro/steering/`** ([Steering](https://kiro.dev/docs/cli/steering/) vs [Agent Skills](https://kiro.dev/docs/skills/)).
 
-**Kiro UI import:** In **Agent Steering & Skills**, **Import a skill** from GitHub; the URL must point at the **`testchimp/`** subdirectory (or `SKILL.md` inside it), not the repository root.
+**Kiro / GitHub import:** You can import from a URL pointing at this repo’s **`SKILL.md`** on the default branch, or at the repo path that contains `SKILL.md` at the root ([Kiro import rules](https://kiro.dev/docs/skills/)).
 
-**Slash / discovery:** Use **`/testchimp`** (or your host’s skill picker) when you need the skill explicitly. Vendor docs: [Cursor](https://www.cursor.com/docs/context/skills), [Claude Code](https://docs.anthropic.com/en/docs/claude-code/skills), [Codex](https://developers.openai.com/codex/skills/), [Copilot skills](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-skills), [Kiro](https://kiro.dev/docs/skills/).
+**Slash / discovery:** **`/testchimp`** (or host equivalent). Docs: [Cursor](https://www.cursor.com/docs/context/skills), [Claude Code](https://docs.anthropic.com/en/docs/claude-code/skills), [Codex](https://developers.openai.com/codex/skills/), [Copilot skills](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-skills), [Kiro](https://kiro.dev/docs/skills/).
 
 ---
 
@@ -129,4 +129,4 @@ Audit requirement coverage for tests/checkout and propose missing tests
 
 ## MCP
 
-**`testchimp-mcp-client`** is not inside this skill folder. Install it in the app repo, register MCP with **`TESTCHIMP_API_KEY`**. Steps: **`testchimp/references/init-testchimp.md`**.
+**`testchimp-mcp-client`** is not part of this skill tree. Install it in the app repo, register MCP with **`TESTCHIMP_API_KEY`**. Steps: **`references/init-testchimp.md`**.
