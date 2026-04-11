@@ -30,12 +30,12 @@ Product: [testchimp.io](https://testchimp.io)
 
 Install by copying this repository into **`<skills-parent>/testchimp/`** so **`SKILL.md`** ends up at **`<skills-parent>/testchimp/SKILL.md`**. Exclude **`.git`** unless you intend to nest a full clone.
 
-Replace **`<repo-url>`** with this repository’s URL (or path to a local checkout).
+**Repository:** [https://github.com/testchimphq/testchimp-skills](https://github.com/testchimphq/testchimp-skills)
 
 ### Option 1 — Global (user home)
 
 ```bash
-git clone <repo-url> /tmp/testchimp-skills-tmp
+git clone https://github.com/testchimphq/testchimp-skills.git /tmp/testchimp-skills-tmp
 mkdir -p <skills-parent>
 rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ <skills-parent>/testchimp/
 rm -rf /tmp/testchimp-skills-tmp
@@ -54,7 +54,7 @@ rm -rf /tmp/testchimp-skills-tmp
 **Claude Code (copy-paste):**
 
 ```bash
-git clone <repo-url> /tmp/testchimp-skills-tmp
+git clone https://github.com/testchimphq/testchimp-skills.git /tmp/testchimp-skills-tmp
 mkdir -p ~/.claude/skills
 rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ ~/.claude/skills/testchimp/
 rm -rf /tmp/testchimp-skills-tmp
@@ -63,7 +63,7 @@ rm -rf /tmp/testchimp-skills-tmp
 **Amazon Kiro (copy-paste):**
 
 ```bash
-git clone <repo-url> /tmp/testchimp-skills-tmp
+git clone https://github.com/testchimphq/testchimp-skills.git /tmp/testchimp-skills-tmp
 mkdir -p ~/.kiro/skills
 rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ ~/.kiro/skills/testchimp/
 rm -rf /tmp/testchimp-skills-tmp
@@ -74,7 +74,7 @@ rm -rf /tmp/testchimp-skills-tmp
 From the **application repository root**:
 
 ```bash
-git clone <repo-url> /tmp/testchimp-skills-tmp
+git clone https://github.com/testchimphq/testchimp-skills.git /tmp/testchimp-skills-tmp
 mkdir -p <skills-parent>
 rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ <skills-parent>/testchimp/
 rm -rf /tmp/testchimp-skills-tmp
@@ -91,7 +91,7 @@ rm -rf /tmp/testchimp-skills-tmp
 **Kiro workspace (copy-paste):**
 
 ```bash
-git clone <repo-url> /tmp/testchimp-skills-tmp
+git clone https://github.com/testchimphq/testchimp-skills.git /tmp/testchimp-skills-tmp
 mkdir -p .kiro/skills
 rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ .kiro/skills/testchimp/
 rm -rf /tmp/testchimp-skills-tmp
@@ -100,10 +100,12 @@ rm -rf /tmp/testchimp-skills-tmp
 ### Existing checkout (no temp clone)
 
 ```bash
-SOURCE=/path/to/testchimp-skills
+SOURCE=~/testchimp-skills
 mkdir -p <skills-parent>/testchimp
 rsync -a --exclude='.git' "$SOURCE/" <skills-parent>/testchimp/
 ```
+
+(`SOURCE` is your local clone of `https://github.com/testchimphq/testchimp-skills`.)
 
 ### After install
 
@@ -111,7 +113,7 @@ Restart the IDE or CLI session if the skill does not appear.
 
 **Amazon Kiro — skills vs steering:** This pack is a **skill** under **`.kiro/skills`** / **`~/.kiro/skills`**. **Steering** directives use **`.kiro/steering/`** / **`~/.kiro/steering/`** ([Steering](https://kiro.dev/docs/cli/steering/) vs [Agent Skills](https://kiro.dev/docs/skills/)).
 
-**Kiro / GitHub import:** You can import from a URL pointing at this repo’s **`SKILL.md`** on the default branch, or at the repo path that contains `SKILL.md` at the root ([Kiro import rules](https://kiro.dev/docs/skills/)).
+**Kiro / GitHub import:** e.g. [SKILL.md on `main`](https://github.com/testchimphq/testchimp-skills/blob/main/SKILL.md) ([Kiro import rules](https://kiro.dev/docs/skills/)).
 
 **Slash / discovery:** **`/testchimp`** (or host equivalent). Docs: [Cursor](https://www.cursor.com/docs/context/skills), [Claude Code](https://docs.anthropic.com/en/docs/claude-code/skills), [Codex](https://developers.openai.com/codex/skills/), [Copilot skills](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-skills), [Kiro](https://kiro.dev/docs/skills/).
 
