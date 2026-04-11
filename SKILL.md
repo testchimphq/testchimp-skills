@@ -1,6 +1,6 @@
 ---
 name: testchimp
-description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans, coverage, and MCP tools. Use when the user mentions TestChimp, @testchimp commands, SmartTests, or agent-driven test authoring.
+description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans, coverage, and MCP tools. Use when the user mentions TestChimp, @testchimp commands, SmartTests, agent-driven test authoring, or updating this skill from Git.
 compatibility: Requires Node.js for Playwright tooling; TESTCHIMP_API_KEY for MCP and ai-wright. Network access for TestChimp APIs when using MCP or AI steps.
 ---
 
@@ -37,6 +37,22 @@ The MCP server exposes tools: `get_requirement_coverage`, `get_execution_history
 | `@testchimp /audit` | [`references/audit-coverage.md`](references/audit-coverage.md) |
 
 If the user asks semantically similar requests ("Setup TestChimp", "Write Tests for the PR", "Analyze requirement coverage" etc.) — open the matching reference file above.
+
+## Updating this skill from Git
+
+This skill is published at **`https://github.com/testchimphq/testchimp-skills`** (branch **`main`**). Prefer installing with **`git clone … <skills-parent>/testchimp`** so **`.git`** remains and updates are trivial.
+
+1. Find **`SKILL_DIR`**: the directory containing this **`SKILL.md`** and (when git-installed) **`.git`**. Typical paths include `~/.claude/skills/testchimp`, `~/.cursor/skills/testchimp`, `~/.kiro/skills/testchimp`, `~/.agents/skills/testchimp`, or the same names under **`.claude/skills`**, **`.cursor/skills`**, **`.kiro/skills`**, **`.agents/skills`**, **`.github/skills`** inside a project.
+2. If **`.git`** exists in **`SKILL_DIR`**:
+
+   ```bash
+   git -C "$SKILL_DIR" pull origin main
+   ```
+
+   (or `git fetch origin && git merge origin/main`).
+
+3. If **`.git`** is missing, reinstall with **`git clone`** per **[README.md](README.md)** (or the copy-only fallback there).
+4. Tell the user to **restart** the IDE or agent host if the skill does not reload automatically.
 
 ## Coverage scope note
 

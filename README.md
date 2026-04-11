@@ -2,7 +2,9 @@
 
 TestChimp skill for **`/testchimp`** flows: `/init`, `/test`, `/audit`. Use with **`testchimp-mcp-client`** and **`TESTCHIMP_API_KEY`**.
 
-Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environments-skill](https://github.com/bunnyshell/bunnyshell-environments-skill)): **`SKILL.md` at the repository root**, with **`references/`** and **`assets/`** beside it. **`name` in `SKILL.md` is `testchimp`**, so the folder you install into must be named **`testchimp`** (see [Agent Skills spec — `name` matches directory](https://agentskills.io/specification)).
+Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environments-skill](https://github.com/bunnyshell/bunnyshell-environments-skill)): **`SKILL.md` at the repository root**, with **`references/`** and **`assets/`** beside it. **`name` in `SKILL.md` is `testchimp`**, so the install directory must be named **`testchimp`** (see [Agent Skills spec — `name` matches directory](https://agentskills.io/specification)).
+
+**Recommended install:** **git clone** into **`<skills-parent>/testchimp`** and keep **`.git`** so agents can **`git pull`** for updates.
 
 **Entrypoint:** `SKILL.md` — then `references/*.md` and `assets/` as needed.
 
@@ -28,94 +30,106 @@ Product: [testchimp.io](https://testchimp.io)
 
 ## Installation
 
-Install by copying this repository into **`<skills-parent>/testchimp/`** so **`SKILL.md`** ends up at **`<skills-parent>/testchimp/SKILL.md`**. Exclude **`.git`** unless you intend to nest a full clone.
+**Repository:** [https://github.com/testchimphq/testchimp-skills](https://github.com/testchimphq/testchimp-skills)  
+**Default branch:** `main`
 
-**Repository:** [https://github.com/testchimphq/testchimp-skills](https://github.com/testchimphq/testchimp-skills)
-
-### Option 1 — Global (user home)
+Clone **into a directory literally named `testchimp`** under your host’s skills parent:
 
 ```bash
-git clone https://github.com/testchimphq/testchimp-skills.git /tmp/testchimp-skills-tmp
 mkdir -p <skills-parent>
-rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ <skills-parent>/testchimp/
-rm -rf /tmp/testchimp-skills-tmp
+git clone https://github.com/testchimphq/testchimp-skills.git <skills-parent>/testchimp
 ```
 
-**`<skills-parent>`** examples:
-
-| Host | Global `<skills-parent>` |
-|------|---------------------------|
-| Claude Code | `~/.claude/skills` |
-| Amazon Kiro | `~/.kiro/skills` |
-| Cursor | `~/.cursor/skills` |
-| OpenAI Codex | `~/.agents/skills` |
-| GitHub Copilot (user) | `~/.copilot/skills` or `~/.claude/skills` or `~/.agents/skills` |
-
-**Claude Code (copy-paste):**
+If **`testchimp` already exists**, either update in place (see [Updating](#updating)) or replace:
 
 ```bash
-git clone https://github.com/testchimphq/testchimp-skills.git /tmp/testchimp-skills-tmp
+rm -rf <skills-parent>/testchimp
+git clone https://github.com/testchimphq/testchimp-skills.git <skills-parent>/testchimp
+```
+
+### `<skills-parent>` by host
+
+| Host | Global | Project (workspace) |
+|------|--------|----------------------|
+| Claude Code | `~/.claude/skills` | `.claude/skills` |
+| Amazon Kiro | `~/.kiro/skills` | `.kiro/skills` |
+| Cursor | `~/.cursor/skills` | `.cursor/skills` |
+| OpenAI Codex | `~/.agents/skills` | `.agents/skills` |
+| GitHub Copilot | `~/.copilot/skills` or `~/.claude/skills` or `~/.agents/skills` | `.github/skills` or `.claude/skills` or `.agents/skills` |
+
+### Copy-paste examples
+
+**Claude Code (global):**
+
+```bash
 mkdir -p ~/.claude/skills
-rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ ~/.claude/skills/testchimp/
-rm -rf /tmp/testchimp-skills-tmp
+git clone https://github.com/testchimphq/testchimp-skills.git ~/.claude/skills/testchimp
 ```
 
-**Amazon Kiro (copy-paste):**
+**Amazon Kiro (global):**
 
 ```bash
-git clone https://github.com/testchimphq/testchimp-skills.git /tmp/testchimp-skills-tmp
 mkdir -p ~/.kiro/skills
-rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ ~/.kiro/skills/testchimp/
-rm -rf /tmp/testchimp-skills-tmp
+git clone https://github.com/testchimphq/testchimp-skills.git ~/.kiro/skills/testchimp
 ```
 
-### Option 2 — Project (workspace)
-
-From the **application repository root**:
+**Kiro workspace (project):**
 
 ```bash
-git clone https://github.com/testchimphq/testchimp-skills.git /tmp/testchimp-skills-tmp
-mkdir -p <skills-parent>
-rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ <skills-parent>/testchimp/
-rm -rf /tmp/testchimp-skills-tmp
-```
-
-| Host | Project `<skills-parent>` |
-|------|---------------------------|
-| Claude Code | `.claude/skills` |
-| Amazon Kiro | `.kiro/skills` |
-| Cursor | `.cursor/skills` |
-| OpenAI Codex | `.agents/skills` |
-| GitHub Copilot | `.github/skills` or `.claude/skills` or `.agents/skills` |
-
-**Kiro workspace (copy-paste):**
-
-```bash
-git clone https://github.com/testchimphq/testchimp-skills.git /tmp/testchimp-skills-tmp
 mkdir -p .kiro/skills
-rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ .kiro/skills/testchimp/
-rm -rf /tmp/testchimp-skills-tmp
+git clone https://github.com/testchimphq/testchimp-skills.git .kiro/skills/testchimp
 ```
-
-### Existing checkout (no temp clone)
-
-```bash
-SOURCE=~/testchimp-skills
-mkdir -p <skills-parent>/testchimp
-rsync -a --exclude='.git' "$SOURCE/" <skills-parent>/testchimp/
-```
-
-(`SOURCE` is your local clone of `https://github.com/testchimphq/testchimp-skills`.)
 
 ### After install
 
 Restart the IDE or CLI session if the skill does not appear.
 
-**Amazon Kiro — skills vs steering:** This pack is a **skill** under **`.kiro/skills`** / **`~/.kiro/skills`**. **Steering** directives use **`.kiro/steering/`** / **`~/.kiro/steering/`** ([Steering](https://kiro.dev/docs/cli/steering/) vs [Agent Skills](https://kiro.dev/docs/skills/)).
+**Amazon Kiro — skills vs steering:** This pack is a **skill** under **`.kiro/skills`** / **`~/.kiro/skills`**. **Steering** uses **`.kiro/steering/`** / **`~/.kiro/steering/`** ([Steering](https://kiro.dev/docs/cli/steering/) vs [Agent Skills](https://kiro.dev/docs/skills/)).
 
-**Kiro / GitHub import:** e.g. [SKILL.md on `main`](https://github.com/testchimphq/testchimp-skills/blob/main/SKILL.md) ([Kiro import rules](https://kiro.dev/docs/skills/)).
+**Kiro / GitHub import:** [SKILL.md on `main`](https://github.com/testchimphq/testchimp-skills/blob/main/SKILL.md) ([Kiro import rules](https://kiro.dev/docs/skills/)). For ongoing updates, prefer a **git clone** install so **`git pull`** works.
 
-**Slash / discovery:** **`/testchimp`** (or host equivalent). Docs: [Cursor](https://www.cursor.com/docs/context/skills), [Claude Code](https://docs.anthropic.com/en/docs/claude-code/skills), [Codex](https://developers.openai.com/codex/skills/), [Copilot skills](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-skills), [Kiro](https://kiro.dev/docs/skills/).
+**Slash / discovery:** **`/testchimp`**. Docs: [Cursor](https://www.cursor.com/docs/context/skills), [Claude Code](https://docs.anthropic.com/en/docs/claude-code/skills), [Codex](https://developers.openai.com/codex/skills/), [Copilot skills](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/create-skills), [Kiro](https://kiro.dev/docs/skills/).
+
+---
+
+## Updating
+
+Use this when the user or workflow wants the **latest skill content** from `main`.
+
+1. Resolve the skill root **`SKILL_DIR`** (the directory that contains **`SKILL.md`** and **`.git`**), e.g. `~/.claude/skills/testchimp` or `.cursor/skills/testchimp`.
+2. Run:
+
+```bash
+git -C "$SKILL_DIR" fetch origin
+git -C "$SKILL_DIR" merge origin/main
+```
+
+Or a single step (if `main` tracks `origin/main`):
+
+```bash
+git -C "$SKILL_DIR" pull origin main
+```
+
+3. **Restart** the IDE or agent session if the host caches skill files.
+
+**If `SKILL_DIR` has no `.git`** (old copy-only install): run a fresh **clone** into a temp path, then replace the skill folder contents, or remove **`SKILL_DIR`** and re-run [Installation](#installation).
+
+**Agents:** Search the user machine for **`testchimp/SKILL.md`** under known parents (`~/.claude/skills`, `~/.cursor/skills`, `~/.kiro/skills`, `~/.agents/skills`, project `.claude/skills`, `.cursor/skills`, `.kiro/skills`, `.agents/skills`, `.github/skills`) and use that directory as **`SKILL_DIR`**.
+
+---
+
+## Copy-only install (fallback)
+
+If policy forbids **`.git`** under skills, use a one-off sync (no in-place `git pull` afterward):
+
+```bash
+git clone https://github.com/testchimphq/testchimp-skills.git /tmp/testchimp-skills-tmp
+mkdir -p <skills-parent>
+rsync -a --exclude='.git' /tmp/testchimp-skills-tmp/ <skills-parent>/testchimp/
+rm -rf /tmp/testchimp-skills-tmp
+```
+
+Repeat that block (or re-clone) when you need updates.
 
 ---
 
@@ -125,6 +139,7 @@ Restart the IDE or CLI session if the skill does not appear.
 Set up TestChimp in this repo (reporter, markers, MCP env)
 Write a SmartTest for scenario #TS-102 from plans
 Audit requirement coverage for tests/checkout and propose missing tests
+Update the TestChimp skill from Git
 ```
 
 ---
