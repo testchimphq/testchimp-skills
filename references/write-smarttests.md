@@ -8,6 +8,8 @@ This document explains **how to write SmartTests** for agents. SmartTests are "P
 
 For **full** `ai-wright` API details (options, env vars, troubleshooting), see **[`ai-wright-usage.md`](./ai-wright-usage.md)**. The sections below summarize what you need to author tests and point there for depth.
 
+For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, platform paths, and MCP tools to **create** plan files), see **[`test-planning.md`](./test-planning.md)**.
+
 ---
 
 ## Test writing workflow

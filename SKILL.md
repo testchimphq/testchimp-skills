@@ -1,6 +1,6 @@
 ---
 name: testchimp
-description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans, coverage, and MCP tools. Use when the user mentions TestChimp, /testchimp commands, SmartTests, agent-driven test authoring, or updating this skill from Git.
+description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP), coverage, and MCP tools. Use when the user mentions TestChimp, /testchimp commands (init, test, plan, audit), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
 compatibility: Requires Node.js for Playwright tooling; TESTCHIMP_API_KEY for MCP and ai-wright. Network access for TestChimp APIs when using MCP or AI steps.
 ---
 
@@ -9,7 +9,7 @@ compatibility: Requires Node.js for Playwright tooling; TESTCHIMP_API_KEY for MC
 TestChimp is a **QA workflow orchestration layer for AI agents**. It provides:
 
 - **Requirement traceability** via structured comments in tests (e.g. `// @Scenario: #TS-101 Title`) linking SmartTests to scenarios.
-- **Markdown test plans** in a mapped `plans/` folder (synced from the TestChimp app).
+- **Markdown test plans** in a mapped `plans/` folder (YAML frontmatter, `stories/` / `scenarios/` / `knowledge/`) — how to read and author them in [`references/test-planning.md`](references/test-planning.md).
 - **Intelligent Playwright steps** (`ai.act` / `ai.verify` / `ai.extract` with `ai-wright`) for more stable execution-time intelligent behavior in tests.
 - **Execution reporting** via `playwright-testchimp-reporter` so test execution details feed to TestChimp servers to enable coverage insights.
 
@@ -26,7 +26,7 @@ Install **`testchimp-mcp-client`** and configure below environment vars:
 
 - `TESTCHIMP_API_KEY` (required)
 
-The MCP server exposes tools: `get_requirement_coverage`, `get_execution_history`, `get_test_advice`.
+The MCP server exposes tools: `get_requirement_coverage`, `get_execution_history`, `create_user_story`, `create_test_scenario`, `update_user_story`, `update_test_scenario`. Use the repo, plans, and those tools to decide what to test;
 
 ## Command routing
 
@@ -34,6 +34,7 @@ The MCP server exposes tools: `get_requirement_coverage`, `get_execution_history
 |-----------|------|
 | `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) |
 | `/testchimp test` | [`references/write-smarttests.md`](references/write-smarttests.md) |
+| `/testchimp plan` | [`references/test-planning.md`](references/test-planning.md) |
 | `/testchimp audit` | [`references/audit-coverage.md`](references/audit-coverage.md) |
 
 If the user asks semantically similar requests ("Setup TestChimp", "Write Tests for the PR", "Analyze requirement coverage" etc.) — open the matching reference file above.
@@ -62,7 +63,7 @@ When a `plans/...` folder is provided, coverage resolves SmartTests linked to sc
 
 ## Progressive disclosure
 
-Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/audit`). Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
+Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/plan`, `/audit`). Plan **reading and authoring** (including MCP create/update flows) use [`references/test-planning.md`](references/test-planning.md). Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
 
 ## References (this skill)
 
@@ -70,6 +71,7 @@ Per the [Agent Skills specification](https://agentskills.io/specification), this
 |------|---------|
 | [`references/init-testchimp.md`](references/init-testchimp.md) | Bootstrap repo, markers, CI, MCP |
 | [`references/write-smarttests.md`](references/write-smarttests.md) | Authoring SmartTests, MCP shapes, examples |
+| [`references/test-planning.md`](references/test-planning.md) | Plan folder layout, frontmatter, `/testchimp plan`, MCP plan authoring |
 | [`references/audit-coverage.md`](references/audit-coverage.md) | Coverage and execution audit playbook |
 | [`references/ai-wright-usage.md`](references/ai-wright-usage.md) | `ai-wright` install, env, API depth |
 | [`assets/template_playwright.config.js`](assets/template_playwright.config.js) | Sample Playwright config (copy into SmartTests root) |
