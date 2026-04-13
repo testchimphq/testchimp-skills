@@ -23,7 +23,10 @@ Convert a validated user flow into a robust Playwright API test by:
    - Validate the proposed regex with the user before recording traffic.
    - Persist the approved regex and rationale in `plans/knowledge/ai-test-instructions.md` so future runs reuse it.
 
-2. **Run the scenario in a browser session**
+2. **Decide whether a browser session run is needed**
+   - Check whether the scenario is a purely API based journey (eg: the PR builds an API endpoint for consumption by callers - so there is no browser experience. The journey is purely API based). In which case, no need to spin up a browser instance, and can simply call the API to get responses and record them to generate the API test afterwards.
+2.a **Run the scenario in a browser session**
+   - If the scenario is a browser based journey (an end user human user facing experience), then:
    - Start Playwright browser context as usual for `/testchimp test`.
    - Register request/response interception for the approved regex before executing steps.
    - Execute the scenario in the UI to capture realistic API traffic.
