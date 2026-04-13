@@ -8,10 +8,10 @@ Initialize the repo for TestChimp: reporter, MCP client, env vars, folder marker
 
 TestChimp SmartTests depend on Playwright 1.59.0+.
 
-Run installs from the **directory that contains the file `.testchimp-tests`**—that file marks the SmartTests root regardless of folder name. If `.testchimp-tests` is not present yet, complete [§3](#3-plans-and-tests-roots-testchimp-integrations) first (create the marker at the chosen root, then map it in TestChimp).
+Run installs from the **directory that contains the file `.testchimp-tests`**—that file marks the SmartTests root regardless of folder name. If `.testchimp-tests` is not present yet, complete [§3](#3-plans-and-tests-roots-testchimp-integrations) first.
 
 ```bash
-npm install playwright-testchimp-reporter ai-wright
+npm install playwright-testchimp-reporter
 npm install -D testchimp-mcp-client
 ```
 
@@ -25,13 +25,17 @@ Set in the MCP server **`env`** block (not only in a repo `.env` file):
 
 - **`TESTCHIMP_API_KEY`** — Project Settings → Keys / key management. The key identifies the **project**, which owns the **plans** and **tests** folder mappings in TestChimp.
 
+Note that API key is **per project** - so the mcp configuration should be done at a project scope (eg: project folder/.cursor/mcp.json), instead of global (since a user may work on multiple projects).
+
 ### CI (for running SmartTests in CI)
 
-TestChimp's tests can be run using the standard playwright runner since all tests are playwright based. (Version 1.59+).
+TestChimp's tests can be run using the standard playwright runner since all tests are playwright based. (Version 1.59+). 
+
+The scaffold `playwright.config.js` already configures the `playwright-testchimp-reporter` which enables reporting to TestChimp platform, enabling smart steps, and TrueCoverage tracking.
 
 - **`TESTCHIMP_API_KEY`** — Required for looping in AI for AI steps and reporter to report execution details to TestChimp platform for coverage insights.
 
-Ask user to configure the above as an environment variable in the Git provider in CI to use. Provide instructions to user depending on their Git provider.
+Ask user to configure the above as an environment variable in the Git repo provider in CI to use. Provide instructions to user depending on their Git provider.
 
 ---
 
@@ -40,7 +44,7 @@ Ask user to configure the above as an environment variable in the Git provider i
 **How TestChimp uses the repo (agent-relevant model):**
 
 - **Plans root** — Humans author **user stories** and **test scenarios** (with stable ids such as `#TS-…`) in the TestChimp platform. That content is **synced into the mapped plans directory** in git as markdown. **Code agents should read these files** to see what must be covered, pull scenario titles and ids for `// @Scenario:` links, and **implement or extend tests guided by the plan**—not by guessing requirements from the UI alone.
-- **Tests root** — This is where **SmartTests** live: Playwright-based specs and supporting code (`playwright.config.js`, page objects, fixtures, etc.). Tests may be written **by humans in the TestChimp platform** (synced into the repo), **by humans directly in the repo**, and **by code agents in the IDE**—all targeting the same mapped **tests** tree. When you author or refactor automation, **do your work under the directory marked with `.testchimp-tests`** so it stays aligned with TestChimp execution, coverage, and sync.
+- **Tests root** — This is where **SmartTests** live: Playwright-based specs and supporting code (`playwright.config.js`, page objects, fixtures, etc.). Tests may be written **by humans in the TestChimp platform** (synced into the repo), **by humans directly in the repo**, and **by code agents**—all targeting the same mapped **tests** tree. When you author or refactor automation, **do your work under the directory marked with `.testchimp-tests`** so it stays aligned with TestChimp execution, coverage, and sync.
 
 **Git wiring:** The product expects **two distinct folders** in the repository, each registered as its own mapping under **TestChimp → Project Settings → Integrations → Git** (wording may vary slightly by UI version):
 
@@ -49,10 +53,12 @@ Ask user to configure the above as an environment variable in the Git provider i
 | **Plans** | Source of truth for scenarios/stories synced from the platform; agents read before coding tests | `.md` plan files with `#TS-…` and narrative |
 | **Tests** | SmartTests and Playwright project; platform edits and local/agent edits converge here | `*.spec.ts`, `playwright.config.js`, `pages/`, … |
 
+If the folders lack `.testchimp-plans` and `.testchimp-tests` marker files, that means the git integration and folder mapping hasn't been done properly. You should ask user to connect the repo to TestChimp, map the 2 folders to TestChimp side `tests` and `plans` and then raise a PR for both - from the TestChimp platform. That will ensure the scaffold is properly created, and the marker files will be created. If one is present and the other isn't provide instructions to user to also raise a PR for the missing one (from TestChimp platform).
+
 **Critical for agents:**
 
 1. **On the TestChimp product side**, these are always the concepts **plans** and **tests**—that is the vocabulary APIs and docs use (e.g. MCP `scope.folderPath` starts with `plans` or `tests` as the **platform** segment, not necessarily your folder name).
-2. **On the repository side**, the directories can be named **anything** (`qa-specs/`, `ui_tests/`, `docs/plans/`, …). There is no requirement that the folder be literally `plans/` or `tests/`.
+2. **On the repository side**, the directories can be named **anything** (`qa-specs/`, `ui_tests/`, `docs/plans/`, …). There is no requirement that the folders be literally `plans/` and `tests/`.
 3. **Marker files** tie a concrete directory to its role so you never have to infer from naming:
    - At the **root of the plans tree**: an empty file **`.testchimp-plans`**
    - At the **root of the SmartTests tree**: an empty file **`.testchimp-tests`**
@@ -62,9 +68,9 @@ Ask user to configure the above as an environment variable in the Git provider i
 **Agent workflow:**
 
 - Search the repo for `.testchimp-plans` and `.testchimp-tests`. The **directory that contains each marker** is the canonical root for that integration type.
-- If the user wants TestChimp but markers are missing: create the empty marker files at the chosen roots, then **tell the user** to go to TestChimp Platform -> Project Settings → Integrations and map **both** folders (plans mapping → plans root, tests mapping → tests root).
+- If the user wants TestChimp but markers are missing: **tell the user** to go to TestChimp Platform -> Project Settings → Integrations and map **both** folders (plans mapping → plans root, tests mapping → tests root), and raise PRs for both plans and tests (from Test Planning page and SmartTests page).
 
-**Creating structure from scratch:** Pick two directories (prefer tests and plans as names), add the two marker files at those roots (`.testchimp-tests` and `.testchimp-plans`), then ensure the human completes **both** mappings in TestChimp (and syncs from TestChimp platform side - to populate the folder scaffolds correctly).
+**Creating structure from scratch:** Pick two directories (prefer tests and plans as names), then ensure the human completes **both** mappings in TestChimp (and syncs from TestChimp platform side - to populate the folder scaffolds correctly).
 
 ---
 
@@ -73,7 +79,7 @@ Ask user to configure the above as an environment variable in the Git provider i
 - Keep `playwright.config.js` in the same directory as **`.testchimp-tests`** (the SmartTests root).
 - Enable **`playwright-testchimp-reporter`**, trace **retain-on-failure**, screenshots on failure.
 - Use **[`../assets/template_playwright.config.js`](../assets/template_playwright.config.js)** in this skill pack as a starting point (copy that file into the SmartTests root, or merge its options into an existing config).
-- Important: Note that the config file should be directly inside the mapped `tests` folder.
+- Important: Note that the config file should be directly inside the mapped `tests` folder for proper path resolution and test execution.
 
 ---
 
@@ -89,4 +95,53 @@ Ask user to configure the above as an environment variable in the Git provider i
 
 Register **`testchimp-mcp-client`** in MCP config with **`TESTCHIMP_API_KEY`**. See the package README for a JSON snippet.
 
-After install, agents can call coverage and execution tools; those APIs still scope by **platform** paths (`tests/...`, `plans/...`)—see **[`write-smarttests.md`](./write-smarttests.md)** for how that relates to the mapped folder on disk.
+After install, agents can call coverage and execution details tools; those APIs still scope by **platform** paths (`tests/...`, `plans/...`)—see **[`write-smarttests.md`](./write-smarttests.md)** for how that relates to the mapped folder on disk.
+
+## 7. Test scaffold setup.
+
+Once the above basic setup is done, you should work with the user to create the test harness. How TestChimps' tests are organized is - there are 3 Playwright projects inside the `tests` folder: `setup`, `e2e`, `api`.
+* `setup`: This project is run first before the other projects. This is where the test data seeding should happen.
+* `e2e`: This contains primarily UI driven tests (although these tests can also call API endpoints as needed - for test specific setups / teardowns and verifications).
+* `api`: This contains primarily API tests.
+
+The `playwright.config.js` wires them up using project dependencies to ensure the above structure.
+
+During the init (this document's scope), you need to ensure a proper setup. By default there is an empty setup. Often, before running any tests, test data (test users, business entities etc.) will need to be inserted to the system to ensure tests have proper world-state to work on. To do this, first check if there are dedicated seed and teardown endpoints available in the codebase.
+- If yes: Then make a plan to use them in the setup project - collaborate with the user to define what seed setup to enable (and teardown).
+- If no: Then make a plan to create seed endpoints - suitable for the projects' structure. Collaborate with the user to define the endpoint structure (authentication, how to ensure they are not available in production etc.) and specific test data to seed in the global setup process.
+Important: Ideally, seed / teardown endpoints should be idempotent, so that multiple runs will be safe.
+
+## 8. Test Environment Setup
+
+Resolve "where" the tests are run. Typical choices depend on "when" the tests are run:
+- within PR branch before merge (recommended)
+- after merge to main branch
+
+### If within PR branch - before merge
+
+Then we will need PR branch specific environments. This can be:
+- PR specific preview-url generated for the frontend (with shared persistent backend - such as staging) or,
+- PR specific full stack isolated environment provisioned.
+Usually the latter is preferred since that ensures proper data state and tests backend behaviour changes properly. 
+TestChimp partners with Bunnyshell to support provisioning PR specific environments. If user prefers this, ask them to configure their Bunnyshell integration in TestChimp platform -> Project Settings -> Integrations -> Bunnyshell. (If they don't already have Bunnyshell configured, you can point them to Bunnyshell skill: https://github.com/bunnyshell/bunnyshell-environments-skill and ask to install that skill to get the yaml for bunnyshell created for their infra). 
+If they have custom setup that creates PR specific environments (in-house built), then they can configure the resulting branch specific preview-url as a template string (or manual specific overrides) in the TestChimp -> Project Settings -> Branch Management section.
+
+Alternatively, user may choose to locally spin up frontend (either pointing to shared backend or locally spinning up a backend as well). But in that case, we will still need logic for how the environment gets provisioned for running on CI (if the user wants CI runs configured).
+
+### If after merge to main branch
+
+Then, tests can run against a persistent environment (post deployment). Collaborate with the user to define the environment endpoint to use, and update the `.env-QA` file to have `BASE_URL` set suitably. `playwright.config.js` sets up this as the baseUrl in `use` block, so that tests can use relative paths, and those get resolved to the correct environment specific url.
+
+## End State
+
+Once the initialization is done, the following must be achieved:
+- User has connected their Git repo to TestChimp platform
+- They have mapped 2 folders on the repo for `plans` and `tests` platform folders.
+- CI setup for running tests on CI (trigger based on what the user chooses - PR merge / deployments / manual invoke etc.) setup (or skipped if user chose to).
+- Seed and teardown endpoints created, and global setup project written, that brings the test suite to a pre-defined useful product state on which tests can be authored next.
+- Decisions taken during the above process (such as environment provisioning logic, when to run tests, seeding plan etc.) should be persisted in the `plans/knowledge/ai-test-instructions.md` file. This will be referred in the future agentic workflows for context. If any items were skipped that can be noted down as well.
+- Skill init marker file is written to `<skill-dir>/bin/.init-has-run` (create `bin/` if needed). This marker is used by the skill preamble to detect whether `/.testchimp init` has already been completed for this installation.
+
+Once done, tell the user of "how to use the agent skill going forward":
+- [On-Demand] When a PR is ready to be tested, issue `/testchimp test` - this will trigger test authoring, referring the decisions taken above as context, to author tests for the changes made.
+- [Ongoing] User can setup a background agent that runs either periodically or on triggers such as deployment / PR merge closed, that runs `/testchimp audit` - which will analyzer requirement coverage and TrueCoverage gaps and make plans to address them and execute those plans - so that coverage gaps are autonomously fixed.

@@ -1,6 +1,6 @@
 # /testchimp test
 
-This document explains **how to write SmartTests** for agents. SmartTests are "Playwright with intelligent steps". Here are the key points:
+This document explains **how to write SmartTests** for agents during the **Execution phase** of `/testchimp test` (phased flow in [`testing-process.md`](./testing-process.md)). SmartTests are "Playwright with intelligent steps". Here are the key points:
 - Playwright tests in a **tests** folder mapped in TestChimp platform,
 - Ability to include natural language steps for "intent based" test steps in standard Playwright scripts
 - scenario linking via in-code structured comments in test (for built-in requirement traceability).
@@ -14,7 +14,7 @@ For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, pla
 
 ## Test writing workflow
 
-1. **Target URL** — Ask for preview URL or local stack URL. In the `playwright.config.js` we have set  
+1. **Target URL** — Ask for preview URL or local stack URL if unclear. In the `playwright.config.js` we have set  
 `baseURL:process.env.BASE_URL,` - so tests should simply specify relative urls, the preview URL should be set as the `BASE_URL` env var so that the test picks up that.
 
 2. **Decide what to write or change** — If **`testchimp-mcp-client`** is configured in the agent environment, call the MCP tools **`get_requirement_coverage`** and **`get_execution_history`** with the request shapes in [Calling the TestChimp MCP tools](#calling-the-testchimp-mcp-tools). Combine responses with the PR diff, commits, and plan files in the repo to choose scenarios and files to touch. If MCP is not available, infer gaps from plans and existing tests.

@@ -52,7 +52,7 @@ Each story or scenario is a **`.md` file** with a **YAML frontmatter** block bet
 
 ## Linking SmartTests to scenarios
 
-In Playwright specs, link to a scenario ordinal with a structured comment (see **`write-smarttests.md`**):
+In Playwright specs, link to a scenario ordinal with a structured comment as the first statement(s) inside the test (see **`write-smarttests.md`**):
 
 `// @Scenario: #TS-107 Empty messages cannot be sent`
 
