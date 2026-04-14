@@ -1,6 +1,6 @@
 # testchimp-skills
 
-TestChimp skill for **`/testchimp`** flows: `/init`, `/test`, `/audit`. Use with **`testchimp-mcp-client`** and **`TESTCHIMP_API_KEY`**.
+TestChimp skill for **`/testchimp`** flows: `/init`, `/test`, `/audit`, plus **TrueCoverage** (`/testchimp setup truecoverage`, `/testchimp instrument` — see `references/truecoverage.md`). Use with **`testchimp-mcp-client`** and **`TESTCHIMP_API_KEY`**.
 
 Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environments-skill](https://github.com/bunnyshell/bunnyshell-environments-skill)): **`SKILL.md` at the repository root**, with **`references/`** and **`assets/`** beside it. **`name` in `SKILL.md` is `testchimp`**, so the install directory must be named **`testchimp`** (see [Agent Skills spec — `name` matches directory](https://agentskills.io/specification)).
 
@@ -19,6 +19,7 @@ testchimp-skills/
 │   ├── init-testchimp.md
 │   ├── write-smarttests.md
 │   ├── audit-coverage.md
+│   ├── truecoverage.md
 │   └── ai-wright-usage.md
 └── assets/
     └── template_playwright.config.js

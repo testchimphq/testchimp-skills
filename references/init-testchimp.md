@@ -39,6 +39,21 @@ Ask user to configure the above as an environment variable in the Git repo provi
 
 ---
 
+## 2a. TrueCoverage opt-in (application instrumentation)
+
+TrueCoverage links real user events with test runs (see [`references/truecoverage.md`](truecoverage.md)). During init, determine whether the **application codebase** already uses `testchimp-rum-js`: check `package.json` dependencies and search the repo for imports from `testchimp-rum-js` or your wrapper.
+
+Read **`<SKILL_DIR>/bin/.truecoverage_setup`** if present (see [`truecoverage.md`](truecoverage.md) for `enabled=true|false|later` and the **3-day snooze** rule for `later`).
+
+- If the file is **missing** or you need a fresh decision: briefly explain TrueCoverage (coverage insights aligned with real usage; agents use MCP analytics in audit) and ask whether to enable it for this repo.
+  - **Yes, set up now:** include installing `testchimp-rum-js`, a single emit helper, env vars (`TESTCHIMP_API_KEY`, project id, per-env tags), and Playwright reporter alignment in the init work; when complete, write **`enabled=true`** to **`bin/.truecoverage_setup`**.
+  - **Not now, but later:** write **`enabled=later`** and tell the user they can run **`/testchimp setup truecoverage`** (or equivalent) when ready.
+  - **No:** write **`enabled=false`**.
+
+If **`enabled=true`** is already set, skip the prompt unless the user asks to change it.
+
+---
+
 ## 3. Plans and tests roots (TestChimp integrations)
 
 **How TestChimp uses the repo (agent-relevant model):**
