@@ -10,6 +10,8 @@ For **full** `ai-wright` API details (options, env vars, troubleshooting), see *
 
 For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, platform paths, and MCP tools to **create** plan files), see **[`test-planning.md`](./test-planning.md)**.
 
+**World states:** Decide the **target world-state** (`meta.id`) per UI test during **planning**, include **authoring `*.world.js` scripts** (and any missing seed APIs) in the **plan / setup** work, then during execution **bring the environment to that world-state before** driving the app with **Playwright**—see **[`testing-process.md`](./testing-process.md)**. File shape, `ensureWorldState`, and composition are in **[`world-states.md`](./world-states.md)**.
+
 ---
 
 ## Test writing workflow
@@ -30,9 +32,9 @@ For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, pla
      3. **Third pass — fit the suite:** Wire in **hooks**, **fixtures**, **`process.env`**, **page objects**, shared **timeouts**, and project **imports** (e.g. reporter runtime) so the test matches how neighboring files are structured.
 5. **Imports in SmartTest files** ALWAYS add those.
    - `import { ai } from 'ai-wright';`
-   - `import 'playwright-testchimp-reporter/runtime';`
+   - `import 'playwright-testchimp/runtime';`
 
-   The above enables AI steps in tests and TrueCoverage event tracking.
+   The above enables AI steps in tests and TrueCoverage event tracking. For **`ensureWorldState` / `teardownWorldState`** imports when using world-state steps, see **[`world-states.md`](./world-states.md)**.
 
 6. **Scenario link** — As the **first statement inside the test body**:
    - `// @Scenario: #TS-xxx <Scenario title>`  
@@ -52,13 +54,14 @@ SmartTests live under whatever folder the team mapped as **tests** in TestChimp 
   pages/           # Page objects — reusable per-page helpers
   e2e/             # Many teams put specs here (or use other subfolders)
   setup/           # Global setup (see below)
+    world-states/  # *.world.js — named seed states ([world-states.md](./world-states.md))
   assets/          # Files used in tests (e.g. uploads)
   .env-QA          # Example env file; more environment types as needed - QA env is auto created by default
   playwright.config.js <-- unlike typical Playwright structure, in TestChimp, the config file lives inside the tests folder.
 ```
 
 - **`pages/`** — Encapsulate navigation and selectors per page.
-- **`setup/`** — Global setup runs **before** browser tests via Playwright [project dependencies](https://playwright.dev/docs/test-global-setup-teardown#option-1-project-dependencies). Use for seed data, auth state, shared harness. Usually excluded from the main test project with `testIgnore` in config.
+- **`setup/`** — Global setup runs **before** browser tests via Playwright [project dependencies](https://playwright.dev/docs/test-global-setup-teardown#option-1-project-dependencies). Use for seed data, auth state, shared harness. **`setup/world-states/`** holds **`*.world.js`** world-state scripts (see [world-states.md](./world-states.md)). Usually excluded from the main test project with `testIgnore` in config.
 - **`e2e/`** (and siblings) — Specs match `*.{spec,test}.{js,ts}` under the tests root except ignored paths like `setup/`.
 - **`assets/`** — Static files (uploads, etc.).
 - **`.env-*`** — Per-environment variables; **QA** is a common default. Read with `process.env.VAR_NAME`.

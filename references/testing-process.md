@@ -8,7 +8,7 @@ This document defines the **phased workflow** for testing a PR with TestChimp.
 3. Execute
 4. Cleanup
 
-Use this as the primary reference for `/testchimp test`. For SmartTest authoring patterns and examples, load **[`write-smarttests.md`](./write-smarttests.md)** during the **Execute** phase. For TrueCoverage rules (state file, instrumentation, `plans/events/`), load **[`truecoverage.md`](./truecoverage.md)** when RUM is in scope.
+Use this as the primary reference for `/testchimp test`. For SmartTest authoring patterns and examples, load **[`write-smarttests.md`](./write-smarttests.md)** during the **Execute** phase. For **world-state** scripts (`*.world.js`), `ensureWorldState`, and how execution should order **seed → browser**, load **[`world-states.md`](./world-states.md)** alongside this doc. For TrueCoverage rules (state file, instrumentation, `plans/events/`), load **[`truecoverage.md`](./truecoverage.md)** when RUM is in scope.
 
 ---
 
@@ -39,13 +39,14 @@ The plan must include:
      - Ask these checks: (1) what risk is being reduced, (2) can outcome be asserted from API state alone, (3) is browser interaction required by acceptance criteria, (4) does UI automation add maintenance cost without additional signal?
    - Record the decision rationale in 1-2 lines per planned case.
 4. **Prerequisites + environment strategy**
-   - Identify world-state prerequisites for each test (accounts, entities, feature flags, seed state).
+   - **World states (per test case):** Decide which **target world-state** each test needs—a stable **`meta.id`** backed by an existing **`tests/setup/world-states/*.world.js`** file, or a **new** id you will introduce. The **plan must spell out** which world-state applies to which case and must list **any missing** world-state scripts (and missing seed APIs or env wiring). **Authoring those `*.world.js` files and seed work is part of the plan phase** (and lands in **Setup** before you lean on Playwright for behavior that depends on that data). See **[`world-states.md`](./world-states.md)** for `defineWorldState`, composition, and env vars (`BACKEND_URL`, etc.). If a sufficiently close enough world-state exists, then use that - with the additional specific pre-setup needed for the test done inline in the test (or a before hook). The objective is NOT to have a world-state per test. World states are a few, managed, states that creates common reusable states that are reused heavily by tests. For instance, if the test case requires a feature flag to be toggled, but other than that, an existing world-state is sufficient, then load that world-state, do the feature flag toggle inline within the test.
+   - **Execution order (core idea):** The agent **brings the environment to the target world-state first** (e.g. `ensureWorldState('…')` in `beforeAll` / start of test, or the product’s equivalent), **then** performs the **Playwright** (and `ai.*`) steps against the UI. The browser pass assumes the backend/data already matches that world-state; do not treat “open Playwright” as a substitute for applying the world-state when the plan called for one.
    - Read `plans/knowledge/ai-test-instructions.md` first (if available), for persisted project decisions.
    - Decide environment mode:
-     - **Persistent backend + local/preview frontend** for frontend-only changes when sufficient.
-     - **Isolated full-stack ephemeral environment** when backend changes affect behavior.
-   - If using persistent environments, infer reusable data from existing tests, fixtures, POMs, and env files; ask user only for missing critical values.
-   - If using ephemeral environments, call `get_eaas_config`; if it returns empty/unconfigured, stop and ask user to configure EaaS in TestChimp.
+     - **Persistent backend + local/preview frontend** for frontend-only changes when sufficient. This is fast, cheap - so favourable default.
+     - **Isolated full-stack ephemeral environment** when backend changes affect behavior. This enables full stack isolation and stronger consistancy guarantees, but is slow to provision (~5-10 mins), and costs (since require actual deployment). Use only when necessary.
+   - If using persistent environments, infer reusable data from existing tests, fixtures, POMs, env files and world-states; ask user only for missing critical values.
+   - If using ephemeral environments, call `get_eaas_config`; if it returns empty/unconfigured, stop and ask user to configure EaaS in TestChimp. Refer `/references/environment-management` for more details on setup and provision.
 5. **Infra gaps**
    - Identify missing seed/teardown endpoints or missing harness infrastructure.
    - Include remediation tasks in the plan before test authoring.
@@ -65,13 +66,14 @@ Goal: create the environment and prerequisites needed to author and run tests.
    - Poll with `get_ephemeral_environment_status` roughly every minute until ready (typical provisioning time is several minutes). After 20 minutes if still not provisioned, inform the user to check the provider and ask whether to kill or keep trying. If user says to kill the environment, use mcp tool to kill the environment.
 2. **Address infra gaps**
    - Implement or wire missing seed/teardown setup identified during planning.
+   - Add or update **`*.world.js`** world-state scripts that the **plan** marked as missing, so execution can call **`ensureWorldState`** before browser steps.
 3. **TrueCoverage setup (when planned and `enabled=true`)**
    - If instrumentation was planned: ensure `testchimp-rum-js` is available in the **application** package, add or update a **single helper** for emits, wire **API key / project id / environment** from config, and add **`plans/events/`** docs for new event types. Skip if `.truecoverage_setup` is not `enabled=true` or the user declined.
 4. **Fix plan gaps first**
    - Author missing stories/scenarios before writing tests.
    - Follow **[`test-planning.md`](./test-planning.md)** for MCP create/update and markdown structure.
 
-**Setup outcome:** runnable environment, infra blockers resolved (or clearly flagged), plan artifacts complete enough for execution.
+**Setup outcome:** runnable environment, infra blockers resolved (or clearly flagged), plan artifacts complete enough for execution,TrueCoverage instrumentation updates planned out.
 
 ---
 
@@ -80,11 +82,12 @@ Goal: create the environment and prerequisites needed to author and run tests.
 Goal: author and validate SmartTests for planned cases.
 
 1. Load **[`write-smarttests.md`](./write-smarttests.md)** and follow its authoring guidance (for UI test authoring).
-2. Create a Playwright browser session, authenticate once, and store storage state in a temporary file for reuse.
-3. Implement each planned test case (UI/API as planned), reusing storage state for faster repeated sessions. For writing API tests, refer **[`api-testing.md`](./api-testing.md)**.
-4. **Application emits (TrueCoverage):** When `enabled=true` and the plan called for new /updated events, add emits in the **app** code for those interactions and keep **`plans/events/`** in sync. This is independent of SmartTest files but should land in the same PR when possible.
-5. Run written tests with Playwright and fix failures iteratively.
-6. Retry fix-and-rerun up to **2 attempts per failing test**. If still failing, stop retrying those and clearly ask user for help with the unresolved failures (in the report created in the next phase).
+2. **World state before UI:** For each UI case that the **plan** tied to a world-state, ensure the test (or shared setup) **runs `ensureWorldState` (or equivalent) before** the Playwright interactions that depend on that seeded backend/data. The flow is: **environment → target world-state → then** browser automation. See **[`world-states.md`](./world-states.md)**.
+3. Create a Playwright browser session, authenticate once, and store storage state in a temporary file for reuse. Make sure the authored test also follows same via storageContext.
+4. **Application emits (TrueCoverage):** When `enabled=true` and the plan called for new /updated events, add emits in the **app** code for those interactions and keep **`plans/events/`** in sync. Do this **before** authoring individual SmartTests or API tests that depend on those events being emitted or on TrueCoverage picking them up. This work is independent of SmartTest files but should land in the same PR when possible.
+5. Implement each planned test case (UI/API as planned), reusing storage state for faster repeated sessions. For writing API tests, refer **[`api-testing.md`](./api-testing.md)**.
+6. Run written tests with Playwright and fix failures iteratively.
+7. Retry fix-and-rerun up to **2 attempts per failing test**. If still failing, stop retrying those and clearly ask user for help with the unresolved failures (in the report created in the next phase).
 
 ---
 
@@ -95,6 +98,11 @@ Goal: remove temporary resources and avoid leaked infrastructure. Communicate re
 1. If an ephemeral environment was provisioned, destroy it via `destroy_ephemeral_environment` using the returned environment id.
 2. Delete temporary storage-state files created for login/session reuse.
 3. Report what was done, flag any things that require user attention (such as failing tests etc.).
+4. Include a summary of:
+   - New TrueCoverage event emits added / updated
+   - # of tests authored (with breakdown of API vs UI)  - and breakdown by failing / passing.
+   - New world-states authored
+   - Any infra setups that was done
 
 ---
 
