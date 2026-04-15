@@ -36,6 +36,17 @@ After provision, run a suitable **world-state** script (`*.world.js`, `ensureWor
 4. Parse **`component_urls_json`** to set `BASE_URL`, `BACKEND_URL`, and any `*_SERVICE_BACKEND_URL` vars your repo uses for seeds and tests (see [`world-states.md`](./world-states.md)).
 5. Use **`destroy_ephemeral_environment`** when done.
 
+### Troubleshooting failed or stuck ephemeral deploy
+
+When **`provision_ephemeral_environment_and_wait`** returns **`failed`** or **`timeout`**, or deploy is stuck:
+
+1. **`list_bunnyshell_environment_events`** — pass the same **`bnsEnvironmentId`**. Inspect **`jsonPayload`** (raw BunnyShell JSON). Filter with optional **`eventStatus`** (`fail` is most useful) or **`eventType`** (e.g. deploy-related types). Official BunnyShell event filters: [event list](https://documentation.bunnyshell.com/reference/eventlist).
+2. **`list_bunnyshell_workflow_jobs`** — same **`bnsEnvironmentId`**; find a relevant **`workflowJobId`** (or equivalent id field in **`jsonPayload`**) for a failing or recent deploy job.
+3. **`get_bunnyshell_workflow_job_logs`** — **`bnsEnvironmentId`** + **`workflowJobId`**. Read **`jsonPayload`**; if **`truncated`** is true, logs were capped server-side (~512KB). Non-JSON log bodies appear under **`plainText`** in a wrapper object.
+4. Fix the underlying issue in the repo (e.g. Helm/YAML, image, resources), **push** to the branch, then re-run **`provision_ephemeral_environment_and_wait`** (or manual provision + status polling fallback).
+
+Kubernetes **pod/container** logs in the BunnyShell UI are not exposed by these MCP tools yet; workflow job logs cover the deploy pipeline.
+
 ### User has no Bunnyshell setup yet
 
 1. Pull or install the **[Bunnyshell environments skill](https://github.com/bunnyshell/bunnyshell-environments-skill)** so the agent can help generate `bunnyshell.yaml` and guide provisioning in Bunnyshell.
