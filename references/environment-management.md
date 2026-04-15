@@ -31,8 +31,10 @@ After provision, run a suitable **world-state** script (`*.world.js`, `ensureWor
 ## EaaS (Bunnyshell) workflow
 
 1. Call **`get_eaas_config`**. Empty `{}` means BunnyShell integration is not set up or has no public fields exposed.
-2. When configured, use **`provision_ephemeral_environment`** (optional `branchName`), then **`get_ephemeral_environment_status`** with `bnsEnvironmentId` until deployed; use **`destroy_ephemeral_environment`** when done.
-3. Poll status until URLs/components appear in the response for wiring `BASE_URL` / seed APIs.
+2. When configured, **prefer `provision_ephemeral_environment_and_wait`** (optional `branchName`, `pollIntervalSeconds` default 60, `maxWaitMinutes` default 25). It provisions and polls until the environment is **deployed** with **`component_urls_json`** populated, then returns a single JSON: `outcome` (`success` \| `failed` \| `timeout`), `failure_phase` (`provision` \| `deploy` \| `wait`), `message` for the user, and `component_urls_json` on success. Provisioning often takes **~5–10 minutes**—the MCP server emits progress logs while waiting.
+3. **Fallback (only if** the wait tool is missing, errors, or the host kills long MCP calls**):** call **`provision_ephemeral_environment`**, then poll **`get_ephemeral_environment_status`** about **once per minute** for up to **~25 minutes** with the same success criteria (deployed + component URLs or terminal failure).
+4. Parse **`component_urls_json`** to set `BASE_URL`, `BACKEND_URL`, and any `*_SERVICE_BACKEND_URL` vars your repo uses for seeds and tests (see [`world-states.md`](./world-states.md)).
+5. Use **`destroy_ephemeral_environment`** when done.
 
 ### User has no Bunnyshell setup yet
 

@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP), coverage, and MCP tools. Use when the user mentions TestChimp, /testchimp commands (init, test, plan, audit), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
 compatibility: Requires Node.js for Playwright tooling; TESTCHIMP_API_KEY for MCP and ai-wright. Network access for TestChimp APIs when using MCP or AI steps.
-version: 0.1.1
+version: 0.1.2
 ---
 
 # TestChimp
@@ -35,7 +35,7 @@ Install **`testchimp-mcp-client`** and configure below environment vars:
 
 - `TESTCHIMP_API_KEY` (required)
 
-The MCP server exposes tools: `get_requirement_coverage`, `get_execution_history`, `create_user_story`, `create_test_scenario`, `update_user_story`, `update_test_scenario`, `get_eaas_config`, `get_branch_specific_endpoint_config`, `provision_ephemeral_environment`, `get_ephemeral_environment_status`, `destroy_ephemeral_environment`, plus TrueCoverage analytics: `list_rum_environments`, `get_truecoverage_events`, `get_truecoverage_event_details`, `get_truecoverage_child_event_tree`, `get_truecoverage_event_transition`, `get_truecoverage_event_time_series`, `get_truecoverage_session_metadata_keys`, `get_truecoverage_event_metadata_keys`.
+The MCP server exposes tools: `get_requirement_coverage`, `get_execution_history`, `create_user_story`, `create_test_scenario`, `update_user_story`, `update_test_scenario`, `get_eaas_config`, `get_branch_specific_endpoint_config`, `provision_ephemeral_environment_and_wait`, `provision_ephemeral_environment`, `get_ephemeral_environment_status`, `destroy_ephemeral_environment`, plus TrueCoverage analytics: `list_rum_environments`, `get_truecoverage_events`, `get_truecoverage_event_details`, `get_truecoverage_child_event_tree`, `get_truecoverage_event_transition`, `get_truecoverage_event_time_series`, `get_truecoverage_session_metadata_keys`, `get_truecoverage_event_metadata_keys`.
 Use the repo, plans, and those tools to decide what to test and how to run them.
 
 ## Command routing
