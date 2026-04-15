@@ -128,6 +128,8 @@ Important: Ideally, seed / teardown endpoints should be idempotent, so that mult
 
 ## 8. Test Environment Setup
 
+Read **[`references/environment-management.md`](environment-management.md)** for the full agent playbook: persistent vs ephemeral targets, Bunnyshell (EaaS), Branch Management preview URLs, and MCP **`get_branch_specific_endpoint_config`**.
+
 Resolve "where" the tests are run. Typical choices depend on "when" the tests are run:
 - within PR branch before merge (recommended)
 - after merge to main branch
@@ -154,7 +156,7 @@ Once the initialization is done, the following must be achieved:
 - They have mapped 2 folders on the repo for `plans` and `tests` platform folders.
 - CI setup for running tests on CI (trigger based on what the user chooses - PR merge / deployments / manual invoke etc.) setup (or skipped if user chose to).
 - Seed and teardown endpoints created, and global setup project written, that brings the test suite to a pre-defined useful product state on which tests can be authored next.
-- Decisions taken during the above process (such as environment provisioning logic, when to run tests, seeding plan etc.) should be persisted in the `plans/knowledge/ai-test-instructions.md` file. This will be referred in the future agentic workflows for context. If any items were skipped that can be noted down as well.
+- Decisions taken during the above process (such as when to run tests, seeding plan, etc.) should be persisted in the `plans/knowledge/ai-test-instructions.md` file. This will be referred to in future agentic workflows for context. Include an **Environment strategy** subsection: default mode (persistent vs ephemeral), when to use Bunnyshell vs Branch Management preview URLs, and how CI supplies `BASE_URL` (or equivalent). If any items were skipped, note that as well.
 - Skill init marker file is written to `<skill-dir>/bin/.init-has-run` (create `bin/` if needed). This marker is used by the skill preamble to detect whether `/.testchimp init` has already been completed for this installation.
 
 Once done, tell the user of "how to use the agent skill going forward":

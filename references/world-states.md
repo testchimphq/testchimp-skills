@@ -14,7 +14,7 @@ A world-state is a plain object that **`defineWorldState(def)`** validates and r
 |--------|----------|---------|
 | **`meta.id`** | Yes | Non-empty string. This exact value is passed to **`ensureWorldState('…')`**, **`teardownWorldState('…')`**, and listed in tooling. Use a **stable, kebab-case** id (e.g. `premium-org-admin-user-created`) so it stays merge-friendly and grep-friendly. |
 | **`meta.description`** | Yes | Human- and agent-readable summary of what environment this state represents—use when choosing or reviewing states. |
-| **`setup(ctx)`** | Yes | Function **`(ctx) => void` or `async (ctx) => void`**. Brings the environment to this state (HTTP seed APIs, DB fixtures, etc.). Prefer **`process.env.BACKEND_URL`** or service-specific **`*_BACKEND_URL`**; see **[`testing-process.md`](./testing-process.md)**. |
+| **`setup(ctx)`** | Yes | Function **`(ctx) => void` or `async (ctx) => void`**. Brings the environment to this state (HTTP seed APIs, DB fixtures, etc.). Prefer **`process.env.BACKEND_URL`** or service-specific **`*_BACKEND_URL`**; see **[`testing-process.md`](./testing-process.md)**. For how the deployment URL is chosen (persistent vs ephemeral, EaaS), see **[`environment-management.md`](./environment-management.md)**. |
 | **`teardown(ctx)`** | No | If present, must be a function with the same **`ctx`** shape as **`setup`**. Omit if cleanup is unnecessary or handled elsewhere. |
 
 Invalid definitions throw at load or at **`defineWorldState`** time (e.g. missing **`meta`**, **`setup`** not a function, **`teardown`** present but not a function).

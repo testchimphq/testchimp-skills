@@ -35,7 +35,7 @@ Install **`testchimp-mcp-client`** and configure below environment vars:
 
 - `TESTCHIMP_API_KEY` (required)
 
-The MCP server exposes tools: `get_requirement_coverage`, `get_execution_history`, `create_user_story`, `create_test_scenario`, `update_user_story`, `update_test_scenario`, `get_eaas_config`, `provision_ephemeral_environment`, `get_ephemeral_environment_status`, `destroy_ephemeral_environment`, plus TrueCoverage analytics: `list_rum_environments`, `get_truecoverage_events`, `get_truecoverage_event_details`, `get_truecoverage_child_event_tree`, `get_truecoverage_event_transition`, `get_truecoverage_event_time_series`, `get_truecoverage_session_metadata_keys`, `get_truecoverage_event_metadata_keys`.
+The MCP server exposes tools: `get_requirement_coverage`, `get_execution_history`, `create_user_story`, `create_test_scenario`, `update_user_story`, `update_test_scenario`, `get_eaas_config`, `get_branch_specific_endpoint_config`, `provision_ephemeral_environment`, `get_ephemeral_environment_status`, `destroy_ephemeral_environment`, plus TrueCoverage analytics: `list_rum_environments`, `get_truecoverage_events`, `get_truecoverage_event_details`, `get_truecoverage_child_event_tree`, `get_truecoverage_event_transition`, `get_truecoverage_event_time_series`, `get_truecoverage_session_metadata_keys`, `get_truecoverage_event_metadata_keys`.
 Use the repo, plans, and those tools to decide what to test and how to run them.
 
 ## Command routing
@@ -76,7 +76,7 @@ When a `plans/...` folder is provided, coverage resolves SmartTests linked to sc
 
 ## Progressive disclosure
 
-Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/plan`, `/audit`, TrueCoverage setup/instrument). Plan **reading and authoring** (including MCP create/update flows) use [`references/test-planning.md`](references/test-planning.md). During `/testchimp test`, load [`references/api-testing.md`](references/api-testing.md) when a scenario is designated for API automation and [`references/write-smarttests.md`](references/write-smarttests.md) for UI SmartTests. Load [`references/truecoverage.md`](references/truecoverage.md) when `.truecoverage_setup`, RUM instrumentation, or TrueCoverage MCP tools are in scope. Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
+Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/plan`, `/audit`, TrueCoverage setup/instrument). Plan **reading and authoring** (including MCP create/update flows) use [`references/test-planning.md`](references/test-planning.md). During `/testchimp test`, load [`references/api-testing.md`](references/api-testing.md) when a scenario is designated for API automation and [`references/write-smarttests.md`](references/write-smarttests.md) for UI SmartTests. Load [`references/environment-management.md`](references/environment-management.md) when choosing or provisioning test environments, EaaS (Bunnyshell), or branch-scoped `BASE_URL` resolution. Load [`references/truecoverage.md`](references/truecoverage.md) when `.truecoverage_setup`, RUM instrumentation, or TrueCoverage MCP tools are in scope. Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
 
 ## References (this skill)
 
@@ -90,5 +90,6 @@ Per the [Agent Skills specification](https://agentskills.io/specification), this
 | [`references/audit-coverage.md`](references/audit-coverage.md) | Coverage and execution audit playbook |
 | [`references/truecoverage.md`](references/truecoverage.md) | TrueCoverage RUM setup, `.truecoverage_setup`, `plans/events/`, MCP analytics |
 | [`references/ai-wright-usage.md`](references/ai-wright-usage.md) | `ai-wright` install, env, API depth |
+| [`references/environment-management.md`](references/environment-management.md) | Persistent vs ephemeral envs, Bunnyshell, Branch Management, MCP `get_branch_specific_endpoint_config` |
 | [`assets/template_playwright.config.js`](assets/template_playwright.config.js) | Sample Playwright config (copy into SmartTests root) |
 
