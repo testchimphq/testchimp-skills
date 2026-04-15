@@ -40,9 +40,9 @@ After provision, run a suitable **world-state** script (`*.world.js`, `ensureWor
 
 When **`provision_ephemeral_environment_and_wait`** returns **`failed`** or **`timeout`**, or deploy is stuck:
 
-1. **`list_bunnyshell_environment_events`** — pass the same **`bnsEnvironmentId`**. Inspect **`jsonPayload`** (raw BunnyShell JSON). Filter with optional **`eventStatus`** (`fail` is most useful) or **`eventType`** (e.g. deploy-related types). Official BunnyShell event filters: [event list](https://documentation.bunnyshell.com/reference/eventlist).
-2. **`list_bunnyshell_workflow_jobs`** — same **`bnsEnvironmentId`**; find a relevant **`workflowJobId`** (or equivalent id field in **`jsonPayload`**) for a failing or recent deploy job.
-3. **`get_bunnyshell_workflow_job_logs`** — **`bnsEnvironmentId`** + **`workflowJobId`**. Read **`jsonPayload`**; if **`truncated`** is true, logs were capped server-side (~512KB). Non-JSON log bodies appear under **`plainText`** in a wrapper object.
+1. **`list_bunnyshell_environment_events`** — pass the same **`bnsEnvironmentId`**. The tool returns the **BunnyShell response body as-is** (same shape as calling their API). Filter with optional **`eventStatus`** (`fail` is most useful) or **`eventType`** (e.g. deploy-related types). Official BunnyShell event filters: [event list](https://documentation.bunnyshell.com/reference/eventlist).
+2. **`list_bunnyshell_workflow_jobs`** — same **`bnsEnvironmentId`**; response body is raw BunnyShell JSON — find a relevant **`workflowJobId`** (field name depends on their payload).
+3. **`get_bunnyshell_workflow_job_logs`** — **`bnsEnvironmentId`** + **`workflowJobId`**. Response body is the **raw BunnyShell logs payload** (no TestChimp wrapping or truncation).
 4. Fix the underlying issue in the repo (e.g. Helm/YAML, image, resources), **push** to the branch, then re-run **`provision_ephemeral_environment_and_wait`** (or manual provision + status polling fallback).
 
 Kubernetes **pod/container** logs in the BunnyShell UI are not exposed by these MCP tools yet; workflow job logs cover the deploy pipeline.
@@ -69,6 +69,6 @@ When EaaS is **not** used, teams may configure a **URL template** and optional *
 
 ## Related
 
-- **`/testchimp init`** — capture environment strategy into `plans/knowledge/ai-test-instructions.md` (see [`init-testchimp.md`](./init-testchimp.md)).
+- **`/testchimp init`** — follow the phased flow (optional quick smoke -> collaborative plan -> execute), and capture environment strategy plus per-item progress into `plans/knowledge/ai-test-instructions.md` (see [`init-testchimp.md`](./init-testchimp.md)).
 - **`/testchimp test`** — [`testing-process.md`](./testing-process.md) for phased workflow and when to load this doc.
 - **World states** — [`world-states.md`](./world-states.md) for deterministic data after the environment URL is known.

@@ -12,7 +12,7 @@ TestChimp is a **QA workflow orchestration layer for AI agents**. It provides:
 - **Requirement traceability** via structured comments in tests (e.g. `// @Scenario: #TS-101 Title`) linking SmartTests to scenarios.
 - **Markdown test plans** in a mapped `plans/` folder (YAML frontmatter, `stories/` / `scenarios/` / `knowledge/`) — how to read and author them in [`references/test-planning.md`](references/test-planning.md).
 - **Intelligent Playwright steps** (`ai.act` / `ai.verify` / `ai.extract` with `ai-wright`) for more stable execution-time intelligent behavior in tests.
-- **Execution reporting** via `playwright-testchimp-reporter` so test execution details feed to TestChimp servers to enable coverage insights.
+- **Execution reporting** via `playwright-testchimp` so test execution details feed to TestChimp servers to enable coverage insights.
 
 ## Preamble checks (run first)
 
@@ -20,13 +20,13 @@ Before executing a TestChimp flow:
 
 1. **Skill update check** — rely on the `version` in this file's frontmatter. Read the current version from the local `SKILL.md`, then fetch the remote `SKILL.md` from the published repo (`https://github.com/testchimphq/testchimp-skills`, see **Updating this skill from Git** below) and compare frontmatter versions. If the remote version is newer, tell the user an update is available and ask whether to update now (`/testchimp update`). If the user agrees to update the version, proceed with the update - as noted in the below section.
 
-2. **Decision memory check** — locate `TESTCHIMP_SKILL_DIR/bin/init-has-run`. If missing, tell user that it seems init hasn't run, and ask whether to run now (highly recommend) - and if agreed do (follow flow for `/testchimp init`).
+2. **Decision memory check** — locate `TESTCHIMP_SKILL_DIR/bin/.init-has-run`. If missing, tell user that it seems init hasn't run, and ask whether to run now (highly recommend) - and if agreed do (follow flow for `/testchimp init`).
 
 ## How TestChimp works
 
 1. Create a project in TestChimp and connect the Git repo. Map 2 folders in the repo to the project created in TestChimp platform **`tests`** (SmartTests) and **`plans`** (test plans). Those can be mapped after logging in to TestChimp -> Select Project -> Project Settings -> Integrations -> GitHub.
 2. TestChimp creates **folder marker files** (empty): `.testchimp-tests` under tests root, `.testchimp-plans` under plans root so paths are recognizable - so you can identify the mapped folders using those markers.
-3. Run SmartTests with Playwright; install **`playwright-testchimp-reporter`** as documented in [`references/write-smarttests.md`](references/write-smarttests.md). This also pulls in `ai-wright` for enabling execution time intelligent steps.
+3. Run SmartTests with Playwright; install **`playwright-testchimp`** as documented in [`references/write-smarttests.md`](references/write-smarttests.md). This also pulls in `ai-wright` for enabling execution time intelligent steps.
 4. Local and CI calls to TestChimp APIs are authenticated via **`TESTCHIMP_API_KEY`** env var (note that this is a project specific key - so it should be used scoped per project).
 
 ## MCP client (agents)
@@ -49,7 +49,7 @@ Use the repo, plans, and those tools to decide what to test and how to run them.
 
 | User says | Read |
 |-----------|------|
-| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) |
+| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) (phased workflow: optional quick smoke -> plan -> execute) |
 | `/testchimp test` | [`references/testing-process.md`](references/testing-process.md) |
 | `/testchimp plan` | [`references/test-planning.md`](references/test-planning.md) |
 | `/testchimp audit` | [`references/audit-coverage.md`](references/audit-coverage.md) |
@@ -83,13 +83,13 @@ When a `plans/...` folder is provided, coverage resolves SmartTests linked to sc
 
 ## Progressive disclosure
 
-Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/plan`, `/audit`, TrueCoverage setup/instrument). Plan **reading and authoring** (including MCP create/update flows) use [`references/test-planning.md`](references/test-planning.md). During `/testchimp test`, load [`references/api-testing.md`](references/api-testing.md) when a scenario is designated for API automation and [`references/write-smarttests.md`](references/write-smarttests.md) for UI SmartTests. Load [`references/environment-management.md`](references/environment-management.md) when choosing or provisioning test environments, EaaS (Bunnyshell), or branch-scoped `BASE_URL` resolution. Load [`references/truecoverage.md`](references/truecoverage.md) when `.truecoverage_setup`, RUM instrumentation, or TrueCoverage MCP tools are in scope. Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
+Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/plan`, `/audit`, TrueCoverage setup/instrument). During `/testchimp init`, follow the phased init workflow (optional quick smoke first, then collaborative plan, then execute item-by-item with progress persisted in `plans/knowledge/ai-test-instructions.md`). Plan **reading and authoring** (including MCP create/update flows) use [`references/test-planning.md`](references/test-planning.md). During `/testchimp test`, load [`references/api-testing.md`](references/api-testing.md) when a scenario is designated for API automation and [`references/write-smarttests.md`](references/write-smarttests.md) for UI SmartTests. Load [`references/environment-management.md`](references/environment-management.md) when choosing or provisioning test environments, EaaS (Bunnyshell), or branch-scoped `BASE_URL` resolution. Load [`references/truecoverage.md`](references/truecoverage.md) when `.truecoverage_setup`, RUM instrumentation, or TrueCoverage MCP tools are in scope. Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
 
 ## References (this skill)
 
 | Path | Purpose |
 |------|---------|
-| [`references/init-testchimp.md`](references/init-testchimp.md) | Bootstrap repo, markers, CI, MCP |
+| [`references/init-testchimp.md`](references/init-testchimp.md) | Phased init: optional quick smoke, collaborative plan, action-item execution |
 | [`references/testing-process.md`](references/testing-process.md) | `/testchimp test` phased workflow: plan, setup, execute, cleanup |
 | [`references/write-smarttests.md`](references/write-smarttests.md) | SmartTest authoring (UI tests with smart steps) details used by the execution phase |
 | [`references/api-testing.md`](references/api-testing.md) | API test authoring workflow from captured browser network flows |

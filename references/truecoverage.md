@@ -1,6 +1,6 @@
 # TrueCoverage
 
-TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the app with [`testchimp-rum-js`](https://www.npmjs.com/package/testchimp-rum-js); [`playwright-testchimp-reporter`](https://github.com/testchimphq/playwright-testchimp-reporter) tags the same events during runs with test identity. TestChimp aggregates both streams for coverage insights.
+TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the app with [`testchimp-rum-js`](https://www.npmjs.com/package/testchimp-rum-js); [`playwright-testchimp`](https://github.com/testchimphq/playwright-testchimp-reporter) tags the same events during runs with test identity. TestChimp aggregates both streams for coverage insights.
 
 **Product overview:** [TrueCoverage intro](https://docs.testchimp.io/truecoverage/intro)
 

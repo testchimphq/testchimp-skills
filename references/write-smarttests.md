@@ -65,7 +65,7 @@ SmartTests live under whatever folder the team mapped as **tests** in TestChimp 
 - **`e2e/`** (and siblings) — Specs match `*.{spec,test}.{js,ts}` under the tests root except ignored paths like `setup/`.
 - **`assets/`** — Static files (uploads, etc.).
 - **`.env-*`** — Per-environment variables; **QA** is a common default. Read with `process.env.VAR_NAME`.
-- **`playwright.config.js`** — Playwright config; projects using TestChimp add **`playwright-testchimp-reporter`**.
+- **`playwright.config.js`** — Playwright config; projects using TestChimp add **`playwright-testchimp`**.
 
 Keep **`@playwright/test`** and **`playwright`** on the **same** version; use npm `overrides` if dependencies pull mismatched Playwright versions. TestChimp requires Playwright 1.59.0+.
 
@@ -219,7 +219,7 @@ Illustrative end-to-end shape: env-driven base URL, scenario comment, plain Play
 ```ts
 import { test, expect } from '@playwright/test';
 import { ai } from 'ai-wright';
-import 'playwright-testchimp-reporter/runtime';
+import 'playwright-testchimp/runtime';
 
 test.describe('Checkout (illustrative)', () => {
   test('guest can reach checkout with valid cart', async ({ page }) => {
