@@ -114,8 +114,10 @@ Run installs from the directory containing `.testchimp-tests`:
 
 ```bash
 npm install playwright-testchimp
-npm install -D testchimp-mcp-client
+npm install -D testchimp-mcp-client@latest
 ```
+
+Use **`@latest`** for the dev dependency so installs track the current default npm release. The **Cursor MCP** entry should use **`npx`** with **`testchimp-mcp-client@latest`** in **`args`** (see [`../assets/sample-mcp.json`](../assets/sample-mcp.json)); that ensures **`npx`** resolves the latest published client when the MCP server starts.
 
 ### Action item C - Environment variables
 
@@ -137,7 +139,11 @@ CI:
 
 ### Action item E - MCP install (Cursor)
 
-Register `testchimp-mcp-client` in MCP config with `TESTCHIMP_API_KEY`.
+Register **`testchimp-mcp-client`** in MCP config with **`TESTCHIMP_API_KEY`**.
+
+- Use **`command`:** **`npx`** and **`args`:** **`["-y", "testchimp-mcp-client@latest"]`** so each run resolves the latest npm release (see [`../assets/sample-mcp.json`](../assets/sample-mcp.json)).
+- Put **`TESTCHIMP_API_KEY`** in the server **`env`** block (project-scoped key).
+- After changing MCP config, the user should **reload MCP or restart the IDE** so the new **`npx`** arguments apply.
 
 After install, MCP tools can be used for:
 

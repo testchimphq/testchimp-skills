@@ -22,7 +22,8 @@ testchimp-skills/
 │   ├── truecoverage.md
 │   └── ai-wright-usage.md
 └── assets/
-    └── template_playwright.config.js
+    ├── template_playwright.config.js
+    └── sample-mcp.json
 ```
 
 Product: [testchimp.io](https://testchimp.io)
@@ -147,4 +148,4 @@ Update the TestChimp skill from Git
 
 ## MCP
 
-**`testchimp-mcp-client`** is not part of this skill tree. Install it in the app repo, register MCP with **`TESTCHIMP_API_KEY`**. Steps: **`references/init-testchimp.md`**.
+**`testchimp-mcp-client`** is not part of this skill tree. Install it in the app repo (**`testchimp-mcp-client@latest`**), ask user to configure **`TESTCHIMP_API_KEY`** in the env block of mcp.json (have a placeholder so that it is clear where to update). Use **`npx`** with **`testchimp-mcp-client@latest`** in **`args`** so **`npx`** picks up new releases. Sample: **`assets/sample-mcp.json`**. Full steps: **`references/init-testchimp.md`**. **`SKILL.md`** frontmatter includes **`required_mcp_client_version`** so agents can verify compatibility (see **Preamble checks** there).

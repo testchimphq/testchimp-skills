@@ -2,7 +2,8 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP), coverage, and MCP tools. Use when the user mentions TestChimp, /testchimp commands (init, test, plan, audit), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
 compatibility: Requires Node.js for Playwright tooling; TESTCHIMP_API_KEY for MCP and ai-wright. Network access for TestChimp APIs when using MCP or AI steps.
-version: 0.1.2
+version: 0.1.3
+required_mcp_client_version: "0.0.3"
 ---
 
 # TestChimp
@@ -22,6 +23,13 @@ Before executing a TestChimp flow:
 
 2. **Decision memory check** — locate `TESTCHIMP_SKILL_DIR/bin/.init-has-run`. If missing, tell user that it seems init hasn't run, and ask whether to run now (highly recommend) - and if agreed do (follow flow for `/testchimp init`).
 
+3. **MCP client compatibility check** — read **`required_mcp_client_version`** from this file's frontmatter (semver). Run **`npm view testchimp-mcp-client version`** and treat the result as **registry latest**. Find the project's MCP server config (for example **`.cursor/mcp.json`**, or the host's documented MCP config path) and locate the server entry whose **`args`** include **`testchimp-mcp-client`** (often the server name **`testchimp`**).
+   - If **`args`** use **`testchimp-mcp-client@latest`** or **`testchimp-mcp-client`** with **no** `@` version suffix, treat the **effective** runtime version as **registry latest** (because **`npx -y`** will resolve **`@latest`** on each run).
+   - If **`args`** use an explicit **`testchimp-mcp-client@x.y.z`**, parse **x.y.z** as the configured version.
+   - **Pass** if the effective configured version is **>=** **`required_mcp_client_version`** (semver). **Pass** if registry latest is **>=** **`required_mcp_client_version`** when using **`@latest`** or an unpinned package name.
+   - **Corrective action** when the pinned semver or registry latest is **below** **`required_mcp_client_version`:** Update **`args`** so the package specifier is **`testchimp-mcp-client@latest`** (see [`assets/sample-mcp.json`](assets/sample-mcp.json)), **or** pin to at least **`required_mcp_client_version`**. Preserve **`env.TESTCHIMP_API_KEY`**. Tell the user to **reload MCP / restart the IDE** so the new command line applies. If registry latest is still below **`required_mcp_client_version`**, tell the user the skill expects a newer published client once it is available.
+   - If no MCP config is present yet, **do not block** the flow; point to [`assets/sample-mcp.json`](assets/sample-mcp.json) during **`/testchimp init`**.
+
 ## How TestChimp works
 
 1. Create a project in TestChimp and connect the Git repo. Map 2 folders in the repo to the project created in TestChimp platform **`tests`** (SmartTests) and **`plans`** (test plans). Those can be mapped after logging in to TestChimp -> Select Project -> Project Settings -> Integrations -> GitHub.
@@ -31,7 +39,13 @@ Before executing a TestChimp flow:
 
 ## MCP client (agents)
 
-Install **`testchimp-mcp-client`** and configure below environment vars:
+Install **`testchimp-mcp-client@latest`** (see [`references/init-testchimp.md`](references/init-testchimp.md)) and register it in the host MCP config using **`npx`** with **`testchimp-mcp-client@latest`** in **`args`** so each **`npx`** invocation resolves the **latest** published client from npm.
+
+**Reference config:** [`assets/sample-mcp.json`](assets/sample-mcp.json) — shows **`command`**, **`args`** (`-y` + **`testchimp-mcp-client@latest`**), and **`env`** with **`TESTCHIMP_API_KEY`**. Replace the placeholder with the **project-scoped** API key from TestChimp; **do not commit** real keys. Optionally add **`TESTCHIMP_BACKEND_URL`** in **`env`** only when pointing at a non-default backend (for example staging).
+
+**Minimum version:** This skill declares **`required_mcp_client_version`** in frontmatter. Agents must run the **MCP client compatibility check** in **Preamble checks** so users are not pinned below that version.
+
+Environment vars (MCP **`env`** block):
 
 - `TESTCHIMP_API_KEY` (required)
 
@@ -99,4 +113,5 @@ Per the [Agent Skills specification](https://agentskills.io/specification), this
 | [`references/ai-wright-usage.md`](references/ai-wright-usage.md) | `ai-wright` install, env, API depth |
 | [`references/environment-management.md`](references/environment-management.md) | Persistent vs ephemeral envs, Bunnyshell, Branch Management, MCP `get_branch_specific_endpoint_config` |
 | [`assets/template_playwright.config.js`](assets/template_playwright.config.js) | Sample Playwright config (copy into SmartTests root) |
+| [`assets/sample-mcp.json`](assets/sample-mcp.json) | Sample Cursor-style MCP config: `npx`, `testchimp-mcp-client@latest`, `TESTCHIMP_API_KEY` |
 
