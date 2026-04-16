@@ -2,6 +2,8 @@
 
 This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and `@Scenario` links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
 
+**Ids:** Never hallucinate **`US-…`** or **`TS-…`** ids. Create stories and scenarios with MCP (**`create_user_story`**, **`create_test_scenario`**, …) or use ids already present in synced plan files / platform responses **before** referencing them in tests or new markdown. The scenario / story IDs are TestChimp system generated - not freetext.
+
 Further reading: [Test planning as code](https://docs.testchimp.io/test-planning/intro) (philosophy, Git export, default-branch scope for plans).
 
 ---

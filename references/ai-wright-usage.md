@@ -71,10 +71,11 @@ const orderIds = await ai.extract('List the order IDs from the table', {
 
 ### Authentication
 
-`ai-wright` is authenticated using TestChimp API Keys:
+`ai-wright` talks to TestChimp using API keys.
 
-1. **TestChimp API keys**
-   - Set `TESTCHIMP_API_KEY`, _or_ `TESTCHIMP_USER_AUTH_KEY` + `TESTCHIMP_USER_MAIL`.
+**Agents (Cursor / skill workflows):** Instruct users to set **`TESTCHIMP_API_KEY`** in the **shell environment** (and in MCP **`mcp.json`** **`env`** when using MCP). **Do not** suggest personal access tokens, user/mail auth env pairs, or putting **`TESTCHIMP_API_KEY`** in **`.env-QA`** — those files are for **test execution** variables (e.g. **`BASE_URL`**). On **401** errors, configure the key from TestChimp → **Project Settings** → **Key management**.
+
+**Library reference (non-agent contexts):** The package may also accept `TESTCHIMP_USER_AUTH_KEY` + `TESTCHIMP_USER_MAIL` in some setups; prefer **`TESTCHIMP_API_KEY`** for automation.
 
 ### Example Playwright Test
 
@@ -132,6 +133,6 @@ Optional context/options:
 - This balances speed and reliability while still unlocking AI flexibility where you _actually_ need it.
 
 ---
-Start by installing the package, set either TestChimp or OpenAI credentials, and layer `ai.act`, `ai.verify`, or `ai.extract` onto the toughest parts of your Playwright suite. 
+Start by installing the package, set **`TESTCHIMP_API_KEY`** for TestChimp-backed AI steps, and layer `ai.act`, `ai.verify`, or `ai.extract` onto the toughest parts of your Playwright suite. 
 
 AI where it helps, plain Playwright everywhere else.

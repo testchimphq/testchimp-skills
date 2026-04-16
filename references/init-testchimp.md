@@ -142,7 +142,7 @@ CI:
 Register **`testchimp-mcp-client`** in MCP config with **`TESTCHIMP_API_KEY`**.
 
 - Use **`command`:** **`npx`** and **`args`:** **`["-y", "testchimp-mcp-client@latest"]`** so each run resolves the latest npm release (see [`../assets/sample-mcp.json`](../assets/sample-mcp.json)).
-- Put **`TESTCHIMP_API_KEY`** in the server **`env`** block (project-scoped key).
+- Put **`TESTCHIMP_API_KEY`** in the server **`env`** block (project-scoped key). Export the **same** key in the **shell** when running **`npx playwright …`**. **Do not** put **`TESTCHIMP_API_KEY`** in **`.env-QA`** — that file is for **test execution** env (e.g. **`BASE_URL`**). On **401** from APIs or MCP, obtain a key at TestChimp → **Project Settings** → **Key management**.
 - After changing MCP config, the user should **reload MCP or restart the IDE** so the new **`npx`** arguments apply.
 
 After install, MCP tools can be used for:
