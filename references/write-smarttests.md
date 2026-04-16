@@ -67,7 +67,7 @@ SmartTests live under whatever folder the team mapped as **tests** in TestChimp 
 - **`.env-*`** — Per-environment variables for **exercising the app under test** (e.g. **`BASE_URL`**); **QA** is a common default. Read with `process.env.VAR_NAME`. **Not** for **`TESTCHIMP_API_KEY`** (use shell + MCP config).
 - **`playwright.config.js`** — Playwright config; projects using TestChimp add **`playwright-testchimp`**.
 
-Keep **`@playwright/test`** and **`playwright`** on the **same** version; use npm `overrides` if dependencies pull mismatched Playwright versions. TestChimp requires Playwright 1.59.0+.
+Keep **`@playwright/test`** and **`playwright`** on the **same** version; use npm `overrides` if dependencies pull mismatched Playwright versions. TestChimp requires **`@playwright/test`** **>= 1.59.0** in **`SKILL.md`**. Agents should run the **Playwright toolchain check** in **`SKILL.md` Preamble checks** before authoring or executing SmartTests so the install is real, not assumed.
 
 **Platform paths vs repo paths:** In API and MCP calls, paths are **platform-rooted**: first segment is `tests` or `plans`, then subfolders (e.g. `["tests","checkout"]`). The repo folder mapped to **tests** might be named `ui_tests` — you still pass `tests/checkout/...` in `scope.folderPath` when scoping coverage to that area.
 

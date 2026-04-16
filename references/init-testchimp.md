@@ -27,6 +27,8 @@ Use this explanation:
 
 ### 0.2 If user chooses quick smoke
 
+Complete the **Playwright toolchain check** (**`SKILL.md`** Preamble check **#4**) first so **`npm install`** has been run at the correct package root and **`@playwright/test` ≥ 1.59.0**. Smoke authoring should also prefer **browser- or Playwright-driven validation** of flows (not only static inference) when the environment allows.
+
 Collaborate with the user to collect:
 
 - target URL to test,
@@ -108,9 +110,9 @@ Platform path note: MCP APIs use platform-rooted paths (`plans/...` or `tests/..
 
 ### Action item B - Dependencies (Node / Playwright)
 
-TestChimp SmartTests require Playwright `1.59.0+`.
+TestChimp SmartTests require **`@playwright/test`** / **`playwright`** at **`>= 1.59.0`** (see **`required_playwright_test_version`** in **`SKILL.md`** frontmatter and the **Playwright toolchain check** in **Preamble checks** — agents must verify install root, **`npm install`**, and semver **before** relying on Playwright).
 
-Run installs from the directory containing `.testchimp-tests`:
+Run installs from the directory containing `.testchimp-tests` (or the monorepo package root that owns Playwright deps, if tests are nested):
 
 ```bash
 npm install playwright-testchimp
