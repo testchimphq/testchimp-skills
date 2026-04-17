@@ -141,6 +141,9 @@ Why this area (quick education):
 - Agent discovery (report findings first):
   - Check `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` for whether TrueCoverage is **enabled now**, **deferred**, or **disabled** (and for any prior instrumentation decisions).
   - Check whether `plans/events/` already exists and has emitted event plan content (if present).
+- If TrueCoverage is **enabled now** (or the user opts in during init), init must:
+  - set up **basic wiring** and instrument a **small initial event slice** (and create `plans/events/*.event.md` only for events actually instrumented), and
+  - generate `plans/knowledge/truecoverage-instrument-progress.md` so the rest can be completed incrementally via `/testchimp instrument` (and/or during `/testchimp audit`). See [`truecoverage.md`](./truecoverage.md).
 - If TrueCoverage decision state is missing OR the user wants to change it:
   - Decide TrueCoverage timing explicitly: set up **now**, **later** (defer with snooze file), or **no**.
   - If setting up now: confirm user should provide `TESTCHIMP_PROJECT_ID` and `TESTCHIMP_API_KEY` to the **app runtime** (usually via the app’s project environment files; not the `.env-QA` files under the tests root).
@@ -156,6 +159,7 @@ Why this area (quick education):
       - write a minimal event plan in `plans/events/` that documents event names, required payload fields, and when the wrapper emits them
       - wire the helper wrapper so it emits the identified minimal events during SmartTests execution
     - Sampling + event names should be summarized in `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` so Phase 3 doesn’t drift.
+    - Full plan + progress tracking (required during init when TrueCoverage is enabled): create `plans/knowledge/truecoverage-instrument-progress.md` (details in [`truecoverage.md`](./truecoverage.md)).
 
 ### Key Area 4 — Environment provision strategy (persistent vs ephemeral / EaaS)
 Why this area (quick education):
@@ -166,6 +170,12 @@ Why this area (quick education):
 - Agent discovery (report findings first):
   - Inspect local CI/workflows and env files to see whether a `BASE_URL` (or a preview URL convention) already exists.
   - If ephemeral env tooling is present in the repo, note it as a candidate path.
+- Local environment provisioning contract (must be explicit for later agents):
+  - During init, persist in `plans/knowledge/ai-test-instructions.md` under `## Environment Provision Strategy` → `### Local - Test Authoring`:
+    - a **single agent-runnable command** (or script entrypoint) to bring the stack up locally (prefer Docker Compose; if multiple prerequisites exist, prefer a single wrapper script entrypoint like `scripts/qa/local-up.sh`)
+    - an explicit **wait-for-healthy** definition (health endpoints, compose healthchecks, ports, etc.) so later `/testchimp test` can do: provision → wait healthy → proceed
+    - the resulting URLs and how they map to test variables (`BASE_URL`, `BACKEND_URL`, any `*_SERVICE_BACKEND_URL` used by world-states)
+  - If the stack is too complex to run locally, record that and use EaaS for author-time instead (with a “provision and wait” MCP tool preference).
 - Where will automated E2E run for PRs? (pick what matches; user can combine)
   - Preview/deploy preview URL + shared backend (typical frontend PRs), and/or
   - Ephemeral full-stack environments per branch/PR (backend or data isolation), and/or
@@ -211,6 +221,7 @@ Acceptance criteria (success checks):
   - emit helper wrapper defined with configuration setup
 - Environment provision strategy
   - depends on the decision, and `ai-test-instructions` contains the user agreed-upon decision AFTER it has been discussed
+  - for **Local - Test Authoring**, `ai-test-instructions` includes a single runnable “local up” command/script **and** explicit “wait until healthy” criteria (so agents can reliably provision and wait before testing)
 - CI setup
   - CI action authored
 
@@ -369,6 +380,12 @@ Read `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan`.
 If decision is missing or the user requests a change, explain value and ask:
 
 - **Yes now**: install `testchimp-rum-js` (in the application package), implement a single emit helper wrapper, configure runtime env vars (`TESTCHIMP_PROJECT_ID` + `TESTCHIMP_API_KEY` via app project environment files, not `.env-QA` under the tests root), set up sampling, identify a minimal set of basic events and write them to `plans/events/`, wire those events through the emit helper during SmartTests, align reporter config, and persist the decision + notes under `### TrueCoverage Plan`.
+
+  Additionally, during init you must generate the instrumentation tracker:
+  - scan the frontend to identify core routes/pages and the semantic events planned for each area
+  - create `plans/knowledge/truecoverage-instrument-progress.md` to track **planned vs done**
+  - mark any existing emits as **done**
+  - keep `plans/events/*.event.md` creation limited to the small slice that was actually wired up in init; planned events remain only in the progress tracker until `/testchimp instrument` lands them
 - **Later**: persist as deferred under `### TrueCoverage Plan` and direct user to `/testchimp setup truecoverage`.
 - **No**: persist as disabled under `### TrueCoverage Plan`.
 

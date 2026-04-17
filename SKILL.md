@@ -95,6 +95,10 @@ Use the repo, plans, and those tools to decide what to test and how to run them.
 
 If the user asks semantically similar requests ("Setup TestChimp", "Write Tests for the PR", "Analyze requirement coverage" etc.) — open the matching reference file above.
 
+TrueCoverage planning source of truth:
+
+- `plans/knowledge/truecoverage-instrument-progress.md` tracks **planned vs done** TrueCoverage instrumentation. Agents should consult it during `/testchimp init`, `/testchimp instrument`, and `/testchimp audit`.
+
 ## Updating this skill from Git
 
 This skill is published at **`https://github.com/testchimphq/testchimp-skills`** (branch **`main`**). Prefer installing with **`git clone … <skills-parent>/testchimp`** so **`.git`** remains and updates are trivial.
@@ -120,6 +124,11 @@ When a `plans/...` folder is provided, coverage resolves SmartTests linked to sc
 ## Progressive disclosure
 
 Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/plan`, `/audit`, TrueCoverage setup/instrument). During `/testchimp init`, follow the phased init workflow (optional quick smoke first, then collaborative plan, then execute item-by-item with progress persisted in `plans/knowledge/ai-test-instructions.md`). Plan **reading and authoring** (including MCP create/update flows) use [`references/test-planning.md`](references/test-planning.md). During `/testchimp test`, load [`references/api-testing.md`](references/api-testing.md) when a scenario is designated for API automation and [`references/write-smarttests.md`](references/write-smarttests.md) for UI SmartTests. Load [`references/environment-management.md`](references/environment-management.md) when choosing or provisioning test environments, EaaS (Bunnyshell), or branch-scoped `BASE_URL` resolution. Load [`references/truecoverage.md`](references/truecoverage.md) when RUM instrumentation, TrueCoverage planning, or TrueCoverage MCP tools are in scope. Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
+
+Environment provisioning contract:
+
+- During `/testchimp init`, persist the **chosen** environment provisioning strategy under `plans/knowledge/ai-test-instructions.md` → `## Environment Provision Strategy`.\n  - If **Local - Test Authoring** is the chosen path, persist a single **local environment up** command/script and explicit **wait-for-healthy** criteria (so the agent can reliably bring the stack up locally, wait until it’s ready, then run seeds/tests).\n  - If **EaaS (Bunnyshell)** or **Branch Management** is chosen, persist the provisioning + wait approach (and how `BASE_URL`/`BACKEND_URL` are resolved).
+- During `/testchimp test`, the agent must consult that decision file and bring the environment up (and wait until healthy) before executing any test cases (including world-state seeding/teardown between cases).
 
 ## References (this skill)
 

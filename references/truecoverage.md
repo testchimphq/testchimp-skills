@@ -38,6 +38,40 @@ If `enabled=false` or `later` (within snooze), skip instrumentation unless the u
 
 ---
 
+## Instrumentation progress tracker: `plans/knowledge/truecoverage-instrument-progress.md`
+
+To make TrueCoverage instrumentation incremental and resumable, maintain a single progress tracker under:
+
+- `plans/knowledge/truecoverage-instrument-progress.md`
+
+Purpose:
+
+- Track **planned vs done** event instrumentation with a route/page-based breakdown.
+- Let agents resume instrumentation consistently during `/testchimp instrument` and opportunistically during `/testchimp audit`.
+
+Init policy:
+
+- `/testchimp init` should wire **basic TrueCoverage infra** and a **small initial event slice**.
+- `/testchimp init` should also scan the frontend routes/pages and write the progress tracker for the **full planned event list**.
+- Init should create `plans/events/*.event.md` files **only** for events actually instrumented in init; planned-but-not-yet-instrumented events remain tracked only in the progress doc until `/testchimp instrument` lands them.
+
+Suggested format:
+
+- Sections grouped by **routes/pages**.\n- Each event entry is marked `done | planned | deferred`.\n- When an event is marked `done`, it should have a matching `plans/events/<title>.event.md` file.
+
+How `/testchimp instrument` uses it:
+
+1. Choose the next relevant `planned` events (often those impacted by the current PR).
+2. Implement emits in app code via the shared helper wrapper.
+3. Create/update `plans/events/<title>.event.md` for each newly-instrumented event.
+4. Update `plans/knowledge/truecoverage-instrument-progress.md` by marking those entries `done`.
+
+How `/testchimp audit` uses it:
+
+- Treat `plans/knowledge/truecoverage-instrument-progress.md` as the plan baseline.
+- If MCP analytics show high-signal gaps that are already `planned`, prioritize instrumenting them.
+- If analytics suggests missing events that are not in the tracker, add them as `planned` (or explain why they are out of scope).
+
 ## Ongoing: `/testchimp audit`
 
 When `enabled=true`, after requirement coverage and execution history, use MCP tools (see **SKILL.md**). Requests mirror the platform TrueCoverage API (JSON bodies use **camelCase** field names).
