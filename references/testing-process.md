@@ -16,7 +16,7 @@ Use this as the primary reference for `/testchimp test`. For SmartTest authoring
 
 Goal: produce a markdown plan document that is explicitly for **authoring TestChimp SmartTests**.
 
-**TrueCoverage gate:** Read **`<SKILL_DIR>/bin/.truecoverage_setup`** and follow **[`truecoverage.md`](./truecoverage.md)** (absent file, `enabled=true|false|later`, and 3-day snooze). If you may prompt the user (e.g. first run or `later` expired), resolve their choice and update the file before relying on instrumentation.
+**TrueCoverage gate:** Read `plans/knowledge/ai-test-instructions.md` first (if available) and follow **[`truecoverage.md`](./truecoverage.md)**. Only plan/execute TrueCoverage instrumentation when the project-level `### TrueCoverage Plan` indicates it is in scope (or the user explicitly opts in during this run).
 
 The plan must include:
 
@@ -50,7 +50,7 @@ The plan must include:
 5. **Infra gaps**
    - Identify missing seed/teardown endpoints or missing harness infrastructure.
    - Include remediation tasks in the plan before test authoring.
-6. **TrueCoverage (when `enabled=true` in `.truecoverage_setup`)**
+6. **TrueCoverage (when enabled for the project)**
    - Use **[`truecoverage.md`](./truecoverage.md)** as the full reference (RUM helper, credentials, **`plans/events/*.event.md`** format, audit/MCP). If the PR adds or materially changes **user journeys** worth measuring, plan instrumentation accordingly.
    - **Defining events:** Choose **stable, semantic** names for journey steps (not one-off UI noise). For each event type you add or change, plan a matching **`plans/events/<kebab-case>.event.md`** file so agents share one vocabulary—see the **Event documentation** section in [`truecoverage.md`](./truecoverage.md).
    - **Per-event metadata keys:** These slice **per-event** coverage metrics. Use **only low-cardinality** keys whose values form a **small, meaningful set** for comparing coverage (e.g. coarse **checkout path**, **payment method** category). **Do not** include **PII**. **Do not** use **high-cardinality** keys or values (e.g. `org_id`, `user_id`, raw emails, free-text)—they are unsuitable for sliced coverage and explode cardinality. Design keys so each dimension answers: *“Would I want a coverage breakdown by this slice?”*
@@ -70,8 +70,8 @@ Goal: create the environment and prerequisites needed to author and run tests.
 2. **Address infra gaps**
    - Implement or wire missing seed/teardown setup identified during planning.
    - Add or update **`*.world.js`** world-state scripts that the **plan** marked as missing, so execution can call **`ensureWorldState`** before browser steps.
-3. **TrueCoverage setup (when planned and `enabled=true`)**
-   - If instrumentation was planned: ensure `testchimp-rum-js` is available in the **application** package, add or update a **single helper** for emits, wire **API key / project id / environment** from config, and add **`plans/events/*.event.md`** docs for new event types. Skip if `.truecoverage_setup` is not `enabled=true` or the user declined.
+3. **TrueCoverage setup (when planned / enabled)**
+   - If instrumentation was planned and TrueCoverage is in scope per `plans/knowledge/ai-test-instructions.md`: ensure `testchimp-rum-js` is available in the **application** package, add or update a **single helper** for emits, wire **API key / project id / environment** from config, and add **`plans/events/*.event.md`** docs for new event types. Skip if the project plan indicates TrueCoverage is out of scope or the user declined.
 4. **Fix plan gaps first**
    - Author missing stories/scenarios before writing tests.
    - Follow **[`test-planning.md`](./test-planning.md)** for MCP create/update and markdown structure.

@@ -4,7 +4,7 @@ Audit test coverage vs plans using TestChimp data.
 
 ## Steps
 
-0. **TrueCoverage (optional)** — If **`<SKILL_DIR>/bin/.truecoverage_setup`** reads **`enabled=true`** (see [`truecoverage.md`](./truecoverage.md)), after requirement coverage use MCP tools to compare real usage vs tests. See **`ExecutionScope`** in that doc: **`baseExecutionScope`** ≈ prod/real usage; **`comparisonExecutionScope`** ≈ test/staging runs. Set **`automationEmitsOnly: true`** on the **comparison** (or **`coverage_scope`**) object so coverage reflects **test-tagged emits only** and manual traffic on the same env does not inflate “covered.” Then:
+0. **TrueCoverage (optional)** — If `plans/knowledge/ai-test-instructions.md` indicates TrueCoverage is enabled (see `### TrueCoverage Plan`), after requirement coverage use MCP tools to compare real usage vs tests. See **`ExecutionScope`** in [`truecoverage.md`](./truecoverage.md): **`baseExecutionScope`** ≈ prod/real usage; **`comparisonExecutionScope`** ≈ test/staging runs. Set **`automationEmitsOnly: true`** on the **comparison** (or **`coverage_scope`**) object so coverage reflects **test-tagged emits only** and manual traffic on the same env does not inflate “covered.” Then:
    - **`list_rum_environments`** — valid environment tags.
    - **`get_truecoverage_events`** — funnel summaries (`baseExecutionScope` + optional `comparisonExecutionScope`).
    - Drill down with **`get_truecoverage_event_details`**, **`get_truecoverage_child_event_tree`**, **`get_truecoverage_event_transition`**, **`get_truecoverage_event_time_series`**, and metadata tools as needed.

@@ -12,6 +12,36 @@ Initialize the repo for TestChimp using a phased workflow. This document is for 
 2. persist decisions and item status in `plans/knowledge/ai-test-instructions.md`,
 3. execute each action item methodically and update progress after each item.
 
+### Source of truth: `plans/knowledge/ai-test-instructions.md`
+
+Project-level decisions must be persisted in `plans/knowledge/ai-test-instructions.md` so teammates and agents share the same choices across workstations.
+
+At minimum, `/testchimp init` should ensure this file contains the following sections (author or update as needed):
+
+```md
+## Environment Provision Strategy
+
+### Local - Test Authoring
+
+### CI - Test Execution
+
+---
+
+### TestChimp Init Progress
+
+#### Completed
+
+#### Pending
+
+#### Deferred
+
+### TrueCoverage Plan
+
+### World-States Plan
+```
+
+Keep this file **project-level only** (avoid workstation-specific progress like “installed MCP client on my laptop”).
+
 ---
 
 ## Phase 0 - Quick smoke (optional but must be asked first)
@@ -22,7 +52,7 @@ At the very start of init, ask the user whether they want a quick smoke pass bef
 
 Use this explanation:
 
-- Full init sets up enterprise QA infrastructure: requirement traceability, TrueCoverage instrumentation, deterministic world-state strategy, seed/teardown setup, and branch-aware execution (including ephemeral environments) so E2E tests are done before PR merge with lower flakiness. Explain that TestChimp enables runtime intelligent steps for more reliable tests.
+- Full init sets up enterprise QA infrastructure: TrueCoverage instrumentation, World-state scripts, seed/teardown endpoints setup, and branch-aware execution (including ephemeral environments) so E2E tests are done before PR merge with lower flakiness. Explain that TestChimp enables runtime intelligent steps for more reliable tests.
 - This can be a larger cognitive investment, so quick smoke can provide immediate value first.
 
 ### 0.2 If user chooses quick smoke
@@ -69,7 +99,7 @@ Why this phase (quick education):
 
 Do not start implementing world-state/seed/truecoverage/CI until you have the user’s deliberate answers (or explicit acceptance of the agent’s proposed defaults) below.
 
-**Do not** write or update `plans/knowledge/ai-test-instructions.md` (other than `## Init requirements`) or `bin/.truecoverage_setup` until the user has answered in this conversation.
+**Do not** write or update `plans/knowledge/ai-test-instructions.md` (other than `## Init requirements`) until the user has answered in this conversation.
 
 ### Key Area 1 — Basic TestChimp integration
 - Agent discovery (report findings first):
@@ -83,12 +113,12 @@ Do not start implementing world-state/seed/truecoverage/CI until you have the us
 
 ### Key Area 2 — World-States Infra (seeding endpoints + base world-states)
 - Agent discovery (report findings first):
-  - Under the SmartTests root, check for `world-states/` and any `*.world.js` scripts. This is likely going to be empty for projects not configured in TestChimp.
+  - Under the SmartTests root, check for `setup/world-states/` and any `*.world.js` scripts. This is likely going to be empty for projects not configured in TestChimp.
   - Scan for existing test-data reset/seed/teardown endpoints (look for candidate reset/seed handlers or idempotent reset entrypoints in the backend). If they are present, then identify them, and include in the plan as identified seed endpoints.
-  - The core idea is - by the end of the init, agent will have authored a few (~1-2) core world-states using the seed endpoints.
+  - The core idea is - by the end of the init plan phase, agent will have identified a few (~1-2) core world-states to write and seed endpoints to implement.
 
 Why this area (quick education):
-- `world-states` let tests load a pre-defined application posture at author-time and execution-time, which dramatically cuts flakiness caused by state drift.
+- `world-states` let tests and agents load a pre-defined application posture at author-time and execution-time, which dramatically cuts flakiness caused by state drift.
 
 Agent stance (preferred behavior):
 - If seed/reset endpoints and/or world-state scripts are missing, do NOT ask the user “what endpoints should we write?”
@@ -96,7 +126,7 @@ Agent stance (preferred behavior):
   - infer candidate entity names from DB schema/ORM models/migrations and existing domain types
   - pick a small “base” set of core entities that unblocks the most common flows (just enough to author and run a first small test suite)
   - recommend a default endpoint naming scheme (for example `POST /qa/testdata/reset` or `POST /testdata/reset`) and ensure it is safe to run (non-production-only guards)
-  - include an idempotency plan (so retries don’t corrupt state)
+  - include an idempotency plan (so retries don’t corrupt state) - prefer endpoints to be authored as idempotent operations.
   - recommend the minimal base world-state script name (for example `world-states/base.world.js`) that matches the seeded posture
 
 Only ask the user when clarification/tweaks are required:
@@ -105,11 +135,11 @@ Only ask the user when clarification/tweaks are required:
 
 ### Key Area 3 — TrueCoverage Infra (RUM + journey events)
 Why this area (quick education):
-- TrueCoverage is extremely useful because it turns **production behavior** into **real coverage gaps**: what users actually do (features people engage with, where they spend time, where they drop off, and top-of-funnel vs later behavior).
-- Those signals let the team get intelligent QA insights, prioritizing optimizations for both test coverage and UX/flow reliability.
+- TrueCoverage is extremely useful because it turns **production behavior** into **real coverage gaps**: what users actually do (features people engage with, where they spend time, where they drop off, and top-of-funnel vs later behavior, funnel flows etc.).
+- Those signals are exposed through data APIs that are consumed via MCP by AI agents to identify critical gaps and to drive coverage improvements, and exploratory testing for UX issue identification, in a tight feedback loop.
 - We still start with a minimal, consistent event slice so the initial setup is fast and stable, but the data remains actionable (not just noisy).
 - Agent discovery (report findings first):
-  - Check `<SKILL_DIR>/bin/.truecoverage_setup` and whether `enabled=true|later|false` is already set.
+  - Check `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` for whether TrueCoverage is **enabled now**, **deferred**, or **disabled** (and for any prior instrumentation decisions).
   - Check whether `plans/events/` already exists and has emitted event plan content (if present).
 - If TrueCoverage decision state is missing OR the user wants to change it:
   - Decide TrueCoverage timing explicitly: set up **now**, **later** (defer with snooze file), or **no**.
@@ -125,7 +155,7 @@ Why this area (quick education):
     - Event plan locking:
       - write a minimal event plan in `plans/events/` that documents event names, required payload fields, and when the wrapper emits them
       - wire the helper wrapper so it emits the identified minimal events during SmartTests execution
-    - Sampling + event names should be summarized in `plans/knowledge/ai-test-instructions.md` under an explicit `## TrueCoverage` (or equivalent) subsection so Phase 3 doesn’t drift.
+    - Sampling + event names should be summarized in `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` so Phase 3 doesn’t drift.
 
 ### Key Area 4 — Environment provision strategy (persistent vs ephemeral / EaaS)
 Why this area (quick education):
@@ -139,7 +169,7 @@ Why this area (quick education):
 - Where will automated E2E run for PRs? (pick what matches; user can combine)
   - Preview/deploy preview URL + shared backend (typical frontend PRs), and/or
   - Ephemeral full-stack environments per branch/PR (backend or data isolation), and/or
-  - Mostly post-merge on a persistent stage (`BASE_URL` in `.env-*`), little or no PR-time E2E.
+  - Discouraged fallback: persistent stage (`BASE_URL` in `.env-*`) with little or no PR-time E2E.
 - If ephemeral: are you using (or planning) Bunnyshell with TestChimp? (yes / no / not sure). If the repo discovery/MCP EaaS hints are missing, ask the connection question; otherwise report what you found.
 - If PR previews matter: do you rely on TestChimp Branch Management URL template/overrides for PR-specific `BASE_URL`, or fixed env files only?
 
@@ -311,8 +341,8 @@ Choose where tests run:
 - **PR pre-merge (recommended)**:
   - branch-specific preview URL with shared backend, or
   - full isolated ephemeral environment (often preferred for backend changes).
-- **Post-merge main**:
-  - persistent stage environment using `BASE_URL` in env files.
+- **Discouraged fallback (explicit choice only):**
+  - persistent stage environment using `BASE_URL` in env files (typically `.env-QA` under the tests root).
 
 For ephemeral strategy with Bunnyshell, instruct user to configure TestChimp -> Project Settings -> Integrations -> Bunnyshell.
 If using custom PR environments, configure Branch Management URL template/overrides.
@@ -334,15 +364,13 @@ Success check (CI setup):
 
 ### Action item I - TrueCoverage opt-in
 
-Check `<SKILL_DIR>/bin/.truecoverage_setup`.
+Read `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan`.
 
-If missing or decision needs refresh, explain value and ask:
+If decision is missing or the user requests a change, explain value and ask:
 
-- **Yes now**: install `testchimp-rum-js` (in the application package), implement an emit helper wrapper using `testchimp-rum-js`, configure runtime env vars (`TESTCHIMP_PROJECT_ID` + `TESTCHIMP_API_KEY` via app project environment files, not `.env-QA` under the tests root), set up sampling, identify a minimal set of basic events and write them to `plans/events/`, wire those events through the emit helper during SmartTests, align reporter config, write `enabled=true`.
-- **Later**: write `enabled=later` and direct user to `/testchimp setup truecoverage`.
-- **No**: write `enabled=false`.
-
-If already `enabled=true`, skip reprompt unless user requests change.
+- **Yes now**: install `testchimp-rum-js` (in the application package), implement a single emit helper wrapper, configure runtime env vars (`TESTCHIMP_PROJECT_ID` + `TESTCHIMP_API_KEY` via app project environment files, not `.env-QA` under the tests root), set up sampling, identify a minimal set of basic events and write them to `plans/events/`, wire those events through the emit helper during SmartTests, align reporter config, and persist the decision + notes under `### TrueCoverage Plan`.
+- **Later**: persist as deferred under `### TrueCoverage Plan` and direct user to `/testchimp setup truecoverage`.
+- **No**: persist as disabled under `### TrueCoverage Plan`.
 
 Success check (TrueCoverage Infra):
 - if `enabled=true`, `plans/events/` is not empty and the emit helper wrapper is defined with configuration setup (env wiring + sampling + basic event emits).
@@ -374,18 +402,17 @@ Critical behavior:
 
 ### TrueCoverage decision memory details
 
-Read `<SKILL_DIR>/bin/.truecoverage_setup` before prompting.
+Read `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` before prompting.
 
-- `enabled=true`: do not reprompt unless user asks to revisit.
-- `enabled=false`: skip instrumentation unless user changes decision.
-- `enabled=later`: apply a 3-day snooze before reprompting. If snooze has not elapsed, continue without reprompt.
-- missing file: ask and create state file.
+- If enabled: do not reprompt unless user asks to revisit.
+- If disabled: skip instrumentation unless user changes decision.
+- If deferred: skip unless user asks to set up now.
 
 If user chooses setup now, include:
 
 - `testchimp-rum-js` installation in application package,
 - one shared emit helper,
-- env wiring (`TESTCHIMP_API_KEY`, project id, environment tags),
+- request args wiring (`TESTCHIMP_API_KEY`, project id, environment tags),
 - alignment with reporter and event documentation flow.
 
 ### Environment strategy decision details
@@ -393,10 +420,13 @@ If user chooses setup now, include:
 When selecting execution target, make this explicit in `plans/knowledge/ai-test-instructions.md`:
 
 - **Persistent backend + local/preview frontend**: preferred fast path for frontend-only changes.
-- **Full-stack ephemeral env**: preferred when backend/data behavior changes and deterministic isolation is required.
-- **Post-merge stage testing**: set persistent `BASE_URL` in environment config for deployment-stage testing.
+- **Full-stack remote managed ephemeral env**: preferred when backend/data behavior changes in the PR and deterministic isolation is required for pre-PR-merge testing.
+- **Full-stack local ephemeral env**: A slight variation could be loading the entire stack locally - if that is feasible (for simple backends). Can use testcontainers for 
+- **Discouraged fallback**: persistent stage testing via `BASE_URL` in env config (only if the team explicitly chooses post-merge-only E2E for initial simplicity).
 
 If user chooses ephemeral and Bunnyshell is not configured, stop and ask user to configure TestChimp -> Project Settings -> Integrations -> Bunnyshell (or use Branch Management if they have bespoke PR environment URLs).
+
+Remember the environment strategy choice made - in the ai-test-instructions.md file.
 
 ### Seed/teardown endpoint planning details
 
@@ -430,12 +460,6 @@ Init is complete when the action checklist is fully resolved (done, skipped, or 
 - deferred items explicitly listed.
 
 Persist final state in `plans/knowledge/ai-test-instructions.md` including an **Environment strategy** subsection.
-
-Write the init marker file only at this point:
-
-- `<skill-dir>/bin/.init-has-run`
-
-Do **not** write `.init-has-run` if only quick smoke was completed and full init was deferred.
 
 ---
 

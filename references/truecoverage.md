@@ -15,31 +15,15 @@ TrueCoverage connects **real user behavior** (from production) with **test execu
 
 ---
 
-## Skill state: `<SKILL_DIR>/bin/.truecoverage_setup`
+## Project decision: `plans/knowledge/ai-test-instructions.md`
 
-Agents persist the user’s choice in **`bin/.truecoverage_setup`** (create `bin/` if needed). Single line:
+TrueCoverage decisions are project-level and must be persisted in `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` (not in workstation marker files).
 
-```text
-enabled=true
-```
+Guidance:
 
-Allowed values:
-
-| Value | Meaning |
-|--------|---------|
-| `enabled=true` | TrueCoverage is in scope: follow instrument / audit steps below. |
-| `enabled=false` | User opted out; **do not** prompt to set up or instrument for TrueCoverage until they ask (e.g. `/testchimp setup truecoverage`). |
-| `enabled=later` | User asked to defer. **Do not** prompt again until the file’s **mtime** is older than **3 days**; then you may ask once whether to enable now. If they choose “not now but later” again, **touch** the file (update mtime) to snooze another 3 days. If they say never, set `enabled=false`. |
-
-If the file is **missing**:
-
-- Explain briefly what TrueCoverage adds (coverage gaps aligned with real usage, used in `/testchimp test` and `/testchimp audit`).
-- Ask whether to set it up.
-- If **yes:** set `enabled=true` and include setup + instrumentation in the relevant plan/execution phases.
-- If **no:** set `enabled=false`.
-- If **later:** set `enabled=later` and touch the file on snooze as above.
-
-During **`/testchimp test`**, read this file **first** (see [testing-process.md](./testing-process.md)): only instrument and expand RUM when `enabled=true` (subject to the `later` / absent-file rules).
+- If TrueCoverage is **enabled** in the project plan: follow setup/instrument steps below.
+- If it is **disabled**: do not prompt again unless the user explicitly asks (e.g. `/testchimp setup truecoverage`).
+- If it is **deferred**: skip instrumentation unless the user decides to enable now.
 
 ---
 
@@ -94,8 +78,8 @@ TrueCoverage setup and ongoing instrumentation is part of `init` and `test` work
 
 | User intent | Action |
 |-------------|--------|
-| `/testchimp setup truecoverage` (or setup-truecoverage) | Walk through RUM install, env vars, helper, reporter; set `enabled=true` when done. |
-| `/testchimp instrument` | Instrument current PR work with emits; run setup first if not `enabled=true` and user wants it. |
+| `/testchimp setup truecoverage` (or setup-truecoverage) | Walk through RUM install, env vars, helper, reporter; persist the decision and notes under `### TrueCoverage Plan` in `plans/knowledge/ai-test-instructions.md`. |
+| `/testchimp instrument` | Instrument current PR work with emits; run setup first if TrueCoverage is not yet enabled and the user wants it. |
 
 ---
 

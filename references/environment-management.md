@@ -1,36 +1,78 @@
-# Test environments (persistent vs ephemeral)
+# Environment provisioning (Local vs CI)
 
-Use this reference when choosing **where** SmartTests authoring happen, provisioning **EaaS**, or resolving **branch-scoped BASE_URL**s. Official product docs: [Configuring branch-specific endpoints](https://docs.testchimp.io/smart-tests/branch-specific-test-execution#configuring-branch-specific-endpoints).
+Use this reference when deciding **where tests run** and **how environments are provisioned** for **per‑PR testing-before-merge**.
 
-## Two environment types
+This doc intentionally focuses on two workflows only:
 
-### Persistent (shared)
+- **Local — Test author time** (agents and humans iterating on tests)
+- **CI — Test execution time** (PR checks)
 
-- **Typical:** One stable frontend URL plus a shared backend stack. Configure in `.env-<ENV>` (or similar) with `BASE_URL`, `API_URL`, etc.
-- **Variation — frontend isolation:** Deploy the PR frontend to a preview URL or run it locally while pointing at a **shared** backend. Suitable for **frontend-only** PRs when backend behavior is unchanged.
-- **Pros:** Fast and cheap (no extra provisioning).
-- **Cons:** Shared world-state with other testers, agents, and tests → less deterministic. Branch-specific backend changes may not be deployed there yet.
+Official product docs: [Configuring branch-specific endpoints](https://docs.testchimp.io/smart-tests/branch-specific-test-execution#configuring-branch-specific-endpoints).
 
-Persistent targets are usually tied to a **stage** (staging, dev, prod). They are deployed after merges/releases, so they are a poor fit for **backend** changes that only exist on a PR branch.
+## Workflow 1: Local — test author time (agents)
 
-### Ephemeral on demand (isolated)
+### Preferred default: Docker Compose full stack
 
-- **Typical:** Full-stack environment for a **Git branch**, provisioned via **EaaS**. TestChimp integrates with **Bunnyshell** for this workflow.
-- **Variation — bespoke provisioning:** Your org provisions PR environments outside TestChimp. Configure resulting URLs via **TestChimp → Project Settings → Branch Management** (URL template and/or per-branch overrides). When **Bunnyshell is not configured** and you need the PR’s resolved `BASE_URL`, use the MCP tool **`get_branch_specific_endpoint_config`** with the Git branch name (see below).
+Goal: get value quickly without requiring EaaS setup during onboarding, and without paying for remote ephemeral environments for tight local agent loops.
 
-After provision, run a suitable **world-state** script (`*.world.js`, `ensureWorldState`) so the stack reaches a known state before UI/API tests (based on the needed state for the test).
+**Agent decisioning (repo discovery first):**
 
-## Choosing a mode
+1. Look for an existing local full-stack entrypoint in the repo:
+   - `docker-compose.yml` / `docker-compose.*.yml` files, and/or
+   - README instructions that mention `docker compose up`, `make up`, `task up`, etc.
+2. If it exists and brings up the stack end-to-end, **use it**.
+3. If it exists but is partial (only DB, only API, etc.), record that constraint and ask whether to author a complete one - reusing the existing partial ones.
+4. If no compose exists, ask whether to author one (only if the stack is realistically runnable on a workstation).
 
-| Situation | Suggested approach |
-|-----------|-------------------|
-| Frontend-only PR; shared staging is enough | Persistent + preview or local FE → shared BE (fast default). |
-| Backend or data-layer changes on the PR | Ephemeral full stack (Bunnyshell) or bespoke branch URL from Branch Management. |
-| Post-merge / release testing on a fixed stage | Persistent env vars (`BASE_URL` in `.env-*`, Playwright `baseURL`). |
+**Caching / build-cost guidance (must):**
+
+- Prefer Docker BuildKit cache for builds:
+
+```bash
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+```
+
+- For repeat runs, prefer:
+  - build once (`docker compose build`) and then
+  - start without rebuilding (`docker compose up -d`), avoiding `up --build` unless necessary.
+
+**Pre-steps (must be captured for the project):**
+
+Some stacks require pre-steps (examples): cloud auth, local secrets access, env files, DB migrations, service emulators.
+
+- Identify these by reading repo docs, compose header comments, `.env.example` files, and any `scripts/` setup docs.
+- Persist the project-level prerequisites and the single recommended “local up” command in `plans/knowledge/ai-test-instructions.md` under:\n  - `## Environment Provision Strategy` → `### Local - Test Authoring`
+
+**Ergonomics requirement (recommended):**
+
+If there are multiple pre-steps, create a single runnable script entrypoint (conventional example: `scripts/qa/local-up.sh`) that:\n- validates prerequisites,\n- exports or checks required env vars,\n- then runs the compose up sequence.
+
+### Alternative: EaaS (Bunnyshell) for author time
+
+Use EaaS for local authoring only when the stack is too big or too complex to run locally (examples: requires full Kubernetes clusters, heavy data dependencies, or non-trivial service meshes).
+
+If the repo does not already have EaaS configured, initiate the EaaS setup workflow separately instead of blocking onboarding.
+
+## Workflow 2: CI — test execution time (PR)
+
+### Preferred default: EaaS (Bunnyshell)
+
+CI should default to running tests against an ephemeral PR environment provisioned via EaaS so results reflect the PR’s code.
+
+- If `bunnyshell.yaml` exists, use it as the basis for provisioning.
+- If it does not exist, ask whether the team wants it created; if yes, follow the EaaS setup workflow.
+
+### Discouraged fallback: persistent environment URL
+
+If the team explicitly chooses to run E2E only post-merge (discouraged, but allowed for “get going quickly” - as a stop gap until EaaS is setup):
+
+- Configure a persistent target URL via `.env-QA` under the tests root (or equivalent), e.g. `BASE_URL=...`.
+- Make it explicit in `plans/knowledge/ai-test-instructions.md` that this is a fallback and why it was chosen.
 
 ## EaaS (Bunnyshell) workflow
 
-1. Call **`get_eaas_config`**. Empty `{}` means BunnyShell integration is not set up or has no public fields exposed.
+1. Call **`get_eaas_config`**. Empty `{}` means BunnyShell integration is not set up.
 2. When configured, **prefer `provision_ephemeral_environment_and_wait`** (optional `branchName`, `pollIntervalSeconds` default 60, `maxWaitMinutes` default 25). It provisions and polls until the environment is **deployed** with **`component_urls_json`** populated, then returns a single JSON: `outcome` (`success` \| `failed` \| `timeout`), `failure_phase` (`provision` \| `deploy` \| `wait`), `message` for the user, and `component_urls_json` on success. Provisioning often takes **~5–10 minutes**—the MCP server emits progress logs while waiting.
 3. **Fallback (only if** the wait tool is missing, errors, or the host kills long MCP calls**):** call **`provision_ephemeral_environment`**, then poll **`get_ephemeral_environment_status`** about **once per minute** for up to **~25 minutes** with the same success criteria (deployed + component URLs or terminal failure).
 4. Parse **`component_urls_json`** to set `BASE_URL`, `BACKEND_URL`, and any `*_SERVICE_BACKEND_URL` vars your repo uses for seeds and tests (see [`world-states.md`](./world-states.md)).
