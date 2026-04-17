@@ -1,9 +1,9 @@
 ---
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP), coverage, and MCP tools. Use when the user mentions TestChimp, /testchimp commands (init, test, plan, audit), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
-compatibility: Requires Node.js for Playwright tooling; TESTCHIMP_API_KEY for MCP and ai-wright. Network access for TestChimp APIs when using MCP or AI steps.
-version: 0.1.3
-required_mcp_client_version: "0.0.3"
+compatibility: Requires Node.js; @playwright/test and playwright >= required_playwright_test_version (see Preamble checks); TESTCHIMP_API_KEY for MCP and ai-wright. Network access for TestChimp APIs when using MCP or AI steps.
+version: 0.1.4
+required_mcp_client_version: "0.0.4"
 ---
 
 # TestChimp
@@ -30,6 +30,12 @@ Before executing a TestChimp flow:
    - **Corrective action** when the pinned semver or registry latest is **below** **`required_mcp_client_version`:** Update **`args`** so the package specifier is **`testchimp-mcp-client@latest`** (see [`assets/sample-mcp.json`](assets/sample-mcp.json)), **or** pin to at least **`required_mcp_client_version`**. Preserve **`env.TESTCHIMP_API_KEY`**. Tell the user to **reload MCP / restart the IDE** so the new command line applies. If registry latest is still below **`required_mcp_client_version`**, tell the user the skill expects a newer published client once it is available.
    - If no MCP config is present yet, **do not block** the flow; point to [`assets/sample-mcp.json`](assets/sample-mcp.json) during **`/testchimp init`**.
 
+4. **Playwright toolchain check** — TestChimp requires Playwright 1.59.0+. **Before** authoring SmartTests, running **`npx playwright test`**, or doing browser-driven exploration for **`/testchimp init`** smoke, ensure the repo actually has a compliant install:
+   - Resolve the **install root**: from the SmartTests directory (the one containing **`.testchimp-tests`**), walk up until you find the **`package.json`** that declares **`@playwright/test`** (often a parent such as `ui/` in a monorepo). That directory is where **`npm install`** / **`npm ci`** must succeed for Playwright to be runnable.
+   - If **`node_modules`** is missing or **`npx playwright --version`** fails, **run the repo’s install** (`npm install`, `npm ci`, or documented workspace install) **at that install root** first. **Do not** treat missing **`node_modules`** as “optional”; without install, Playwright-based steps cannot be validated.
+   - **Verify** the resolved **`@playwright/test`** version is **>=** 1.59.0, and that **`playwright`** (browser package) matches **`@playwright/test`** (same line as [`references/write-smarttests.md`](references/write-smarttests.md)). Use e.g. `npm ls @playwright/test --prefix <install-root>` or `npx playwright --version` with **cwd** at the install root.
+   - **Corrective action** if below minimum or version mismatch: bump **`@playwright/test`** and **`playwright`** together, reinstall, then **`npx playwright install`** for browsers if needed. If the environment cannot run install commands, **tell the user** to install dependencies and re-run; **do not** silently author tests that were never executed against a real runner.
+
 ## How TestChimp works
 
 1. Create a project in TestChimp and connect the Git repo. Map 2 folders in the repo to the project created in TestChimp platform **`tests`** (SmartTests) and **`plans`** (test plans). Those can be mapped after logging in to TestChimp -> Select Project -> Project Settings -> Integrations -> GitHub.
@@ -37,17 +43,29 @@ Before executing a TestChimp flow:
 3. Run SmartTests with Playwright; install **`playwright-testchimp`** as documented in [`references/write-smarttests.md`](references/write-smarttests.md). This also pulls in `ai-wright` for enabling execution time intelligent steps.
 4. Local and CI calls to TestChimp APIs are authenticated via **`TESTCHIMP_API_KEY`** env var (note that this is a project specific key - so it should be used scoped per project).
 
+## Agent guardrails (must follow)
+
+1. **Scenario and story IDs — never invent.** Do **not** guess or fabricate **`#TS-…`** / **`US-…`** ids or write `// @Scenario: #TS-…` comments before those entities exist in TestChimp. **First** create user stories and test scenarios via the planning flow and MCP tools (**`create_user_story`**, **`create_test_scenario`**, etc.; see [`references/test-planning.md`](references/test-planning.md)), or use ids **returned** by the platform / present in committed plan markdown. **Then** add link comments in SmartTests so stable ids match the system.
+
+2. **Run Playwright only from the mapped SmartTests folder.** Find the repo directory that contains **`.testchimp-tests`** (the folder mapped to platform **tests** — the on-disk name may be `tests`, `ui_tests`, or anything). **`cd` to that folder**, then run Playwright via **`npx`** (e.g. `npx playwright test …`). Do not run tests from the repo root unless that root **is** the mapped folder.
+
+3. **`TESTCHIMP_API_KEY` — where it lives.** Set the project API key in the **shell environment** for local runs and in the MCP server **`env`** block in **`mcp.json`** (see [`assets/sample-mcp.json`](assets/sample-mcp.json)). **Do not** put **`TESTCHIMP_API_KEY`** in **`.env-QA`** (or other **`.env-*`**) files — those are for **test execution** variables (e.g. **`BASE_URL`**, auth fixtures, feature flags). For **ai-wright** / AI steps, instruct users to set **`TESTCHIMP_API_KEY`** in the environment only — **do not** document or suggest **personal access token (PAT)** or alternate user-auth env pairs for agents.
+
+4. **HTTP 401 from TestChimp APIs or MCP.** If a run or MCP call returns **401 Unauthorized**, stop and ask the user to configure **`TESTCHIMP_API_KEY`**. Tell them how to obtain a key: sign in to **TestChimp** → **Project Settings** → **Key management**, where project API keys are listed. Remind them to set the same key in the shell (and in **`mcp.json`** **`env`** for MCP).
+
 ## MCP client (agents)
 
 Install **`testchimp-mcp-client@latest`** (see [`references/init-testchimp.md`](references/init-testchimp.md)) and register it in the host MCP config using **`npx`** with **`testchimp-mcp-client@latest`** in **`args`** so each **`npx`** invocation resolves the **latest** published client from npm.
 
 **Reference config:** [`assets/sample-mcp.json`](assets/sample-mcp.json) — shows **`command`**, **`args`** (`-y` + **`testchimp-mcp-client@latest`**), and **`env`** with **`TESTCHIMP_API_KEY`**. Replace the placeholder with the **project-scoped** API key from TestChimp; **do not commit** real keys. Optionally add **`TESTCHIMP_BACKEND_URL`** in **`env`** only when pointing at a non-default backend (for example staging).
 
-**Minimum version:** This skill declares **`required_mcp_client_version`** in frontmatter. Agents must run the **MCP client compatibility check** in **Preamble checks** so users are not pinned below that version.
+**Minimum versions:** This skill declares **`required_mcp_client_version`** and **`required_playwright_test_version`** in frontmatter. Agents must run the **MCP client compatibility check** and **Playwright toolchain check** in **Preamble checks**.
 
 Environment vars (MCP **`env`** block):
 
-- `TESTCHIMP_API_KEY` (required)
+- `TESTCHIMP_API_KEY` (required) — same project key as in the shell for Playwright / ai-wright; not stored in **`.env-QA`**.
+
+If MCP or API calls return **401**, see **Agent guardrails** → HTTP 401.
 
 The MCP server exposes tools grouped by area:
 

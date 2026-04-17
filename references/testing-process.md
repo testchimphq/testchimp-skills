@@ -89,7 +89,7 @@ Goal: author and validate SmartTests for planned cases.
 3. Create a Playwright browser session, authenticate once, and store storage state in a temporary file for reuse. Make sure the authored test also follows same via storageContext.
 4. **Application emits (TrueCoverage):** When `enabled=true` and the plan called for new /updated events, add emits in the **app** code for those interactions and keep **`plans/events/*.event.md`** in sync. Do this **before** authoring individual SmartTests or API tests that depend on those events being emitted or on TrueCoverage picking them up. This work is independent of SmartTest files but should land in the same PR when possible.
 5. Implement each planned test case (UI/API as planned), reusing storage state for faster repeated sessions. For writing API tests, refer **[`api-testing.md`](./api-testing.md)**.
-6. Run written tests with Playwright and fix failures iteratively.
+6. Run written tests with Playwright and fix failures iteratively. **`cd`** to the mapped SmartTests root (folder with **`.testchimp-tests`**), then run via **`npx playwright …`** (see [`write-smarttests.md`](./write-smarttests.md) **Running Playwright**). Ensure **`TESTCHIMP_API_KEY`** is set in the shell (not only in **`.env-QA`**). If runs or MCP return **401**, follow the skill’s HTTP 401 guidance (Project Settings → Key management).
 7. Retry fix-and-rerun up to **2 attempts per failing test**. If still failing, stop retrying those and clearly ask user for help with the unresolved failures (in the report created in the next phase).
 
 ---

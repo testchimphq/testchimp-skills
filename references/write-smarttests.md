@@ -23,7 +23,7 @@ For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, pla
 3. **Per scenario** — Add or update a test; reuse existing page objects, fixtures, and env conventions in the repo.
 4. **Drive the real app with Playwright (no invented steps)** — Human input is often required **before** you start (URLs, accounts, feature flags, which environment to hit) **and sometimes during** a run (unexpected MFA, captcha, missing seed data, “which org should I use?”). Do not guess secrets or one-off values (unless you deem any random suitable guessed value should suffice for a specific step).
 
-   - **Discover values in the repo before asking:** Read **`.env-*`** files under the mapped tests folder (e.g. `.env-QA`) for standard names like `BASE_URL`, auth-related vars, and feature toggles. Skim **`setup/`** scripts and global setup for how auth state or data is created. Open **existing specs** in the same area to see which env vars, fixtures, and URLs peers use.
+   - **Discover values in the repo before asking:** Read **`.env-*`** files under the mapped tests folder (e.g. `.env-QA`) for **test-run** variables: `BASE_URL`, auth-related vars, feature toggles, etc. **Do not** store **`TESTCHIMP_API_KEY`** there — it belongs in the **shell** and MCP **`env`** (see skill **Agent guardrails**). Skim **`setup/`** scripts and global setup for how auth state or data is created. Open **existing specs** in the same area to see which env vars, fixtures, and URLs peers use.
    - **Ask early when something crucial is missing** — If authentication details, org/project identifiers, or other data the scenario depends on is not discoverable from the repo or plans, **ask the user before** driving the browser. If you only learn what is missing **while** interacting (e.g. login fails, wrong tenant), **stop and ask** rather than fabricating credentials or steps.
    - **Run in headed mode by default** — Use a **headed** Playwright run (if in a graphic support environment such as local dev) so the user can see the browser (unless they explicitly request headless). The goal of the interaction pass is to **record the Playwright commands that actually work** against the live UI.
    - **Multi-pass authoring (recommended):**
@@ -38,7 +38,7 @@ For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, pla
 
 6. **Scenario link** — As the **first statement inside the test body**:
    - `// @Scenario: #TS-xxx <Scenario title>`  
-   Use the scenario id from the plan markdown (`#TS-xxx`). Same pattern as: 
+   Use the **`#TS-xxx`** id that **already exists** in TestChimp (from plan markdown **`id:`**, or from MCP **`create_test_scenario`** / **`create_user_story`** responses). **Never invent** scenario or story ids: create scenarios (and parent stories if needed) **before** adding this comment so links stay stable and real. Same pattern as: 
    `// @Scenario: #TS-102 Checkout with credit card`.
 
 7. **Mix Playwright and AI** — Prefer plain Playwright for stable, fast paths; use **`ai.*`** when the selector-based step looks brittle or intent-driven steps are clearer (see [AI steps](#ai-steps-ai-wright-when-to-use-what)). AI steps use an agent that observes the screen to fulfill the objective, so they are typically **slower** than direct locators - though more flexible to UI variances.
@@ -64,12 +64,23 @@ SmartTests live under whatever folder the team mapped as **tests** in TestChimp 
 - **`setup/`** — Global setup runs **before** browser tests via Playwright [project dependencies](https://playwright.dev/docs/test-global-setup-teardown#option-1-project-dependencies). Use for seed data, auth state, shared harness. **`setup/world-states/`** holds **`*.world.js`** world-state scripts (see [world-states.md](./world-states.md)). Usually excluded from the main test project with `testIgnore` in config.
 - **`e2e/`** (and siblings) — Specs match `*.{spec,test}.{js,ts}` under the tests root except ignored paths like `setup/`.
 - **`assets/`** — Static files (uploads, etc.).
-- **`.env-*`** — Per-environment variables; **QA** is a common default. Read with `process.env.VAR_NAME`.
+- **`.env-*`** — Per-environment variables for **exercising the app under test** (e.g. **`BASE_URL`**); **QA** is a common default. Read with `process.env.VAR_NAME`. **Not** for **`TESTCHIMP_API_KEY`** (use shell + MCP config).
 - **`playwright.config.js`** — Playwright config; projects using TestChimp add **`playwright-testchimp`**.
 
-Keep **`@playwright/test`** and **`playwright`** on the **same** version; use npm `overrides` if dependencies pull mismatched Playwright versions. TestChimp requires Playwright 1.59.0+.
+Keep **`@playwright/test`** and **`playwright`** on the **same** version; use npm `overrides` if dependencies pull mismatched Playwright versions. TestChimp requires **`@playwright/test`** **>= 1.59.0** in **`SKILL.md`**. Agents should run the **Playwright toolchain check** in **`SKILL.md` Preamble checks** before authoring or executing SmartTests so the install is real, not assumed.
 
 **Platform paths vs repo paths:** In API and MCP calls, paths are **platform-rooted**: first segment is `tests` or `plans`, then subfolders (e.g. `["tests","checkout"]`). The repo folder mapped to **tests** might be named `ui_tests` — you still pass `tests/checkout/...` in `scope.folderPath` when scoping coverage to that area.
+
+### Running Playwright (agents)
+
+Always execute from the **mapped SmartTests root** (the directory containing **`.testchimp-tests`**):
+
+```bash
+cd /path/to/<mapped-tests-folder>
+npx playwright test
+```
+
+Use **`npx playwright …`** (install/use the project’s Playwright CLI from that folder). Do not assume the folder is literally named `tests` — resolve the path via the marker file.
 
 ---
 
@@ -81,7 +92,9 @@ These tools are provided by the **`testchimp-mcp-client`** package when it is in
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `TESTCHIMP_API_KEY` | Yes | Authenticates to TestChimp; project is inferred from the key. |
+| `TESTCHIMP_API_KEY` | Yes | Authenticates to TestChimp; project is inferred from the key. Set in **`mcp.json`** **`env`** and in the **shell** for local runs — **not** in **`.env-QA`**. |
+
+**Environment (Playwright / ai-wright in the same session):** Export the **same** **`TESTCHIMP_API_KEY`** in the shell when running `npx playwright …` so reporters, **`ai.*`** steps, and MCP-backed flows share one project key. For **ai-wright**, agents should **only** instruct setting **`TESTCHIMP_API_KEY`** (not user PAT / mail-based auth). On **401** responses, configure the key via TestChimp → **Project Settings** → **Key management**.
 
 ### Tool: `get_requirement_coverage`
 
