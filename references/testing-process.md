@@ -8,7 +8,7 @@ This document defines the **phased workflow** for testing a PR with TestChimp.
 3. Execute
 4. Cleanup
 
-Use this as the primary reference for `/testchimp test`. For SmartTest authoring patterns and examples, load **[`write-smarttests.md`](./write-smarttests.md)** during the **Execute** phase. For **world-state** scripts (`*.world.js`), `ensureWorldState`, and how execution should order **seed → browser**, load **[`world-states.md`](./world-states.md)** alongside this doc. For TrueCoverage rules (state file, instrumentation, `plans/events/`), load **[`truecoverage.md`](./truecoverage.md)** when RUM is in scope.
+Use this as the primary reference for `/testchimp test`. For SmartTest authoring patterns and examples, load **[`write-smarttests.md`](./write-smarttests.md)** during the **Execute** phase. For **world-state** scripts (`*.world.js`), `ensureWorldState`, and how execution should order **seed → browser**, load **[`world-states.md`](./world-states.md)** alongside this doc. For TrueCoverage rules (instrumentation, `plans/events/*.event.md`), load **[`truecoverage.md`](./truecoverage.md)** when RUM is in scope.
 
 ---
 
@@ -51,7 +51,10 @@ The plan must include:
    - Identify missing seed/teardown endpoints or missing harness infrastructure.
    - Include remediation tasks in the plan before test authoring.
 6. **TrueCoverage (when `enabled=true` in `.truecoverage_setup`)**
-   - If the PR adds or materially changes **user journeys** worth measuring, plan which **semantic events** to emit, optional **metadata** keys (low cardinality), and new or updated **`plans/events/*.md`** entries for agent reference.
+   - Use **[`truecoverage.md`](./truecoverage.md)** as the full reference (RUM helper, credentials, **`plans/events/*.event.md`** format, audit/MCP). If the PR adds or materially changes **user journeys** worth measuring, plan instrumentation accordingly.
+   - **Defining events:** Choose **stable, semantic** names for journey steps (not one-off UI noise). For each event type you add or change, plan a matching **`plans/events/<kebab-case>.event.md`** file so agents share one vocabulary—see the **Event documentation** section in [`truecoverage.md`](./truecoverage.md).
+   - **Per-event metadata keys:** These slice **per-event** coverage metrics. Use **only low-cardinality** keys whose values form a **small, meaningful set** for comparing coverage (e.g. coarse **checkout path**, **payment method** category). **Do not** include **PII**. **Do not** use **high-cardinality** keys or values (e.g. `org_id`, `user_id`, raw emails, free-text)—they are unsuitable for sliced coverage and explode cardinality. Design keys so each dimension answers: *“Would I want a coverage breakdown by this slice?”*
+   - **Session metadata keys:** Use these for **session-wide, non-mutating** context that applies across the session (e.g. coarse **user role**, **region/country** bucket, **tenant tier** if bounded). Same constraints: **no PII**, **no identifiers or exploding value sets** as keys meant for slicing. Prefer a small enum-like vocabulary per key so **session-level** slices stay interpretable for coverage.
 
 **Plan output:** write a `.md` plan artifact summarizing scenarios, missing scenarios, test matrix (UI/API/manual), prerequisites, environment choice, infra-gap actions, and TrueCoverage instrumentation when applicable.
 
@@ -68,7 +71,7 @@ Goal: create the environment and prerequisites needed to author and run tests.
    - Implement or wire missing seed/teardown setup identified during planning.
    - Add or update **`*.world.js`** world-state scripts that the **plan** marked as missing, so execution can call **`ensureWorldState`** before browser steps.
 3. **TrueCoverage setup (when planned and `enabled=true`)**
-   - If instrumentation was planned: ensure `testchimp-rum-js` is available in the **application** package, add or update a **single helper** for emits, wire **API key / project id / environment** from config, and add **`plans/events/`** docs for new event types. Skip if `.truecoverage_setup` is not `enabled=true` or the user declined.
+   - If instrumentation was planned: ensure `testchimp-rum-js` is available in the **application** package, add or update a **single helper** for emits, wire **API key / project id / environment** from config, and add **`plans/events/*.event.md`** docs for new event types. Skip if `.truecoverage_setup` is not `enabled=true` or the user declined.
 4. **Fix plan gaps first**
    - Author missing stories/scenarios before writing tests.
    - Follow **[`test-planning.md`](./test-planning.md)** for MCP create/update and markdown structure.
@@ -84,7 +87,7 @@ Goal: author and validate SmartTests for planned cases.
 1. Load **[`write-smarttests.md`](./write-smarttests.md)** and follow its authoring guidance (for UI test authoring).
 2. **World state before UI:** For each UI case that the **plan** tied to a world-state, ensure the test (or shared setup) **runs `ensureWorldState` (or equivalent) before** the Playwright interactions that depend on that seeded backend/data. The flow is: **environment → target world-state → then** browser automation. See **[`world-states.md`](./world-states.md)**.
 3. Create a Playwright browser session, authenticate once, and store storage state in a temporary file for reuse. Make sure the authored test also follows same via storageContext.
-4. **Application emits (TrueCoverage):** When `enabled=true` and the plan called for new /updated events, add emits in the **app** code for those interactions and keep **`plans/events/`** in sync. Do this **before** authoring individual SmartTests or API tests that depend on those events being emitted or on TrueCoverage picking them up. This work is independent of SmartTest files but should land in the same PR when possible.
+4. **Application emits (TrueCoverage):** When `enabled=true` and the plan called for new /updated events, add emits in the **app** code for those interactions and keep **`plans/events/*.event.md`** in sync. Do this **before** authoring individual SmartTests or API tests that depend on those events being emitted or on TrueCoverage picking them up. This work is independent of SmartTest files but should land in the same PR when possible.
 5. Implement each planned test case (UI/API as planned), reusing storage state for faster repeated sessions. For writing API tests, refer **[`api-testing.md`](./api-testing.md)**.
 6. Run written tests with Playwright and fix failures iteratively.
 7. Retry fix-and-rerun up to **2 attempts per failing test**. If still failing, stop retrying those and clearly ask user for help with the unresolved failures (in the report created in the next phase).

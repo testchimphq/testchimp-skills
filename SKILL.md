@@ -109,7 +109,7 @@ Per the [Agent Skills specification](https://agentskills.io/specification), this
 | [`references/api-testing.md`](references/api-testing.md) | API test authoring workflow from captured browser network flows |
 | [`references/test-planning.md`](references/test-planning.md) | Plan folder layout, frontmatter, `/testchimp plan`, MCP plan authoring |
 | [`references/audit-coverage.md`](references/audit-coverage.md) | Coverage and execution audit playbook |
-| [`references/truecoverage.md`](references/truecoverage.md) | TrueCoverage RUM setup, `.truecoverage_setup`, `plans/events/`, MCP analytics |
+| [`references/truecoverage.md`](references/truecoverage.md) | TrueCoverage RUM setup, `.truecoverage_setup`, `plans/events/*.event.md`, MCP analytics |
 | [`references/ai-wright-usage.md`](references/ai-wright-usage.md) | `ai-wright` install, env, API depth |
 | [`references/environment-management.md`](references/environment-management.md) | Persistent vs ephemeral envs, Bunnyshell, Branch Management, MCP `get_branch_specific_endpoint_config` |
 | [`assets/template_playwright.config.js`](assets/template_playwright.config.js) | Sample Playwright config (copy into SmartTests root) |
