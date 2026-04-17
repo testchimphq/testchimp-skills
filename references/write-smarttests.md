@@ -25,11 +25,37 @@ For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, pla
 
    - **Discover values in the repo before asking:** Read **`.env-*`** files under the mapped tests folder (e.g. `.env-QA`) for **test-run** variables: `BASE_URL`, auth-related vars, feature toggles, etc. **Do not** store **`TESTCHIMP_API_KEY`** there — it belongs in the **shell** and MCP **`env`** (see skill **Agent guardrails**). Skim **`setup/`** scripts and global setup for how auth state or data is created. Open **existing specs** in the same area to see which env vars, fixtures, and URLs peers use.
    - **Ask early when something crucial is missing** — If authentication details, org/project identifiers, or other data the scenario depends on is not discoverable from the repo or plans, **ask the user before** driving the browser. If you only learn what is missing **while** interacting (e.g. login fails, wrong tenant), **stop and ask** rather than fabricating credentials or steps.
-   - **Run in headed mode by default** — Use a **headed** Playwright run (if in a graphic support environment such as local dev) so the user can see the browser (unless they explicitly request headless). The goal of the interaction pass is to **record the Playwright commands that actually work** against the live UI.
+  - **Run in headed mode by default** — Use a **headed** Playwright run during authoring so the user (and agent) can see the browser (unless the user explicitly requests headless). The objective is to **exercise the real journey** and only write steps that were actually proven to work against the live UI.
+    - Prefer running with **`--headed`** during authoring, or setting Playwright config **`use.headless = false`** for the local authoring workflow.
+    - Keep CI headless unless explicitly needed; headed is mainly for interactive authoring and debugging.
    - **Multi-pass authoring (recommended):**
      1. **First pass — record behavior:** Write the flow as real **`await page…` / `expect(…)`** calls. Where the UI is unclear, add a short **`// intent:`** comment above the line describing what you are trying to do, then the concrete Playwright line. Do not skip browser verification.
      2. **Second pass — harden brittle steps:** Re-read the spec. Where a selector-based step is likely **brittle** or **non-semantic**, replace it with **`ai.act` / `ai.verify` / `ai.extract`**, using the intent comments as guidance for natural-language objective. Remove redundant intent comments; **keep only comments that demarcate major sections** of the test (long flows, distinct phases).
      3. **Third pass — fit the suite:** Wire in **hooks**, **fixtures**, **`process.env`**, **page objects**, shared **timeouts**, and project **imports** (e.g. reporter runtime) so the test matches how neighboring files are structured.
+
+### User takeover (headed) when the agent gets stuck
+
+During interactive authoring, it is valid (and often necessary) to ask the user to temporarily **take over** to complete a journey segment (SSO/MFA, captcha, ambiguous UI, missing context). The key constraint is that the user must perform the actions **inside the same Playwright-controlled browser session** so the agent can incorporate them into the SmartTest.
+
+Recommended takeover loop:
+
+1. **Start capture before asking for takeover**
+   - Enable **trace** (at least “retain-on-failure”; during authoring you may keep it on more aggressively).
+   - Enable **network capture** if API-test derivation is a goal (request/response logging or HAR).
+   - Optionally start **Playwright codegen** when you want high-fidelity step capture. Treat codegen output as a draft: it is often verbose and must be refactored.
+
+2. **Ask user to complete the segment**
+   - Tell the user exactly what checkpoint to reach (e.g. “get to the order confirmation screen”).
+   - The user interacts with the **headed Playwright window** that the agent opened (not a separate browser).
+
+3. **Convert captured behavior into SmartSteps**
+   - Replace brittle literal click/fill chains with **`ai.act`** objectives where appropriate (“Choose an active card”, “Select plan X and continue”).
+   - Add stable checkpoints with **`expect(...)`** or **`ai.verify(...)`** for user-visible outcomes.
+   - If the objective is API testing, use the captured network data to author API tests (and still keep UI tests as thin smoke when needed).
+
+4. **Validate immediately**
+   - Run `npx playwright test` (still in the mapped tests root) to ensure the updated test passes end-to-end.
+   - If failures occur, decide: **intended behavior change** (update test + scenario), or **real regression** (call it out; prefer fixing product code over “fixing tests”).
 5. **Imports in SmartTest files** ALWAYS add those.
    - `import { ai } from 'ai-wright';`
    - `import 'playwright-testchimp/runtime';`

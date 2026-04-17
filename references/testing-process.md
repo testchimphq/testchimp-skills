@@ -16,6 +16,24 @@ Use this as the primary reference for `/testchimp test`. For SmartTest authoring
 
 Goal: produce a markdown plan document that is explicitly for **authoring TestChimp SmartTests**.
 
+### Derive change context
+
+Before planning scenarios and tests, derive the **change context**. Default to assuming the user is on a PR branch and analyzing **the PR’s changes**, then run the standard planning workflow (existing plans → missing plans → coverage gaps).
+
+1. **Assume PR branch by default**
+   - Treat the current branch as a PR branch and analyze the delta against the base branch (typically `main`) using a merge-base diff (e.g. `git diff origin/main...HEAD`).
+   - Extract **likely user-journey impact** from the change set. Do not limit this to “frontend changes”: backend-only changes can still affect user-facing behavior. Consider:
+     - UI flows impacted (auth/checkout/onboarding/search/settings, etc.)
+     - API contract / validation changes that surface as UI errors or changed UI states
+     - Authorization/permission changes and role-based access
+     - Feature flags, pricing/rules engines, state transitions, async jobs that affect UI
+     - Analytics/tracking and error-state behavior
+
+2. **Fallback when on `main`**
+   - If the user is on `main` (or no clear PR branch exists), approximate the PR delta by reviewing the **last few commits** (commit messages + file changes) and infer which user journeys could be affected.
+
+Use the derived change context to (a) locate existing relevant plans/scenarios, (b) identify missing stories/scenarios, and (c) drive targeted coverage queries (`get_requirement_coverage`, `get_execution_history`) to surface gaps.
+
 **TrueCoverage gate:** Read `plans/knowledge/ai-test-instructions.md` first (if available) and follow **[`truecoverage.md`](./truecoverage.md)**. Only plan/execute TrueCoverage instrumentation when the project-level `### TrueCoverage Plan` indicates it is in scope (or the user explicitly opts in during this run).
 
 The plan must include:
@@ -85,6 +103,11 @@ Goal: create the environment and prerequisites needed to author and run tests.
 Goal: author and validate SmartTests for planned cases.
 
 1. Load **[`write-smarttests.md`](./write-smarttests.md)** and follow its authoring guidance (for UI test authoring).
+2. **Sanity-check likely affected existing tests (small, best-effort subset)**: before writing new tests, identify a **small set** of existing tests that are likely related to the derived change context (based on paths touched, scenarios referenced, and test naming). Run them first as a **quick regression check** (this is intentionally fuzzy; do not try to run *all* “possibly affected” tests).
+   - If these tests **fail**, triage each failure:
+     - If the PR intentionally changed the behavior, **update the test** (and/or world-state/fixtures) to match the new expected behavior and ensure the linked scenario still reflects requirements.
+     - If the behavior should not have changed, treat it as a **real regression** and **call it out** clearly in the report (and prioritize fixing product code over “fixing tests”).
+     - If it’s unclear, gather evidence (UI screenshots/logs/network) and explain why it’s ambiguous rather than guessing.
 2. **World state before UI:** For each UI case that the **plan** tied to a world-state, ensure the test (or shared setup) **runs `ensureWorldState` (or equivalent) before** the Playwright interactions that depend on that seeded backend/data. The flow is: **environment → target world-state → then** browser automation. See **[`world-states.md`](./world-states.md)**.
 3. Create a Playwright browser session, authenticate once, and store storage state in a temporary file for reuse. Make sure the authored test also follows same via storageContext.
 4. **Application emits (TrueCoverage):** When `enabled=true` and the plan called for new /updated events, add emits in the **app** code for those interactions and keep **`plans/events/*.event.md`** in sync. Do this **before** authoring individual SmartTests or API tests that depend on those events being emitted or on TrueCoverage picking them up. This work is independent of SmartTest files but should land in the same PR when possible.

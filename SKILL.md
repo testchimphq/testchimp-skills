@@ -2,7 +2,6 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP), coverage, and MCP tools. Use when the user mentions TestChimp, /testchimp commands (init, test, plan, audit), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
 compatibility: Requires Node.js; @playwright/test and playwright >= required_playwright_test_version (see Preamble checks); TESTCHIMP_API_KEY for MCP and ai-wright. Network access for TestChimp APIs when using MCP or AI steps.
-version: 0.1.5
 required_mcp_client_version: "0.0.4"
 ---
 
@@ -40,6 +39,10 @@ Before executing a TestChimp flow:
    - **Verify** the resolved **`@playwright/test`** version is **>=** 1.59.0, and that **`playwright`** (browser package) matches **`@playwright/test`** (same line as [`references/write-smarttests.md`](references/write-smarttests.md)). Use e.g. `npm ls @playwright/test --prefix <install-root>` or `npx playwright --version` with **cwd** at the install root.
    - **Corrective action** if below minimum or version mismatch: bump **`@playwright/test`** and **`playwright`** together, reinstall, then **`npx playwright install`** for browsers if needed. If the environment cannot run install commands, **tell the user** to install dependencies and re-run; **do not** silently author tests that were never executed against a real runner.
 
+5. **`TESTCHIMP_API_KEY` availability check (before authoring + before `npx playwright test`)** — `/testchimp test` expects to (a) use Playwright to navigate while authoring AI steps as needed, and then (b) run **`npx playwright test`** to validate the authored SmartTest. For both of those to succeed, `TESTCHIMP_API_KEY` must be available to the **agent-run process** (MCP server and/or Playwright execution), which may **not** inherit the user’s interactive shell environment in Cursor.
+   - If `TESTCHIMP_API_KEY` is missing, instruct the user to set it in the relevant MCP server config **`env`** block(s) (at minimum the `testchimp-mcp-client` server; and also any Playwright execution context used to run `npx playwright test` and playwright mcp - if that is used), then **reload MCP / restart the IDE** so the processes restart with the env applied.
+   - Do **not** proceed to author AI steps or run Playwright until the key is present (otherwise MCP calls / reporting will fail with 401).
+
 ## How TestChimp works
 
 1. Create a project in TestChimp and connect the Git repo. Map 2 folders in the repo to the project created in TestChimp platform **`tests`** (SmartTests) and **`plans`** (test plans). Those can be mapped after logging in to TestChimp -> Select Project -> Project Settings -> Integrations -> GitHub.
@@ -56,6 +59,12 @@ Before executing a TestChimp flow:
 3. **`TESTCHIMP_API_KEY` — where it lives.** Set the project API key in the **shell environment** for local runs and in the MCP server **`env`** block in **`mcp.json`** (see [`assets/sample-mcp.json`](assets/sample-mcp.json)). **Do not** put **`TESTCHIMP_API_KEY`** in **`.env-QA`** (or other **`.env-*`**) files — those are for **test execution** variables (e.g. **`BASE_URL`**, auth fixtures, feature flags). For **ai-wright** / AI steps, instruct users to set **`TESTCHIMP_API_KEY`** in the environment only — **do not** document or suggest **personal access token (PAT)** or alternate user-auth env pairs for agents.
 
 4. **HTTP 401 from TestChimp APIs or MCP.** If a run or MCP call returns **401 Unauthorized**, stop and ask the user to configure **`TESTCHIMP_API_KEY`**. Tell them how to obtain a key: sign in to **TestChimp** → **Project Settings** → **Key management**, where project API keys are listed. Remind them to set the same key in the shell (and in **`mcp.json`** **`env`** for MCP).
+
+5. **Gitignore generated report folders.** Playwright (and reporters) can create generated artifacts (HTML reports, traces, screenshots, videos, raw results). These must **not** be committed. Ensure the repo’s **`.gitignore`** includes common Playwright output folders such as:
+   - `playwright-report/`
+   - `test-results/`
+   - `blob-report/`
+   - any other repo-specific generated report/output directory configured by the test runner or CI
 
 ## MCP client (agents)
 
