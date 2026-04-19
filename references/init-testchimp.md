@@ -54,7 +54,7 @@ At the very start of init, ask the user whether they want a quick smoke pass bef
 
 Use this explanation:
 
-- Full init sets up enterprise QA infrastructure: TrueCoverage instrumentation, World-state scripts, seed/teardown endpoints setup, and branch-aware execution (including ephemeral environments) so E2E tests are done before PR merge with lower flakiness. Explain that TestChimp enables runtime intelligent steps for more reliable tests.
+- Full init sets up enterprise QA infrastructure: TrueCoverage instrumentation, World-state scripts, test-only **seed / teardown / read** endpoint setup, and branch-aware execution (including ephemeral environments) so E2E tests are done before PR merge with lower flakiness. Explain that TestChimp enables runtime intelligent steps for more reliable tests.
 - This can be a larger cognitive investment, so quick smoke can provide immediate value first.
 
 ### 0.2 If user chooses quick smoke
@@ -118,20 +118,26 @@ Do not start implementing world-states/mocking/env/truecoverage/CI until you hav
 - If the MCP server entry is missing: the agent should update the host MCP config automatically (using the `npx` + `testchimp-mcp-client@latest` pattern from `assets/sample-mcp.json`), then re-check that the server runs.
 - Only if `TESTCHIMP_API_KEY` value is not already available to write/use (e.g. not present in shell env or existing MCP `env`): ask the user to enter that in the mcp.json env block (or confirm where it is already provided) so the MCP validation call can succeed. Ensure the MCP can be called - by using get_eaas_config - expectation is for it to not return 401.
 
-### Key Area 2 — World-States Infra (seeding endpoints + base world-states)
+### Key Area 2 — World-States Infra (seed / teardown / read endpoints + base world-states)
+
+Authoritative guide: [`seeding-endpoints.md`](./seeding-endpoints.md).
+
 - Agent discovery (report findings first):
   - Under the SmartTests root, check for `setup/world-states/` and any `*.world.js` scripts. This is likely going to be empty for projects not configured in TestChimp.
-  - Scan for existing test-data reset/seed/teardown endpoints (look for candidate reset/seed handlers or idempotent reset entrypoints in the backend). If they are present, then identify them, and include in the plan as identified seed endpoints.
-  - The core idea is - by the end of the init plan phase, agent will have identified a few (~1-2) core world-states to write and seed endpoints to implement.
+  - Scan for existing test-data reset/seed/teardown endpoints and any **read** or probe endpoints used for test assertions (look for candidate reset/seed handlers, idempotent reset entrypoints, or QA-only routes in the backend). If they are present, identify them and include them in the plan.
+  - Plan **read** endpoints where SmartTests must assert **persisted** or **observable** state after UI actions (not only DOM checks). Reads can also be useful in **read-before-write** idempotency in seed/teardown implementations.
+  - The core idea is - by the end of the init plan phase, agent will have identified a few (~1-2) core world-states to write and the seed/teardown/read endpoints needed to support them.
 
 Why this area (quick education):
 - `world-states` let tests and agents load a pre-defined application posture at author-time and execution-time, which dramatically cuts flakiness caused by state drift.
 
 Agent stance (preferred behavior):
 - If seed/reset endpoints and/or world-state scripts are missing, do NOT ask the user “what endpoints should we write?”
-- Instead, inspect the backend/domain model to recommend a minimal, idempotent seed/reset setup:
-  - infer candidate entity names from DB schema/ORM models/migrations and existing domain types
+- Instead, inspect the backend/domain model and product APIs per [`seeding-endpoints.md`](./seeding-endpoints.md) to recommend a minimal, idempotent seed/reset setup:
+  - infer candidate entity names from DB schema/ORM models/migrations and existing domain types; use **foreign key** relationships to order **creation** and **teardown** sequences
+  - map **frontend-facing or public CRUD** flows where they represent the real create/delete behavior (prefer **proxying** those paths through test-only routes rather than duplicating business logic with raw table writes)
   - pick a small “base” set of core entities that unblocks the most common flows (just enough to author and run a first small test suite)
+  - recommend **read** endpoints (or test-only wrappers around existing reads) for assertions after UI flows; include **read-before-write** in the idempotency plan when it simplifies safe retries
   - recommend a default endpoint naming scheme (for example `POST /qa/testdata/reset` or `POST /testdata/reset`) and ensure it is safe to run (non-production-only guards)
   - include an idempotency plan (so retries don’t corrupt state) - prefer endpoints to be authored as idempotent operations.
   - recommend the minimal base world-state script name (for example `world-states/base.world.js`) that matches the seeded posture
@@ -377,14 +383,15 @@ Target structure inside SmartTests root:
 - `e2e`: UI-focused tests (may call APIs as needed),
 - `api`: API-focused tests.
 
-If seed/teardown endpoints exist, plan and wire them in setup project.
-If they do not exist, plan endpoint creation with user (seed endpoint authoring planning in the full init path):
+If seed/teardown/read endpoints exist, plan and wire them in the setup project.
+If they do not exist, plan endpoint creation with the user (see [`seeding-endpoints.md`](./seeding-endpoints.md)):
 
 - auth model,
 - production-safety constraints (non-production-only guards),
 - data model to seed (agent-recommended minimal entities for the base world-state, inferred from DB schema/ORM models/migrations; user confirms/tweaks add/remove domain-specific entities),
+- **read** surfaces for asserting persisted state after UI actions (and for **read-before-write** idempotency where useful),
 - teardown behavior (safe to rerun),
-- idempotency strategy (how retries behave).
+- idempotency strategy (how retries behave; include read-before-write when it reduces duplicate work or corruption risk).
 
 Seed/teardown endpoints should be idempotent.
 
@@ -517,12 +524,14 @@ If user chooses ephemeral and Bunnyshell is not configured, stop and ask user to
 
 Remember the environment strategy choice made - in the ai-test-instructions.md file.
 
-### Seed/teardown endpoint planning details
+### Test setup endpoints (seed / teardown / read)
 
-For harness setup, always determine one of the two paths:
+Follow [`seeding-endpoints.md`](./seeding-endpoints.md) for discovery, proxying real workflows, and guardrails.
 
-1. Existing seed/teardown endpoints -> integrate them into setup project with explicit seed scope.
-2. Missing endpoints -> plan endpoint creation with user (auth, prod safety, payload shape, idempotency, teardown semantics).
+For harness setup, determine one of these paths:
+
+1. **Existing** seed/teardown/read endpoints → integrate them into the setup project with explicit scope (what each route does, env guards).
+2. **Missing** endpoints → plan creation with the user: auth, prod safety, payload shape, idempotency (including **read-before-write** when helpful), teardown semantics, and **read** surfaces for post-UI assertions.
 
 Aim for idempotent seed/teardown operations so retries are safe and world-state can be restored deterministically.
 
@@ -543,7 +552,7 @@ Init is complete when the action checklist is fully resolved (done, skipped, or 
 - repo connected to TestChimp,
 - plans/tests mappings in place,
 - CI run strategy chosen and documented,
-- seed/teardown and harness strategy established,
+- seed/teardown/**read** and harness strategy established (per [`seeding-endpoints.md`](./seeding-endpoints.md) when authoring endpoints),
 - mocking approach recorded under `### Mocking Plan` (or explicitly deferred / N/A),
 - environment strategy recorded,
 - TrueCoverage decision recorded,

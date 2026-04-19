@@ -2,6 +2,8 @@
 
 World states are **`*.world.js`** files under **`<test root>/setup/world-states`**. Each file exports a definition created with **`defineWorldState`** from **`playwright-testchimp/runtime`** (or `playwright-testchimp/worldstate`). They describe a **named, reusable seed** of the app (via APIs / env), so tests and agents can start from the same deterministic state.
 
+**How this ties to test endpoints:** World-state **`setup`** / **`teardown`** typically call **seed** and **teardown** HTTP endpoints (or equivalent) as described in **[`seeding-endpoints.md`](./seeding-endpoints.md)**. **Read** endpoints are complementary: use them from tests or helpers to **assert** persisted or observable state after UI actions (and optionally inside seed logic for **read-before-write** idempotency). World-state scripts **bring** the environment to a known posture; read endpoints **probe** whether that posture (or post-UI outcomes) holds.
+
 ## Shape
 
 A world-state is a plain object that **`defineWorldState(def)`** validates and returns. Each **`*.world.js`** file should **`module.exports`** (or **`export default`**) that object—typically the return value of **`defineWorldState({ ... })`**.
@@ -60,8 +62,8 @@ module.exports = defineWorldState({
 
 Phased detail lives in **[`testing-process.md`](./testing-process.md)**. In short:
 
-- **Plan** — For each UI test, name the **target `meta.id`**, list **missing** `*.world.js` (and seed API gaps), and treat authoring those as **plan/setup** work—not an afterthought at the keyboard.
-- **Setup** — Land the world-state scripts and seeds so **`ensureWorldState`** can run.
-- **Execute** — **Apply the world-state** by running the world-state setup(), then** drive the app with **Playwright**. The agent brings the shared environment to the desired world-state **before** relying on browser actions to imply backend/data shape.
+- **Plan** — For each UI test, name the **target `meta.id`**, list **missing** `*.world.js` (and seed/teardown/**read** API gaps per **[`seeding-endpoints.md`](./seeding-endpoints.md)**), and treat authoring those as **plan/setup** work—not an afterthought at the keyboard.
+- **Setup** — Land the world-state scripts and seed/teardown wiring so **`ensureWorldState`** can run; add **read** endpoints when tests must verify backend state after UI flows. It is often more preferred to do the verification with an API call than relying on UI visible changes.
+- **Execute** — **Apply the world-state** by running the world-state `setup()`, then **drive the app with Playwright**. The agent brings the shared environment to the desired world-state **before** relying on browser actions to imply backend/data shape.
 
-See also **[`write-smarttests.md`](./write-smarttests.md)** for SmartTest authoring patterns.
+See also **[`write-smarttests.md`](./write-smarttests.md)** for SmartTest authoring patterns and **[`seeding-endpoints.md`](./seeding-endpoints.md)** for how to design seed, teardown, and read routes.
