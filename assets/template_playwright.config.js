@@ -15,7 +15,7 @@ Keep @playwright/test and playwright on the SAME version in package.json (e.g. b
 "Playwright Test did not expect test() to be called here". Verify with: npm ls @playwright/test playwright
 If a dependency nests another playwright, use package.json "overrides" to force a single version.
 
-Global setup: project "setup" runs first (tests/setup/global.setup.spec.js), then "chromium" discovers *.spec.js / *.test.js (and .ts) anywhere under tests/ except setup/. See https://playwright.dev/docs/test-global-setup-teardown#option-1-project-dependencies
+Global setup: project "setup" runs first (tests/setup/global.setup.spec.js), then "chromium" discovers *.spec.{js,ts} anywhere under tests/ except setup/. (TestChimp SmartTests use *.spec.* only — not *.test.*.) See https://playwright.dev/docs/test-global-setup-teardown#option-1-project-dependencies
 **/
 
 dotenv.config({
@@ -66,7 +66,7 @@ export default defineConfig({
       dependencies: ['setup'],
       testDir: '.',
       testIgnore: ['**/setup/**'],
-      testMatch: '**/*.{spec,test}.{js,ts}',
+      testMatch: '**/*.spec.{js,ts}',
       use: { ...devices['Desktop Chrome'], actionTimeout: 15 * 1000 },
     },
   ],

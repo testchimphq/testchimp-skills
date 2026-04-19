@@ -6,7 +6,7 @@ Initialize the repo for TestChimp using a phased workflow. This document is for 
 
 ## Purpose
 
-`/testchimp init` often includes long-running and branching work: EaaS decisions, seeding strategy, harness setup, CI wiring, importing existing tests, and TrueCoverage setup. To keep this reliable, agents must:
+`/testchimp init` often includes long-running and branching work: EaaS decisions, seeding strategy, harness setup, mocking (MSW / AIMock), CI wiring, importing existing tests, and TrueCoverage setup. To keep this reliable, agents must:
 
 1. collaborate with the user on a concrete action plan first,
 2. persist decisions and item status in `plans/knowledge/ai-test-instructions.md`,
@@ -19,25 +19,27 @@ Project-level decisions must be persisted in `plans/knowledge/ai-test-instructio
 At minimum, `/testchimp init` should ensure this file contains the following sections (author or update as needed):
 
 ```md
+
+# TestChimp Init Progress
+
+## Completed Items
+
+## Pending Items
+
+## Deferred Items
+
+---
 ## Environment Provision Strategy
 
 ### Local - Test Authoring
 
 ### CI - Test Execution
 
----
+## TrueCoverage Plan
 
-### TestChimp Init Progress
+## World-States Plan
 
-#### Completed
-
-#### Pending
-
-#### Deferred
-
-### TrueCoverage Plan
-
-### World-States Plan
+## Mocking Plan
 ```
 
 Keep this file **project-level only** (avoid workstation-specific progress like “installed MCP client on my laptop”).
@@ -97,7 +99,7 @@ Why this phase (quick education):
 - For pre–PR-merge testing, isolated environments are necessary so agents validate against the exact PR-specific code/data they’re changing (otherwise they may author based on stale staging/main behavior).
 - Environment strategy affects both CI behavior and the final `BASE_URL` resolution; setting it wrong usually breaks tests in CI, and choosing the wrong isolation level makes agent decisions inaccurate.
 
-Do not start implementing world-state/seed/truecoverage/CI until you have the user’s deliberate answers (or explicit acceptance of the agent’s proposed defaults) below.
+Do not start implementing world-states/mocking/env/truecoverage/CI until you have the user’s deliberate answers (or explicit acceptance of the agent’s proposed defaults) below.
 
 **Do not** write or update `plans/knowledge/ai-test-instructions.md` (other than `## Init requirements`) until the user has answered in this conversation.
 
@@ -106,7 +108,12 @@ Do not start implementing world-state/seed/truecoverage/CI until you have the us
   - Locate marker files on disk:
     - `.testchimp-plans` => plans root mapped
     - `.testchimp-tests` => SmartTests root mapped
-  - Locate host MCP config (commonly `.cursor/mcp.json`) and check whether a `testchimp-mcp-client` server entry exists with `env.TESTCHIMP_API_KEY`.
+  - Locate host MCP config (eg: `<project-root>/.cursor/mcp.json`) and check whether a `testchimp-mcp-client` server entry exists with `env.TESTCHIMP_API_KEY`.
+  - **Existing Playwright vs greenfield** (see [`importing-existing-tests.md`](./importing-existing-tests.md)):
+    - Treat the folder containing `.testchimp-tests` as the **SmartTests root**.
+    - Scan for **`*.spec.{js,ts}`** only (not `*.test.*` — TestChimp uses **`*.spec.*`**), excluding **`setup/**`** and treating scaffold-only setup files as non-“suite” (e.g. `global.setup.spec.*` under `setup/` does not count as an existing e2e suite).
+    - Under that root, check **`playwright.config.*`** for **`playwright-testchimp/reporter`** in `reporter` — if present, call out **prior SmartTests/TestChimp wiring** in findings.
+    - Classify: **greenfield** (no specs outside `setup/` beyond scaffold) vs **has existing Playwright** vs **dual-folder** (mapped SmartTests folder is empty/new but **`*.spec.{js,ts}`** exist elsewhere in the repo). If legacy specs live **outside** the mapped folder, **ask** whether to move them into the mapped folder; if yes, **plan in Phase 2**, **execute in Phase 3** after approval.
 - If either marker file is missing: ask the user to complete the minimum needed TestChimp Git integration + sync so marker files exist.
 - If the MCP server entry is missing: the agent should update the host MCP config automatically (using the `npx` + `testchimp-mcp-client@latest` pattern from `assets/sample-mcp.json`), then re-check that the server runs.
 - Only if `TESTCHIMP_API_KEY` value is not already available to write/use (e.g. not present in shell env or existing MCP `env`): ask the user to enter that in the mcp.json env block (or confirm where it is already provided) so the MCP validation call can succeed. Ensure the MCP can be called - by using get_eaas_config - expectation is for it to not return 401.
@@ -133,35 +140,62 @@ Only ask the user when clarification/tweaks are required:
 - confirm or tweak the recommended base entity list (add/remove domain-specific entities)
 - confirm endpoint guard approach if the repo’s non-production guard mechanism is unclear
 
-### Key Area 3 — TrueCoverage Infra (RUM + journey events)
+### Key Area 3 — Mocking (MSW + AIMock)
+
+Why this area is placed here (quick education):
+
+- Mocking sits **after world-states** because it is usually **low-friction**: little user input is required — the agent discovers how LLMs and HTTP clients are wired, decides where to plug in **AIMock** (and optional **MSW**), and reports what was done. It does not depend on TrueCoverage or environment strategy first.
+
+Agent discovery (report findings first):
+
+- Whether **`msw`** (or Playwright-oriented MSW setup) already exists in the SmartTests package or app.
+- Whether **AIMock** (`@copilotkit/aimock` / `aimock` CLI per [upstream docs](https://github.com/CopilotKit/aimock)) or similar is already present.
+- How **LLM / OpenAI-compatible** calls are resolved (hardcoded URL vs `OPENAI_BASE_URL` / SDK defaults) in frontend, backend, or shared packages.
+- Whether **`<SmartTests root>/assets/goldens`** exists (or another agreed path for AIMock fixtures).
+
+Authoritative reference: [`mocking_strategy.md`](./mocking_strategy.md).
+
+Agent stance (preferred behavior):
+
+- **Phase 1:** Summarize findings and lock **requirements** under `### Mocking Plan` in the plan (enabled / deferred / not applicable; MSW scope if any; AIMock + goldens path; env vars for LLM base URL). Prefer **agent-proposed defaults** and only ask the user when something is ambiguous or repo-specific (e.g. multiple backends each calling an LLM).
+- **Phase 3:** Perform installs, create `assets/goldens` when needed, refactor opaque OpenAI URLs into **config/env** pointing at AIMock during tests, and document how AIMock runs locally and in CI — per [`mocking_strategy.md`](./mocking_strategy.md) and vendor AIMock docs.
+
+### Key Area 4 — TrueCoverage Infra (RUM + journey events)
 Why this area (quick education):
 - TrueCoverage is extremely useful because it turns **production behavior** into **real coverage gaps**: what users actually do (features people engage with, where they spend time, where they drop off, and top-of-funnel vs later behavior, funnel flows etc.).
 - Those signals are exposed through data APIs that are consumed via MCP by AI agents to identify critical gaps and to drive coverage improvements, and exploratory testing for UX issue identification, in a tight feedback loop.
 - We still start with a minimal, consistent event slice so the initial setup is fast and stable, but the data remains actionable (not just noisy).
 - Agent discovery (report findings first):
   - Check `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` for whether TrueCoverage is **enabled now**, **deferred**, or **disabled** (and for any prior instrumentation decisions).
-  - Check whether `plans/events/` already exists and has emitted event plan content (if present).
+  - Check whether **TrueCoverage RUM is already wired in the app codebase** (report as a finding either way):
+    - **Dependency:** e.g. `testchimp-rum-js` listed in a frontend / app `package.json` (and lockfile where present), not only under the SmartTests package.
+    - **Usage:** imports or calls from `testchimp-rum-js` and/or **`testchimp.init`** / **`testchimp.emit`** (or a thin wrapper module that delegates to them) in application source.
+    - If both are present, **call this out explicitly** in discovery findings (e.g. “RUM library installed and referenced for emits—init can focus on gaps vs `truecoverage-instrument-progress`, not greenfield wiring”). Optionally ask the user whether to **plan additional events** to instrument (expand `plans/knowledge/truecoverage-instrument-progress.md` and follow the `plans/events/` vs `plans/knowledge/` rules) versus only documenting what already exists.
+  - Check `plans/knowledge/truecoverage-instrument-progress.md` (if present) for planned vs done events; optionally list existing `plans/events/*.event.md` files (these document **instrumented** event types only—see below).
 - If TrueCoverage is **enabled now** (or the user opts in during init), init must:
   - set up **basic wiring** and instrument a **small initial event slice** (and create `plans/events/*.event.md` only for events actually instrumented), and
   - generate `plans/knowledge/truecoverage-instrument-progress.md` so the rest can be completed incrementally via `/testchimp instrument` (and/or during `/testchimp audit`). See [`truecoverage.md`](./truecoverage.md).
 - If TrueCoverage decision state is missing OR the user wants to change it:
   - Decide TrueCoverage timing explicitly: set up **now**, **later** (defer with snooze file), or **no**.
-  - If setting up now: confirm user should provide `TESTCHIMP_PROJECT_ID` and `TESTCHIMP_API_KEY` to the **app runtime** (usually via the app’s project environment files; not the `.env-QA` files under the tests root).
+  - **Authoritative references (agents must follow these for wiring and limits):**
+    - Project TrueCoverage playbook: [`references/truecoverage.md`](./truecoverage.md) (setup, progress tracker, MCP analytics, event docs).
+    - Browser RUM library (API, `init`/`emit`, configuration, batching, event constraints): **[testchimp-rum-js on GitHub](https://github.com/testchimphq/testchimp-rum-js)** — read the README for **`testchimp.init`**, optional `config` tuning (sampling-like limits), and **`emit()`** rules before writing wrapper code.
+  - If setting up now: confirm the user should provide **`projectId`** and **`apiKey`** to the **app runtime** (the RUM SDK expects them in `testchimp.init({ projectId, apiKey, environment, ... })` per the library README). Use the app’s project environment files as appropriate; do **not** put these in `.env-QA` under the SmartTests root (those are for test execution vars like `BASE_URL`). The platform labels match TestChimp: `TESTCHIMP_PROJECT_ID` / `TESTCHIMP_API_KEY` in env often map into `init()`—see [`truecoverage.md`](./truecoverage.md).
   - If setting up now, the agent should take a stance and propose a minimal instrumentation slice:
-    - Helper wrapper location: pick (or create) a single app-runtime module dedicated to TrueCoverage emits (NOT inside the tests root). Prefer an existing telemetry/analytics module if one exists; otherwise create a dedicated file (example pattern: `src/lib/truecoverage/emit.ts`).
-    - Sampling: use conservative sampling for the first slice, reusing any existing sampling config found in the repo/env; only introduce new sampling when the repo has no prior configuration.
+    - Helper wrapper location: pick (or create) a single app-runtime module dedicated to TrueCoverage emits - in the webapp-under-tests' frontend code (NOT inside the tests root). Prefer an existing telemetry/analytics module if one exists; otherwise create a dedicated file. Call **`testchimp.init()` once** (see GitHub README), then **`emit()`** from the wrapper for journey events.
+    - **Sampling / volume:** RUM volume is controlled by the library’s **`config`** object on `init()` (e.g. `maxEventsPerSession`, `maxRepeatsPerEvent`, `eventSendInterval`, `maxBufferSize`, `captureEnabled`)—see **[testchimp-rum-js README](https://github.com/testchimphq/testchimp-rum-js)** and the **Configuration / sampling** subsection in [`truecoverage.md`](./truecoverage.md). For the first slice, prefer **conservative** limits; reuse any existing tuning in the repo/env when present; only introduce new limits when none exist.
     - Basic events to instrument (minimal, stable set):
       - **Semantic journey completion milestones** (good examples: `add-to-cart`, `checkout-completed` / `checkout`, `order-confirmed`; bad examples: “click button”, “click next”)
       - at least one **high-signal error variant** for a key journey step (good examples: `checkout-failed`, `checkout-validation-error`; avoid generic “ui_error” noise)
       - keep event names consistent with your app’s existing analytics vocabulary if you already have one; otherwise use kebab-case semantic steps
       - only add technical noise (page_view/route changes, raw API success/failure) if you cannot identify any user-journey milestones in the product
-    - Event plan locking:
-      - write a minimal event plan in `plans/events/` that documents event names, required payload fields, and when the wrapper emits them
-      - wire the helper wrapper so it emits the identified minimal events during SmartTests execution
-    - Sampling + event names should be summarized in `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` so Phase 3 doesn’t drift.
-    - Full plan + progress tracking (required during init when TrueCoverage is enabled): create `plans/knowledge/truecoverage-instrument-progress.md` (details in [`truecoverage.md`](./truecoverage.md)).
+    - Event plan locking (folder contract):
+      - **`plans/knowledge/`** — maintain the **full TrueCoverage plan**: planned vs not-yet-instrumented events, route/page breakdown, and rollout progress. Required: `plans/knowledge/truecoverage-instrument-progress.md`; summarize decisions and vocabulary under `### TrueCoverage Plan` in `plans/knowledge/ai-test-instructions.md` so Phase 3 doesn’t drift.
+      - **`plans/events/`** — **only** `*.event.md` files (one per **instrumented** event type, frontmatter per [`truecoverage.md`](./truecoverage.md)). Do **not** put “planned but not wired” events here; those stay in the knowledge progress tracker until `/testchimp instrument` lands them.
+      - wire the helper wrapper so it emits the identified minimal **instrumented** events (SmartTests should exercise the paths that trigger those emits).
+    - Full plan + progress tracking (required during init when TrueCoverage is enabled): create/update `plans/knowledge/truecoverage-instrument-progress.md` (details in [`truecoverage.md`](./truecoverage.md)).
 
-### Key Area 4 — Environment provision strategy (persistent vs ephemeral / EaaS)
+### Key Area 5 — Environment provision strategy (persistent vs ephemeral / EaaS)
 Why this area (quick education):
 - The key benefit of **ephemeral, pre–PR-merge environments** is **shift-left QA**: tests run against the exact PR-specific code/data stack, not stale staging/main.
 - For agentic testing, isolated envs are crucial for **accurate reasoning** because agents can load controlled `world-states` against the PR’s real behavior (deterministic inputs, fewer “it changed after merge” surprises).
@@ -183,15 +217,17 @@ Why this area (quick education):
 - If ephemeral: are you using (or planning) Bunnyshell with TestChimp? (yes / no / not sure). If the repo discovery/MCP EaaS hints are missing, ask the connection question; otherwise report what you found.
 - If PR previews matter: do you rely on TestChimp Branch Management URL template/overrides for PR-specific `BASE_URL`, or fixed env files only?
 
-### Key Area 5 — CI setup
+### Key Area 6 — CI setup
 - Agent discovery (report findings first):
   - Check whether `.github/workflows/` (or equivalent) already has Playwright/TestChimp-related CI.
-- If discovery finds existing Playwright/TestChimp CI: report what it looks like and ask whether to reuse/adjust it.
+  - Relate findings to **greenfield vs existing Playwright vs dual-folder** (see [`importing-existing-tests.md`](./importing-existing-tests.md)): e.g. existing workflows may `cd` to the wrong folder or omit `TESTCHIMP_API_KEY`.
+- If discovery finds existing Playwright/TestChimp CI: report what it looks like (including whether it **`cd`**s into the **mapped SmartTests folder** and sets **`TESTCHIMP_API_KEY`**) and ask whether to reuse/adjust it.
 - Otherwise: ask what CI system to use (GitHub Actions / others), whether it runs on PRs vs main, and whether it should start with shared/persistent envs or provision ephemeral envs per run.
+- **Detail reference:** [`importing-existing-tests.md`](./importing-existing-tests.md) (cwd, env, alignment with mapped folder).
 
 ---
 
-## Phase 2 - Plan phase (draft the 5-area execution checklist)
+## Phase 2 - Plan phase (draft the 6-area execution checklist)
 Why this phase (quick education):
 - The plan prevents the agent from drifting across infra choices by forcing a small, explicit checklist with acceptance criteria.
 - It also ensures decisions land in `plans/knowledge/ai-test-instructions.md` so Phase 3 execution stays consistent.
@@ -202,13 +238,16 @@ Each action item must include:
 - `status`: `pending | in_progress | done | skipped | deferred`
 - concise notes (decisions, blockers, links, trade-offs)
 
-Your plan MUST include exactly these 5 key areas in this order (each starting with `pending`), and for each include the acceptance criteria:
+Your plan MUST include exactly these 6 key areas in this order (each starting with `pending`), and for each include the acceptance criteria:
 
 1. Basic TestChimp integration
 2. World-States Infra
-3. TrueCoverage Infra
-4. Environment provision strategy
-5. CI setup
+3. Mocking (MSW + AIMock)
+4. TrueCoverage Infra
+5. Environment provision strategy
+6. CI setup
+
+**Import / alignment (when discovery applies):** If Phase 1 discovery found **existing Playwright** under the mapped folder, **dual-folder** layout (specs outside mapped SmartTests root), or misaligned **`playwright.config.*`** location, the plan **must** include explicit **import / alignment** tasks (per [`importing-existing-tests.md`](./importing-existing-tests.md)) in addition to the six areas above.
 
 Acceptance criteria (success checks):
 - Basic TestChimp integration
@@ -216,16 +255,20 @@ Acceptance criteria (success checks):
   - there are 2 folders with the `.testchimp-plans` and `.testchimp-tests` marker files
 - World-States Infra
   - `world-states/` folder not empty
+- Mocking (MSW + AIMock)
+  - `### Mocking Plan` in `plans/knowledge/ai-test-instructions.md` records enabled / deferred / N/A and the chosen approach
+  - if enabled: dependencies and wiring per [`mocking_strategy.md`](./mocking_strategy.md); `<SmartTests root>/assets/goldens` exists (or documented alternative); LLM traffic can be aimed at AIMock via agreed env/config; brief note of what was wired for local vs CI
+  - if deferred or N/A: explicitly recorded with reason
 - TrueCoverage Infra
-  - `plans/events/` folder not empty
-  - emit helper wrapper defined with configuration setup
+  - `plans/knowledge/truecoverage-instrument-progress.md` exists with planned vs done (and planned-not-yet-instrumented events live there, not under `plans/events/`)
+  - for each event type **actually instrumented** during init, a matching `plans/events/<title>.event.md` exists; emit helper wrapper defined with configuration setup
 - Environment provision strategy
   - depends on the decision, and `ai-test-instructions` contains the user agreed-upon decision AFTER it has been discussed
   - for **Local - Test Authoring**, `ai-test-instructions` includes a single runnable “local up” command/script **and** explicit “wait until healthy” criteria (so agents can reliably provision and wait before testing)
 - CI setup
   - CI action authored
 
-After the plan is written, ask the user to explicitly approve or request edits. Only after approval proceed to Phase 3.
+After the plan is written, ask the user to explicitly approve or request edits. Only after approval proceed to Phase 3. Phase 3 executes any agreed import/alignment tasks (moves, config fixes, reporter/runtime wiring) **only** after approval.
 
 ---
 
@@ -236,12 +279,21 @@ Why this phase (quick education):
 
 Work item-by-item from the agreed checklist and update `plans/knowledge/ai-test-instructions.md` after each completion, skip, or deferral.
 
+If the approved plan included **moving** specs into the mapped SmartTests folder or **upgrading** an existing Playwright tree to TestChimp structure, perform those steps here in line with [`importing-existing-tests.md`](./importing-existing-tests.md).
+
 Use the following action-item playbooks as implementation references.
 
-Execute the 5 key areas in this order and treat them as grouped action-item blocks:
+### PR strategy (before you push)
+
+Init touches a lot of surface area. **By default**, prefer **separate PRs** for the heavier slices so review and rollback stay manageable: **world-states infra**, **TrueCoverage infra**, **CI**, and **mocking** (plus any **import/alignment** work as its own PR if large).
+
+**Ask the user explicitly:** do they want **one combined PR** or **separate PRs**? Execute and branch/push accordingly; do not assume a single mega-PR.
+
+Execute the 6 key areas in this order and treat them as grouped action-item blocks:
 - Basic TestChimp integration: actions A–E
 - World-States Infra: action F
-- TrueCoverage Infra: action I (run before environment/Ci actions)
+- Mocking: action J (immediately after world-states; see [`mocking_strategy.md`](./mocking_strategy.md))
+- TrueCoverage Infra: action I (after Mocking; still before environment/CI actions)
 - Environment provision strategy: action G
 - CI setup: action H
 
@@ -343,6 +395,44 @@ Base world-states posture (minimal is enough):
 
 Success check (World-States Infra): `world-states/` folder not empty.
 
+### Action item J - Mocking (MSW + AIMock)
+
+Read `plans/knowledge/ai-test-instructions.md` under `### Mocking Plan` and follow [`references/mocking_strategy.md`](./mocking_strategy.md).
+
+If the decision is **enabled** (or missing and the plan calls for default-on wiring):
+
+- Install **AIMock** per [upstream documentation](https://github.com/CopilotKit/aimock) (package / CLI as appropriate for the repo).
+- Add **`<SmartTests root>/assets/goldens`** when record/replay fixtures are in scope; align AIMock config with that path.
+- Install **MSW** only if the agreed plan calls for non-LLM API mocking; keep usage narrow (see [`mocking_strategy.md`](./mocking_strategy.md)).
+- Refactor **OpenAI-compatible base URL** (and related client config) so tests can point LLM traffic at the AIMock listener (commonly `OPENAI_BASE_URL` or the project’s existing env name — document which).
+- Ensure AIMock can run **during test execution** locally (e.g. global setup, compose sidecar, or documented `npx` command) and note what CI should do (e.g. official AIMock GitHub Action or equivalent — follow vendor docs).
+- Summarize **what was wired and where** for the user (this area is usually agent-led; minimal user Q&A).
+
+If **deferred** or **not applicable**: mark skipped in the checklist and update `### Mocking Plan` with the reason.
+
+Success check (Mocking):
+
+- `### Mocking Plan` reflects the outcome; if enabled, goldens path + env wiring exist and are documented for local runs; CI path noted when CI is in scope (final CI wiring may complete in action H).
+
+### Action item I - TrueCoverage opt-in
+
+Read `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan`.
+
+If decision is missing or the user requests a change, explain value and ask:
+
+- **Yes now**: install `testchimp-rum-js` (in the application package), implement a single emit helper wrapper, configure runtime env vars (`TESTCHIMP_PROJECT_ID` + `TESTCHIMP_API_KEY` via app project environment files, not `.env-QA` under the tests root), set up sampling, identify a minimal set of basic events, wire those **instrumented** events through the emit helper, align reporter config, and persist the decision + notes under `### TrueCoverage Plan` in `plans/knowledge/ai-test-instructions.md`.
+
+  Additionally, during init you must generate the instrumentation tracker:
+  - scan the frontend to identify core routes/pages and the semantic events planned for each area
+  - create `plans/knowledge/truecoverage-instrument-progress.md` to track **planned vs done** (including events not yet instrumented)
+  - mark any existing emits as **done**
+  - add `plans/events/<title>.event.md` **only** for event types **actually wired** in init; planned-but-not-instrumented events stay in the knowledge progress tracker until `/testchimp instrument` lands them
+- **Later**: persist as deferred under `### TrueCoverage Plan` and direct user to `/testchimp setup truecoverage`.
+- **No**: persist as disabled under `### TrueCoverage Plan`.
+
+Success check (TrueCoverage Infra):
+- if `enabled=true`, `plans/knowledge/truecoverage-instrument-progress.md` exists, the emit helper wrapper is defined with configuration setup (env wiring + sampling + basic event emits), and `plans/events/*.event.md` exists for each event type instrumented in init (planned-only events appear only under `plans/knowledge/` until instrumented).
+
 ### Action item G - Environment strategy
 
 Load [`references/environment-management.md`](./environment-management.md).
@@ -368,29 +458,11 @@ Success check (Environment provision strategy):
 
 - Run from tests root with required env vars.
 - Pass PR/stage URL via `BASE_URL`.
+- If **Mocking** was enabled in action J, align CI with the documented AIMock approach (e.g. GitHub Action or `npx` per [`mocking_strategy.md`](./mocking_strategy.md) / vendor docs).
 - If using PR-triggered runs, exclude TestChimp plan sync PRs with title `TestChimp Platform Sync [Plans]`.
 
 Success check (CI setup):
 - CI action authored (and wired to the selected environment strategy for `BASE_URL` / provisioning).
-
-### Action item I - TrueCoverage opt-in
-
-Read `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan`.
-
-If decision is missing or the user requests a change, explain value and ask:
-
-- **Yes now**: install `testchimp-rum-js` (in the application package), implement a single emit helper wrapper, configure runtime env vars (`TESTCHIMP_PROJECT_ID` + `TESTCHIMP_API_KEY` via app project environment files, not `.env-QA` under the tests root), set up sampling, identify a minimal set of basic events and write them to `plans/events/`, wire those events through the emit helper during SmartTests, align reporter config, and persist the decision + notes under `### TrueCoverage Plan`.
-
-  Additionally, during init you must generate the instrumentation tracker:
-  - scan the frontend to identify core routes/pages and the semantic events planned for each area
-  - create `plans/knowledge/truecoverage-instrument-progress.md` to track **planned vs done**
-  - mark any existing emits as **done**
-  - keep `plans/events/*.event.md` creation limited to the small slice that was actually wired up in init; planned events remain only in the progress tracker until `/testchimp instrument` lands them
-- **Later**: persist as deferred under `### TrueCoverage Plan` and direct user to `/testchimp setup truecoverage`.
-- **No**: persist as disabled under `### TrueCoverage Plan`.
-
-Success check (TrueCoverage Infra):
-- if `enabled=true`, `plans/events/` is not empty and the emit helper wrapper is defined with configuration setup (env wiring + sampling + basic event emits).
 
 ---
 
@@ -472,6 +544,7 @@ Init is complete when the action checklist is fully resolved (done, skipped, or 
 - plans/tests mappings in place,
 - CI run strategy chosen and documented,
 - seed/teardown and harness strategy established,
+- mocking approach recorded under `### Mocking Plan` (or explicitly deferred / N/A),
 - environment strategy recorded,
 - TrueCoverage decision recorded,
 - deferred items explicitly listed.

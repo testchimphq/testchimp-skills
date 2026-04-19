@@ -88,7 +88,7 @@ SmartTests live under whatever folder the team mapped as **tests** in TestChimp 
 
 - **`pages/`** — Encapsulate navigation and selectors per page.
 - **`setup/`** — Global setup runs **before** browser tests via Playwright [project dependencies](https://playwright.dev/docs/test-global-setup-teardown#option-1-project-dependencies). Use for seed data, auth state, shared harness. **`setup/world-states/`** holds **`*.world.js`** world-state scripts (see [world-states.md](./world-states.md)). Usually excluded from the main test project with `testIgnore` in config.
-- **`e2e/`** (and siblings) — Specs match `*.{spec,test}.{js,ts}` under the tests root except ignored paths like `setup/`.
+- **`e2e/`** (and siblings) — SmartTests use **`*.spec.{js,ts}`** under the tests root.
 - **`assets/`** — Static files (uploads, etc.).
 - **`.env-*`** — Per-environment variables for **exercising the app under test** (e.g. **`BASE_URL`**); **QA** is a common default. Read with `process.env.VAR_NAME`. **Not** for **`TESTCHIMP_API_KEY`** (use shell + MCP config).
 - **`playwright.config.js`** — Playwright config; projects using TestChimp add **`playwright-testchimp`**.

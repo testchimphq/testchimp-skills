@@ -1,6 +1,8 @@
 # TrueCoverage
 
-TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the app with [`testchimp-rum-js`](https://www.npmjs.com/package/testchimp-rum-js); [`playwright-testchimp`](https://github.com/testchimphq/playwright-testchimp-reporter) tags the same events during runs with test identity. TestChimp aggregates both streams for coverage insights.
+TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the app with **`testchimp-rum-js`**; [`playwright-testchimp`](https://github.com/testchimphq/playwright-testchimp-reporter) tags the same events during runs with test identity. TestChimp aggregates both streams for coverage insights.
+
+**Authoritative RUM library docs (read before implementing):** [testchimp-rum-js on GitHub](https://github.com/testchimphq/testchimp-rum-js) (README covers `init`, `emit`, `flush`, `resetSession`, configuration options, event constraints, and batching). **npm:** [`testchimp-rum-js`](https://www.npmjs.com/package/testchimp-rum-js).
 
 **Product overview:** [TrueCoverage intro](https://docs.testchimp.io/truecoverage/intro)
 
@@ -8,10 +10,36 @@ TrueCoverage connects **real user behavior** (from production) with **test execu
 
 ## Setup (library and credentials)
 
-1. Install: `npm install testchimp-rum-js` (in the app under test, not only in the SmartTests package).
-2. Prefer **one helper** (e.g. `emitProductEvent`) that wraps `testchimp-rum-js`, sets `TESTCHIMP_API_KEY`, `TESTCHIMP_PROJECT_ID`, and environment tag from your per-env config. Avoid scattering raw calls throughout codebase.
-3. **Credentials:** Users get `TESTCHIMP_API_KEY` and project id from **TestChimp → Project Settings → Key Management**. Send them on event emits per library docs; tag **environment** (e.g. `QA`, `prod`) consistently. You can optionally specify a release id as well - if require release-specific coverage.
-4. **Vocabulary:** If you already use product analytics (PostHog, Segment, etc.), align event names where it helps—but TrueCoverage goals differ: prefer **semantic journey steps** (e.g. checkout completed) over noise (“button clicked”). Keep **metadata cardinality** low (few distinct values per key) to avoid explosion; use sampling aggressively if needed—goal is QA gap signal, not product analytics precision.
+1. Install: `npm install testchimp-rum-js` in the **app under test** (frontend / runtime bundle), not only in the SmartTests package.
+2. Call **`testchimp.init()` once** at app bootstrap (see [library README](https://github.com/testchimphq/testchimp-rum-js)). Required top-level fields per README:
+   - **`projectId`** — TestChimp project ID (from **TestChimp → Project Settings → Key management**).
+   - **`apiKey`** — project API key for RUM (same source).
+   - **`environment`** — logical tag for the session (e.g. `production`, `staging`, `QA`); use one consistent scheme per deploy.
+   - Optional: `sessionId`, `release`, `branchName`, `sessionMetadata`, and nested **`config`** (see below).
+3. Prefer **one helper** (e.g. `emitProductEvent`) that wraps **`testchimp.emit()`** after init. Read credentials from your app’s env/build config (e.g. map `TESTCHIMP_PROJECT_ID` / `TESTCHIMP_API_KEY` into `init()`); avoid scattering raw `emit` calls. Do **not** put these secrets in SmartTests `.env-QA`—those are for test execution vars like `BASE_URL`.
+4. **Vocabulary:** If you already use product analytics (PostHog, Segment, etc.), align event names where it helps—but TrueCoverage goals differ: prefer **semantic journey steps** (e.g. checkout completed) over noise (“button clicked”). Keep **metadata cardinality** low; follow **Event constraints** in the [GitHub README](https://github.com/testchimphq/testchimp-rum-js) (title length, metadata keys/values, max serialized size).
+
+### RUM `config` (volume / “sampling” behavior)
+
+The library does not use a separate “sampling percentage” API; **event volume and repeat caps** are controlled via the optional **`config`** object passed to **`testchimp.init({ ..., config })`**. Defaults and meanings are defined in the [testchimp-rum-js README — Configuration options](https://github.com/testchimphq/testchimp-rum-js). Use this table as the agent checklist (align with README for exact defaults):
+
+| Option | Purpose |
+|--------|--------|
+| `captureEnabled` | If `false`, `emit` is a no-op (kill switch). |
+| `maxEventsPerSession` | Cap total accepted events per session. |
+| `maxRepeatsPerEvent` | Cap repeats of the same event **title** per session. |
+| `eventSendInterval` | Ms between batch sends. |
+| `maxBufferSize` | Buffer size before auto-flush. |
+| `inactivityTimeoutMillis` | Session expiry; new load starts a new session. |
+| `testchimpEndpoint` | RUM ingress base URL (override only if needed). |
+| `enableDefaultSessionMetadata` | Session init metadata from client (`navigator` / `Intl`); set `false` if you want only your `sessionMetadata`. |
+
+For a **first instrumentation slice**, prefer **conservative** limits (the README includes an example “high-frequency sampling” block). Reuse existing tuning from the repo when present.
+
+### After init
+
+- Use **`testchimp.emit({ title, metadata? })`** for journey events; call **`testchimp.flush()`** before navigation/redirect if you need immediate delivery.
+- Invalid or over-limit events are **dropped** (console warning per README)—design titles and metadata accordingly.
 
 ---
 
