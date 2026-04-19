@@ -8,7 +8,7 @@ This document defines the **phased workflow** for testing a PR with TestChimp.
 3. Execute
 4. Cleanup
 
-Use this as the primary reference for `/testchimp test`. For SmartTest authoring patterns and examples, load **[`write-smarttests.md`](./write-smarttests.md)** during the **Execute** phase. For **world-state** scripts (`*.world.js`), `ensureWorldState`, and how execution should order **seed → browser**, load **[`world-states.md`](./world-states.md)** alongside this doc. For **test-only seed, teardown, and read** endpoints (discovery, proxy pattern, idempotency, post-UI assertions), load **[`seeding-endpoints.md`](./seeding-endpoints.md)**. For TrueCoverage rules (instrumentation, `plans/events/*.event.md`), load **[`truecoverage.md`](./truecoverage.md)** when RUM is in scope.
+Use this as the primary reference for `/testchimp test`. For SmartTest authoring patterns and examples, load **[`write-smarttests.md`](./write-smarttests.md)** during the **Execute** phase. For **Playwright fixtures** (`mergeTests`, `<tests_root>/fixtures/`), **`testInfo`** scoping, and **probe** specs (`page.pause()`), load **[`fixture-usage.md`](./fixture-usage.md)**. For **test-only seed, teardown, and read** endpoints (discovery, proxy pattern, idempotency, post-UI assertions), load **[`seeding-endpoints.md`](./seeding-endpoints.md)**. For TrueCoverage rules (instrumentation, `plans/events/*.event.md`), load **[`truecoverage.md`](./truecoverage.md)** when RUM is in scope.
 
 ---
 
@@ -57,13 +57,13 @@ The plan must include:
      - Ask these checks: (1) what risk is being reduced, (2) can outcome be asserted from API state alone, (3) is browser interaction required by acceptance criteria, (4) does UI automation add maintenance cost without additional signal?
    - Record the decision rationale in 1-2 lines per planned case.
 4. **Prerequisites + environment strategy**
-   - **World states (per test case):** Decide which **target world-state** a given test needs—a stable **`meta.id`** backed by an existing **`tests/setup/world-states/*.world.js`** file, or a **new** id you will introduce. The **plan must spell out** which world-state applies to which case and must list **any missing** world-state scripts (and missing seed/teardown/**read** APIs or env wiring). **Authoring those `*.world.js` files and seed work is part of the plan phase** (and lands in **Setup** before you lean on Playwright for behavior that depends on that data). See **[`world-states.md`](./world-states.md)** for `defineWorldState`, composition, and env vars (`BACKEND_URL`, etc.); see **[`seeding-endpoints.md`](./seeding-endpoints.md)** for designing those APIs (including **read** endpoints for assertions and **read-before-write** idempotency). If a sufficiently close enough world-state exists, then use that - with the additional specific pre-setup needed for the test done inline in the test (or a before hook). The objective is NOT to have a world-state per test. World states are a few, managed, states that creates common reusable states that are reused heavily by tests. For instance, if the test case requires a feature flag to be toggled, but other than that, an existing world-state is sufficient, then load that world-state, do the feature flag toggle inline within the test.
-   - **Execution order (core idea):** The agent **brings the environment to the target world-state first** (e.g. `ensureWorldState('…')` in `beforeAll` / start of test, or the product’s equivalent), **then** performs the **Playwright** (and `ai.*`) steps against the UI. The browser pass assumes the backend/data already matches that world-state; do not treat “open Playwright” as a substitute for applying the world-state when the plan called for one.
+   - **Fixtures + seed/read APIs (per test case):** Decide which **fixture-backed posture** each UI test needs. The **plan must list** which **`fixtures/`** dependencies apply to which case and any **missing** pieces: seed/teardown/**read** endpoints, env wiring, or new domain fixture modules. **Authoring or extending [`fixtures/`](./fixture-usage.md) and the APIs they call is part of Plan/Setup** when tests depend on specific data. Prefer **few reusable fixture extensions** composed in specs—not a unique mega-fixture per test. Extra one-off steps (e.g. toggle a flag) stay **inline** in the test when they do not deserve a shared fixture.
+   - **Execution order (core idea):** Playwright runs **fixture setup** (seed via APIs) **before** the test body. The browser steps assume the backend/data already matches that posture. Do not skip fixtures when the plan called for seeded data.
    - Read `plans/knowledge/ai-test-instructions.md` first (if available), for persisted project decisions.
    - Decide environment mode:
      - **Persistent backend + local/preview frontend** for frontend-only changes when sufficient. This is fast, cheap - so favourable default.
      - **Isolated full-stack ephemeral environment** when backend changes affect behavior. This enables full stack isolation and stronger consistancy guarantees, but is slow to provision (~5-10 mins), and costs (since require actual deployment). Use only when necessary.
-   - If using persistent environments, infer reusable data from existing tests, fixtures, POMs, env files and world-states; ask user only for missing critical values.
+   - If using persistent environments, infer reusable data from existing tests, **`fixtures/`**, POMs, and env files; ask user only for missing critical values.
    - If using ephemeral environments, call `get_eaas_config`; if it returns empty/unconfigured, stop and ask user to configure EaaS in TestChimp. Refer `/references/environment-management` for more details on setup and provision.
 5. **Infra gaps**
    - Identify missing seed/teardown/read endpoints or missing harness infrastructure (see **[`seeding-endpoints.md`](./seeding-endpoints.md)**).
@@ -86,8 +86,7 @@ Goal: create the environment and prerequisites needed to author and run tests.
    - If plan selected ephemeral env and `get_eaas_config` is configured, call `provision_ephemeral_environment` with current branch name.
    - Poll with `get_ephemeral_environment_status` roughly every minute until ready (typical provisioning time is several minutes). After 20 minutes if still not provisioned, inform the user to check the provider and ask whether to kill or keep trying. If user says to kill the environment, use mcp tool to kill the environment.
 2. **Address infra gaps**
-   - Implement or wire missing seed/teardown/read setup identified during planning.
-   - Add or update **`*.world.js`** world-state scripts that the **plan** marked as missing, so execution can call **`ensureWorldState`** before browser steps.
+   - Implement or wire missing seed/teardown/read endpoints and **`fixtures/`** modules that the **plan** marked as missing, so tests can declare the needed fixtures and run.
 3. **TrueCoverage setup (when planned / enabled)**
    - If instrumentation was planned and TrueCoverage is in scope per `plans/knowledge/ai-test-instructions.md`: ensure `testchimp-rum-js` is available in the **application** package, add or update a **single helper** for emits, wire **API key / project id / environment** from config, and add **`plans/events/*.event.md`** docs for new event types. Skip if the project plan indicates TrueCoverage is out of scope or the user declined.
 4. **Fix plan gaps first**
@@ -105,10 +104,10 @@ Goal: author and validate SmartTests for planned cases.
 1. Load **[`write-smarttests.md`](./write-smarttests.md)** and follow its authoring guidance (for UI test authoring).
 2. **Sanity-check likely affected existing tests (small, best-effort subset)**: before writing new tests, identify a **small set** of existing tests that are likely related to the derived change context (based on paths touched, scenarios referenced, and test naming). Run them first as a **quick regression check** (this is intentionally fuzzy; do not try to run *all* “possibly affected” tests).
    - If these tests **fail**, triage each failure:
-     - If the PR intentionally changed the behavior, **update the test** (and/or world-state/fixtures) to match the new expected behavior and ensure the linked scenario still reflects requirements.
+     - If the PR intentionally changed the behavior, **update the test** (and/or fixtures) to match the new expected behavior and ensure the linked scenario still reflects requirements.
      - If the behavior should not have changed, treat it as a **real regression** and **call it out** clearly in the report (and prioritize fixing product code over “fixing tests”).
      - If it’s unclear, gather evidence (UI screenshots/logs/network) and explain why it’s ambiguous rather than guessing.
-2. **World state before UI:** For each UI case that the **plan** tied to a world-state, ensure the test (or shared setup) **runs `ensureWorldState` (or equivalent) before** the Playwright interactions that depend on that seeded backend/data. The flow is: **environment → target world-state → then** browser automation. See **[`world-states.md`](./world-states.md)**.
+2. **Fixtures before UI:** For each UI case that the **plan** tied to a seeded posture, ensure the spec **imports `test` from `fixtures`** (merged entry) and **lists the needed fixtures** so setup runs before browser steps. See **[`fixture-usage.md`](./fixture-usage.md)**.
 3. Create a Playwright browser session, authenticate once, and store storage state in a temporary file for reuse. Make sure the authored test also follows same via storageContext.
 4. **Application emits (TrueCoverage):** When `enabled=true` and the plan called for new /updated events, add emits in the **app** code for those interactions and keep **`plans/events/*.event.md`** in sync. Do this **before** authoring individual SmartTests or API tests that depend on those events being emitted or on TrueCoverage picking them up. This work is independent of SmartTest files but should land in the same PR when possible.
 5. Implement each planned test case (UI/API as planned), reusing storage state for faster repeated sessions. For writing API tests, refer **[`api-testing.md`](./api-testing.md)**.
@@ -127,7 +126,7 @@ Goal: remove temporary resources and avoid leaked infrastructure. Communicate re
 4. Include a summary of:
    - New TrueCoverage event emits added / updated
    - # of tests authored (with breakdown of API vs UI)  - and breakdown by failing / passing.
-   - New world-states authored
+   - New or updated **fixtures** / seed endpoints
    - Any infra setups that was done
 
 ---

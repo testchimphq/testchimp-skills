@@ -10,7 +10,7 @@ For **full** `ai-wright` API details (options, env vars, troubleshooting), see *
 
 For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, platform paths, and MCP tools to **create** plan files), see **[`test-planning.md`](./test-planning.md)**.
 
-**World states:** Decide the **target world-state** (`meta.id`) per UI test during **planning**, include **authoring `*.world.js` scripts** (and any missing seed/teardown APIs) in the **plan / setup** work, then during execution **bring the environment to that world-state before** driving the app with **Playwright**—see **[`testing-process.md`](./testing-process.md)**. File shape, `ensureWorldState`, and composition are in **[`world-states.md`](./world-states.md)**. When a scenario must assert **backend persistence** or **observable** state after UI steps (not only the DOM), plan **test-only read** endpoints or `request` calls to them per **[`seeding-endpoints.md`](./seeding-endpoints.md)** (reads also support **read-before-write** idempotency in seed/teardown code paths).
+**Fixtures:** Decide which **fixture dependencies** each UI test needs during **planning**; add or extend **`fixtures/`** (and any missing seed/teardown/read APIs) in **plan / setup**—see **[`testing-process.md`](./testing-process.md)** and **[`fixture-usage.md`](./fixture-usage.md)** (`mergeTests`, master `index`, `testInfo`). When a scenario must assert **backend persistence** or **observable** state after UI steps (not only the DOM), plan **test-only read** endpoints or `request` calls per **[`seeding-endpoints.md`](./seeding-endpoints.md)** (reads also support **read-before-write** idempotency in fixture teardown).
 
 ---
 
@@ -60,7 +60,7 @@ Recommended takeover loop:
    - `import { ai } from 'ai-wright';`
    - `import 'playwright-testchimp/runtime';`
 
-   The above enables AI steps in tests and TrueCoverage event tracking. For **`ensureWorldState` / `teardownWorldState`** imports when using world-state steps, see **[`world-states.md`](./world-states.md)**.
+   The above enables AI steps in tests and TrueCoverage event tracking. Import **`test` / `expect` from your merged [`fixtures/`](./fixture-usage.md) entry** when tests use shared data setup.
 
 6. **Scenario link** — As the **first statement inside the test body**:
    - `// @Scenario: #TS-xxx <Scenario title>`  
@@ -78,16 +78,17 @@ SmartTests live under whatever folder the team mapped as **tests** in TestChimp 
 ```text
 <mapped-tests-root>/
   pages/           # Page objects — reusable per-page helpers
+  fixtures/        # mergeTests entry + domain fixtures ([fixture-usage.md](./fixture-usage.md))
   e2e/             # Many teams put specs here (or use other subfolders)
   setup/           # Global setup (see below)
-    world-states/  # *.world.js — named seed states ([world-states.md](./world-states.md))
   assets/          # Files used in tests (e.g. uploads)
   .env-QA          # Example env file; more environment types as needed - QA env is auto created by default
   playwright.config.js <-- unlike typical Playwright structure, in TestChimp, the config file lives inside the tests folder.
 ```
 
 - **`pages/`** — Encapsulate navigation and selectors per page.
-- **`setup/`** — Global setup runs **before** browser tests via Playwright [project dependencies](https://playwright.dev/docs/test-global-setup-teardown#option-1-project-dependencies). Use for seed data, auth state, shared harness. **`setup/world-states/`** holds **`*.world.js`** world-state scripts (see [world-states.md](./world-states.md)). From specs, call **read** endpoints (guarded test routes) when you need to assert persisted state after browser actions—see **[`seeding-endpoints.md`](./seeding-endpoints.md)**. Usually excluded from the main test project with `testIgnore` in config.
+- **`fixtures/`** — Shared **`test.extend`** modules merged via **`mergeTests`**; use for per-test seed/teardown via APIs ([`fixture-usage.md`](./fixture-usage.md), [`seeding-endpoints.md`](./seeding-endpoints.md)).
+- **`setup/`** — Global setup runs **before** browser tests via Playwright [project dependencies](https://playwright.dev/docs/test-global-setup-teardown#option-1-project-dependencies). Use for expensive one-time work (e.g. auth storage state). Usually excluded from the main test project with `testIgnore` in config.
 - **`e2e/`** (and siblings) — SmartTests use **`*.spec.{js,ts}`** under the tests root.
 - **`assets/`** — Static files (uploads, etc.).
 - **`.env-*`** — Per-environment variables for **exercising the app under test** (e.g. **`BASE_URL`**); **QA** is a common default. Read with `process.env.VAR_NAME`. **Not** for **`TESTCHIMP_API_KEY`** (use shell + MCP config).

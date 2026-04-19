@@ -41,7 +41,7 @@ Convert a validated user flow into a robust Playwright API test by:
    - API tests are also just plain Playwright scripts - just executing API calls and no browser interactions.
    - Sequence calls in dependency order - including only the absolutely necessary calls.
    - Extract values from earlier responses and pass them into later requests (ids, tokens, generated resource keys).
-   - Keep setup assumptions explicit and aligned with the setup project / seeded world-state.
+   - Keep setup assumptions explicit and aligned with the setup project / **fixtures** and seed endpoints.
 5. **Link to Relevent Scenarios**
    - Just like in SmartTests, you can add scenario link comments - inside the api tests with: `// @Scenario: #TS-101 Scenario Title` style comments. (Follow the format strictly).
 6. **Add strong verifications**

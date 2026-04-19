@@ -1,30 +1,42 @@
 # Mocking strategy (TestChimp)
 
-Opinionated defaults for **service** vs **LLM** mocking for E2E testing. Use during **`/testchimp init`** (planning discovers existing setup; execution installs and wires) and when authoring tests that need deterministic or error-path behavior.
+Opinionated defaults for **HTTP/API** vs **LLM** mocking for E2E testing. Use during **`/testchimp init`** (planning discovers existing setup; execution wires what the user opted into) and when authoring tests that need deterministic or error-path behavior.
 
 ## Principles
 
-### MSW (Mock Service Worker)
+### Playwright `page.route` (HTTP / API)
 
-- Use **when needed** for **generic HTTP/API mocking** — for example emulating a **specific** response so the UI can be asserted (error toast when upstream returns **500**, empty list, validation error payload).
-- Use **sparingly**. MSW is **not** a shortcut to avoid running real flows end-to-end; prefer exercising the real stack unless the scenario is explicitly about handling a particular API outcome.
-- Do **not** use MSW for **LLM** traffic — use **AIMock** (below).
+- **Default choice** for selective HTTP/API stubbing in SmartTests: use Playwright’s native **[`page.route`](https://playwright.dev/docs/network#handle-requests)** (or `context.route`) to intercept requests and fulfill or abort with a controlled response.
+- Use **when needed** for targeted outcomes (e.g. assert error UI when upstream returns **500**, empty list, validation error payload)—not as a way to avoid exercising the real stack unless the scenario is explicitly about that outcome.
+- Prefer **shared helpers or fixtures** (see [`fixture-usage.md`](./fixture-usage.md)) so routes stay readable and reusable across specs.
+- **Do not** add **MSW** as part of TestChimp’s default stack; teams that already use MSW may keep it, but new work should follow **`page.route`** unless there is a strong reason not to.
 
 ### AIMock (LLM / OpenAI-compatible traffic)
 
-- Use for **any LLM interaction** anywhere in the stack (browser, backend, workers, agents): OpenAI-compatible APIs, streaming, record/replay, semantic matching.
-- **Do not** mock LLM calls with MSW — AIMock is built for streaming and realistic replay.
+- **Optional during `/testchimp init`:** the agent **asks the user** whether to set up AIMock so LLM interactions in the stack can be **mocked during tests** with **record/replay when feasible** (see Phase 1 in [`init-testchimp.md`](./init-testchimp.md)).
+- When enabled, use AIMock for **OpenAI-compatible** traffic (browser, backend, workers): streaming, record/replay, semantic matching—**not** generic REST stubs (use **`page.route`** or app-level test doubles for those).
+- **Strongly recommended** for repos with LLM calls in the path under test: it **avoids ongoing LLM usage costs during test executions** compared to hitting real models every run. Users may **defer** AIMock and ask to wire it later; document **deferred** under `### Mocking Plan` with a short reason.
 
 ### Fixture location (AIMock record/replay)
 
 - Store AIMock goldens/fixtures under **`<SmartTests root>/assets/goldens`** (the folder that contains `.testchimp-tests`).
 - Point AIMock config (or CLI `--fixtures` / equivalent) at that path per [upstream AIMock docs](https://github.com/CopilotKit/aimock).
 
+## What to record under `### Mocking Plan`
+
+In `plans/knowledge/ai-test-instructions.md`, make the choices explicit, for example:
+
+- **`http_mocking`:** `page.route` (default stance) | deferred | N/A — plus a one-line note if the repo uses something else (e.g. legacy MSW).
+- **`aimock`:** enabled | deferred | not applicable — if deferred, **reason** (e.g. “set up in a follow-up init pass”).
+- When AIMock is enabled or planned: **goldens path** (default `<SmartTests root>/assets/goldens`), **env/config** used to aim OpenAI-compatible traffic at AIMock during tests (e.g. `OPENAI_BASE_URL`), and **local vs CI** run notes.
+
 ## Plan vs execute
 
-- **Planning phase:** Report what exists (MSW, AIMock, env vars for LLM base URL, existing goldens). Lock requirements in `plans/knowledge/ai-test-instructions.md` under `### Mocking Plan`. This area usually needs **little user input** — the agent proposes where to wire AIMock and documents what was chosen.
-- If the user uses some other solution for mocking in E2E tests - document that in the ai-test-instructions and continue to use that. However, ask whether they would like to move to TestChimp recommended defaults.
-- **Execution phase:** Install dependencies, create `assets/goldens` if missing, refactor hardcoded OpenAI/base URLs into **config/env** (e.g. `OPENAI_BASE_URL` pointing at the AIMock server during tests), ensure AIMock runs for local and CI test runs as upstream recommends.
+- **Planning phase:** Report what exists (any **`page.route`** helpers, AIMock packages, env vars for LLM base URL, existing goldens). Lock the above fields under `### Mocking Plan`. **AIMock** requires a **direct user decision** in init (see [`init-testchimp.md`](./init-testchimp.md)); do not treat AIMock as silently default-on.
+- If the user uses another HTTP mocking approach, document it under `### Mocking Plan` and ask whether they want to align with **`page.route`** for new work.
+- **Execution phase:**
+  - Document or add **`page.route`** patterns as agreed—**no** default install of MSW.
+  - **Only if `aimock: enabled`:** install AIMock per [upstream docs](https://github.com/CopilotKit/aimock), create `assets/goldens` if needed, refactor hardcoded OpenAI/base URLs into **config/env** for test runs, and ensure AIMock runs locally and in CI per vendor guidance.
 
 ## Upstream AIMock setup (authoritative detail)
 

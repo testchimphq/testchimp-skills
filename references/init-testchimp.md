@@ -6,7 +6,7 @@ Initialize the repo for TestChimp using a phased workflow. This document is for 
 
 ## Purpose
 
-`/testchimp init` often includes long-running and branching work: EaaS decisions, seeding strategy, harness setup, mocking (MSW / AIMock), CI wiring, importing existing tests, and TrueCoverage setup. To keep this reliable, agents must:
+`/testchimp init` often includes long-running and branching work: EaaS decisions, seeding strategy, harness setup, mocking (Playwright `page.route` + optional AIMock), existing Playwright import strategy, CI wiring, and TrueCoverage setup. To keep this reliable, agents must:
 
 1. collaborate with the user on a concrete action plan first,
 2. persist decisions and item status in `plans/knowledge/ai-test-instructions.md`,
@@ -37,12 +37,33 @@ At minimum, `/testchimp init` should ensure this file contains the following sec
 
 ## TrueCoverage Plan
 
-## World-States Plan
-
 ## Mocking Plan
 ```
 
 Keep this file **project-level only** (avoid workstation-specific progress like “installed MCP client on my laptop”).
+
+### Two scopes: workstation vs project
+
+Init mixes **two independent scopes**. Agents must not collapse them into a single “are we done?” signal.
+
+| Scope | What it covers | How to tell if it is already done |
+|--------|----------------|-------------------------------------|
+| **Workstation** (per machine) | Host MCP registration: `npx` resolves **`testchimp-mcp-client`** (see [`../assets/sample-mcp.json`](../assets/sample-mcp.json)), **`.cursor/mcp.json`** (or host equivalent) contains a **`testchimp`** server entry whose **`args`** invoke the client, and **`env.TESTCHIMP_API_KEY`** is set to a **real** project key (not empty, not a placeholder). Optionally shell `TESTCHIMP_API_KEY` for Playwright / ai-wright. | **Check local config every time** — never infer from git. |
+| **Project** (repo / team) | Shared decisions: environment strategy, TrueCoverage, mocking, import/CI plans, action items — persisted under **`plans/knowledge/ai-test-instructions.md`**. | If that file **exists and is substantively populated** (sections filled, not just a stub), treat **project-level** decisions as already captured unless the user wants to change them. |
+
+**Critical:** A teammate who clones the repo after project init may see a complete **`ai-test-instructions.md`** and still have **no** MCP client or key on **their** laptop. **`/testchimp init` must always run the workstation checks and fixes** in that situation, even when project-level markdown is already done.
+
+---
+
+## Workstation gate (always first)
+
+Run this **before** optional smoke (Phase 0) or project requirement gathering (Phase 1–3). On **every** `/testchimp init`, complete:
+
+1. **Resolve MCP config** — From the SmartTests root (folder with `.testchimp-tests`), walk **up** the directory tree for **`.cursor/mcp.json`** until you find one whose **`mcpServers`** defines the TestChimp client (typically **`testchimp`**) — same resolution rules as **`SKILL.md`** Preamble check **#3**.
+2. **Verify client + key** — Apply **`SKILL.md`** Preamble checks **#3** (`TESTCHIMP_API_KEY` resolvable and usable) and **#4** (MCP client version / `args` for **`testchimp-mcp-client`**). If the server entry is missing or wrong: update the host MCP config using the **`npx`** + **`testchimp-mcp-client@latest`** pattern from [`../assets/sample-mcp.json`](../assets/sample-mcp.json), then re-check (e.g. MCP tool call such as **`get_eaas_config`** must not return **401**).
+3. **Never skip** this block because **`ai-test-instructions.md`** exists or looks complete.
+
+Only after the workstation gate passes should you use **`ai-test-instructions.md`** to decide how much **project-level** Phase 1–3 work remains.
 
 ---
 
@@ -50,11 +71,11 @@ Keep this file **project-level only** (avoid workstation-specific progress like 
 
 ### 0.1 Ask first
 
-At the very start of init, ask the user whether they want a quick smoke pass before full infra setup.
+Complete the **[Workstation gate](#workstation-gate-always-first)** first. Then ask the user whether they want a quick smoke pass before full infra setup.
 
 Use this explanation:
 
-- Full init sets up enterprise QA infrastructure: TrueCoverage instrumentation, World-state scripts, test-only **seed / teardown / read** endpoint setup, and branch-aware execution (including ephemeral environments) so E2E tests are done before PR merge with lower flakiness. Explain that TestChimp enables runtime intelligent steps for more reliable tests.
+- Full init sets up enterprise QA infrastructure: TrueCoverage instrumentation, test-only **seed / teardown / read** endpoint discovery (full wiring often lands during **`/testchimp test`**), and branch-aware execution (including ephemeral environments) so E2E tests are done before PR merge with lower flakiness. Explain that TestChimp enables runtime intelligent steps for more reliable tests.
 - This can be a larger cognitive investment, so quick smoke can provide immediate value first.
 
 ### 0.2 If user chooses quick smoke
@@ -95,76 +116,70 @@ Before any infra implementation, the agent should first **discover what it can f
 
 Why this phase (quick education):
 - Teams don’t usually know TestChimp’s infra expectations up front (mapped folders), so we front-load discovery to avoid rebuilding things that already exist.
-- Deterministic `world-states` and idempotent seeding reduce “works on my machine” flakiness by ensuring author-time and execution-time start from the same posture (so agents can reason about which entities exist in which states).
+- Idempotent seeding and **Playwright fixtures** (see [`fixture-usage.md`](./fixture-usage.md)) reduce “works on my machine” flakiness by aligning author-time and run-time data posture.
 - For pre–PR-merge testing, isolated environments are necessary so agents validate against the exact PR-specific code/data they’re changing (otherwise they may author based on stale staging/main behavior).
 - Environment strategy affects both CI behavior and the final `BASE_URL` resolution; setting it wrong usually breaks tests in CI, and choosing the wrong isolation level makes agent decisions inaccurate.
 
-Do not start implementing world-states/mocking/env/truecoverage/CI until you have the user’s deliberate answers (or explicit acceptance of the agent’s proposed defaults) below.
+Do not start implementing mocking/env/truecoverage/CI until you have the user’s deliberate answers (or explicit acceptance of the agent’s proposed defaults) below.
 
-**Do not** write or update `plans/knowledge/ai-test-instructions.md` (other than `## Init requirements`) until the user has answered in this conversation.
+**Do not** write or update `plans/knowledge/ai-test-instructions.md` (other than `## Init requirements`) until the user has answered in this conversation — **except** that the **[Workstation gate](#workstation-gate-always-first)** may (and should) be completed **before** those answers; workstation MCP/API-key setup does not wait on project-level Q&A.
+
+**Project-level shortcut:** If **`ai-test-instructions.md`** is already substantively populated, treat Key Areas **3–6** (and similar) as **read-and-confirm** unless the user wants changes — but still run the **Workstation gate** and Key Area **1** marker / SmartTests root discovery.
 
 ### Key Area 1 — Basic TestChimp integration
+- **Workstation subset:** MCP + API key expectations are defined in the **[Workstation gate](#workstation-gate-always-first)** above; do not skip them when `ai-test-instructions.md` exists in git.
 - Agent discovery (report findings first):
   - Locate marker files on disk:
     - `.testchimp-plans` => plans root mapped
     - `.testchimp-tests` => SmartTests root mapped
-  - Locate host MCP config (eg: `<project-root>/.cursor/mcp.json`) and check whether a `testchimp-mcp-client` server entry exists with `env.TESTCHIMP_API_KEY`.
-  - **Existing Playwright vs greenfield** (see [`importing-existing-tests.md`](./importing-existing-tests.md)):
-    - Treat the folder containing `.testchimp-tests` as the **SmartTests root**.
-    - Scan for **`*.spec.{js,ts}`** only (not `*.test.*` — TestChimp uses **`*.spec.*`**), excluding **`setup/**`** and treating scaffold-only setup files as non-“suite” (e.g. `global.setup.spec.*` under `setup/` does not count as an existing e2e suite).
-    - Under that root, check **`playwright.config.*`** for **`playwright-testchimp/reporter`** in `reporter` — if present, call out **prior SmartTests/TestChimp wiring** in findings.
-    - Classify: **greenfield** (no specs outside `setup/` beyond scaffold) vs **has existing Playwright** vs **dual-folder** (mapped SmartTests folder is empty/new but **`*.spec.{js,ts}`** exist elsewhere in the repo). If legacy specs live **outside** the mapped folder, **ask** whether to move them into the mapped folder; if yes, **plan in Phase 2**, **execute in Phase 3** after approval.
+  - Confirm the **SmartTests root** path (folder containing `.testchimp-tests`) for downstream key areas. **Existing Playwright classification and import strategy** are handled in [Key Area 2](#key-area-2--existing-playwright-suite--import-strategy).
 - If either marker file is missing: ask the user to complete the minimum needed TestChimp Git integration + sync so marker files exist.
-- If the MCP server entry is missing: the agent should update the host MCP config automatically (using the `npx` + `testchimp-mcp-client@latest` pattern from `assets/sample-mcp.json`), then re-check that the server runs.
+- If the MCP server entry is missing or invalid after the Workstation gate: the agent should update the host MCP config automatically (using the `npx` + `testchimp-mcp-client@latest` pattern from `assets/sample-mcp.json`), then re-check that the server runs.
 - Only if `TESTCHIMP_API_KEY` value is not already available to write/use (e.g. not present in shell env or existing MCP `env`): ask the user to enter that in the mcp.json env block (or confirm where it is already provided) so the MCP validation call can succeed. Ensure the MCP can be called - by using get_eaas_config - expectation is for it to not return 401.
 
-### Key Area 2 — World-States Infra (seed / teardown / read endpoints + base world-states)
-
-Authoritative guide: [`seeding-endpoints.md`](./seeding-endpoints.md).
-
-- Agent discovery (report findings first):
-  - Under the SmartTests root, check for `setup/world-states/` and any `*.world.js` scripts. This is likely going to be empty for projects not configured in TestChimp.
-  - Scan for existing test-data reset/seed/teardown endpoints and any **read** or probe endpoints used for test assertions (look for candidate reset/seed handlers, idempotent reset entrypoints, or QA-only routes in the backend). If they are present, identify them and include them in the plan.
-  - Plan **read** endpoints where SmartTests must assert **persisted** or **observable** state after UI actions (not only DOM checks). Reads can also be useful in **read-before-write** idempotency in seed/teardown implementations.
-  - The core idea is - by the end of the init plan phase, agent will have identified a few (~1-2) core world-states to write and the seed/teardown/read endpoints needed to support them.
+### Key Area 2 — Existing Playwright suite / import strategy
 
 Why this area (quick education):
-- `world-states` let tests and agents load a pre-defined application posture at author-time and execution-time, which dramatically cuts flakiness caused by state drift.
 
-Agent stance (preferred behavior):
-- If seed/reset endpoints and/or world-state scripts are missing, do NOT ask the user “what endpoints should we write?”
-- Instead, inspect the backend/domain model and product APIs per [`seeding-endpoints.md`](./seeding-endpoints.md) to recommend a minimal, idempotent seed/reset setup:
-  - infer candidate entity names from DB schema/ORM models/migrations and existing domain types; use **foreign key** relationships to order **creation** and **teardown** sequences
-  - map **frontend-facing or public CRUD** flows where they represent the real create/delete behavior (prefer **proxying** those paths through test-only routes rather than duplicating business logic with raw table writes)
-  - pick a small “base” set of core entities that unblocks the most common flows (just enough to author and run a first small test suite)
-  - recommend **read** endpoints (or test-only wrappers around existing reads) for assertions after UI flows; include **read-before-write** in the idempotency plan when it simplifies safe retries
-  - recommend a default endpoint naming scheme (for example `POST /qa/testdata/reset` or `POST /testdata/reset`) and ensure it is safe to run (non-production-only guards)
-  - include an idempotency plan (so retries don’t corrupt state) - prefer endpoints to be authored as idempotent operations.
-  - recommend the minimal base world-state script name (for example `world-states/base.world.js`) that matches the seeded posture
-
-Only ask the user when clarification/tweaks are required:
-- confirm or tweak the recommended base entity list (add/remove domain-specific entities)
-- confirm endpoint guard approach if the repo’s non-production guard mechanism is unclear
-
-### Key Area 3 — Mocking (MSW + AIMock)
-
-Why this area is placed here (quick education):
-
-- Mocking sits **after world-states** because it is usually **low-friction**: little user input is required — the agent discovers how LLMs and HTTP clients are wired, decides where to plug in **AIMock** (and optional **MSW**), and reports what was done. It does not depend on TrueCoverage or environment strategy first.
+- Many repos are **not** greenfield: they already have Playwright specs, or specs live **outside** the mapped SmartTests folder. TestChimp needs an explicit **migration strategy** so Phase 2 plans the right moves and Phase 3 executes them **after approval**—see [`importing-existing-tests.md`](./importing-existing-tests.md).
 
 Agent discovery (report findings first):
 
-- Whether **`msw`** (or Playwright-oriented MSW setup) already exists in the SmartTests package or app.
+- Treat the folder containing `.testchimp-tests` as the **SmartTests root**.
+- Scan for **`*.spec.{js,ts}`** only (not `*.test.*` — TestChimp uses **`*.spec.*`**), excluding **`setup/**`** and treating scaffold-only setup files as non-“suite” (e.g. `global.setup.spec.*` under `setup/` does not count as an existing e2e suite).
+- Under that root, check **`playwright.config.*`** for **`playwright-testchimp/reporter`** in `reporter` — if present, call out **prior SmartTests/TestChimp wiring** in findings.
+- Classify: **greenfield** (no specs outside `setup/` beyond scaffold) vs **has existing Playwright** vs **dual-folder** (mapped SmartTests folder is empty/new but **`*.spec.{js,ts}`** exist elsewhere in the repo).
+
+User choices (required when not greenfield, or when dual-folder / misaligned config):
+
+- **Parallel SmartTests folder (gradual migration):** keep the mapped SmartTests root and **move specs and helpers over time** from a legacy Playwright folder; both may coexist until migration completes.
+- **Retrofit in place:** adopt **`.testchimp-tests`**, `playwright.config.*`, **`playwright-testchimp` reporter**, and **`import 'playwright-testchimp/runtime'`** inside the **existing** tree that already holds specs (see **Migration strategies** in [`importing-existing-tests.md`](./importing-existing-tests.md)).
+- If legacy specs live **outside** the mapped folder: the plan must include **moving** them into the mapped folder on an agreed schedule **or** changing Git mapping—**plan in Phase 2**, **execute in Phase 3** after approval. Do **not** move files silently in Phase 1.
+- **Runtime import (mandatory for imported specs):** Any **`*.spec.{js,ts}`** that is part of the SmartTests suite after import must include **`import 'playwright-testchimp/runtime'`** at the top of the file—required for TrueCoverage (test-side), **`ai-wright`** steps, and reporter integration. See [Required: runtime import in every spec file](./importing-existing-tests.md#required-runtime-import-in-every-spec-file) in [`importing-existing-tests.md`](./importing-existing-tests.md).
+
+**Greenfield:** state N/A briefly; no import tasks beyond normal harness scaffold in Phase 2/3.
+
+### Key Area 3 — Mocking (Playwright `page.route` + optional AIMock)
+
+Why this area is placed here (quick education):
+
+- **HTTP/API** mocking uses Playwright’s native **`page.route`** by default (no MSW install as a TestChimp default). **LLM** mocking via **AIMock** is **optional** and must be **explicitly chosen** by the user during init—see [`mocking_strategy.md`](./mocking_strategy.md).
+
+Agent discovery (report findings first):
+
+- Whether specs or helpers already use **`page.route`** / **`context.route`** for HTTP interception.
 - Whether **AIMock** (`@copilotkit/aimock` / `aimock` CLI per [upstream docs](https://github.com/CopilotKit/aimock)) or similar is already present.
 - How **LLM / OpenAI-compatible** calls are resolved (hardcoded URL vs `OPENAI_BASE_URL` / SDK defaults) in frontend, backend, or shared packages.
 - Whether **`<SmartTests root>/assets/goldens`** exists (or another agreed path for AIMock fixtures).
+
+**Required user question (AIMock):** Ask whether the user wants **AIMock** set up during this init so LLM interactions in the stack are **mocked during tests** (record/replay when feasible). Tell them they can **defer** and ask to set it up when needed; also state that **AIMock is highly recommended** because it **removes ongoing LLM usage costs during test executions**. Record the choice (**yes / later / not applicable**—e.g. no LLM in scope).
 
 Authoritative reference: [`mocking_strategy.md`](./mocking_strategy.md).
 
 Agent stance (preferred behavior):
 
-- **Phase 1:** Summarize findings and lock **requirements** under `### Mocking Plan` in the plan (enabled / deferred / not applicable; MSW scope if any; AIMock + goldens path; env vars for LLM base URL). Prefer **agent-proposed defaults** and only ask the user when something is ambiguous or repo-specific (e.g. multiple backends each calling an LLM).
-- **Phase 3:** Perform installs, create `assets/goldens` when needed, refactor opaque OpenAI URLs into **config/env** pointing at AIMock during tests, and document how AIMock runs locally and in CI — per [`mocking_strategy.md`](./mocking_strategy.md) and vendor AIMock docs.
+- **Phase 1:** Summarize findings and lock **`http_mocking`** and **`aimock`** under `### Mocking Plan` per [`mocking_strategy.md`](./mocking_strategy.md). Do **not** install or wire AIMock unless the user opts in (**yes**) or the plan explicitly schedules it; if **later**, record **deferred** with reason.
+- **Phase 3:** Document or add **`page.route`** patterns as agreed. **Only if AIMock was enabled:** install AIMock, create `assets/goldens` when needed, refactor OpenAI-compatible URLs into **config/env** for tests, and document local + CI runs—per [`mocking_strategy.md`](./mocking_strategy.md) and vendor AIMock docs.
 
 ### Key Area 4 — TrueCoverage Infra (RUM + journey events)
 Why this area (quick education):
@@ -204,7 +219,7 @@ Why this area (quick education):
 ### Key Area 5 — Environment provision strategy (persistent vs ephemeral / EaaS)
 Why this area (quick education):
 - The key benefit of **ephemeral, pre–PR-merge environments** is **shift-left QA**: tests run against the exact PR-specific code/data stack, not stale staging/main.
-- For agentic testing, isolated envs are crucial for **accurate reasoning** because agents can load controlled `world-states` against the PR’s real behavior (deterministic inputs, fewer “it changed after merge” surprises).
+- For agentic testing, isolated envs are crucial for **accurate reasoning** because agents can validate against the PR’s real behavior (deterministic inputs, fewer “it changed after merge” surprises).
 - This also makes failures more explainable: when an isolated environment is used, the test environment context matches the PR diff.
 - Persistent vs ephemeral still changes how CI is structured and how `BASE_URL` is resolved per PR, and ephemeral setups require additional provisioning steps (EaaS/Bunnyshell or another ephemeral mechanism).
 - Agent discovery (report findings first):
@@ -214,7 +229,7 @@ Why this area (quick education):
   - During init, persist in `plans/knowledge/ai-test-instructions.md` under `## Environment Provision Strategy` → `### Local - Test Authoring`:
     - a **single agent-runnable command** (or script entrypoint) to bring the stack up locally (prefer Docker Compose; if multiple prerequisites exist, prefer a single wrapper script entrypoint like `scripts/qa/local-up.sh`)
     - an explicit **wait-for-healthy** definition (health endpoints, compose healthchecks, ports, etc.) so later `/testchimp test` can do: provision → wait healthy → proceed
-    - the resulting URLs and how they map to test variables (`BASE_URL`, `BACKEND_URL`, any `*_SERVICE_BACKEND_URL` used by world-states)
+    - the resulting URLs and how they map to test variables (`BASE_URL`, `BACKEND_URL`, any `*_SERVICE_BACKEND_URL` used by fixtures and seed helpers)
   - If the stack is too complex to run locally, record that and use EaaS for author-time instead (with a “provision and wait” MCP tool preference).
 - Where will automated E2E run for PRs? (pick what matches; user can combine)
   - Preview/deploy preview URL + shared backend (typical frontend PRs), and/or
@@ -244,27 +259,29 @@ Each action item must include:
 - `status`: `pending | in_progress | done | skipped | deferred`
 - concise notes (decisions, blockers, links, trade-offs)
 
-Your plan MUST include exactly these 6 key areas in this order (each starting with `pending`), and for each include the acceptance criteria:
+Your plan MUST include exactly these **6** key areas in this order (each starting with `pending`), and for each include the acceptance criteria:
 
 1. Basic TestChimp integration
-2. World-States Infra
-3. Mocking (MSW + AIMock)
+2. Existing Playwright suite / import strategy (use **skipped** or minimal notes when **greenfield**)
+3. Mocking (Playwright `page.route` + optional AIMock)
 4. TrueCoverage Infra
 5. Environment provision strategy
 6. CI setup
 
-**Import / alignment (when discovery applies):** If Phase 1 discovery found **existing Playwright** under the mapped folder, **dual-folder** layout (specs outside mapped SmartTests root), or misaligned **`playwright.config.*`** location, the plan **must** include explicit **import / alignment** tasks (per [`importing-existing-tests.md`](./importing-existing-tests.md)) in addition to the six areas above.
+**Note:** Detailed **seed/teardown/read** endpoints and **`fixtures/`** ([`fixture-usage.md`](./fixture-usage.md)) are authored during **`/testchimp test`** when scenarios require them—not a separate init gate.
 
 Acceptance criteria (success checks):
 - Basic TestChimp integration
   - invoke an MCP command (e.g. `get_eaas_config`) to ensure it is not returning `401 Unauthorized`
   - there are 2 folders with the `.testchimp-plans` and `.testchimp-tests` marker files
-- World-States Infra
-  - `world-states/` folder not empty
-- Mocking (MSW + AIMock)
-  - `### Mocking Plan` in `plans/knowledge/ai-test-instructions.md` records enabled / deferred / N/A and the chosen approach
-  - if enabled: dependencies and wiring per [`mocking_strategy.md`](./mocking_strategy.md); `<SmartTests root>/assets/goldens` exists (or documented alternative); LLM traffic can be aimed at AIMock via agreed env/config; brief note of what was wired for local vs CI
-  - if deferred or N/A: explicitly recorded with reason
+  - Playwright harness layout per template (`setup` / `e2e` / `api` projects as applicable; optional `fixtures/` per [`fixture-usage.md`](./fixture-usage.md))
+- Existing Playwright suite / import strategy
+  - when **not** greenfield: explicit tasks for moves/config/reporter/**`import 'playwright-testchimp/runtime'` on every `*.spec.{js,ts}`** in the mapped SmartTests tree per [`importing-existing-tests.md`](./importing-existing-tests.md) and the user’s **parallel-folder vs retrofit** choice from Phase 1
+  - when **greenfield**: marked **skipped** or **N/A** with a one-line note
+- Mocking (Playwright `page.route` + optional AIMock)
+  - `### Mocking Plan` in `plans/knowledge/ai-test-instructions.md` records **`http_mocking`** and **`aimock`** per [`mocking_strategy.md`](./mocking_strategy.md)
+  - **`page.route`** stance documented (or deferred/N/A); **AIMock** only if user opted in—then dependencies and wiring per [`mocking_strategy.md`](./mocking_strategy.md); `<SmartTests root>/assets/goldens` when AIMock is in scope; LLM traffic can be aimed at AIMock via agreed env/config; brief local vs CI notes
+  - if AIMock **deferred** or **not applicable**: explicitly recorded with reason
 - TrueCoverage Infra
   - `plans/knowledge/truecoverage-instrument-progress.md` exists with planned vs done (and planned-not-yet-instrumented events live there, not under `plans/events/`)
   - for each event type **actually instrumented** during init, a matching `plans/events/<title>.event.md` exists; emit helper wrapper defined with configuration setup
@@ -274,7 +291,7 @@ Acceptance criteria (success checks):
 - CI setup
   - CI action authored
 
-After the plan is written, ask the user to explicitly approve or request edits. Only after approval proceed to Phase 3. Phase 3 executes any agreed import/alignment tasks (moves, config fixes, reporter/runtime wiring) **only** after approval.
+After the plan is written, ask the user to explicitly approve or request edits. Only after approval proceed to Phase 3. Phase 3 executes **Key Area 2** import/alignment tasks (moves, config fixes, reporter/runtime wiring) **only** after approval, when the plan included them.
 
 ---
 
@@ -285,23 +302,23 @@ Why this phase (quick education):
 
 Work item-by-item from the agreed checklist and update `plans/knowledge/ai-test-instructions.md` after each completion, skip, or deferral.
 
-If the approved plan included **moving** specs into the mapped SmartTests folder or **upgrading** an existing Playwright tree to TestChimp structure, perform those steps here in line with [`importing-existing-tests.md`](./importing-existing-tests.md).
+If the approved plan included **moving** specs into the mapped SmartTests folder or **upgrading** an existing Playwright tree to TestChimp structure, perform those steps here (action **K**) in line with [`importing-existing-tests.md`](./importing-existing-tests.md).
 
 Use the following action-item playbooks as implementation references.
 
 ### PR strategy (before you push)
 
-Init touches a lot of surface area. **By default**, prefer **separate PRs** for the heavier slices so review and rollback stay manageable: **world-states infra**, **TrueCoverage infra**, **CI**, and **mocking** (plus any **import/alignment** work as its own PR if large).
+Init touches a lot of surface area. **By default**, prefer **separate PRs** for the heavier slices so review and rollback stay manageable: **TrueCoverage infra**, **CI**, **mocking**, and **import/alignment** (each as its own PR when large).
 
 **Ask the user explicitly:** do they want **one combined PR** or **separate PRs**? Execute and branch/push accordingly; do not assume a single mega-PR.
 
-Execute the 6 key areas in this order and treat them as grouped action-item blocks:
-- Basic TestChimp integration: actions A–E
-- World-States Infra: action F
-- Mocking: action J (immediately after world-states; see [`mocking_strategy.md`](./mocking_strategy.md))
-- TrueCoverage Infra: action I (after Mocking; still before environment/CI actions)
-- Environment provision strategy: action G
-- CI setup: action H
+Execute the **6** key areas in this order and treat them as grouped action-item blocks:
+- **Basic TestChimp integration + test harness:** actions A–F (markers, deps, config, MCP, Playwright layout including `setup` / `e2e` / `api` and optional `fixtures/`—see [`fixture-usage.md`](./fixture-usage.md))
+- **Existing suite import / alignment (when planned):** action K—skip when greenfield / N/A
+- **Mocking:** action J ([`mocking_strategy.md`](./mocking_strategy.md))
+- **TrueCoverage Infra:** action I
+- **Environment provision strategy:** action G
+- **CI setup:** action H
 
 After each key area group is completed, verify that its success check is met and update the action item statuses in `plans/knowledge/ai-test-instructions.md`.
 After marking a key area as `done`, communicate the success milestone to the user in chat.
@@ -375,51 +392,48 @@ After install, MCP tools can be used for:
 - environment provisioning and endpoint resolution,
 - TrueCoverage analytics.
 
-### Action item F - Test harness setup (`setup`, `e2e`, `api`)
+### Action item F - Test harness setup (`setup`, `e2e`, `api`, `fixtures`)
 
 Target structure inside SmartTests root:
 
-- `setup`: pre-test seeding/teardown orchestration,
-- `e2e`: UI-focused tests (may call APIs as needed),
-- `api`: API-focused tests.
+- `setup`: global setup / project dependencies (see template [`template_playwright.config.js`](../assets/template_playwright.config.js)),
+- `e2e`: UI-focused tests,
+- `api`: API-focused tests (optional project),
+- `fixtures`: optional; **`mergeTests`** master + domain modules per [`fixture-usage.md`](./fixture-usage.md). Full **fixture** and **seed endpoint** implementation usually lands during **`/testchimp test`** when scenarios require it.
 
-If seed/teardown/read endpoints exist, plan and wire them in the setup project.
-If they do not exist, plan endpoint creation with the user (see [`seeding-endpoints.md`](./seeding-endpoints.md)):
+During init, **discover** whether test-only seed/teardown/read routes already exist (see [`seeding-endpoints.md`](./seeding-endpoints.md)) and **record** findings in `plans/knowledge/ai-test-instructions.md` for later test authoring. Do **not** block init on authoring every endpoint or fixture.
 
-- auth model,
-- production-safety constraints (non-production-only guards),
-- data model to seed (agent-recommended minimal entities for the base world-state, inferred from DB schema/ORM models/migrations; user confirms/tweaks add/remove domain-specific entities),
-- **read** surfaces for asserting persisted state after UI actions (and for **read-before-write** idempotency where useful),
-- teardown behavior (safe to rerun),
-- idempotency strategy (how retries behave; include read-before-write when it reduces duplicate work or corruption risk).
+Success check (Test harness): SmartTests root matches the template’s project layout (`setup` project, main test project, `testIgnore` for `setup/**`); optional empty **`fixtures/index`** stub is fine; no `world-states` path required.
 
-Seed/teardown endpoints should be idempotent.
+### Action item K - Import / align existing Playwright suite (when planned)
 
-Base world-states posture (minimal is enough):
-- create `world-states/` under the SmartTests root,
-- add at least one minimal `*.world.js` base world-state script that corresponds to the seeded data,
-- ensure the harness loads the base posture consistently at author time and execution time (e.g. `ensureWorldState` before browser steps when supported by your current setup wiring).
+Read `plans/knowledge/ai-test-instructions.md` for Key Area 2 decisions and follow [`references/importing-existing-tests.md`](./importing-existing-tests.md).
 
-Success check (World-States Infra): `world-states/` folder not empty.
+- If Phase 2 marked this area **skipped** / **N/A** (greenfield), mark action K **skipped** and do not move files.
+- Otherwise: perform the **approved** moves, config path fixes, `playwright-testchimp` reporter + deps, and `fixtures/` layout as listed in the init plan—**only** after user approval of the plan.
+- **Every** `*.spec.{js,ts}` under the mapped SmartTests root that runs as a test must include **`import 'playwright-testchimp/runtime'`** (add to any file that is missing it). This enables TrueCoverage (test-side), **`ai-wright`** steps, and full reporter/runtime integration—see [`importing-existing-tests.md`](./importing-existing-tests.md#required-runtime-import-in-every-spec-file).
 
-### Action item J - Mocking (MSW + AIMock)
+Success check (Import strategy):
+
+- SmartTests root matches the agreed strategy (**parallel-folder** migration state or **retrofit** complete to the extent planned); `npx playwright test` from the mapped folder is the canonical command; platform path expectations in [`importing-existing-tests.md`](./importing-existing-tests.md) are satisfied.
+- **Every** in-scope **`*.spec.{js,ts}`** includes **`import 'playwright-testchimp/runtime'`** (verify with a repo search under the SmartTests root before marking **done**).
+
+### Action item J - Mocking (Playwright `page.route` + optional AIMock)
 
 Read `plans/knowledge/ai-test-instructions.md` under `### Mocking Plan` and follow [`references/mocking_strategy.md`](./mocking_strategy.md).
 
-If the decision is **enabled** (or missing and the plan calls for default-on wiring):
+- Document or implement **`page.route`** / **`context.route`** patterns (helpers or fixtures) as agreed—**do not** install MSW by default.
+- **Only if the user opted into AIMock** in Phase 1 (and the plan says **enabled**): install **AIMock** per [upstream documentation](https://github.com/CopilotKit/aimock) (package / CLI as appropriate for the repo).
+- Add **`<SmartTests root>/assets/goldens`** when AIMock record/replay is in scope; align AIMock config with that path.
+- Refactor **OpenAI-compatible base URL** (and related client config) so tests can point LLM traffic at the AIMock listener when AIMock is enabled (commonly `OPENAI_BASE_URL` or the project’s existing env name — document which).
+- When AIMock is enabled: ensure it can run **during test execution** locally (e.g. global setup, compose sidecar, or documented `npx` command) and note what CI should do (e.g. official AIMock GitHub Action or equivalent — follow vendor docs).
+- Summarize **what was wired and where** for the user.
 
-- Install **AIMock** per [upstream documentation](https://github.com/CopilotKit/aimock) (package / CLI as appropriate for the repo).
-- Add **`<SmartTests root>/assets/goldens`** when record/replay fixtures are in scope; align AIMock config with that path.
-- Install **MSW** only if the agreed plan calls for non-LLM API mocking; keep usage narrow (see [`mocking_strategy.md`](./mocking_strategy.md)).
-- Refactor **OpenAI-compatible base URL** (and related client config) so tests can point LLM traffic at the AIMock listener (commonly `OPENAI_BASE_URL` or the project’s existing env name — document which).
-- Ensure AIMock can run **during test execution** locally (e.g. global setup, compose sidecar, or documented `npx` command) and note what CI should do (e.g. official AIMock GitHub Action or equivalent — follow vendor docs).
-- Summarize **what was wired and where** for the user (this area is usually agent-led; minimal user Q&A).
-
-If **deferred** or **not applicable**: mark skipped in the checklist and update `### Mocking Plan` with the reason.
+If **AIMock** is **deferred** or **not applicable**: mark AIMock portions skipped; still ensure `### Mocking Plan` reflects **`http_mocking`** and **`aimock`** outcomes.
 
 Success check (Mocking):
 
-- `### Mocking Plan` reflects the outcome; if enabled, goldens path + env wiring exist and are documented for local runs; CI path noted when CI is in scope (final CI wiring may complete in action H).
+- `### Mocking Plan` reflects **`http_mocking`** and **`aimock`**; if AIMock enabled, goldens path + env wiring exist and are documented for local runs; CI path noted when CI is in scope (final CI wiring may complete in action H).
 
 ### Action item I - TrueCoverage opt-in
 
@@ -465,7 +479,7 @@ Success check (Environment provision strategy):
 
 - Run from tests root with required env vars.
 - Pass PR/stage URL via `BASE_URL`.
-- If **Mocking** was enabled in action J, align CI with the documented AIMock approach (e.g. GitHub Action or `npx` per [`mocking_strategy.md`](./mocking_strategy.md) / vendor docs).
+- If **AIMock** was enabled in action J, align CI with the documented AIMock approach (e.g. GitHub Action or `npx` per [`mocking_strategy.md`](./mocking_strategy.md) / vendor docs).
 - If using PR-triggered runs, exclude TestChimp plan sync PRs with title `TestChimp Platform Sync [Plans]`.
 
 Success check (CI setup):
@@ -533,7 +547,7 @@ For harness setup, determine one of these paths:
 1. **Existing** seed/teardown/read endpoints → integrate them into the setup project with explicit scope (what each route does, env guards).
 2. **Missing** endpoints → plan creation with the user: auth, prod safety, payload shape, idempotency (including **read-before-write** when helpful), teardown semantics, and **read** surfaces for post-UI assertions.
 
-Aim for idempotent seed/teardown operations so retries are safe and world-state can be restored deterministically.
+Aim for idempotent seed/teardown operations so retries are safe and fixture-driven setup stays deterministic.
 
 ### CI guardrails
 
@@ -553,7 +567,8 @@ Init is complete when the action checklist is fully resolved (done, skipped, or 
 - plans/tests mappings in place,
 - CI run strategy chosen and documented,
 - seed/teardown/**read** and harness strategy established (per [`seeding-endpoints.md`](./seeding-endpoints.md) when authoring endpoints),
-- mocking approach recorded under `### Mocking Plan` (or explicitly deferred / N/A),
+- mocking approach recorded under `### Mocking Plan` (`http_mocking` + `aimock`, or explicitly deferred / N/A),
+- existing-suite import strategy recorded (or greenfield / N/A),
 - environment strategy recorded,
 - TrueCoverage decision recorded,
 - deferred items explicitly listed.

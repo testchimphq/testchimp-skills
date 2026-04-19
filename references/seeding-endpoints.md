@@ -1,8 +1,8 @@
 # Test setup endpoints (seed, teardown, read)
 
-Authoritative guide for **test-only** HTTP (or equivalent) surfaces used from Playwright harnesses, **`*.world.js`** scripts, and assertions. These are **not** general product APIs: they are **controlled, guarded** entry points for QA automation.
+Authoritative guide for **test-only** HTTP (or equivalent) surfaces used from Playwright harnesses, **fixtures** (`test.extend` setup/teardown), and assertions. These are **not** general product APIs: they are **controlled, guarded** entry points for QA automation.
 
-For how world-state scripts apply seeds, see **[`world-states.md`](./world-states.md)**.
+For how fixtures call these endpoints, see **[`fixture-usage.md`](./fixture-usage.md)**.
 
 ---
 
@@ -62,11 +62,11 @@ This keeps seed operations **safe to rerun** without relying solely on blind ups
 
 ---
 
-## Relationship to world-states
+## Relationship to fixtures
 
-**World-state** scripts (see **[`world-states.md`](./world-states.md)**) are how tests and agents **bring an environment to a known posture**. They typically invoke **seed** and **teardown** endpoints (or equivalent) inside **`setup`** / **`teardown`**.
+**Playwright fixtures** (see **[`fixture-usage.md`](./fixture-usage.md)**) are how tests **bring an environment to a known posture per test**. Fixture **`use` callbacks** typically invoke **seed** and **teardown** endpoints (or equivalent).
 
-**Read** endpoints are primarily for **tests and helpers** to **assert** state after actions; they are not required inside every `defineWorldState` unless you need to **verify** that a seed step completed. Use reads in specs or shared helpers when validating persistence after UI flows.
+**Read** endpoints are primarily for **tests and fixtures** to **assert** state after actions; use them inside fixtures when you need to **verify** that a seed step completed. Use reads in specs or shared helpers when validating persistence after UI flows.
 
 ---
 
