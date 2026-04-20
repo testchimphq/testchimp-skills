@@ -170,8 +170,8 @@ Goal: author and validate SmartTests for planned cases.
 1. Load **[`write-smarttests.md`](./write-smarttests.md)** and follow its authoring guidance (for UI test authoring).
 2. **Targeted existing-tests smoke (keep it tiny + strongly related)**: run a **very small** set of existing tests that are **directly** tied to the PR’s changed behavior (same feature area / same story/scenario ids / same user journey). This is a **regression smoke**, not a “run existing tests” phase.
    - **Selection rule**: pick only tests with a clear, strong link to the change context. Avoid broad “possibly affected” guesses.
-   - **Size + time box**: aim for **3–8 tests** (or the smallest equivalent set) and keep runtime to **~5–10 minutes** total. If the suite isn’t that fast, shrink the set further.
-   - **Stop early**: once you have basic regression signal (or you hit the time box), move on to **writing new tests** for the PR.
+   - **Size + time box**: aim for **2–5 tests** (or the smallest equivalent set) and keep runtime to **~2-3 mins** total. If the suite isn’t that fast, shrink the set further.
+   - **Stop early**: once you have basic regression signal (or you hit the time box), move on to next phases of the testing process.
    - If a smoke test **fails**, triage quickly:
      - If the PR intentionally changed the behavior, **update the test** (and/or fixtures) to the new expectation and ensure linked scenarios still reflect requirements.
      - If the behavior should not have changed, treat it as a **real regression** and **call it out** clearly (prioritize fixing product code over “fixing tests”).
@@ -187,7 +187,11 @@ Goal: author and validate SmartTests for planned cases.
 
 Before proceeding to **Cleanup and report**, the agent must confirm:
 
+<<<<<<< HEAD
 - [ ] A **tiny, strongly-related smoke** subset of existing tests was run (which + result) - if exists (if not - say so), explicitly time-boxed so execution stayed focused on authoring new tests.
+=======
+- [ ] A **tiny, strongly-related smoke** subset of existing tests was run (which + result), explicitly time-boxed so execution stayed focused on authoring new tests.
+>>>>>>> c120ebe2418d4bb7de4028effd38fb4bde2778ea
 - [ ] New/updated tests were authored per the plan and linked to scenario ids **only when ids exist** (never invented).
 - [ ] Playwright executed from the mapped SmartTests root (folder with `.testchimp-tests`).
 - [ ] `TESTCHIMP_API_KEY` was present in the run environment; any 401s were handled per guidance.
