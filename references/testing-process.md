@@ -187,11 +187,7 @@ Goal: author and validate SmartTests for planned cases.
 
 Before proceeding to **Cleanup and report**, the agent must confirm:
 
-<<<<<<< HEAD
 - [ ] A **tiny, strongly-related smoke** subset of existing tests was run (which + result) - if exists (if not - say so), explicitly time-boxed so execution stayed focused on authoring new tests.
-=======
-- [ ] A **tiny, strongly-related smoke** subset of existing tests was run (which + result), explicitly time-boxed so execution stayed focused on authoring new tests.
->>>>>>> c120ebe2418d4bb7de4028effd38fb4bde2778ea
 - [ ] New/updated tests were authored per the plan and linked to scenario ids **only when ids exist** (never invented).
 - [ ] Playwright executed from the mapped SmartTests root (folder with `.testchimp-tests`).
 - [ ] `TESTCHIMP_API_KEY` was present in the run environment; any 401s were handled per guidance.
