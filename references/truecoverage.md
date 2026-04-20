@@ -130,7 +130,11 @@ Set **`automationEmitsOnly: true`** on **`comparisonExecutionScope`** or **`cove
 
 ### Metadata keys and “coverage”
 
-Use metadata for gap analysis **only when the key is a meaningful product dimension** (e.g. `plan_tier`, `payment_method` where behavior differs). **Do not** treat **user identifiers**, **free-text**, or **high-cardinality** dimensions (e.g. `user_id`, raw `user_country`) as goals to “cover every value” unless the product logic genuinely branches on them—the platform can mark keys as high-cardinality; prefer skipping those for coverage prioritization.
+Use metadata for gap analysis **only when the key is a meaningful product dimension** (e.g. `plan_tier`, `payment_method` where behavior differs).
+
+Hard rule: **do not emit identifiers** as metadata keys or values (or plan for them in `plans/events/*.event.md`). In practice this means avoiding keys like `project_id`, `org_id`, `user_id`, any `*_id`, UUIDs, raw emails, or other high-cardinality identifiers. These explode cardinality and are not useful for sliced coverage.
+
+Also avoid **free-text** or other high-cardinality dimensions unless the product logic genuinely branches on a small bounded set of values—the platform can mark keys as high-cardinality; prefer skipping those for coverage prioritization.
 
 When in doubt, refer documentation: https://docs.testchimp.io/truecoverage/how-it-works
 

@@ -67,7 +67,42 @@ Recommended takeover loop:
    Use the **`#TS-xxx`** id that **already exists** in TestChimp (from plan markdown **`id:`**, or from MCP **`create_test_scenario`** / **`create_user_story`** responses). **Never invent** scenario or story ids: create scenarios (and parent stories if needed) **before** adding this comment so links stay stable and real. Same pattern as: 
    `// @Scenario: #TS-102 Checkout with credit card`.
 
-7. **Mix Playwright and AI** — Prefer plain Playwright for stable, fast paths; use **`ai.*`** when the selector-based step looks brittle or intent-driven steps are clearer (see [AI steps](#ai-steps-ai-wright-when-to-use-what)). AI steps use an agent that observes the screen to fulfill the objective, so they are typically **slower** than direct locators - though more flexible to UI variances.
+   **Strict format rules (do not deviate):**
+   - Must be a single-line `//` comment
+   - Must start with exactly `// @Scenario: `
+   - Must include the `#TS-<n>` ordinal id (with the leading `#`)
+   - The **first** `// @Scenario:` line must be the **first statement inside the test body** (immediately after the opening `{`).
+
+   **Multiple scenarios in one test:** If a single test legitimately covers **more than one** scenario (e.g. one end-to-end flow that satisfies two acceptance criteria), add **additional** `// @Scenario: #TS-… <title>` lines **inside the same test**, each on its own line, using the same strict format. Place extra comments **before the steps that exercise that scenario**. Do not merge multiple ids into one comment.
+
+   **Example (copy/paste shape):**
+
+   ```js
+   test('usage graphs show daily usage by project', async ({ page }) => {
+     // @Scenario: #TS-2100 Validate event ingest volume graphs display correctly
+     // ...
+   });
+   ```
+
+   **Example (multiple scenario links in one test):**
+
+   ```js
+   test('checkout confirms order and sends receipt', async ({ page }) => {
+     // @Scenario: #TS-101 Submit checkout
+     await page.goto('/checkout');
+     // ... steps for checkout ...
+
+     // @Scenario: #TS-102 Email receipt after purchase
+     // ... steps that assert receipt / email ...
+   });
+   ```
+
+8. **Test naming (Playwright convention)**:
+   - Use a **short, human-readable title** describing the behavior (imperative/statement form).
+   - **Do not** include scenario ids (`TS-...`, `#TS-...`, `US-...`) or other IDs in the `test('...')` title.
+   - **Do not** use underscores or long machine-style names; prefer spaces.
+
+9. **Mix Playwright and AI** — Prefer plain Playwright for stable, fast paths; use **`ai.*`** when the selector-based step looks brittle or intent-driven steps are clearer (see [AI steps](#ai-steps-ai-wright-when-to-use-what)). AI steps use an agent that observes the screen to fulfill the objective, so they are typically **slower** than direct locators - though more flexible to UI variances.
 
 ---
 

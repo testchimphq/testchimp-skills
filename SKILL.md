@@ -11,7 +11,7 @@ required_mcp_client_version: "0.0.4"
 TestChimp is a **QA workflow orchestration layer for AI agents**. It provides:
 
 - **Setup QA infra** - sets up opinionated, enterprise-grade QA infra including CI setup, test-only seed / teardown / read endpoints, mocking strategy (Playwright **`page.route`** for HTTP/API; optional **AIMock** for LLM), TrueCoverage instrumentation, per-PR environment provisioning. **Fixtures** (Playwright `mergeTests`, `<tests_root>/fixtures/`) and the endpoints they call are introduced during **`/testchimp test`** as needed—see [`references/fixture-usage.md`](references/fixture-usage.md).
-- **Requirement traceability** via structured comments in tests (e.g. `// @Scenario: #TS-101 Title`) linking SmartTests to scenarios.
+- **Requirement traceability** via structured comments in tests (e.g. `// @Scenario: #TS-101 Title`) linking SmartTests to scenarios. One test may include **multiple** `// @Scenario:` lines when it covers several scenarios; the first must be the first statement in the test body—see [`references/write-smarttests.md`](references/write-smarttests.md).
 - **Markdown test plans** in a mapped `plans/` folder (YAML frontmatter, `stories/` / `scenarios/` / `knowledge/`) — how to read and author them in [`references/test-planning.md`](references/test-planning.md).
 - **Intelligent Playwright steps** (`ai.act` / `ai.verify` / `ai.extract` with `ai-wright`) for more stable execution-time intelligent behavior in tests.
 - **Execution reporting** via `playwright-testchimp` so test execution details feed to TestChimp servers to enable coverage insights.
