@@ -12,6 +12,32 @@ Use this as the primary reference for `/testchimp test`. For SmartTest authoring
 
 ---
 
+## Non-negotiables (agent guardrails for this flow)
+
+Before running **any** Playwright command (headed or headless), or authoring **any** `ai-wright` steps:
+
+- **Write the Plan artifact first**: produce a markdown plan document for this run (see Phase 1), grounded in PR diffs + existing `plans/` material.
+- **Get explicit agreement on the Plan**: pause after the plan and wait for “go ahead” / approval to proceed to Setup + Execute.
+- **Provision / select the environment per `plans/knowledge/ai-test-instructions.md`**: choose the recorded strategy and satisfy its “up + healthy” contract before Execute.
+- **Default to headed authoring/debug**: during authoring and triage, prefer `--headed --debug` so the user can observe/intervene.
+- **TrueCoverage belongs in the Plan**:
+  - If the PR adds or changes **user journeys / user-facing behaviors**, the Plan must explicitly decide whether to instrument.
+  - If TrueCoverage is **not configured yet** and there is **no explicit opt-out** recorded in `plans/knowledge/ai-test-instructions.md`, the agent must **ask the user** whether to enable it for this repo and include **RUM wiring + event docs** work in the Plan when the user agrees.
+  - If TrueCoverage **is already configured**, the agent should **consider** whether there are **key user events** worth instrumenting for the changed behavior, and include them (with `plans/events/*.event.md` updates) when appropriate.
+- **Mocking belongs in the Plan (always)**:
+  - Explicitly decide per test case: **real backend**, **Playwright HTTP mocking** (`page.route` / `context.route`), and (when applicable) **AIMock** for LLM-backed flows.
+  - If AIMock is selected, the Plan must include: wiring tasks, enablement mechanism (env flag / config), and how to validate it is actually being used.
+- **Fixtures belong in the Plan (always)**:
+  - For every UI SmartTest planned, list the required **fixture-backed posture** and any missing `fixtures/` modules or missing seed/read/teardown endpoints.
+  - If new fixtures/endpoints are needed, treat them as **Setup blockers** (not “nice-to-haves”).
+- **Blockers must be called out in the Plan**: list every known blocker with (a) owner (agent vs user), (b) the exact action required, and (c) the earliest phase it blocks.
+- **Final checklist is required**: the plan document must end with an “Execution checklist” that the agent will tick through, including:
+  - TrueCoverage plan respected (and instrumentation executed when in-scope)
+  - MCP coverage-gap queries executed (when MCP is configured) and results recorded
+  - Environment provisioned/selected per `ai-test-instructions` and health contract satisfied
+  - Tests executed on that provisioned environment
+  - Cleanup performed (ephemeral env destroy, temp artifacts not committed)
+
 ## Phase 1: Plan
 
 Goal: produce a markdown plan document that is explicitly for **authoring TestChimp SmartTests**.
@@ -38,7 +64,12 @@ Before planning scenarios and tests, derive the **change context**.
 
 Use the derived change context to (a) locate existing relevant plans/scenarios, (b) identify missing stories/scenarios, and (c) drive targeted coverage queries (`get_requirement_coverage`, `get_execution_history`) to surface gaps.
 
-**TrueCoverage gate:** Read `plans/knowledge/ai-test-instructions.md` first (if available) and follow **[`truecoverage.md`](./truecoverage.md)**. Only plan/execute TrueCoverage instrumentation when the project-level `### TrueCoverage Plan` indicates it is in scope (or the user explicitly opts in during this run).
+**TrueCoverage gate:** Read `plans/knowledge/ai-test-instructions.md` first (if available) and follow **[`truecoverage.md`](./truecoverage.md)**.
+
+- If `ai-test-instructions.md` contains an **explicit opt-out** (or states TrueCoverage is intentionally deferred), respect it.
+- Otherwise, when the PR adds/changes **user journeys / user-facing behaviors**, the agent should:
+  - **If not configured**: ask the user whether to enable TrueCoverage now; if yes, include RUM wiring + docs in the Plan.
+  - **If configured**: decide whether to add/adjust instrumentation for key events introduced/changed by the PR, and include that work in the Plan.
 
 The plan must include:
 
@@ -72,13 +103,34 @@ The plan must include:
 5. **Infra gaps**
    - Identify missing seed/teardown/read endpoints or missing harness infrastructure (see **[`seeding-endpoints.md`](./seeding-endpoints.md)**).
    - Include remediation tasks in the plan before test authoring.
-6. **TrueCoverage (when enabled for the project)**
-   - Use **[`truecoverage.md`](./truecoverage.md)** as the full reference (RUM helper, credentials, **`plans/events/*.event.md`** format, audit/MCP). If the PR adds or materially changes **user journeys** worth measuring, plan instrumentation accordingly.
+6. **TrueCoverage (when applicable)**
+   - Use **[`truecoverage.md`](./truecoverage.md)** as the full reference (RUM helper, credentials, **`plans/events/*.event.md`** format, audit/MCP).
+   - If the PR adds or materially changes **user journeys / user-facing behaviors**, the plan must include a clear decision:
+     - **Enable + wire TrueCoverage** (when not configured and no explicit opt-out exists; requires user agreement), or
+     - **Add/adjust key events** (when already configured), or
+     - **Do not instrument** (only with an explicit rationale + any opt-out reference).
    - **Defining events:** Choose **stable, semantic** names for journey steps (not one-off UI noise). For each event type you add or change, plan a matching **`plans/events/<kebab-case>.event.md`** file so agents share one vocabulary—see the **Event documentation** section in [`truecoverage.md`](./truecoverage.md).
    - **Per-event metadata keys:** These slice **per-event** coverage metrics. Use **only low-cardinality** keys whose values form a **small, meaningful set** for comparing coverage (e.g. coarse **checkout path**, **payment method** category). **Do not** include **PII**. **Do not** use **high-cardinality** keys or values (e.g. `org_id`, `user_id`, raw emails, free-text)—they are unsuitable for sliced coverage and explode cardinality. Design keys so each dimension answers: *“Would I want a coverage breakdown by this slice?”*
    - **Session metadata keys:** Use these for **session-wide, non-mutating** context that applies across the session (e.g. coarse **user role**, **region/country** bucket, **tenant tier** if bounded). Same constraints: **no PII**, **no identifiers or exploding value sets** as keys meant for slicing. Prefer a small enum-like vocabulary per key so **session-level** slices stay interpretable for coverage.
 
 **Plan output:** write a `.md` plan artifact summarizing scenarios, missing scenarios, test matrix (UI/API/manual), prerequisites, environment choice, infra-gap actions, and TrueCoverage instrumentation when applicable.
+
+### Phase 1 completion gate (must pass before Phase 2)
+
+Before proceeding to **Setup**, the agent must confirm:
+
+- [ ] **Plan artifact written** (path + brief summary).
+- [ ] Plan is grounded in **PR diff** (`origin/main...HEAD`) or the fallback is explicitly documented.
+- [ ] Relevant existing **plans/stories/scenarios** were located and mapped to the change context.
+- [ ] **Missing plans** (stories/scenarios) were identified (and whether they must be authored now vs deferred is stated).
+- [ ] **Test matrix** exists (UI/API/manual) and each planned test has a 1–2 line rationale.
+- [ ] **Fixtures / seed / read / teardown prerequisites** are listed per planned test, with explicit blockers.
+- [ ] **Mocking decisions** are recorded per test (real vs route mocks vs AIMock).
+- [ ] **TrueCoverage decision** is explicitly recorded:
+  - [ ] Opt-out/defer respected **OR**
+  - [ ] Not configured → user will be asked (and wiring tasks are in plan) **OR**
+  - [ ] Configured → key events considered (instrument vs not + rationale).
+- [ ] **User agreement** received to proceed (or the run is explicitly declared “plan-only”).
 
 ---
 
@@ -99,6 +151,16 @@ Goal: create the environment and prerequisites needed to author and run tests.
 
 **Setup outcome:** runnable environment, infra blockers resolved (or clearly flagged), plan artifacts complete enough for execution,TrueCoverage instrumentation updates planned out.
 
+### Phase 2 completion gate (must pass before Phase 3)
+
+Before proceeding to **Execute**, the agent must confirm:
+
+- [ ] Environment provisioned/selected per `plans/knowledge/ai-test-instructions.md` and **health validated** (how).
+- [ ] Any plan-marked infra gaps (fixtures, seed/read/teardown endpoints, env wiring) are **implemented** or explicitly marked as blocking.
+- [ ] TrueCoverage setup work is either:
+  - [ ] completed (when planned), or
+  - [ ] explicitly deferred with user agreement.
+
 ---
 
 ## Phase 3: Execute
@@ -118,6 +180,18 @@ Goal: author and validate SmartTests for planned cases.
 6. Run written tests with Playwright and fix failures iteratively. **`cd`** to the mapped SmartTests root (folder with **`.testchimp-tests`**), then run via **`npx playwright …`** (see [`write-smarttests.md`](./write-smarttests.md) **Running Playwright**). Ensure **`TESTCHIMP_API_KEY`** is set in the shell (not only in **`.env-QA`**). If runs or MCP return **401**, follow the skill’s HTTP 401 guidance (Project Settings → Key management).
 7. Retry fix-and-rerun up to **2 attempts per failing test**. If still failing, stop retrying those and clearly ask user for help with the unresolved failures (in the report created in the next phase).
 
+### Phase 3 completion gate (must pass before Phase 4)
+
+Before proceeding to **Cleanup and report**, the agent must confirm:
+
+- [ ] A small, relevant subset of existing tests was run first (which + result).
+- [ ] New/updated tests were authored per the plan and linked to scenario ids **only when ids exist** (never invented).
+- [ ] Playwright executed from the mapped SmartTests root (folder with `.testchimp-tests`).
+- [ ] `TESTCHIMP_API_KEY` was present in the run environment; any 401s were handled per guidance.
+- [ ] All planned tests either:
+  - [ ] pass, or
+  - [ ] have a clear failure report + next steps (no silent skipping).
+
 ---
 
 ## Phase 4: Cleanup and report
@@ -132,6 +206,15 @@ Goal: remove temporary resources and avoid leaked infrastructure. Communicate re
    - # of tests authored (with breakdown of API vs UI)  - and breakdown by failing / passing.
    - New or updated **fixtures** / seed endpoints
    - Any infra setups that was done
+
+### Phase 4 completion gate (must pass before ending the run)
+
+Before ending the run, the agent must confirm:
+
+- [ ] Ephemeral environments destroyed (if created).
+- [ ] Temporary auth/storage-state artifacts removed.
+- [ ] Generated artifacts not committed (`test-results/`, `playwright-report/`, traces/videos/screens).
+- [ ] Final report includes: what was tested, what was added/changed (tests/fixtures/endpoints/instrumentation), what failed (if anything), and next steps.
 
 ---
 
