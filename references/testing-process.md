@@ -168,23 +168,26 @@ Before proceeding to **Execute**, the agent must confirm:
 Goal: author and validate SmartTests for planned cases.
 
 1. Load **[`write-smarttests.md`](./write-smarttests.md)** and follow its authoring guidance (for UI test authoring).
-2. **Sanity-check likely affected existing tests (small, best-effort subset)**: before writing new tests, identify a **small set** of existing tests that are likely related to the derived change context (based on paths touched, scenarios referenced, and test naming). Run them first as a **quick regression check** (this is intentionally fuzzy; do not try to run *all* “possibly affected” tests).
-   - If these tests **fail**, triage each failure:
-     - If the PR intentionally changed the behavior, **update the test** (and/or fixtures) to match the new expected behavior and ensure the linked scenario still reflects requirements.
-     - If the behavior should not have changed, treat it as a **real regression** and **call it out** clearly in the report (and prioritize fixing product code over “fixing tests”).
-     - If it’s unclear, gather evidence (UI screenshots/logs/network) and explain why it’s ambiguous rather than guessing.
-2. **Fixtures before UI:** For each UI case that the **plan** tied to a seeded posture, ensure the spec **imports `test` from `fixtures`** (merged entry) and **lists the needed fixtures** so setup runs before browser steps. See **[`fixture-usage.md`](./fixture-usage.md)**.
-3. Create a Playwright browser session, authenticate once, and store storage state in a temporary file for reuse. Make sure the authored test also follows same via storageContext.
-4. **Application emits (TrueCoverage):** When `enabled=true` and the plan called for new /updated events, add emits in the **app** code for those interactions and keep **`plans/events/*.event.md`** in sync. Do this **before** authoring individual SmartTests or API tests that depend on those events being emitted or on TrueCoverage picking them up. This work is independent of SmartTest files but should land in the same PR when possible.
-5. Implement each planned test case (UI/API as planned), reusing storage state for faster repeated sessions. For writing API tests, refer **[`api-testing.md`](./api-testing.md)**.
-6. Run written tests with Playwright and fix failures iteratively. **`cd`** to the mapped SmartTests root (folder with **`.testchimp-tests`**), then run via **`npx playwright …`** (see [`write-smarttests.md`](./write-smarttests.md) **Running Playwright**). Ensure **`TESTCHIMP_API_KEY`** is set in the shell (not only in **`.env-QA`**). If runs or MCP return **401**, follow the skill’s HTTP 401 guidance (Project Settings → Key management).
-7. Retry fix-and-rerun up to **2 attempts per failing test**. If still failing, stop retrying those and clearly ask user for help with the unresolved failures (in the report created in the next phase).
+2. **Targeted existing-tests smoke (keep it tiny + strongly related)**: run a **very small** set of existing tests that are **directly** tied to the PR’s changed behavior (same feature area / same story/scenario ids / same user journey). This is a **regression smoke**, not a “run existing tests” phase.
+   - **Selection rule**: pick only tests with a clear, strong link to the change context. Avoid broad “possibly affected” guesses.
+   - **Size + time box**: aim for **2–5 tests** (or the smallest equivalent set) and keep runtime to **~2-3 mins** total. If the suite isn’t that fast, shrink the set further.
+   - **Stop early**: once you have basic regression signal (or you hit the time box), move on to next phases of the testing process.
+   - If a smoke test **fails**, triage quickly:
+     - If the PR intentionally changed the behavior, **update the test** (and/or fixtures) to the new expectation and ensure linked scenarios still reflect requirements.
+     - If the behavior should not have changed, treat it as a **real regression** and **call it out** clearly (prioritize fixing product code over “fixing tests”).
+     - If unclear, gather evidence (screenshots/logs/network) and state what’s ambiguous rather than guessing.
+3. **Fixtures before UI:** For each UI case that the **plan** tied to a seeded posture, ensure the spec **imports `test` from `fixtures`** (merged entry) and **lists the needed fixtures** so setup runs before browser steps. See **[`fixture-usage.md`](./fixture-usage.md)**.
+4. Create a Playwright browser session, authenticate once, and store storage state in a temporary file for reuse. Make sure the authored test also follows same via storageContext.
+5. **Application emits (TrueCoverage):** When `enabled=true` and the plan called for new /updated events, add emits in the **app** code for those interactions and keep **`plans/events/*.event.md`** in sync. Do this **before** authoring individual SmartTests or API tests that depend on those events being emitted or on TrueCoverage picking them up. This work is independent of SmartTest files but should land in the same PR when possible.
+6. Implement each planned test case (UI/API as planned), reusing storage state for faster repeated sessions. For writing API tests, refer **[`api-testing.md`](./api-testing.md)**.
+7. Run written tests with Playwright and fix failures iteratively. **`cd`** to the mapped SmartTests root (folder with **`.testchimp-tests`**), then run via **`npx playwright …`** (see [`write-smarttests.md`](./write-smarttests.md) **Running Playwright**). Ensure **`TESTCHIMP_API_KEY`** is set in the shell (not only in **`.env-QA`**). If runs or MCP return **401**, follow the skill’s HTTP 401 guidance (Project Settings → Key management).
+8. Retry fix-and-rerun up to **2 attempts per failing test**. If still failing, stop retrying those and clearly ask user for help with the unresolved failures (in the report created in the next phase).
 
 ### Phase 3 completion gate (must pass before Phase 4)
 
 Before proceeding to **Cleanup and report**, the agent must confirm:
 
-- [ ] A small, relevant subset of existing tests was run first (which + result).
+- [ ] A **tiny, strongly-related smoke** subset of existing tests was run (which + result), explicitly time-boxed so execution stayed focused on authoring new tests.
 - [ ] New/updated tests were authored per the plan and linked to scenario ids **only when ids exist** (never invented).
 - [ ] Playwright executed from the mapped SmartTests root (folder with `.testchimp-tests`).
 - [ ] `TESTCHIMP_API_KEY` was present in the run environment; any 401s were handled per guidance.
