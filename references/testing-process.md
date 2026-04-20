@@ -66,7 +66,9 @@ Use the derived change context to (a) locate existing relevant plans/scenarios, 
 
 **TrueCoverage gate:** Read `plans/knowledge/ai-test-instructions.md` first (if available) and follow **[`truecoverage.md`](./truecoverage.md)**.
 
-- If `ai-test-instructions.md` contains an **explicit opt-out** (or states TrueCoverage is intentionally deferred), respect it.
+- If `ai-test-instructions.md` contains an **explicit opt-out** (TrueCoverage disabled / out of scope), respect it.
+- If `ai-test-instructions.md` says TrueCoverage was **deferred during init**, do **not** treat that as “deferred forever”:
+  - During **`/testchimp test`**, assume TrueCoverage is **in-scope now** for the PR and include the necessary wiring + event docs for the changed journeys.
 - Otherwise, when the PR adds/changes **user journeys / user-facing behaviors**, the agent should:
   - **If not configured**: ask the user whether to enable TrueCoverage now; if yes, include RUM wiring + docs in the Plan.
   - **If configured**: decide whether to add/adjust instrumentation for key events introduced/changed by the PR, and include that work in the Plan.

@@ -51,7 +51,9 @@ Guidance:
 
 - If TrueCoverage is **enabled** in the project plan: follow setup/instrument steps below.
 - If it is **disabled**: do not prompt again unless the user explicitly asks (e.g. `/testchimp setup truecoverage`).
-- If it is **deferred**: skip instrumentation unless the user decides to enable now.
+- If it is **deferred during init**: this is a **snooze**, not a permanent opt-out.
+  - During **`/testchimp test`**, treat TrueCoverage as **in-scope** for the PR and proceed to wire missing framework pieces (if any) and define/document the **event slice required by the changed journeys**.
+  - During **`/testchimp init`**, “deferred” should mean “not doing additional instrumentation in init” (commonly because `plans/events/` is still empty), but the agent must not later assume TrueCoverage is unavailable or out of scope.
 
 ---
 
@@ -62,7 +64,7 @@ When `enabled=true` and the PR adds or changes **meaningful user journeys**:
 1. **Plan:** Note TrueCoverage needs: new or updated events, helper placement, env config.
 2. **Execute:** Emit events from the app code where it adds signal; use **`plans/events/`** (below) to document event types and metadata for consistency.
 
-If `enabled=false` or `later` (within snooze), skip instrumentation unless the user explicitly asks.
+If `enabled=false`, skip instrumentation unless the user explicitly asks.
 
 ---
 

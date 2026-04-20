@@ -534,7 +534,9 @@ Read `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` bef
 
 - If enabled: do not reprompt unless user asks to revisit.
 - If disabled: skip instrumentation unless user changes decision.
-- If deferred: skip unless user asks to set up now.
+- If deferred: treat as **deferred during init** (a snooze), not a permanent opt-out.
+  - In **init**: do not proceed unless the user chooses “setup now”; record the deferral explicitly as “deferred during init”.
+  - In **test runs (`/testchimp test`)**: do **not** assume this means “skip forever” — proceed with TrueCoverage for the PR scope (wire missing framework pieces and define/document required events) unless the user has explicitly opted out/disabled.
 
 If user chooses setup now, include:
 
