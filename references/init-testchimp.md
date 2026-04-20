@@ -55,6 +55,21 @@ Init mixes **two independent scopes**. Agents must not collapse them into a sing
 
 ---
 
+## Opening message (required, first user-facing step)
+
+When **`/testchimp init`** starts, the **first substantive message to the user** must set expectations before deep technical work. **Immediately after** that message, run the **[Workstation gate](#workstation-gate-always-first)** and the rest of this document (Preamble checks in **`SKILL.md`** apply as usual).
+
+**Include the following substance** (adapt wording slightly for tone; keep meaning):
+
+- **During init**, TestChimp sets up **complete QA infrastructure** for the project: seeding endpoints, test environment management, CI setup, fixtures, TrueCoverage instrumentation, and test scaffolds with proper TestChimp integration.
+- **After init**, the user mainly runs **`/testchimp test`** when they finish a PR and want it tested.
+- **Ongoing**, the agent runs the full QA workflow — when speaking to the user, use first person: *I will run the complete QA workflow* to author tests for relevant scenarios, make the necessary QA infrastructure adjustments, identify coverage gaps, and address them.
+- **Periodically**, run **`/testchimp audit`** to analyze test coverage gaps and TrueCoverage insights, address them, and improve the suite.
+
+**Always** include this overview link: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
+
+---
+
 ## Workstation gate (always first)
 
 Run this **before** optional smoke (Phase 0) or project requirement gathering (Phase 1–3). On **every** `/testchimp init`, complete:
@@ -133,7 +148,9 @@ Do not start implementing mocking/env/truecoverage/CI until you have the user’
     - `.testchimp-plans` => plans root mapped
     - `.testchimp-tests` => SmartTests root mapped
   - Confirm the **SmartTests root** path (folder containing `.testchimp-tests`) for downstream key areas. **Existing Playwright classification and import strategy** are handled in [Key Area 2](#key-area-2--existing-playwright-suite--import-strategy).
-- If either marker file is missing: ask the user to complete the minimum needed TestChimp Git integration + sync so marker files exist.
+- If either marker file is missing: ask the user to complete the minimum needed TestChimp Git integration + sync so marker files exist. **Also ask them to confirm:**
+  - For **each** mapped folder (plans and tests, after mapping in TestChimp → Project Settings → Integrations), a **PR has been raised from the TestChimp platform** and **merged**, so the scaffold (including empty marker files) exists in the remote repo.
+  - Their **local workspace has been updated** (e.g. `git pull` / sync) so they have pulled those PR changes. Markers only appear locally after the platform sync PRs are merged and the branch is up to date.
 - If the MCP server entry is missing or invalid after the Workstation gate: the agent should update the host MCP config automatically (using the `npx` + `testchimp-mcp-client@latest` pattern from `assets/sample-mcp.json`), then re-check that the server runs.
 - Only if `TESTCHIMP_API_KEY` value is not already available to write/use (e.g. not present in shell env or existing MCP `env`): ask the user to enter that in the mcp.json env block (or confirm where it is already provided) so the MCP validation call can succeed. Ensure the MCP can be called - by using get_eaas_config - expectation is for it to not return 401.
 
@@ -337,9 +354,10 @@ Search for marker files:
 
 If markers are missing:
 
-1. ask user to connect repo in TestChimp -> Project Settings -> Integrations -> Git,
-2. map both plans and tests folders,
-3. sync/raise PR from TestChimp platform so scaffold and markers are created.
+1. Ask the user to connect the repo in TestChimp → Project Settings → Integrations → Git.
+2. Map **both** plans and tests folders (each mapping corresponds to one root that will get a marker).
+3. From the TestChimp platform, **raise the sync PR(s)** for each mapped folder so the scaffold and **empty marker files** (`.testchimp-plans`, `.testchimp-tests`) are created on the remote.
+4. Ask the user to **merge those PRs** (or ensure they are merged) and then **update the local workspace** (`git pull` / equivalent) so the merged changes—including the markers—are present locally. Without merge + local pull, markers will still be missing on disk.
 
 Platform path note: MCP APIs use platform-rooted paths (`plans/...` or `tests/...`) even if repo folder names differ.
 
@@ -506,8 +524,8 @@ Critical behavior:
 2. Marker files define canonical roots:
    - `.testchimp-plans` at plans root
    - `.testchimp-tests` at SmartTests root
-3. If one marker exists but the other does not, instruct the user to map the missing integration and sync from TestChimp.
-4. If both markers are missing, ask user to map both folders in TestChimp and raise platform sync PRs for both.
+3. If one marker exists but the other does not, instruct the user to map the missing integration and complete the platform sync PR (merge) + local pull for that folder.
+4. If both markers are missing, ask the user to map both folders in TestChimp, ensure **sync PRs from the platform exist and are merged for each mapped folder**, and that the **local workspace is updated** to include those merges.
 5. If mappings are wrong, sync/coverage behavior is incomplete; pause implementation until mapping is corrected.
 
 ### TrueCoverage decision memory details

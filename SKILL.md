@@ -29,7 +29,7 @@ Before executing a TestChimp flow:
 
 3. **`TESTCHIMP_API_KEY` prerequisite (BLOCKING)** — before starting **any** Playwright processes (headed or headless) or authoring AI steps:
    - **Resolve the key source via SmartTests-root walk-up**:
-     - Find the **SmartTests root** (the folder containing `.testchimp-tests`).
+     - Find the **SmartTests root** (the folder containing `.testchimp-tests`) per **[Marker files](#marker-files)** under *How TestChimp works*.
      - Starting from that folder, walk **upwards** (parent → parent → …) looking for a `.cursor/mcp.json`.
      - Continue walking upwards until you find a `.cursor/mcp.json` whose `mcpServers` contains a `testchimp` entry (i.e. the MCP server config that actually defines the TestChimp MCP client).
      - Use `mcpServers.testchimp.env.TESTCHIMP_API_KEY` from that file as the key source. (This supports monorepos / nested workspaces where the nearest `.cursor` is not the one that defines TestChimp.)
@@ -45,7 +45,7 @@ Before executing a TestChimp flow:
    - If no MCP config is present yet, **do not block** the flow; point to [`assets/sample-mcp.json`](assets/sample-mcp.json) during **`/testchimp init`**.
 
 5. **Playwright toolchain check** — TestChimp requires Playwright 1.59.0+. **Before** authoring SmartTests, running **`npx playwright test`**, or doing browser-driven exploration for **`/testchimp init`** smoke, ensure the repo actually has a compliant install:
-   - Resolve the **install root**: from the SmartTests directory (the one containing **`.testchimp-tests`**), walk up until you find the **`package.json`** that declares **`@playwright/test`** (often a parent such as `ui/` in a monorepo). That directory is where **`npm install`** / **`npm ci`** must succeed for Playwright to be runnable.
+   - Resolve the **install root**: from the **SmartTests root** (see **[Marker files](#marker-files)**), walk up until you find the **`package.json`** that declares **`@playwright/test`** (often a parent such as `ui/` in a monorepo). That directory is where **`npm install`** / **`npm ci`** must succeed for Playwright to be runnable.
    - If **`node_modules`** is missing or **`npx playwright --version`** fails, **run the repo’s install** (`npm install`, `npm ci`, or documented workspace install) **at that install root** first. **Do not** treat missing **`node_modules`** as “optional”; without install, Playwright-based steps cannot be validated.
    - **Verify** the resolved **`@playwright/test`** version is **>=** 1.59.0, and that **`playwright`** (browser package) matches **`@playwright/test`** (same line as [`references/write-smarttests.md`](references/write-smarttests.md)). Use e.g. `npm ls @playwright/test --prefix <install-root>` or `npx playwright --version` with **cwd** at the install root.
    - **Corrective action** if below minimum or version mismatch: bump **`@playwright/test`** and **`playwright`** together, reinstall, then **`npx playwright install`** for browsers if needed. If the environment cannot run install commands, **tell the user** to install dependencies and re-run; **do not** silently author tests that were never executed against a real runner.
@@ -59,15 +59,24 @@ Before executing a TestChimp flow:
 ## How TestChimp works
 
 1. Create a project in TestChimp and connect the Git repo. Map 2 folders in the repo to the project created in TestChimp platform **`tests`** (SmartTests) and **`plans`** (test plans). Those can be mapped after logging in to TestChimp -> Select Project -> Project Settings -> Integrations -> GitHub.
-2. TestChimp creates **folder marker files** (empty): `.testchimp-tests` under tests root, `.testchimp-plans` under plans root so paths are recognizable - so you can identify the mapped folders using those markers.
-3. Run SmartTests with Playwright; install **`playwright-testchimp`** as documented in [`references/write-smarttests.md`](references/write-smarttests.md). This also pulls in `ai-wright` for enabling execution time intelligent steps.
-4. Local and CI calls to TestChimp APIs are authenticated via **`TESTCHIMP_API_KEY`** env var (note that this is a project specific key - so it should be used scoped per project).
+2. Run SmartTests with Playwright; install **`playwright-testchimp`** as documented in [`references/write-smarttests.md`](references/write-smarttests.md). This also pulls in `ai-wright` for enabling execution time intelligent steps.
+3. Local and CI calls to TestChimp APIs are authenticated via **`TESTCHIMP_API_KEY`** env var (note that this is a project specific key - so it should be used scoped per project).
+
+### Marker files
+
+TestChimp adds **empty marker files** after mapping: **`.testchimp-tests`** at the **SmartTests root** (platform **tests**) and **`.testchimp-plans`** at the **plans root** (platform **plans**). On-disk folder names may differ (e.g. `ui_tests`, `plans`).
+
+**Finding them:** Markers are **dotfiles**; workspace Glob may omit them, so **an empty Glob search does not prove they are missing**. From the repo (or workspace) root, use the terminal—e.g. **`find . -name '.testchimp-*'`**, or **`ls -a`** in a candidate folder next to `package.json` or `plans/`.
+
+**Using SmartTests root:** The directory that contains **`.testchimp-tests`** is the SmartTests root—use it for the MCP key walk-up (Preamble **#3**), Playwright install resolution (**#5**), and every **`npx playwright …`** run (Agent guardrails).
+
+**If markers are missing after mapping:** Confirm **sync PRs from the TestChimp platform were raised and merged for each mapped folder** and the **local workspace was updated** (e.g. `git pull`)—see [`references/init-testchimp.md`](references/init-testchimp.md) (Key Area 1 and Action item A).
 
 ## Agent guardrails (must follow)
 
 1. **Scenario and story IDs — never invent.** Do **not** guess or fabricate **`#TS-…`** / **`US-…`** ids or write `// @Scenario: #TS-…` comments before those entities exist in TestChimp. **First** create user stories and test scenarios via the planning flow and MCP tools (**`create_user_story`**, **`create_test_scenario`**, etc.; see [`references/test-planning.md`](references/test-planning.md)), or use ids **returned** by the platform / present in committed plan markdown. **Then** add link comments in SmartTests so stable ids match the system.
 
-2. **Run Playwright only from the mapped SmartTests folder.** Find the repo directory that contains **`.testchimp-tests`** (the folder mapped to platform **tests** — the on-disk name may be `tests`, `ui_tests`, or anything). **`cd` to that folder**, then run Playwright via **`npx`** (e.g. `npx playwright test …`). Do not run tests from the repo root unless that root **is** the mapped folder.
+2. **Run Playwright only from the mapped SmartTests root** (see **[Marker files](#marker-files)**). **`cd` there**, then run Playwright via **`npx`** (e.g. `npx playwright test …`). Do not run tests from the repo root unless that root **is** the mapped folder.
 
 3. **`TESTCHIMP_API_KEY` — where it lives.** Set the project API key in the **shell environment** for local runs and in the MCP server **`env`** block in **`mcp.json`** (see [`assets/sample-mcp.json`](assets/sample-mcp.json)). **Do not** put **`TESTCHIMP_API_KEY`** in **`.env-QA`** (or other **`.env-*`**) files — those are for **test execution** variables (e.g. **`BASE_URL`**, auth fixtures, feature flags). For **ai-wright** / AI steps, instruct users to set **`TESTCHIMP_API_KEY`** in the environment only — **do not** document or suggest **personal access token (PAT)** or alternate user-auth env pairs for agents.
 
@@ -107,7 +116,22 @@ Use the repo, plans, and those tools to decide what to test and how to run them.
 
 | User says | Read |
 |-----------|------|
-| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) (phased workflow: optional quick smoke -> plan -> execute) |
+| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) (opening message → phased workflow: optional quick smoke → plan → execute) |
+
+### `/testchimp init` — opening message (deliver first)
+
+When the user runs **`/testchimp init`**, the **first substantive message to the user** must set expectations: what init delivers, what they do after init, what the agent does during ongoing QA, and how **`/testchimp audit`** fits in. **Then** continue with Preamble checks, the [Workstation gate](references/init-testchimp.md#workstation-gate-always-first), and the rest of [`references/init-testchimp.md`](references/init-testchimp.md).
+
+**Include the following substance** (adapt wording slightly for tone; keep meaning):
+
+- **During init**, TestChimp sets up **complete QA infrastructure** for the project: seeding endpoints, test environment management, CI setup, fixtures maintainance, mocks, TrueCoverage instrumentation (for coverage gaps aligned with real user behaviours in production), and test scaffolds with proper TestChimp integration.
+- **After init**, the user mainly runs **`/testchimp test`** when they finish a PR and want it tested.
+- **Ongoing**, the agent runs the full QA workflow (say in first person when addressing the user: *I will run the complete QA workflow* — author tests for relevant scenarios, author missing test plans for the PR, adjust QA infrastructure as needed - adding seed endpoints, TrueCoverage instrumentations, fixture updates, find coverage gaps and address them).
+- **Periodically**, run **`/testchimp audit`** "I will" (similar to above say in first-person) analyze requirement coverage gaps and TrueCoverage insights - by communicating with TestChimp platform, and address them systematically - to continuously improve your test coverage.
+
+**Always** share this doc link for a short overview of what TestChimp enables: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
+
+(Full step order is in [`references/init-testchimp.md`](references/init-testchimp.md#opening-message-required-first-user-facing-step).)
 | `/testchimp test` | [`references/testing-process.md`](references/testing-process.md) |
 | `/testchimp plan` | [`references/test-planning.md`](references/test-planning.md) |
 | `/testchimp audit` | [`references/audit-coverage.md`](references/audit-coverage.md) |
@@ -145,7 +169,7 @@ When a `plans/...` folder is provided, coverage resolves SmartTests linked to sc
 
 ## Progressive disclosure
 
-Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/plan`, `/audit`, TrueCoverage setup/instrument). During `/testchimp init`, run the **workstation gate** (MCP + API key) **before** optional smoke — see [Workstation gate](references/init-testchimp.md#workstation-gate-always-first) in [`references/init-testchimp.md`](references/init-testchimp.md) — then follow the phased init workflow (optional quick smoke, collaborative plan, execute item-by-item with **project-level** progress in `plans/knowledge/ai-test-instructions.md`); when classifying **greenfield vs existing Playwright**, dual-folder mappings, import strategy, or CI alignment for SmartTests, load [`references/importing-existing-tests.md`](references/importing-existing-tests.md). For **Playwright `page.route`** (HTTP/API), **optional AIMock** (LLM), goldens layout, and test doubles, load [`references/mocking_strategy.md`](references/mocking_strategy.md). Plan **reading and authoring** (including MCP create/update flows) use [`references/test-planning.md`](references/test-planning.md). When planning or implementing **seed**, **teardown**, or **read** test endpoints, **fixtures**, or **backend state assertions** after UI flows, load [`references/seeding-endpoints.md`](references/seeding-endpoints.md) and [`references/fixture-usage.md`](references/fixture-usage.md). During `/testchimp test`, load [`references/api-testing.md`](references/api-testing.md) when a scenario is designated for API automation and [`references/write-smarttests.md`](references/write-smarttests.md) for UI SmartTests. Load [`references/environment-management.md`](references/environment-management.md) when choosing or provisioning test environments, EaaS (Bunnyshell), or branch-scoped `BASE_URL` resolution. Load [`references/truecoverage.md`](references/truecoverage.md) when RUM instrumentation, TrueCoverage planning, or TrueCoverage MCP tools are in scope. Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
+Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/plan`, `/audit`, TrueCoverage setup/instrument). During `/testchimp init`, run the **workstation gate** (MCP + API key) **before** optional smoke — see [Workstation gate](references/init-testchimp.md#workstation-gate-always-first) in [`references/init-testchimp.md`](references/init-testchimp.md) — then follow the phased init workflow (optional quick smoke, collaborative plan, execute item-by-item with **project-level** progress in `plans/knowledge/ai-test-instructions.md`); when classifying **greenfield vs existing Playwright**, dual-folder mappings, import strategy, or CI alignment for SmartTests, load [`references/importing-existing-tests.md`](references/importing-existing-tests.md). During **`/testchimp test`**, if the user specifies an **area**, **story/scenario**, or other **focus instructions**, prioritize that scope; otherwise derive context from **PR changes / recent commits** and cross-reference test plans per [`references/testing-process.md`](references/testing-process.md). For **Playwright `page.route`** (HTTP/API), **optional AIMock** (LLM), goldens layout, and test doubles, load [`references/mocking_strategy.md`](references/mocking_strategy.md). Plan **reading and authoring** (including MCP create/update flows) use [`references/test-planning.md`](references/test-planning.md). When planning or implementing **seed**, **teardown**, or **read** test endpoints, **fixtures**, or **backend state assertions** after UI flows, load [`references/seeding-endpoints.md`](references/seeding-endpoints.md) and [`references/fixture-usage.md`](references/fixture-usage.md). During `/testchimp test`, load [`references/api-testing.md`](references/api-testing.md) when a scenario is designated for API automation and [`references/write-smarttests.md`](references/write-smarttests.md) for UI SmartTests. Load [`references/environment-management.md`](references/environment-management.md) when choosing or provisioning test environments, EaaS (Bunnyshell), or branch-scoped `BASE_URL` resolution. Load [`references/truecoverage.md`](references/truecoverage.md) when RUM instrumentation, TrueCoverage planning, or TrueCoverage MCP tools are in scope. Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
 
 Environment provisioning contract:
 

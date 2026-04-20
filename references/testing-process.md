@@ -18,7 +18,11 @@ Goal: produce a markdown plan document that is explicitly for **authoring TestCh
 
 ### Derive change context
 
-Before planning scenarios and tests, derive the **change context**. Default to assuming the user is on a PR branch and analyzing **the PR’s changes**, then run the standard planning workflow (existing plans → missing plans → coverage gaps).
+Before planning scenarios and tests, derive the **change context**.
+
+**Optional user focus (takes precedence when present):** If the user names an **area**, **user story**, **scenario**, or gives **additional focus instructions** (what to validate, edge cases, acceptance criteria), treat that as the primary scope for this run. Prioritize reading and testing against **that** context: locate matching or related material in the mapped `plans/` tree, align SmartTests and execution to it, and use PR/commit analysis only as supporting signal (e.g. to see what code might implement that area). Do **not** substitute a generic “whole PR” pass when the user has specified a narrower focus—unless they also ask for broader regression.
+
+**Default when no extra focus is given:** Assume the user is on a PR branch and analyze **the PR’s changes**, then run the standard planning workflow (existing plans → missing plans → coverage gaps), **cross-referencing** mapped test plans to find relevant scenarios for the changed behavior.
 
 1. **Assume PR branch by default**
    - Treat the current branch as a PR branch and analyze the delta against the base branch (typically `main`) using a merge-base diff (e.g. `git diff origin/main...HEAD`).
