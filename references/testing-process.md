@@ -12,6 +12,29 @@ Use this as the primary reference for `/testchimp test`. For SmartTest authoring
 
 ---
 
+## Non-negotiables (agent guardrails for this flow)
+
+Before running **any** Playwright command (headed or headless), or authoring **any** `ai-wright` steps:
+
+- **Write the Plan artifact first**: produce a markdown plan document for this run (see Phase 1), grounded in PR diffs + existing `plans/` material.
+- **Get explicit agreement on the Plan**: pause after the plan and wait for “go ahead” / approval to proceed to Setup + Execute.
+- **Provision / select the environment per `plans/knowledge/ai-test-instructions.md`**: choose the recorded strategy and satisfy its “up + healthy” contract before Execute.
+- **Default to headed authoring/debug**: during authoring and triage, prefer `--headed --debug` so the user can observe/intervene.
+- **TrueCoverage belongs in the Plan**: if the PR adds or changes user journeys and the project’s TrueCoverage plan is enabled (or user opts in), the Plan must include instrumentation tasks and required `plans/events/*.event.md` updates.
+- **Mocking belongs in the Plan (always)**:
+  - Explicitly decide per test case: **real backend**, **Playwright HTTP mocking** (`page.route` / `context.route`), and (when applicable) **AIMock** for LLM-backed flows.
+  - If AIMock is selected, the Plan must include: wiring tasks, enablement mechanism (env flag / config), and how to validate it is actually being used.
+- **Fixtures belong in the Plan (always)**:
+  - For every UI SmartTest planned, list the required **fixture-backed posture** and any missing `fixtures/` modules or missing seed/read/teardown endpoints.
+  - If new fixtures/endpoints are needed, treat them as **Setup blockers** (not “nice-to-haves”).
+- **Blockers must be called out in the Plan**: list every known blocker with (a) owner (agent vs user), (b) the exact action required, and (c) the earliest phase it blocks.
+- **Final checklist is required**: the plan document must end with an “Execution checklist” that the agent will tick through, including:
+  - TrueCoverage plan respected (and instrumentation executed when in-scope)
+  - MCP coverage-gap queries executed (when MCP is configured) and results recorded
+  - Environment provisioned/selected per `ai-test-instructions` and health contract satisfied
+  - Tests executed on that provisioned environment
+  - Cleanup performed (ephemeral env destroy, temp artifacts not committed)
+
 ## Phase 1: Plan
 
 Goal: produce a markdown plan document that is explicitly for **authoring TestChimp SmartTests**.
