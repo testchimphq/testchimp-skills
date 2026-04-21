@@ -6,6 +6,18 @@ For how fixtures call these endpoints, see **[`fixture-usage.md`](./fixture-usag
 
 ---
 
+## After you change seed endpoints or backend code
+
+When you add or modify **seed/teardown/read** routes, **config or flags** that gate those test-only surfaces (non-production guards, env vars, etc.), or **any backend** your fixtures or tests call (using whatever **base URLs** the project documents—often `BASE_URL`, API host vars, or similar), the **running** app-under-test must pick up those changes before you execute Playwright or validate behavior.
+
+1. **Read** `plans/knowledge/ai-test-instructions.md` → **`## Environment Provision Strategy`** and follow the project’s chosen approach (local stack vs cloud EaaS vs staging).
+2. **Local** — Restart or recreate the stack (or the affected containers/processes) using the documented **up** / **healthy** flow. Stopping the old env and starting a new one is fine when that matches repo practice.
+3. **Cloud / EaaS / branch-provisioned SaaS** — Environments often deploy from **Git `HEAD`**. **Commit** (and **push** if provision pulls from remote) so the provisioned environment includes your seed-endpoint changes; then **reprovision** or wait for deploy if required.
+
+This avoids false failures where tests call new routes or toggles that the running server was never rebuilt with.
+
+---
+
 ## What to build
 
 | Kind | Role |

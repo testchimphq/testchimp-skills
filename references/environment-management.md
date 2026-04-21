@@ -109,6 +109,15 @@ When EaaS is **not** used, teams may configure a **URL template** and optional *
 - **Use when EaaS is not configured** and you need the branch-specific preview/base URL for tests or CI `BASE_URL`.
 - **Implementation detail:** overrides are stored keyed by **internal Git branch id** in the product; the tool accepts **branch name** and resolves server-side—do not require the human or agent to know internal ids.
 
+## Authoring time: refresh when the app-under-test changes
+
+If you modify **seed/teardown/read** routes, **config or flags** that gate test-only surfaces, **fixture-facing APIs**, or any backend your tests use (see the project’s documented base URLs in `ai-test-instructions.md`) while authoring SmartTests, **restart or reprovision** the environment per `plans/knowledge/ai-test-instructions.md` → **Environment Provision Strategy**:
+
+- **Local stack** — tear down and bring the stack up again (or restart affected services) so processes load the new bytecode/config.
+- **Cloud / EaaS / branch previews** — provisioning usually tracks **Git `HEAD`**; **commit** (and **push** if the provisioner pulls from remote) **before** reprovisioning so the deployment includes your changes.
+
+Details: main skill **`SKILL.md`** (*Backend / seed changes* under Environment provisioning contract) and [`seeding-endpoints.md`](./seeding-endpoints.md) (*After you change seed endpoints or backend code*).
+
 ## Related
 
 - **`/testchimp init`** — follow the phased flow (optional quick smoke -> collaborative plan -> execute), and capture environment strategy plus per-item progress into `plans/knowledge/ai-test-instructions.md` (see [`init-testchimp.md`](./init-testchimp.md)).
