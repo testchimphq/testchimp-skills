@@ -2,7 +2,10 @@
 
 This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and `@Scenario` links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
 
-**Ids:** Never hallucinate **`US-…`** or **`TS-…`** ids. Create stories and scenarios with MCP (**`create_user_story`**, **`create_test_scenario`**, …) or use ids already present in synced plan files / platform responses **before** referencing them in tests or new markdown. The scenario / story IDs are TestChimp system generated - not freetext.
+**Ids (hard rules):**
+- **Never hallucinate** **`US-…`** or **`TS-…`** ids (the ordinals are TestChimp-generated, not freetext).
+- **Never create** (even temporarily) story/scenario markdown files with a **blank `id:`** in frontmatter.
+- **Always provision first via MCP** to get the real ordinal id, **then** write the markdown file with `id: US-…` / `id: TS-…` already populated.
 
 Further reading: [Test planning as code](https://docs.testchimp.io/test-planning/intro) (philosophy, Git export, default-branch scope for plans).
 
@@ -66,15 +69,15 @@ Use the **`#TS-<n>`** from the scenario markdown **`id`**.
 
 Creating a file **only on disk** is **not** enough: the TestChimp project needs **entities** with real ordinals. Use **`testchimp-mcp-client`** to create the entities in this **order**:
 
-1. **`create_user_story`** — pass **`platformFilePath`** (e.g. `plans/stories/area/my-feature.md`) and **`title`**. Response includes **`ordinalId`** (number). Build frontmatter **`id: US-<ordinalId>`**.
-2. **Write** the markdown file under the repo’s mapped plans root (same relative path under **`stories/`** as you chose in the platform path after `plans/stories/`).
+1. **`create_user_story`** — pass **`platformFilePath`** (e.g. `plans/stories/area/my-feature.md`) and **`title`**. Response includes **`ordinalId`** (number).
+2. **Write** the markdown file under the repo’s mapped plans root, and **the first on-disk version must already include** frontmatter **`id: US-<ordinalId>`** (do not write a stub with blank `id:`).
 3. **`update_user_story`** — pass the **full file contents** (frontmatter + body) so the platform stays in sync.
 
 For scenarios:
 
 1. Ensure the **parent story** exists and you know its **`US-<n>`**.
-2. **`create_test_scenario`** — **`platformFilePath`** under `plans/scenarios/...`, **`title`**, **`userStoryOrdinalId`** = **`n`** from **`US-n`**. Response includes scenario **`ordinalId`** → use **`id: TS-<ordinalId>`** and **`story: US-<n>`** in frontmatter.
-3. **Write** the file locally.
+2. **`create_test_scenario`** — **`platformFilePath`** under `plans/scenarios/...`, **`title`**, **`userStoryOrdinalId`** = **`n`** from **`US-n`**. Response includes scenario **`ordinalId`**.
+3. **Write** the file locally, and **the first on-disk version must already include** **`id: TS-<ordinalId>`** and **`story: US-<n>`** (do not write a stub with blank `id:` or missing `story:`).
 4. **`update_test_scenario`** with **full markdown** after edits.
 
 **Filenames:** Prefer **kebab-case** and **`.md`**. **Titles** are short sentences; filenames are stable identifiers.

@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP), coverage, and MCP tools. Use when the user mentions TestChimp, /testchimp commands (init, test, plan, audit), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
 compatibility: Requires Node.js; @playwright/test and playwright >= required_playwright_test_version (see Preamble checks); TESTCHIMP_API_KEY for MCP and ai-wright. Network access for TestChimp APIs when using MCP or AI steps.
-version: 0.1.8
+version: 0.1.9
 required_mcp_client_version: "0.0.4"
 ---
 
@@ -170,6 +170,22 @@ When a `plans/...` folder is provided, coverage resolves SmartTests linked to sc
 ## Progressive disclosure
 
 Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/plan`, `/audit`, TrueCoverage setup/instrument). During `/testchimp init`, run the **workstation gate** (MCP + API key) **before** optional smoke — see [Workstation gate](references/init-testchimp.md#workstation-gate-always-first) in [`references/init-testchimp.md`](references/init-testchimp.md) — then follow the phased init workflow (optional quick smoke, collaborative plan, execute item-by-item with **project-level** progress in `plans/knowledge/ai-test-instructions.md`); when classifying **greenfield vs existing Playwright**, dual-folder mappings, import strategy, or CI alignment for SmartTests, load [`references/importing-existing-tests.md`](references/importing-existing-tests.md). During **`/testchimp test`**, if the user specifies an **area**, **story/scenario**, or other **focus instructions**, prioritize that scope; otherwise derive context from **PR changes / recent commits** and cross-reference test plans per [`references/testing-process.md`](references/testing-process.md). For **Playwright `page.route`** (HTTP/API), **optional AIMock** (LLM), goldens layout, and test doubles, load [`references/mocking_strategy.md`](references/mocking_strategy.md). Plan **reading and authoring** (including MCP create/update flows) use [`references/test-planning.md`](references/test-planning.md). When planning or implementing **seed**, **teardown**, or **read** test endpoints, **fixtures**, or **backend state assertions** after UI flows, load [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (includes **restart/reprovision** the app-under-test after seed or backend changes) and [`references/fixture-usage.md`](references/fixture-usage.md). During `/testchimp test`, load [`references/api-testing.md`](references/api-testing.md) when a scenario is designated for API automation and [`references/write-smarttests.md`](references/write-smarttests.md) for UI SmartTests. Load [`references/environment-management.md`](references/environment-management.md) when choosing or provisioning test environments, EaaS (Bunnyshell), or branch-scoped `BASE_URL` resolution. Load [`references/truecoverage.md`](references/truecoverage.md) when RUM instrumentation, TrueCoverage planning, or TrueCoverage MCP tools are in scope. Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
+
+### `/testchimp test` plan persistence (branch scope)
+
+`/testchimp test` may be run multiple times while developing a branch. To make reruns deterministic, the Plan phase must be persisted and reused as a **per-branch** markdown spec under the mapped plans root:
+
+- Always locate the mapped plans root (`<MAPPED_PLANS_ROOT>`) via the `.testchimp-plans` marker file.
+- Always create/update the branch plan file at:
+  - `<MAPPED_PLANS_ROOT>/knowledge/branch_test_plans/branch_<branch_slug>.md`
+- Define `<branch_slug>` as a **filename-safe** form of the current git branch name:
+  - Resolve branch name via `git branch --show-current` (fallback `git rev-parse --abbrev-ref HEAD`, then `git rev-parse --short HEAD` for detached HEAD)
+  - Lowercase; replace any non `[a-z0-9]` sequences (including `/`) with `_`; trim leading/trailing `_`
+- Always include YAML frontmatter with:
+  - `LastRunOnCommit: <commit_sha>`
+- Always maintain an explicit **done/not-done checklist** of action items so the agent can resume from the file on subsequent runs.
+
+See [`references/testing-process.md`](references/testing-process.md) → **Non-negotiables** and **Phase 1: Plan** for the full locating logic, slug rules, and required file shape.
 
 Environment provisioning contract:
 

@@ -16,8 +16,16 @@ Use this as the primary reference for `/testchimp test`. For SmartTest authoring
 
 Before running **any** Playwright command (headed or headless), or authoring **any** `ai-wright` steps:
 
-- **Write the Plan artifact first**: produce a markdown plan document for this run (see Phase 1), grounded in PR diffs + existing `plans/` material.
-- **Get explicit agreement on the Plan**: pause after the plan and wait for “go ahead” / approval to proceed to Setup + Execute.
+- **Persist and reuse a per-branch Plan artifact first (REQUIRED)**:
+  - **Always** create/update the **current branch** plan at:
+    - `<MAPPED_PLANS_ROOT>/knowledge/branch_test_plans/branch_<branch_slug>.md`
+  - **Before planning**, **check for the existence** of that file:
+    - If it exists, **read it first**, then update it based on (a) what’s already planned/done, (b) current PR diffs and plan materials, and (c) any additional user context for *this* run.
+    - If it does not exist, create it and do the full Plan phase (see Phase 1).
+  - The plan file must have YAML frontmatter containing:
+    - `LastRunOnCommit: <commit_sha>` (commit at which this branch plan was last updated by `/testchimp test`)
+  - The plan body must contain a **checklist** of action items, where each item is explicitly marked **done** (`- [x]`) or **not done** (`- [ ]`), so reruns are deterministic.
+- **Get explicit agreement on the Plan**: pause after writing/updating the branch plan file (the first time) and wait for “go ahead” / approval to proceed to Setup + Execute.
 - **Provision / select the environment per `plans/knowledge/ai-test-instructions.md`**: choose the recorded strategy and satisfy its “up + healthy” contract before Execute.
 - **Default to headed authoring/debug**: during authoring and triage, prefer `--headed --debug` so the user can observe/intervene.
 - **TrueCoverage belongs in the Plan**:
@@ -40,7 +48,48 @@ Before running **any** Playwright command (headed or headless), or authoring **a
 
 ## Phase 1: Plan
 
-Goal: produce a markdown plan document that is explicitly for **authoring TestChimp SmartTests**.
+Goal: produce (or update) the **per-branch** markdown plan document that is explicitly for **authoring TestChimp SmartTests**, persisted under the mapped plans root so it can be reused across multiple `/testchimp test` runs on the same branch.
+
+### Locate the branch plan file (always first)
+
+1. **Resolve `<MAPPED_PLANS_ROOT>`**
+   - Find the mapped plans root by locating the `.testchimp-plans` marker file (see `SKILL.md` → Marker files). The directory containing `.testchimp-plans` is `<MAPPED_PLANS_ROOT>`.
+2. **Resolve `<branch_slug>`**
+   - First resolve the **current git branch name** (preferred command):
+     - `git branch --show-current`
+   - **If empty** (detached HEAD), fall back to:
+     - `git rev-parse --abbrev-ref HEAD`
+     - If still not usable, use the short commit SHA: `git rev-parse --short HEAD`
+   - **Define `<branch_slug>` deterministically from the branch name** (filename-safe):
+     - Start with the resolved branch name string.
+     - Lowercase it.
+     - Replace any sequence of characters that is not `[a-z0-9]` with a single `_` (this includes `/` in branch names like `feature/foo`).
+     - Trim leading/trailing `_`.
+     - If the result is empty, use `detached_<short_sha>`.
+3. **Resolve the plan path**
+   - `<MAPPED_PLANS_ROOT>/knowledge/branch_test_plans/branch_<branch_slug>.md`
+4. **Branch-plan-first behavior**
+   - If the file exists: read it, then continue planning based on **existing checklist state** + new context.
+   - If missing: create it, then do the full planning steps below.
+
+### Branch plan file shape (required)
+
+At minimum, the plan file must contain:
+
+- **Frontmatter**:
+
+  ```yaml
+  ---
+  LastRunOnCommit: <commit_sha>
+  ---
+  ```
+
+- **Body sections** (recommended structure; keep it concise):
+  - `## Context` (what changed / what user asked to focus on)
+  - `## Plan` (summary bullets)
+  - `## Action checklist` (the source of truth for progress)
+    - Each item must be an actionable unit of work that can be marked done across reruns.
+    - Use `- [ ]` / `- [x]` consistently.
 
 ### Derive change context
 
@@ -121,7 +170,7 @@ The plan must include:
 
 Before proceeding to **Setup**, the agent must confirm:
 
-- [ ] **Plan artifact written** (path + brief summary).
+- [ ] **Branch plan file written/updated** (path + brief summary).
 - [ ] Plan is grounded in **PR diff** (`origin/main...HEAD`) or the fallback is explicitly documented.
 - [ ] Relevant existing **plans/stories/scenarios** were located and mapped to the change context.
 - [ ] **Missing plans** (stories/scenarios) were identified (and whether they must be authored now vs deferred is stated).
@@ -225,7 +274,10 @@ Before ending the run, the agent must confirm:
 
 ## Expected `/testchimp test` deliverables
 
-- A test-plan markdown artifact for this PR (this is not for persistance, but for planning the work to be done - though we can leave it for the user to clean up the files - or create the plan in a system location such as ~.cursor/plans etc.).
+- A **branch plan file** persisted under the mapped plans root:
+  - `<MAPPED_PLANS_ROOT>/knowledge/branch_test_plans/branch_<branch_slug>.md`
+  - Contains `LastRunOnCommit: <commit_sha>` frontmatter
+  - Contains a **done/not-done** checklist used as the deterministic continuation point for reruns
 - Any required new stories/scenarios authored (if gaps existed).
 - New/updated SmartTests + API Tests and execution results.
 - A short report of what was achieved.
