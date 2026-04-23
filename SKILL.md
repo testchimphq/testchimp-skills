@@ -18,6 +18,28 @@ TestChimp is a **QA workflow orchestration layer for AI agents**. It provides:
 - **Fixtures + seed/read APIs** - Playwright fixtures under **`<tests_root>/fixtures/`** (master `mergeTests` entry + domain files) call **seed**, **teardown**, and **read** endpoints per [`references/seeding-endpoints.md`](references/seeding-endpoints.md). Patterns and `testInfo` scoping: [`references/fixture-usage.md`](references/fixture-usage.md).
 - **TrueCoverage** - feedback loop for test coverage aligned with real user behaviour insights from production.
 
+## Preamble (run first)
+
+Run this once at the start of any TestChimp flow. It will:
+- Flag if your **installed skill is outdated** (git-based; canonical)
+- Verify `TESTCHIMP_API_KEY` is **present** in a nearby MCP config (without printing it)
+
+```bash
+_TC_PRE=$(
+  ~/.cursor/skills/testchimp/bin/testchimp-preamble-check 2>/dev/null \
+  || ~/.claude/skills/testchimp/bin/testchimp-preamble-check 2>/dev/null \
+  || .cursor/skills/testchimp/bin/testchimp-preamble-check 2>/dev/null \
+  || .claude/skills/testchimp/bin/testchimp-preamble-check 2>/dev/null \
+  || true
+)
+[ -n "$_TC_PRE" ] && echo "$_TC_PRE" || true
+```
+
+If the preamble script cannot be run (or prints nothing), the agent MUST manually validate:
+
+- **Skill update check**: compare local `SKILL.md` `version:` vs `origin/main` (or GitHub `main`) and offer `/testchimp update` if newer exists.
+- **`TESTCHIMP_API_KEY`**: confirm it exists (non-blank, non-placeholder) in the MCP config discovered via SmartTests-root walk-up; do not print it.
+
 
 ## Preamble checks (run first)
 
