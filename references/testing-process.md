@@ -23,6 +23,10 @@ Do **not** advance **Analyze → Plan → Execute** until the **prior phase’s 
 
 Before running **any** Playwright command (headed or headless), or authoring **any** `ai-wright` steps, the agent MUST follow the flow below and satisfy the gates.
 
+- **Plan first (no upfront smoke runs)**:
+  - Do **not** start by “running a few smoke tests” or spinning up a local/ephemeral environment just to smoke the app.
+  - Go through **Analyze → Plan** first so the plan can decide the required **stories/scenarios**, **tests**, and any required **seed/teardown/read endpoints** and **fixtures**.
+  - Only provision/start an environment in **Execute**  (after the plan makes infra needs explicit - and any new seed / probe endpoints are implemented, so that we dont have to restart after the changes).
 - **Persist and reuse a per-branch Plan artifact first (REQUIRED)**:
   - **Always** create/update the **current branch** plan at:
     - `<MAPPED_PLANS_ROOT>/knowledge/branch_test_plans/branch_<branch_slug>.md`
