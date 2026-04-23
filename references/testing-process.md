@@ -10,6 +10,13 @@ This document defines the **phased workflow** for testing a PR with TestChimp.
 
 Use this as the primary reference for `/testchimp test`. For SmartTest authoring patterns and examples, load **[`write-smarttests.md`](./write-smarttests.md)** during the **Execute** phase. For **Playwright fixtures** (`mergeTests`, `<tests_root>/fixtures/`), **`testInfo`** scoping, and **probe** specs (`page.pause()`), load **[`fixture-usage.md`](./fixture-usage.md)**. For **test-only seed, teardown, and read** endpoints (discovery, proxy pattern, idempotency, post-UI assertions), load **[`seeding-endpoints.md`](./seeding-endpoints.md)**. For TrueCoverage rules (instrumentation, `plans/events/*.event.md`), load **[`truecoverage.md`](./truecoverage.md)** when RUM is in scope.
 
+### Phase gating (required)
+
+Do **not** advance **Plan → Setup → Execute → Cleanup** until the **prior phase’s completion gate** is satisfied. **Nothing implied; nothing skipped silently.**
+
+- For **every** gate line item: mark **done** (brief evidence) or **`N/A`** with a **one-line justification** when it does not apply to **this** branch/run.
+- Record gate outcomes in the **branch plan file** (`<MAPPED_PLANS_ROOT>/knowledge/branch_test_plans/branch_<branch_slug>.md`) under a short **“Phase N completion”** subsection (or tick inline next to the plan checklist) so reruns are deterministic.
+
 ---
 
 ## Non-negotiables (agent guardrails for this flow)
@@ -45,6 +52,7 @@ Before running **any** Playwright command (headed or headless), or authoring **a
   - Environment provisioned/selected per `ai-test-instructions` and health contract satisfied
   - Tests executed on that provisioned environment
   - Cleanup performed (ephemeral env destroy, temp artifacts not committed)
+  - Each line above: **done** or **`N/A`** + **one-line justification** if not applicable to this run (same bar as phase gates).
 
 ## Phase 1: Plan
 
@@ -155,7 +163,7 @@ The plan must include:
    - Identify missing seed/teardown/read endpoints or missing harness infrastructure (see **[`seeding-endpoints.md`](./seeding-endpoints.md)**).
    - Include remediation tasks in the plan before test authoring.
 6. **TrueCoverage (when applicable)**
-   - Use **[`truecoverage.md`](./truecoverage.md)** as the full reference (RUM helper, credentials, **`plans/events/*.event.md`** format, audit/MCP).
+   - Use **[`truecoverage.md`](./truecoverage.md)** as the full reference (RUM helper, credentials, **`plans/events/*.event.md`** format, MCP analytics).
    - If the PR adds or materially changes **user journeys / user-facing behaviors**, the plan must include a clear decision:
      - **Enable + wire TrueCoverage** (when not configured and no explicit opt-out exists; requires user agreement), or
      - **Add/adjust key events** (when already configured), or
@@ -168,7 +176,7 @@ The plan must include:
 
 ### Phase 1 completion gate (must pass before Phase 2)
 
-Before proceeding to **Setup**, the agent must confirm:
+Before proceeding to **Setup**, the agent must confirm **every** item below is **done** or **`N/A`** + one-line justification (record in the branch plan file):
 
 - [ ] **Branch plan file written/updated** (path + brief summary).
 - [ ] Plan is grounded in **PR diff** (`origin/main...HEAD`) or the fallback is explicitly documented.
@@ -204,7 +212,7 @@ Goal: create the environment and prerequisites needed to author and run tests.
 
 ### Phase 2 completion gate (must pass before Phase 3)
 
-Before proceeding to **Execute**, the agent must confirm:
+Before proceeding to **Execute**, the agent must confirm **every** item below is **done** or **`N/A`** + one-line justification (record in the branch plan file):
 
 - [ ] Environment provisioned/selected per `plans/knowledge/ai-test-instructions.md` and **health validated** (how).
 - [ ] Any plan-marked infra gaps (fixtures, seed/read/teardown endpoints, env wiring) are **implemented** or explicitly marked as blocking.
@@ -236,7 +244,7 @@ Goal: author and validate SmartTests for planned cases.
 
 ### Phase 3 completion gate (must pass before Phase 4)
 
-Before proceeding to **Cleanup and report**, the agent must confirm:
+Before proceeding to **Cleanup and report**, the agent must confirm **every** item below is **done** or **`N/A`** + one-line justification (record in the branch plan file):
 
 - [ ] A **tiny, strongly-related smoke** subset of existing tests was run (which + result) - if exists (if not - say so), explicitly time-boxed so execution stayed focused on authoring new tests.
 - [ ] New/updated tests were authored per the plan and linked to scenario ids **only when ids exist** (never invented).
@@ -263,7 +271,7 @@ Goal: remove temporary resources and avoid leaked infrastructure. Communicate re
 
 ### Phase 4 completion gate (must pass before ending the run)
 
-Before ending the run, the agent must confirm:
+Before ending the run, the agent must confirm **every** item below is **done** or **`N/A`** + one-line justification (record in the branch plan file):
 
 - [ ] Ephemeral environments destroyed (if created).
 - [ ] Temporary auth/storage-state artifacts removed.

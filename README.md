@@ -1,6 +1,6 @@
 # testchimp-skills
 
-TestChimp skill for **`/testchimp`** flows: `/init`, `/test`, `/audit`, plus **TrueCoverage** (`/testchimp setup truecoverage`, `/testchimp instrument` — see `references/truecoverage.md`). Use with **`@testchimp/cli`** and **`TESTCHIMP_API_KEY`**.
+TestChimp skill for **`/testchimp`** flows: `/init`, `/test`, `/evolve`, plus **TrueCoverage** (`/testchimp setup truecoverage`, `/testchimp instrument` — see `references/truecoverage.md`). Use with **`@testchimp/cli`** and **`TESTCHIMP_API_KEY`**.
 
 Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environments-skill](https://github.com/bunnyshell/bunnyshell-environments-skill)): **`SKILL.md` at the repository root**, with **`references/`** and **`assets/`** beside it. **`name` in `SKILL.md` is `testchimp`**, so the install directory must be named **`testchimp`** (see [Agent Skills spec — `name` matches directory](https://agentskills.io/specification)).
 
@@ -18,7 +18,7 @@ testchimp-skills/
 ├── references/
 │   ├── init-testchimp.md
 │   ├── write-smarttests.md
-│   ├── audit-coverage.md
+│   ├── evolve-coverage.md
 │   ├── truecoverage.md
 │   ├── cli.md
 │   └── ai-wright-usage.md
@@ -141,7 +141,7 @@ Repeat that block (or re-clone) when you need updates.
 ```
 Set up TestChimp in this repo (reporter, markers, MCP env)
 Write a SmartTest for scenario #TS-102 from plans
-Audit requirement coverage for tests/checkout and propose missing tests
+Evolve requirement coverage for tests/checkout (analyze gaps, implement fixes)
 Update the TestChimp skill from Git
 ```
 

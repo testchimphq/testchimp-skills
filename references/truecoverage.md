@@ -77,7 +77,7 @@ To make TrueCoverage instrumentation incremental and resumable, maintain a singl
 Purpose:
 
 - Track **planned vs done** event instrumentation with a route/page-based breakdown.
-- Let agents resume instrumentation consistently during `/testchimp instrument` and opportunistically during `/testchimp audit`.
+- Let agents resume instrumentation consistently during `/testchimp instrument` and opportunistically during `/testchimp evolve`.
 
 Init policy:
 
@@ -96,13 +96,14 @@ How `/testchimp instrument` uses it:
 3. Create/update `plans/events/<title>.event.md` for each newly-instrumented event.
 4. Update `plans/knowledge/truecoverage-instrument-progress.md` by marking those entries `done`.
 
-How `/testchimp audit` uses it:
+How `/testchimp evolve` uses it:
 
 - Treat `plans/knowledge/truecoverage-instrument-progress.md` as the plan baseline.
 - If MCP analytics show high-signal gaps that are already `planned`, prioritize instrumenting them.
 - If analytics suggests missing events that are not in the tracker, add them as `planned` (or explain why they are out of scope).
+- Full evolve workflow (Analyze → Plan → Execute), phase gates, and where to persist evolve plans: [`evolve-coverage.md`](./evolve-coverage.md).
 
-## Ongoing: `/testchimp audit`
+## Ongoing: `/testchimp evolve`
 
 When `enabled=true`, after requirement coverage and execution history, use MCP tools (see **SKILL.md**). Requests mirror the platform TrueCoverage API (JSON bodies use **camelCase** field names).
 
@@ -130,13 +131,32 @@ Set **`automationEmitsOnly: true`** on **`comparisonExecutionScope`** or **`cove
 
 ### Metadata keys and “coverage”
 
-Use metadata for gap analysis **only when the key is a meaningful product dimension** (e.g. `plan_tier`, `payment_method` where behavior differs).
+Use metadata for gap analysis **only when the key is a meaningful product dimension** (e.g. role, plan tier, payment readiness) where behavior or risk differs.
 
 Hard rule: **do not emit identifiers** as metadata keys or values (or plan for them in `plans/events/*.event.md`). In practice this means avoiding keys like `project_id`, `org_id`, `user_id`, any `*_id`, UUIDs, raw emails, or other high-cardinality identifiers. These explode cardinality and are not useful for sliced coverage.
 
 Also avoid **free-text** or other high-cardinality dimensions unless the product logic genuinely branches on a small bounded set of values—the platform can mark keys as high-cardinality; prefer skipping those for coverage prioritization.
 
 When in doubt, refer documentation: https://docs.testchimp.io/truecoverage/how-it-works
+
+### Dot-scoped metadata (entity attributes)
+
+**Mental model:** `testchimp.emit()` is how you **learn how real users move through the product** at the level of *journeys + slicing dimensions*, not raw logs. Before instrumenting, ask: *What slices matter for risk, for prioritizing tests, and for building fixtures that resemble production?* (examples: role, org tier, cart state, entitlements.)
+
+**Convention (domain entities only):** When metadata describes a **domain entity** (user, org, cart, subscription, …), prefer keys shaped **`{entity}.{attribute}`** with a **stable, low-cardinality** first segment:
+
+- `user.role`, `user.has_fop` (boolean or enum—not raw payment instrument ids)
+- `org.plan_tier`
+- `cart.line_item_count_bucket` or `cart.is_empty` (buckets/enums, not SKUs)
+- `product.availability_class` (small enum: `in_stock` / `backorder` / …)
+
+Use **flat** keys for cross-cutting dimensions that are not “owned” by one entity (e.g. `entry_surface`, `experiment_cohort`) if that reads clearer—dot notation is a **scoping aid**, not a strict schema.
+
+**Per-event minimalism:** Attach only fields that **change how you interpret that event** for coverage and QA. Do **not** dump whole domain objects onto every emit. The goal is to answer: *which kinds of entities perform which actions, how often, and are those slices exercised in automated tests?*—without cardinality explosion.
+
+**Feedback loop (fixtures and tests):** Production-like traffic → distributions and transitions in TrueCoverage (e.g. `get-truecoverage-event-details`, `get-truecoverage-event-metadata-keys`, child event trees, time series) → **gaps** (common real slices with weak or missing test coverage) → **seed/probe endpoints** and **Playwright fixtures** (`mergeTests`, `<tests_root>/fixtures/`) that recreate those world-states → **SmartTests / API tests** → requirement scenarios where the product is under-specified. Dot-scoped keys make it obvious *which fixture dimensions* to extend (e.g. a `viewer` role fixture when `user.role=viewer` dominates a critical event).
+
+Dot notation **does not** relax the rules above: it is **namespacing** for allowed, low-cardinality dimensions—not permission to add PII, ids, or unbounded text.
 
 ---
 
@@ -162,9 +182,9 @@ Events do **not** require server-side registration. To avoid duplicate names and
 | `title` | kebab-case; match the event file basename (without `.event.md`). |
 | `description` | Details about the event. Eg: When the event fires.|
 | `added-on` | Date instrumentation was added (ISO date). |
-| `significance` | 1–5 for audit prioritization (1=low, 5=high). |
+| `significance` | 1–5 for gap prioritization during evolve runs (1=low, 5=high). |
 
-**Body:** List metadata keys and allowed values or types (e.g. fixed vocab for `form-of-payment`, free text, max length etc).
+**Body:** Document each metadata key using the **dot-scoped** form when it refers to a domain entity (`user.role`, `org.plan_tier`, …). For each key, specify **allowed values or value type**—prefer small **enums** or buckets (booleans, `low|med|high`) over free text. Note cardinality intent (e.g. “bounded set of roles only”). Non-entity dimensions may stay flat if clearer. Avoid documenting identifier-like keys; they must not be emitted.
 
 ---
 

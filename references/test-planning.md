@@ -101,4 +101,4 @@ When the user asks for **`/testchimp plan`** (or equivalent: fill gaps in the te
 
 - **[`SKILL.md`](../SKILL.md)** — command routing and MCP tool list.
 - **[`write-smarttests.md`](./write-smarttests.md)** — SmartTests, coverage MCP, `@Scenario` comments, platform vs repo paths for **`tests/`**.
-- **[`audit-coverage.md`](./audit-coverage.md)** — coverage audit workflow.
+- **[`evolve-coverage.md`](./evolve-coverage.md)** — `/testchimp evolve`: **Analyze → Plan → Execute** with phase gates; persisted plans under `<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/plan_<YYYY-MM-DD>_<nn>.md`.

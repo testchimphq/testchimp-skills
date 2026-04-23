@@ -1,8 +1,8 @@
 ---
 name: testchimp
-description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP or CLI), coverage, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, audit), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
+description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP or CLI), coverage, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
 compatibility: Requires Node.js; @playwright/test and playwright >= 1.59.0 (see Preamble checks); TESTCHIMP_API_KEY for MCP, CLI, and ai-wright. Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.2.0
+version: 0.2.1
 required_cli_version: "0.1.0"
 ---
 
@@ -118,34 +118,34 @@ Use the repo, plans, and those tools to decide what to test and how to run them.
 
 | User says | Read |
 |-----------|------|
-| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) (opening message → phased workflow: optional quick smoke → plan → execute) |
+| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — opening message → phased workflow (optional quick smoke → plan → execute). **Between phases:** complete each **phase completion gate** in the reference; every line **done** or **`N/A`** + one-line justification (persist in `plans/knowledge/ai-test-instructions.md` where noted). |
+| `/testchimp test` | [`references/testing-process.md`](references/testing-process.md) — Plan → Setup → Execute → Cleanup. **Between phases:** complete each **phase completion gate**; every line **done** or **`N/A`** + one-line justification (record on the **branch plan** file). |
+| `/testchimp plan` | [`references/test-planning.md`](references/test-planning.md) |
+| `/testchimp evolve` | [`references/evolve-coverage.md`](references/evolve-coverage.md) — Analyze → Plan → Execute; same **done / `N/A` + justify** gating on phase gates and completion checklists. |
+| `/testchimp setup truecoverage` / setup-truecoverage | [`references/truecoverage.md`](references/truecoverage.md) |
+| `/testchimp instrument` | [`references/truecoverage.md`](references/truecoverage.md) |
+| `/testchimp update` | [Read below for updating the skill] |
 
 ### `/testchimp init` — opening message (deliver first)
 
-When the user runs **`/testchimp init`**, the **first substantive message to the user** must set expectations: what init delivers, what they do after init, what the agent does during ongoing QA, and how **`/testchimp audit`** fits in. **Then** continue with Preamble checks, the [Workstation gate](references/init-testchimp.md#workstation-gate-always-first), and the rest of [`references/init-testchimp.md`](references/init-testchimp.md).
+When the user runs **`/testchimp init`**, the **first substantive message to the user** must set expectations: what init delivers, what they do after init, what the agent does during ongoing QA, and how **`/testchimp evolve`** fits in. **Then** continue with Preamble checks, the [Workstation gate](references/init-testchimp.md#workstation-gate-always-first), and the rest of [`references/init-testchimp.md`](references/init-testchimp.md).
 
 **Include the following substance** (adapt wording slightly for tone; keep meaning):
 
 - **During init**, TestChimp sets up **complete QA infrastructure** for the project: seeding endpoints, test environment management, CI setup, fixtures maintainance, mocks, TrueCoverage instrumentation (for coverage gaps aligned with real user behaviours in production), and test scaffolds with proper TestChimp integration.
 - **After init**, the user mainly runs **`/testchimp test`** when they finish a PR and want it tested.
 - **Ongoing**, the agent runs the full QA workflow (say in first person when addressing the user: *I will run the complete QA workflow* — author tests for relevant scenarios, author missing test plans for the PR, adjust QA infrastructure as needed - adding seed endpoints, TrueCoverage instrumentations, fixture updates, find coverage gaps and address them).
-- **Periodically**, run **`/testchimp audit`** "I will" (similar to above say in first-person) analyze requirement coverage gaps and TrueCoverage insights - by communicating with TestChimp platform, and address them systematically - to continuously improve your test coverage.
+- **Periodically**, run **`/testchimp evolve`** "I will" (similar to above say in first-person) analyze requirement coverage gaps and TrueCoverage insights - by communicating with TestChimp platform, and address them systematically - to continuously improve your test coverage, including QA infra updates such as writing up seed / probe endpoints, fixtures, mocks, to mimic real world situations as observed, and writing up tests to cover under-tested areas.
 
 **Always** share this doc link for a short overview of what TestChimp enables: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
 
 (Full step order is in [`references/init-testchimp.md`](references/init-testchimp.md#opening-message-required-first-user-facing-step).)
-| `/testchimp test` | [`references/testing-process.md`](references/testing-process.md) |
-| `/testchimp plan` | [`references/test-planning.md`](references/test-planning.md) |
-| `/testchimp audit` | [`references/audit-coverage.md`](references/audit-coverage.md) |
-| `/testchimp setup truecoverage` / setup-truecoverage | [`references/truecoverage.md`](references/truecoverage.md) |
-| `/testchimp instrument` | [`references/truecoverage.md`](references/truecoverage.md) |
-| `/testchimp update` | [Read below for updating the skill] |
 
-If the user asks semantically similar requests ("Setup TestChimp", "Write Tests for the PR", "Analyze requirement coverage" etc.) — open the matching reference file above.
+If the user asks semantically similar requests ("Setup TestChimp", "Write Tests for the PR", "Analyze requirement coverage" etc.) — open the matching reference file above. Legacy **`/testchimp audit`** is the same flow as **`/testchimp evolve`** ([`references/evolve-coverage.md`](references/evolve-coverage.md)).
 
 TrueCoverage planning source of truth:
 
-- `plans/knowledge/truecoverage-instrument-progress.md` tracks **planned vs done** TrueCoverage instrumentation. Agents should consult it during `/testchimp init`, `/testchimp instrument`, and `/testchimp audit`.
+- `plans/knowledge/truecoverage-instrument-progress.md` tracks **planned vs done** TrueCoverage instrumentation. Agents should consult it during `/testchimp init`, `/testchimp instrument`, and `/testchimp evolve`.
 
 ## Updating this skill from Git
 
@@ -171,7 +171,7 @@ When a `plans/...` folder is provided, coverage resolves SmartTests linked to sc
 
 ## Progressive disclosure
 
-Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/plan`, `/audit`, TrueCoverage setup/instrument). During `/testchimp init`, run the **workstation gate** (MCP + API key) **before** optional smoke — see [Workstation gate](references/init-testchimp.md#workstation-gate-always-first) in [`references/init-testchimp.md`](references/init-testchimp.md) — then follow the phased init workflow (optional quick smoke, collaborative plan, execute item-by-item with **project-level** progress in `plans/knowledge/ai-test-instructions.md`); when classifying **greenfield vs existing Playwright**, dual-folder mappings, import strategy, or CI alignment for SmartTests, load [`references/importing-existing-tests.md`](references/importing-existing-tests.md). During **`/testchimp test`**, if the user specifies an **area**, **story/scenario**, or other **focus instructions**, prioritize that scope; otherwise derive context from **PR changes / recent commits** and cross-reference test plans per [`references/testing-process.md`](references/testing-process.md). For **Playwright `page.route`** (HTTP/API), **optional AIMock** (LLM), goldens layout, and test doubles, load [`references/mocking_strategy.md`](references/mocking_strategy.md). Plan **reading and authoring** (including MCP create/update flows) use [`references/test-planning.md`](references/test-planning.md). When planning or implementing **seed**, **teardown**, or **read** test endpoints, **fixtures**, or **backend state assertions** after UI flows, load [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (includes **restart/reprovision** the app-under-test after seed or backend changes) and [`references/fixture-usage.md`](references/fixture-usage.md). During `/testchimp test`, load [`references/api-testing.md`](references/api-testing.md) when a scenario is designated for API automation and [`references/write-smarttests.md`](references/write-smarttests.md) for UI SmartTests. Load [`references/environment-management.md`](references/environment-management.md) when choosing or provisioning test environments, EaaS (Bunnyshell), or branch-scoped `BASE_URL` resolution. Load [`references/truecoverage.md`](references/truecoverage.md) when RUM instrumentation, TrueCoverage planning, or TrueCoverage MCP tools are in scope. Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
+Per the [Agent Skills specification](https://agentskills.io/specification), this skill keeps **`SKILL.md`** as the entrypoint. **Load a reference file only when** the task matches that flow (`/init`, `/test`, `/plan`, `/evolve`, TrueCoverage setup/instrument). During `/testchimp init`, run the **workstation gate** (MCP + API key) **before** optional smoke — see [Workstation gate](references/init-testchimp.md#workstation-gate-always-first) in [`references/init-testchimp.md`](references/init-testchimp.md) — then follow the phased init workflow (optional quick smoke, collaborative plan, execute item-by-item with **project-level** progress in `plans/knowledge/ai-test-instructions.md`); when classifying **greenfield vs existing Playwright**, dual-folder mappings, import strategy, or CI alignment for SmartTests, load [`references/importing-existing-tests.md`](references/importing-existing-tests.md). During **`/testchimp test`**, if the user specifies an **area**, **story/scenario**, or other **focus instructions**, prioritize that scope; otherwise derive context from **PR changes / recent commits** and cross-reference test plans per [`references/testing-process.md`](references/testing-process.md). For **Playwright `page.route`** (HTTP/API), **optional AIMock** (LLM), goldens layout, and test doubles, load [`references/mocking_strategy.md`](references/mocking_strategy.md). Plan **reading and authoring** (including MCP create/update flows) use [`references/test-planning.md`](references/test-planning.md). When planning or implementing **seed**, **teardown**, or **read** test endpoints, **fixtures**, or **backend state assertions** after UI flows, load [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (includes **restart/reprovision** the app-under-test after seed or backend changes) and [`references/fixture-usage.md`](references/fixture-usage.md). During `/testchimp test`, load [`references/api-testing.md`](references/api-testing.md) when a scenario is designated for API automation and [`references/write-smarttests.md`](references/write-smarttests.md) for UI SmartTests. Load [`references/environment-management.md`](references/environment-management.md) when choosing or provisioning test environments, EaaS (Bunnyshell), or branch-scoped `BASE_URL` resolution. During **`/testchimp evolve`**, load [`references/evolve-coverage.md`](references/evolve-coverage.md) — structured **Analyze → Plan → Execute** with phase gates and persisted plans at `<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/plan_<YYYY-MM-DD>_<nn>.md`. Use [`references/truecoverage.md`](references/truecoverage.md) for **`testchimp.emit`** metadata (including dot-scoped entity keys) so instrumentation captures how real users slice the product for later fixture and test work. Load [`references/truecoverage.md`](references/truecoverage.md) when RUM instrumentation, TrueCoverage planning, or TrueCoverage MCP tools are in scope. Deep **`ai-wright`** API detail lives in [`references/ai-wright-usage.md`](references/ai-wright-usage.md) — pull it in when authoring or debugging AI steps.
 
 ### `/testchimp test` plan persistence (branch scope)
 
@@ -211,7 +211,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`references/write-smarttests.md`](references/write-smarttests.md) | SmartTest authoring (UI tests with smart steps) details used by the execution phase |
 | [`references/api-testing.md`](references/api-testing.md) | API test authoring workflow from captured browser network flows |
 | [`references/test-planning.md`](references/test-planning.md) | Plan folder layout, frontmatter, `/testchimp plan`, MCP plan authoring |
-| [`references/audit-coverage.md`](references/audit-coverage.md) | Coverage and execution audit playbook |
+| [`references/evolve-coverage.md`](references/evolve-coverage.md) | `/testchimp evolve`: Analyze → Plan → Execute, phase gates, persisted `knowledge/evolve_plans/` |
 | [`references/truecoverage.md`](references/truecoverage.md) | TrueCoverage RUM setup, `plans/events/*.event.md`, MCP analytics |
 | [`references/ai-wright-usage.md`](references/ai-wright-usage.md) | `ai-wright` install, env, API depth |
 | [`references/environment-management.md`](references/environment-management.md) | Persistent vs ephemeral envs, Bunnyshell, Branch Management, MCP `get-branch-specific-endpoint-config` |

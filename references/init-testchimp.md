@@ -2,6 +2,13 @@
 
 Initialize the repo for TestChimp using a phased workflow. This document is for **AI agents** and must be run as **Phase 0 (optional smoke) -> Phase 1 (Requirement gather) -> Phase 2 (Plan) -> Phase 3 (Execution)**. Do not jump directly into implementing every setup task.
 
+### Phase gating (required — same style as `/testchimp evolve`)
+
+Between phases, **stop and complete the phase’s completion gate** before continuing. Treat gates like [`evolve-coverage.md`](./evolve-coverage.md): **nothing implied**, **nothing skipped silently**.
+
+- For **every** gate checklist line: mark **done** (one-line evidence is enough) or **`N/A`** with a **one-line justification** (why this run/repo does not need it).
+- Record outcomes in **`plans/knowledge/ai-test-instructions.md`** (recommended: short **“Phase N completion”** subsections) **and/or** the chat transcript so reruns are deterministic.
+
 ---
 
 ## Purpose
@@ -64,7 +71,7 @@ When **`/testchimp init`** starts, the **first substantive message to the user**
 - **During init**, TestChimp sets up **complete QA infrastructure** for the project: seeding endpoints, test environment management, CI setup, fixtures, TrueCoverage instrumentation, and test scaffolds with proper TestChimp integration.
 - **After init**, the user mainly runs **`/testchimp test`** when they finish a PR and want it tested.
 - **Ongoing**, the agent runs the full QA workflow — when speaking to the user, use first person: *I will run the complete QA workflow* to author tests for relevant scenarios, make the necessary QA infrastructure adjustments, identify coverage gaps, and address them.
-- **Periodically**, run **`/testchimp audit`** to analyze test coverage gaps and TrueCoverage insights, address them, and improve the suite.
+- **Periodically**, run **`/testchimp evolve`** to analyze test coverage gaps and TrueCoverage insights, address them, and improve the suite. Persist each evolve run as a dated plan markdown file under **`<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/`** (see [`evolve-coverage.md`](./evolve-coverage.md)) so later runs have traceability.
 
 **Always** include this overview link: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
 
@@ -122,6 +129,14 @@ Prompt again: continue with full init setup?
 - If **yes**: continue to Phase 1.
 
 Quick smoke by itself does **not** mean full init is complete. So do not write the init done marker file.
+
+### Phase 0 completion gate (before Phase 1 — or before stopping if user declines full init)
+
+Do **not** continue until **all** are satisfied (each **done** or **`N/A`** + one-line justification, recorded in `ai-test-instructions.md` and/or chat):
+
+- [ ] **Quick smoke offered** — user was asked; choice recorded.
+- [ ] **If smoke was accepted** — toolchain + smoke authoring steps **done**, or **`N/A`** + justification (e.g. blocked env).
+- [ ] **Continue to full init?** — user answered; if **no**, deferrals/what-was-done written to `ai-test-instructions.md` and the run stops here; if **yes**, proceed to Phase 1.
 
 ---
 
@@ -212,7 +227,7 @@ Why this area (quick education):
   - Check `plans/knowledge/truecoverage-instrument-progress.md` (if present) for planned vs done events; optionally list existing `plans/events/*.event.md` files (these document **instrumented** event types only—see below).
 - If TrueCoverage is **enabled now** (or the user opts in during init), init must:
   - set up **basic wiring** and instrument a **small initial event slice** (and create `plans/events/*.event.md` only for events actually instrumented), and
-  - generate `plans/knowledge/truecoverage-instrument-progress.md` so the rest can be completed incrementally via `/testchimp instrument` (and/or during `/testchimp audit`). See [`truecoverage.md`](./truecoverage.md).
+  - generate `plans/knowledge/truecoverage-instrument-progress.md` so the rest can be completed incrementally via `/testchimp instrument` (and/or during `/testchimp evolve`). See [`truecoverage.md`](./truecoverage.md). For evolve cadence and persisted evolve plans, see [`evolve-coverage.md`](./evolve-coverage.md).
 - If TrueCoverage decision state is missing OR the user wants to change it:
   - Decide TrueCoverage timing explicitly: set up **now**, **later** (defer with snooze file), or **no**.
   - **Authoritative references (agents must follow these for wiring and limits):**
@@ -263,6 +278,18 @@ Why this area (quick education):
 - Otherwise: ask what CI system to use (GitHub Actions / others), whether it runs on PRs vs main, and whether it should start with shared/persistent envs or provision ephemeral envs per run.
 - **Detail reference:** [`importing-existing-tests.md`](./importing-existing-tests.md) (cwd, env, alignment with mapped folder).
 
+### Phase 1 completion gate (before Phase 2 — plan drafting)
+
+Do **not** open Phase 2 until **all** are satisfied (each **done** or **`N/A`** + one-line justification):
+
+- [ ] **Workstation gate** — completed on this run (not inferred from git).
+- [ ] **Key Area 1** — markers / SmartTests root **discovered and reported** (or **blocker** + owner recorded).
+- [ ] **Key Area 2** — suite classification + user’s import/migration stance (or **greenfield `N/A`** + justification).
+- [ ] **Key Area 3** — AIMock choice + **`### Mocking Plan`** inputs ready for Phase 2 (or explicit deferral + reason).
+- [ ] **Key Area 4** — TrueCoverage discovery + **enabled / deferred / disabled** path decided and noted for Phase 2.
+- [ ] **Key Area 5** — environment strategy **decided enough** to draft local-up + health contract in Phase 2.
+- [ ] **Key Area 6** — CI discovery + intended direction recorded for Phase 2.
+
 ---
 
 ## Phase 2 - Plan phase (draft the 6-area execution checklist)
@@ -309,6 +336,14 @@ Acceptance criteria (success checks):
   - CI action authored
 
 After the plan is written, ask the user to explicitly approve or request edits. Only after approval proceed to Phase 3. Phase 3 executes **Key Area 2** import/alignment tasks (moves, config fixes, reporter/runtime wiring) **only** after approval, when the plan included them.
+
+### Phase 2 completion gate (before Phase 3 — execution)
+
+Do **not** start Phase 3 until **all** are satisfied:
+
+- [ ] **`plans/knowledge/ai-test-instructions.md`** contains the **six-area** init checklist with **`status`** + notes per item (or equivalent traceability).
+- [ ] **Acceptance criteria** from Phase 2 are present for each area (what “done” means in Phase 3), or the area is **`N/A`** + justification.
+- [ ] **User explicitly approved** the plan (chat or documented).
 
 ---
 
@@ -577,6 +612,19 @@ When enabling PR-triggered execution:
 - pass resolved target URL via `BASE_URL`,
 - exclude plan-sync-only PRs titled exactly `TestChimp Platform Sync [Plans]`.
 
+### Phase 3 completion gate (before declaring init complete)
+
+After implementation, **before** treating init as finished, walk the **six key areas** and record outcomes in **`plans/knowledge/ai-test-instructions.md`** (append **“Init Phase 3 completion”** or tick inline next to each area). Same rule as other gates: **done** + one-line summary **or** **`N/A`** + one-line justification — **no silent skips**.
+
+- [ ] **Key Area 1** — Basic integration / markers / harness layout / MCP not 401.
+- [ ] **Key Area 2** — Import strategy executed or **skipped**/`N/A` per plan (with justification).
+- [ ] **Key Area 3** — Mocking stance applied (`page.route` / AIMock per plan).
+- [ ] **Key Area 4** — TrueCoverage per plan (progress tracker + `plans/events/` when instrumenting).
+- [ ] **Key Area 5** — Environment local-up + health contract documented as agreed.
+- [ ] **Key Area 6** — CI workflow (or **`N/A`** + justification if truly no CI this cycle).
+
+Then reconcile with **End state and completion rules** below.
+
 ---
 
 ## End state and completion rules
@@ -600,4 +648,4 @@ Persist final state in `plans/knowledge/ai-test-instructions.md` including an **
 ## Post-init guidance for the user
 
 - On demand: run `/testchimp test` when a PR is ready for test authoring and execution.
-- Ongoing: run `/testchimp audit` periodically or on CI triggers to close requirement and TrueCoverage gaps.
+- Ongoing: run `/testchimp evolve` periodically or on CI triggers to close requirement and TrueCoverage gaps; keep a record under `<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/` per [`evolve-coverage.md`](./evolve-coverage.md).
