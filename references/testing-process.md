@@ -115,7 +115,10 @@ Goal: produce a written plan (persisted in the branch plan file) that the user e
 The Plan MUST be written under the branch plan file with these sections (in order):
 
 1. **Test plan updates** (plans layer)
-   - Stories/scenarios to create/update (use MCP/CLI; never invent ids - refer test planning md file).
+   - Stories/scenarios to create/update.
+     - **Never invent IDs** means: never assume fake `#US-...` / `#TS-...` ids.
+     - If scenarios / stories are missing for the PR changes, the Plan must explicitly list the **new** stories/scenarios to be created so the platform generates **real IDs**.
+     - **Timing rule**: the actual `create-user-story` / `create-test-scenario` calls must be performed **only in Execute**, **after** the user approves the Plan generated.
 2. **System infra updates** (product/backend)
    - Seed/teardown/read (probe) endpoints to add/update to setup the world-state required for the tests to be done, and assertions to be made.
    - TrueCoverage instrumentation changes (events/metadata + docs) when in scope.
@@ -127,7 +130,7 @@ The Plan MUST be written under the branch plan file with these sections (in orde
 
 The Plan MUST also include:
 
-- **Explicit user approval** checkpoint (the agent must stop here until approved).
+- **Explicit user approval** checkpoint (the agent must stop here until approved). Include user approval status as a frontmatter field and update it once the user gives you consent to proceed.
 - An **Execute checklist** that mirrors the four buckets above plus “validate test runs”, where each line is marked **done / blocked / N/A**.
 
 ### Phase 2 completion gate (Plan → Execute)
@@ -142,6 +145,8 @@ Before proceeding to **Execute**, the agent must record **done/blocked/`N/A`** f
 ---
 
 ## Phase 3: Execute (do the plan)
+
+Preamble before execution: Verify that the plan doc created above is present. Verify that it indicates user has approved. If not - PAUSE and do NOT continue.
 
 Goal: execute the approved plan, and keep the plan checklists updated so reruns are deterministic.
 
@@ -176,6 +181,11 @@ During Execute, the agent MUST maintain a checklist in the branch plan file with
 - [ ] SmartTests authored/updated (UI) **using fixtures** (import merged `test` from `fixtures/index.js`) -> These should be authored using a real playwright browser - refer writing smarttests guide.
 - [ ] API tests authored/updated (if planned).
 - [ ] Tests linked to scenarios **only when ids exist** (never invented).
+
+### Dogfooding note (TestChimp testing TestChimp)
+
+If the product-under-test is TestChimp itself (or you are testing a “planning UI” feature), do **not** treat repository `plans/` files as proof of runtime state.
+Your tests must establish a **world-state posture** in the target project (seed a test project and create the required plan artifacts like event files via seed endpoints + fixtures), then validate the UI against that seeded state.
 
 ### F) Validate test runs (NON-NEGOTIABLE)
 

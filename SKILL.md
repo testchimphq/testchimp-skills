@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP or CLI), coverage, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
 compatibility: Requires Node.js; @playwright/test and playwright >= 1.59.0 (see Preamble checks); TESTCHIMP_API_KEY for MCP, CLI, and ai-wright. Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.2.2
+version: 0.2.3
 required_cli_version: "0.1.1"
 ---
 
@@ -74,7 +74,11 @@ TestChimp adds **empty marker files** after mapping: **`.testchimp-tests`** at t
 
 ## Agent guardrails (must follow)
 
-1. **Scenario and story IDs — never invent.** Do **not** guess or fabricate **`#TS-…`** / **`US-…`** ids or write `// @Scenario: #TS-…` comments before those entities exist in TestChimp. **First** create user stories and test scenarios via the planning flow and MCP tools (**`create-user-story`**, **`create-test-scenario`**, etc.; see [`references/test-planning.md`](references/test-planning.md)), or use ids **returned** by the platform / present in committed plan markdown. **Then** add link comments in SmartTests so stable ids match the system.
+1. **Scenario and story IDs — never invent (but do create real ones when missing).**
+   - **Never invent / assume fake IDs**: Do **not** guess or fabricate **`#TS-…`** / **`US-…`** ids, and do **not** write `// @Scenario: #TS-…` comments before those entities exist in TestChimp.
+   - **Correct behavior when coverage is missing**: If the PR introduces behavior and there are **no relevant stories/scenarios**, the correct solution is to **plan the creation** of the missing user stories and test scenarios (via MCP/CLI) so the platform generates **real IDs**.
+   - **Timing rule (critical)**: The agent must **only call** `create-user-story` / `create-test-scenario` (or equivalent CLI/MCP upserts) **in the Execute phase**, **after** the user has explicitly approved the Plan. The Plan must list exactly which stories/scenarios will be created/updated, but must not mutate the platform pre-approval.
+   - **After IDs exist**: Add link comments in SmartTests using the **actual IDs returned by the platform** (or present in committed plan markdown). See [`references/test-planning.md`](references/test-planning.md).
 
 2. **Run Playwright only from the mapped SmartTests root** (see **[Marker files](#marker-files)**). **`cd` there**, then run Playwright via **`npx`** (e.g. `npx playwright test …`). Do not run tests from the repo root unless that root **is** the mapped folder.
 
