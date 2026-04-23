@@ -1,8 +1,8 @@
 # TrueCoverage
 
-TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the app with **`testchimp-rum-js`**; [`playwright-testchimp`](https://github.com/testchimphq/playwright-testchimp-reporter) tags the same events during runs with test identity. TestChimp aggregates both streams for coverage insights.
+TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the app with **`@testchimp/rum-js`**; [`@testchimp/playwright`](https://github.com/testchimphq/playwright-testchimp-reporter) tags the same events during runs with test identity. TestChimp aggregates both streams for coverage insights.
 
-**Authoritative RUM library docs (read before implementing):** [testchimp-rum-js on GitHub](https://github.com/testchimphq/testchimp-rum-js) (README covers `init`, `emit`, `flush`, `resetSession`, configuration options, event constraints, and batching). **npm:** [`testchimp-rum-js`](https://www.npmjs.com/package/testchimp-rum-js).
+**Authoritative RUM library docs (read before implementing):** [@testchimp/rum-js on GitHub](https://github.com/testchimphq/testchimp-rum-js) (README covers `init`, `emit`, `flush`, `resetSession`, configuration options, event constraints, and batching). **npm:** [`@testchimp/rum-js`](https://www.npmjs.com/package/@testchimp/rum-js).
 
 **Product overview:** [TrueCoverage intro](https://docs.testchimp.io/truecoverage/intro)
 
@@ -10,7 +10,7 @@ TrueCoverage connects **real user behavior** (from production) with **test execu
 
 ## Setup (library and credentials)
 
-1. Install: `npm install testchimp-rum-js` in the **app under test** (frontend / runtime bundle), not only in the SmartTests package.
+1. Install: `npm install @testchimp/rum-js` in the **app under test** (frontend / runtime bundle), not only in the SmartTests package.
 2. Call **`testchimp.init()` once** at app bootstrap (see [library README](https://github.com/testchimphq/testchimp-rum-js)). Required top-level fields per README:
    - **`projectId`** — TestChimp project ID (from **TestChimp → Project Settings → Key management**).
    - **`apiKey`** — project API key for RUM (same source).
@@ -21,7 +21,7 @@ TrueCoverage connects **real user behavior** (from production) with **test execu
 
 ### RUM `config` (volume / “sampling” behavior)
 
-The library does not use a separate “sampling percentage” API; **event volume and repeat caps** are controlled via the optional **`config`** object passed to **`testchimp.init({ ..., config })`**. Defaults and meanings are defined in the [testchimp-rum-js README — Configuration options](https://github.com/testchimphq/testchimp-rum-js). Use this table as the agent checklist (align with README for exact defaults):
+The library does not use a separate “sampling percentage” API; **event volume and repeat caps** are controlled via the optional **`config`** object passed to **`testchimp.init({ ..., config })`**. Defaults and meanings are defined in the [@testchimp/rum-js README — Configuration options](https://github.com/testchimphq/testchimp-rum-js). Use this table as the agent checklist (align with README for exact defaults):
 
 | Option | Purpose |
 |--------|--------|

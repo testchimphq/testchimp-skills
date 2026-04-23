@@ -195,7 +195,7 @@ Goal: create the environment and prerequisites needed to author and run tests.
 2. **Address infra gaps**
    - Implement or wire missing seed/teardown/read endpoints and **`fixtures/`** modules that the **plan** marked as missing, so tests can declare the needed fixtures and run.
 3. **TrueCoverage setup (when planned / enabled)**
-   - If instrumentation was planned and TrueCoverage is in scope per `plans/knowledge/ai-test-instructions.md`: ensure `testchimp-rum-js` is available in the **application** package, add or update a **single helper** for emits, wire **API key / project id / environment** from config, and add **`plans/events/*.event.md`** docs for new event types. Skip if the project plan indicates TrueCoverage is out of scope or the user declined.
+   - If instrumentation was planned and TrueCoverage is in scope per `plans/knowledge/ai-test-instructions.md`: ensure `@testchimp/rum-js` is available in the **application** package, add or update a **single helper** for emits, wire **API key / project id / environment** from config, and add **`plans/events/*.event.md`** docs for new event types. Skip if the project plan indicates TrueCoverage is out of scope or the user declined.
 4. **Fix plan gaps first**
    - Author missing stories/scenarios before writing tests.
    - Follow **[`test-planning.md`](./test-planning.md)** for MCP create/update and markdown structure.

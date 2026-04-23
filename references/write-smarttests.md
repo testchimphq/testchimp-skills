@@ -58,7 +58,7 @@ Recommended takeover loop:
    - If failures occur, decide: **intended behavior change** (update test + scenario), or **real regression** (call it out; prefer fixing product code over “fixing tests”).
 5. **Imports in SmartTest files** ALWAYS add those.
    - `import { ai } from 'ai-wright';`
-   - `import 'playwright-testchimp/runtime';`
+   - `import '@testchimp/playwright/runtime';`
 
    The above enables AI steps in tests and TrueCoverage event tracking. Import **`test` / `expect` from your merged [`fixtures/`](./fixture-usage.md) entry** when tests use shared data setup.
 
@@ -127,7 +127,7 @@ SmartTests live under whatever folder the team mapped as **tests** in TestChimp 
 - **`e2e/`** (and siblings) — SmartTests use **`*.spec.{js,ts}`** under the tests root.
 - **`assets/`** — Static files (uploads, etc.).
 - **`.env-*`** — Per-environment variables for **exercising the app under test** (e.g. **`BASE_URL`**); **QA** is a common default. Read with `process.env.VAR_NAME`. **Not** for **`TESTCHIMP_API_KEY`** (use shell + MCP config).
-- **`playwright.config.js`** — Playwright config; projects using TestChimp add **`playwright-testchimp`**.
+- **`playwright.config.js`** — Playwright config; projects using TestChimp add **`@testchimp/playwright`**.
 
 Keep **`@playwright/test`** and **`playwright`** on the **same** version; use npm `overrides` if dependencies pull mismatched Playwright versions. TestChimp requires **`@playwright/test`** **>= 1.59.0** in **`SKILL.md`**. Agents should run the **Playwright toolchain check** in **`SKILL.md` Preamble checks** before authoring or executing SmartTests so the install is real, not assumed.
 
@@ -294,7 +294,7 @@ Illustrative end-to-end shape: env-driven base URL, scenario comment, plain Play
 ```ts
 import { test, expect } from '@playwright/test';
 import { ai } from 'ai-wright';
-import 'playwright-testchimp/runtime';
+import '@testchimp/playwright/runtime';
 
 test.describe('Checkout (illustrative)', () => {
   test('guest can reach checkout with valid cart', async ({ page }) => {

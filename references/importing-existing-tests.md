@@ -29,13 +29,13 @@ Migrating **non-Playwright** suites (Selenium, Cypress, WebdriverIO, etc.) into 
 By init time, the user has already chosen a folder to map as **tests** in TestChimp; the repo may have `.testchimp-tests` and scaffold files.
 
 1. **Mapped folder = existing Playwright tree**  
-   `.testchimp-tests` sits next to legacy specs. Align structure to TestChimp expectations: config inside folder, `playwright-testchimp` reporter, `setup` project + `fixtures/`, optional SmartTest imports (below).
+   `.testchimp-tests` sits next to legacy specs. Align structure to TestChimp expectations: config inside folder, `@testchimp/playwright` reporter, `setup` project + `fixtures/`, optional SmartTest imports (below).
 
 2. **Mapped folder = new blank SmartTests folder**  
    `.testchimp-tests` in a **new** folder; **another** directory still holds old Playwright tests. **Ask** whether to **move** legacy `*.spec.{js,ts}` (and related helpers) into the mapped folder. If yes: **plan** moves in Phase 2; **execute** in Phase 3 after approval. Leaving tests outside the mapped folder breaks platform path / coverage expectations for that mapping.
 
 3. **Already-configured SmartTests folder**  
-   The folder with `.testchimp-tests` also has `playwright.config.*` listing **`playwright-testchimp/reporter`** in `reporter`. Treat as **prior TestChimp wiring** (teammate already set up, or reconnect). **Report** this in discovery; avoid duplicating scaffold or overwriting without cause.
+   The folder with `.testchimp-tests` also has `playwright.config.*` listing **`@testchimp/playwright/reporter`** in `reporter`. Treat as **prior TestChimp wiring** (teammate already set up, or reconnect). **Report** this in discovery; avoid duplicating scaffold or overwriting without cause.
 
 ---
 
@@ -60,9 +60,9 @@ Teams can adopt these gradually on an existing suite:
 |----------|---------|
 | `// @Scenario` comments | Link specs to test-plan scenarios (traceability). |
 | `import { ai } from 'ai-wright'` | Natural-language **`ai.act` / `ai.verify` / `ai.extract`** steps. |
-| `playwright-testchimp/runtime` | TrueCoverage / reporter integration (`import 'playwright-testchimp/runtime'`). |
-| `import 'playwright-testchimp/runtime'` in **every** `*.spec.{js,ts}` | Enables runtime integration (e.g. TrueCoverage test-identity metadata during runs). Include in each spec file. |
-| `playwright-testchimp/reporter` in config | Execution reporting to TestChimp. |
+| `@testchimp/playwright/runtime` | TrueCoverage / reporter integration (`import '@testchimp/playwright/runtime'`). |
+| `import '@testchimp/playwright/runtime'` in **every** `*.spec.{js,ts}` | Enables runtime integration (e.g. TrueCoverage test-identity metadata during runs). Include in each spec file. |
+| `@testchimp/playwright/reporter` in config | Execution reporting to TestChimp. |
 
 ---
 
@@ -82,18 +82,18 @@ npx playwright test
 
 ## Enabling TestChimp runtime and reporting
 
-1. **`playwright-testchimp`** installed at the SmartTests **package root** (same `package.json` as `@playwright/test` for that folder).
-2. In **`playwright.config.*`**, `reporter` includes **`['playwright-testchimp/reporter', { ... }]`**.
-3. **`import 'playwright-testchimp/runtime'`** at the top of **each** `*.spec.{js,ts}` file (per TestChimp integration expectations).
+1. **`@testchimp/playwright`** installed at the SmartTests **package root** (same `package.json` as `@playwright/test` for that folder).
+2. In **`playwright.config.*`**, `reporter` includes **`['@testchimp/playwright/reporter', { ... }]`**.
+3. **`import '@testchimp/playwright/runtime'`** at the top of **each** `*.spec.{js,ts}` file (per TestChimp integration expectations).
 4. **`setup/`** as a Playwright project that runs before main tests (see template); add **`fixtures/`** when tests need shared seed/teardown ([`fixture-usage.md`](./fixture-usage.md)).
 
 ### Required: runtime import in every spec file
 
 When **importing or aligning** an existing Playwright suite, treat this as **non-negotiable** for completion:
 
-- **Every** `*.spec.{js,ts}` under the **mapped SmartTests root** (including specs **moved** in from a legacy folder and any **`setup/**/*.spec.*`** that Playwright runs as tests) must include **`import 'playwright-testchimp/runtime'`** as a top-of-file side effect (before or alongside other imports, per project style—**do not** skip files).
+- **Every** `*.spec.{js,ts}` under the **mapped SmartTests root** (including specs **moved** in from a legacy folder and any **`setup/**/*.spec.*`** that Playwright runs as tests) must include **`import '@testchimp/playwright/runtime'`** as a top-of-file side effect (before or alongside other imports, per project style—**do not** skip files).
 
-**Why:** That import wires the **test-side** TestChimp runtime used for **TrueCoverage** (test identity and related metadata during runs), **`ai-wright`** intelligent steps, and consistent integration with **`playwright-testchimp`** reporting—without it, those features are incomplete or unreliable even if the reporter is in config.
+**Why:** That import wires the **test-side** TestChimp runtime used for **TrueCoverage** (test identity and related metadata during runs), **`ai-wright`** intelligent steps, and consistent integration with **`@testchimp/playwright`** reporting—without it, those features are incomplete or unreliable even if the reporter is in config.
 
 During **Phase 2 (plan)**, list adding/fixing this import as an explicit task for every affected file. During **Phase 3 (execute)**, verify with a repo-wide pass (e.g. search for `*.spec.{js,ts}` and confirm each contains the import) before marking import work **done**.
 
@@ -108,7 +108,7 @@ During **Phase 2 (plan)**, list adding/fixing this import as an explicit task fo
 
 ## Init workflow: plan vs execute
 
-- **Phase 2 (plan):** If discovery finds **existing Playwright** outside the mapped folder, or **dual-folder** layout, include an explicit **import / alignment** subsection: moves, config path fixes, adding reporter + deps, `fixtures/`, and **adding `import 'playwright-testchimp/runtime'` to every `*.spec.{js,ts}`** in scope (see [Required: runtime import in every spec file](#required-runtime-import-in-every-spec-file) above).
+- **Phase 2 (plan):** If discovery finds **existing Playwright** outside the mapped folder, or **dual-folder** layout, include an explicit **import / alignment** subsection: moves, config path fixes, adding reporter + deps, `fixtures/`, and **adding `import '@testchimp/playwright/runtime'` to every `*.spec.{js,ts}`** in scope (see [Required: runtime import in every spec file](#required-runtime-import-in-every-spec-file) above).
 - **Phase 3 (execute):** Perform agreed **file moves** and **config edits** only after the user approves the plan—do not move tests silently. Before closing out import work, confirm **all** SmartTests specs include the runtime import.
 
 ---

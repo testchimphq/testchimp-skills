@@ -14,7 +14,7 @@ TestChimp is a **QA workflow orchestration layer for AI agents**. It provides:
 - **Requirement traceability** via structured comments in tests (e.g. `// @Scenario: #TS-101 Title`) linking SmartTests to scenarios. One test may include **multiple** `// @Scenario:` lines when it covers several scenarios; the first must be the first statement in the test body—see [`references/write-smarttests.md`](references/write-smarttests.md).
 - **Markdown test plans** in a mapped `plans/` folder (YAML frontmatter, `stories/` / `scenarios/` / `knowledge/`) — how to read and author them in [`references/test-planning.md`](references/test-planning.md).
 - **Intelligent Playwright steps** (`ai.act` / `ai.verify` / `ai.extract` with `ai-wright`) for more stable execution-time intelligent behavior in tests.
-- **Execution reporting** via `playwright-testchimp` so test execution details feed to TestChimp servers to enable coverage insights.
+- **Execution reporting** via `@testchimp/playwright` so test execution details feed to TestChimp servers to enable coverage insights.
 - **Fixtures + seed/read APIs** - Playwright fixtures under **`<tests_root>/fixtures/`** (master `mergeTests` entry + domain files) call **seed**, **teardown**, and **read** endpoints per [`references/seeding-endpoints.md`](references/seeding-endpoints.md). Patterns and `testInfo` scoping: [`references/fixture-usage.md`](references/fixture-usage.md).
 - **TrueCoverage** - feedback loop for test coverage aligned with real user behaviour insights from production.
 
@@ -34,7 +34,7 @@ Before executing a TestChimp flow:
      - Continue walking upwards until you find a `.cursor/mcp.json` whose `mcpServers` contains a `testchimp` entry (i.e. the MCP server config that actually defines the TestChimp MCP client).
      - Use `mcpServers.testchimp.env.TESTCHIMP_API_KEY` from that file as the key source. (This supports monorepos / nested workspaces where the nearest `.cursor` is not the one that defines TestChimp.)
    - If no `.cursor/mcp.json` is found on the walk-up, or none of them contain a `testchimp` MCP server, or `TESTCHIMP_API_KEY` is missing/blank/placeholder, **stop** and tell the user to populate it, then **reload MCP / restart the IDE** so the MCP server process restarts with the env applied.
-   - When present, **read it and export it into the Playwright run environment** (agent-run shells often do not inherit IDE/MCP env). This ensures `ai-wright` and `playwright-testchimp` can authenticate.
+   - When present, **read it and export it into the Playwright run environment** (agent-run shells often do not inherit IDE/MCP env). This ensures `ai-wright` and `@testchimp/playwright` can authenticate.
    - **Never print the key** in logs or chat output.
 
 4. **MCP client compatibility check** — read **`required_mcp_client_version`** from this file's frontmatter (semver). Run **`npm view testchimp-mcp-client version`** and treat the result as **registry latest**. Find the project's MCP server config (for example **`.cursor/mcp.json`**, or the host's documented MCP config path) and locate the server entry whose **`args`** include **`testchimp-mcp-client`** (often the server name **`testchimp`**).
@@ -59,7 +59,7 @@ Before executing a TestChimp flow:
 ## How TestChimp works
 
 1. Create a project in TestChimp and connect the Git repo. Map 2 folders in the repo to the project created in TestChimp platform **`tests`** (SmartTests) and **`plans`** (test plans). Those can be mapped after logging in to TestChimp -> Select Project -> Project Settings -> Integrations -> GitHub.
-2. Run SmartTests with Playwright; install **`playwright-testchimp`** as documented in [`references/write-smarttests.md`](references/write-smarttests.md). This also pulls in `ai-wright` for enabling execution time intelligent steps.
+2. Run SmartTests with Playwright; install **`@testchimp/playwright`** as documented in [`references/write-smarttests.md`](references/write-smarttests.md). This also pulls in `ai-wright` for enabling execution time intelligent steps.
 3. Local and CI calls to TestChimp APIs are authenticated via **`TESTCHIMP_API_KEY`** env var (note that this is a project specific key - so it should be used scoped per project).
 
 ### Marker files

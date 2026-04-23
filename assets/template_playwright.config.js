@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 /**
 SETUP INSTRUCTIONS FOR CI:
-1) run `npm install playwright-testchimp` in your repo.
+1) run `npm install @testchimp/playwright` in your repo.
 2) Ensure TESTCHIMP_API_KEY is set in CI (from Project Settings → Key management). TESTCHIMP_PROJECT_ID is optional.
 3) Sync this 'tests' folder to a folder in your repo (Click "Sync with GitHub" - in SmartTests page in TestChimp).
 4) Setup your git workflow to run tests using standard playwright runner. Sample workflow file: https://github.com/testchimphq/CafeTime/blob/main/.github/workflows/playwright-tests.yml
@@ -38,7 +38,7 @@ export default defineConfig({
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['list'],
-    ['playwright-testchimp/reporter', {
+    ['@testchimp/playwright/reporter', {
       verbose: false
     }]
   ],

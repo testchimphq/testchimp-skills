@@ -164,15 +164,15 @@ Agent discovery (report findings first):
 
 - Treat the folder containing `.testchimp-tests` as the **SmartTests root**.
 - Scan for **`*.spec.{js,ts}`** only (not `*.test.*` — TestChimp uses **`*.spec.*`**), excluding **`setup/**`** and treating scaffold-only setup files as non-“suite” (e.g. `global.setup.spec.*` under `setup/` does not count as an existing e2e suite).
-- Under that root, check **`playwright.config.*`** for **`playwright-testchimp/reporter`** in `reporter` — if present, call out **prior SmartTests/TestChimp wiring** in findings.
+- Under that root, check **`playwright.config.*`** for **`@testchimp/playwright/reporter`** in `reporter` — if present, call out **prior SmartTests/TestChimp wiring** in findings.
 - Classify: **greenfield** (no specs outside `setup/` beyond scaffold) vs **has existing Playwright** vs **dual-folder** (mapped SmartTests folder is empty/new but **`*.spec.{js,ts}`** exist elsewhere in the repo).
 
 User choices (required when not greenfield, or when dual-folder / misaligned config):
 
 - **Parallel SmartTests folder (gradual migration):** keep the mapped SmartTests root and **move specs and helpers over time** from a legacy Playwright folder; both may coexist until migration completes.
-- **Retrofit in place:** adopt **`.testchimp-tests`**, `playwright.config.*`, **`playwright-testchimp` reporter**, and **`import 'playwright-testchimp/runtime'`** inside the **existing** tree that already holds specs (see **Migration strategies** in [`importing-existing-tests.md`](./importing-existing-tests.md)).
+- **Retrofit in place:** adopt **`.testchimp-tests`**, `playwright.config.*`, **`@testchimp/playwright` reporter**, and **`import '@testchimp/playwright/runtime'`** inside the **existing** tree that already holds specs (see **Migration strategies** in [`importing-existing-tests.md`](./importing-existing-tests.md)).
 - If legacy specs live **outside** the mapped folder: the plan must include **moving** them into the mapped folder on an agreed schedule **or** changing Git mapping—**plan in Phase 2**, **execute in Phase 3** after approval. Do **not** move files silently in Phase 1.
-- **Runtime import (mandatory for imported specs):** Any **`*.spec.{js,ts}`** that is part of the SmartTests suite after import must include **`import 'playwright-testchimp/runtime'`** at the top of the file—required for TrueCoverage (test-side), **`ai-wright`** steps, and reporter integration. See [Required: runtime import in every spec file](./importing-existing-tests.md#required-runtime-import-in-every-spec-file) in [`importing-existing-tests.md`](./importing-existing-tests.md).
+- **Runtime import (mandatory for imported specs):** Any **`*.spec.{js,ts}`** that is part of the SmartTests suite after import must include **`import '@testchimp/playwright/runtime'`** at the top of the file—required for TrueCoverage (test-side), **`ai-wright`** steps, and reporter integration. See [Required: runtime import in every spec file](./importing-existing-tests.md#required-runtime-import-in-every-spec-file) in [`importing-existing-tests.md`](./importing-existing-tests.md).
 
 **Greenfield:** state N/A briefly; no import tasks beyond normal harness scaffold in Phase 2/3.
 
@@ -206,8 +206,8 @@ Why this area (quick education):
 - Agent discovery (report findings first):
   - Check `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` for whether TrueCoverage is **enabled now**, **deferred**, or **disabled** (and for any prior instrumentation decisions).
   - Check whether **TrueCoverage RUM is already wired in the app codebase** (report as a finding either way):
-    - **Dependency:** e.g. `testchimp-rum-js` listed in a frontend / app `package.json` (and lockfile where present), not only under the SmartTests package.
-    - **Usage:** imports or calls from `testchimp-rum-js` and/or **`testchimp.init`** / **`testchimp.emit`** (or a thin wrapper module that delegates to them) in application source.
+    - **Dependency:** e.g. `@testchimp/rum-js` listed in a frontend / app `package.json` (and lockfile where present), not only under the SmartTests package.
+    - **Usage:** imports or calls from `@testchimp/rum-js` and/or **`testchimp.init`** / **`testchimp.emit`** (or a thin wrapper module that delegates to them) in application source.
     - If both are present, **call this out explicitly** in discovery findings (e.g. “RUM library installed and referenced for emits—init can focus on gaps vs `truecoverage-instrument-progress`, not greenfield wiring”). Optionally ask the user whether to **plan additional events** to instrument (expand `plans/knowledge/truecoverage-instrument-progress.md` and follow the `plans/events/` vs `plans/knowledge/` rules) versus only documenting what already exists.
   - Check `plans/knowledge/truecoverage-instrument-progress.md` (if present) for planned vs done events; optionally list existing `plans/events/*.event.md` files (these document **instrumented** event types only—see below).
 - If TrueCoverage is **enabled now** (or the user opts in during init), init must:
@@ -217,11 +217,11 @@ Why this area (quick education):
   - Decide TrueCoverage timing explicitly: set up **now**, **later** (defer with snooze file), or **no**.
   - **Authoritative references (agents must follow these for wiring and limits):**
     - Project TrueCoverage playbook: [`references/truecoverage.md`](./truecoverage.md) (setup, progress tracker, MCP analytics, event docs).
-    - Browser RUM library (API, `init`/`emit`, configuration, batching, event constraints): **[testchimp-rum-js on GitHub](https://github.com/testchimphq/testchimp-rum-js)** — read the README for **`testchimp.init`**, optional `config` tuning (sampling-like limits), and **`emit()`** rules before writing wrapper code.
+    - Browser RUM library (API, `init`/`emit`, configuration, batching, event constraints): **[@testchimp/rum-js on GitHub](https://github.com/testchimphq/testchimp-rum-js)** — read the README for **`testchimp.init`**, optional `config` tuning (sampling-like limits), and **`emit()`** rules before writing wrapper code.
   - If setting up now: confirm the user should provide **`projectId`** and **`apiKey`** to the **app runtime** (the RUM SDK expects them in `testchimp.init({ projectId, apiKey, environment, ... })` per the library README). Use the app’s project environment files as appropriate; do **not** put these in `.env-QA` under the SmartTests root (those are for test execution vars like `BASE_URL`). The platform labels match TestChimp: `TESTCHIMP_PROJECT_ID` / `TESTCHIMP_API_KEY` in env often map into `init()`—see [`truecoverage.md`](./truecoverage.md).
   - If setting up now, the agent should take a stance and propose a minimal instrumentation slice:
     - Helper wrapper location: pick (or create) a single app-runtime module dedicated to TrueCoverage emits - in the webapp-under-tests' frontend code (NOT inside the tests root). Prefer an existing telemetry/analytics module if one exists; otherwise create a dedicated file. Call **`testchimp.init()` once** (see GitHub README), then **`emit()`** from the wrapper for journey events.
-    - **Sampling / volume:** RUM volume is controlled by the library’s **`config`** object on `init()` (e.g. `maxEventsPerSession`, `maxRepeatsPerEvent`, `eventSendInterval`, `maxBufferSize`, `captureEnabled`)—see **[testchimp-rum-js README](https://github.com/testchimphq/testchimp-rum-js)** and the **Configuration / sampling** subsection in [`truecoverage.md`](./truecoverage.md). For the first slice, prefer **conservative** limits; reuse any existing tuning in the repo/env when present; only introduce new limits when none exist.
+    - **Sampling / volume:** RUM volume is controlled by the library’s **`config`** object on `init()` (e.g. `maxEventsPerSession`, `maxRepeatsPerEvent`, `eventSendInterval`, `maxBufferSize`, `captureEnabled`)—see **[@testchimp/rum-js README](https://github.com/testchimphq/testchimp-rum-js)** and the **Configuration / sampling** subsection in [`truecoverage.md`](./truecoverage.md). For the first slice, prefer **conservative** limits; reuse any existing tuning in the repo/env when present; only introduce new limits when none exist.
     - Basic events to instrument (minimal, stable set):
       - **Semantic journey completion milestones** (good examples: `add-to-cart`, `checkout-completed` / `checkout`, `order-confirmed`; bad examples: “click button”, “click next”)
       - at least one **high-signal error variant** for a key journey step (good examples: `checkout-failed`, `checkout-validation-error`; avoid generic “ui_error” noise)
@@ -293,7 +293,7 @@ Acceptance criteria (success checks):
   - there are 2 folders with the `.testchimp-plans` and `.testchimp-tests` marker files
   - Playwright harness layout per template (`setup` / `e2e` / `api` projects as applicable; optional `fixtures/` per [`fixture-usage.md`](./fixture-usage.md))
 - Existing Playwright suite / import strategy
-  - when **not** greenfield: explicit tasks for moves/config/reporter/**`import 'playwright-testchimp/runtime'` on every `*.spec.{js,ts}`** in the mapped SmartTests tree per [`importing-existing-tests.md`](./importing-existing-tests.md) and the user’s **parallel-folder vs retrofit** choice from Phase 1
+  - when **not** greenfield: explicit tasks for moves/config/reporter/**`import '@testchimp/playwright/runtime'` on every `*.spec.{js,ts}`** in the mapped SmartTests tree per [`importing-existing-tests.md`](./importing-existing-tests.md) and the user’s **parallel-folder vs retrofit** choice from Phase 1
   - when **greenfield**: marked **skipped** or **N/A** with a one-line note
 - Mocking (Playwright `page.route` + optional AIMock)
   - `### Mocking Plan` in `plans/knowledge/ai-test-instructions.md` records **`http_mocking`** and **`aimock`** per [`mocking_strategy.md`](./mocking_strategy.md)
@@ -370,7 +370,7 @@ TestChimp SmartTests require **`@playwright/test`** / **`playwright`** at **`>= 
 Run installs from the directory containing `.testchimp-tests` (or the monorepo package root that owns Playwright deps, if tests are nested):
 
 ```bash
-npm install playwright-testchimp
+npm install @testchimp/playwright
 npm install -D testchimp-mcp-client@latest
 ```
 
@@ -391,7 +391,7 @@ CI:
 ### Action item D - Playwright config
 
 - Keep `playwright.config.js` directly in the SmartTests root (`.testchimp-tests` directory).
-- Enable `playwright-testchimp`, retain-on-failure trace, screenshots on failure.
+- Enable `@testchimp/playwright`, retain-on-failure trace, screenshots on failure.
 - Use [`../assets/template_playwright.config.js`](../assets/template_playwright.config.js) as baseline.
 
 ### Action item E - MCP install (Cursor)
@@ -428,13 +428,13 @@ Success check (Test harness): SmartTests root matches the template’s project l
 Read `plans/knowledge/ai-test-instructions.md` for Key Area 2 decisions and follow [`references/importing-existing-tests.md`](./importing-existing-tests.md).
 
 - If Phase 2 marked this area **skipped** / **N/A** (greenfield), mark action K **skipped** and do not move files.
-- Otherwise: perform the **approved** moves, config path fixes, `playwright-testchimp` reporter + deps, and `fixtures/` layout as listed in the init plan—**only** after user approval of the plan.
-- **Every** `*.spec.{js,ts}` under the mapped SmartTests root that runs as a test must include **`import 'playwright-testchimp/runtime'`** (add to any file that is missing it). This enables TrueCoverage (test-side), **`ai-wright`** steps, and full reporter/runtime integration—see [`importing-existing-tests.md`](./importing-existing-tests.md#required-runtime-import-in-every-spec-file).
+- Otherwise: perform the **approved** moves, config path fixes, `@testchimp/playwright` reporter + deps, and `fixtures/` layout as listed in the init plan—**only** after user approval of the plan.
+- **Every** `*.spec.{js,ts}` under the mapped SmartTests root that runs as a test must include **`import '@testchimp/playwright/runtime'`** (add to any file that is missing it). This enables TrueCoverage (test-side), **`ai-wright`** steps, and full reporter/runtime integration—see [`importing-existing-tests.md`](./importing-existing-tests.md#required-runtime-import-in-every-spec-file).
 
 Success check (Import strategy):
 
 - SmartTests root matches the agreed strategy (**parallel-folder** migration state or **retrofit** complete to the extent planned); `npx playwright test` from the mapped folder is the canonical command; platform path expectations in [`importing-existing-tests.md`](./importing-existing-tests.md) are satisfied.
-- **Every** in-scope **`*.spec.{js,ts}`** includes **`import 'playwright-testchimp/runtime'`** (verify with a repo search under the SmartTests root before marking **done**).
+- **Every** in-scope **`*.spec.{js,ts}`** includes **`import '@testchimp/playwright/runtime'`** (verify with a repo search under the SmartTests root before marking **done**).
 
 ### Action item J - Mocking (Playwright `page.route` + optional AIMock)
 
@@ -459,7 +459,7 @@ Read `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan`.
 
 If decision is missing or the user requests a change, explain value and ask:
 
-- **Yes now**: install `testchimp-rum-js` (in the application package), implement a single emit helper wrapper, configure runtime env vars (`TESTCHIMP_PROJECT_ID` + `TESTCHIMP_API_KEY` via app project environment files, not `.env-QA` under the tests root), set up sampling, identify a minimal set of basic events, wire those **instrumented** events through the emit helper, align reporter config, and persist the decision + notes under `### TrueCoverage Plan` in `plans/knowledge/ai-test-instructions.md`.
+- **Yes now**: install `@testchimp/rum-js` (in the application package), implement a single emit helper wrapper, configure runtime env vars (`TESTCHIMP_PROJECT_ID` + `TESTCHIMP_API_KEY` via app project environment files, not `.env-QA` under the tests root), set up sampling, identify a minimal set of basic events, wire those **instrumented** events through the emit helper, align reporter config, and persist the decision + notes under `### TrueCoverage Plan` in `plans/knowledge/ai-test-instructions.md`.
 
   Additionally, during init you must generate the instrumentation tracker:
   - scan the frontend to identify core routes/pages and the semantic events planned for each area
@@ -540,7 +540,7 @@ Read `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` bef
 
 If user chooses setup now, include:
 
-- `testchimp-rum-js` installation in application package,
+- `@testchimp/rum-js` installation in application package,
 - one shared emit helper,
 - request args wiring (`TESTCHIMP_API_KEY`, project id, environment tags),
 - alignment with reporter and event documentation flow.
