@@ -187,7 +187,7 @@ Per the [Agent Skills specification](https://agentskills.io/specification), this
   - `LastRunOnCommit: <commit_sha>`
 - Always maintain an explicit **done/not-done checklist** of action items so the agent can resume from the file on subsequent runs.
 
-See [`references/testing-process.md`](references/testing-process.md) → **Non-negotiables** and **Phase 1: Plan** for the full locating logic, slug rules, and required file shape.
+See [`references/testing-process.md`](references/testing-process.md) for the full `/testchimp test` workflow (**Analyze → Plan → Execute**) including non-negotiables, required plan sections, and the checklist gating mechanism.
 
 Environment provisioning contract:
 
@@ -207,7 +207,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 |------|---------|
 | [`references/init-testchimp.md`](references/init-testchimp.md) | Phased init: optional quick smoke, collaborative plan, action-item execution |
 | [`references/importing-existing-tests.md`](references/importing-existing-tests.md) | Greenfield vs existing Playwright, migration strategies, mapped-folder layout, CI |
-| [`references/testing-process.md`](references/testing-process.md) | `/testchimp test` phased workflow: plan, setup, execute, cleanup |
+| [`references/testing-process.md`](references/testing-process.md) | `/testchimp test` strict workflow: Analyze → Plan → Execute with checklist gates |
 | [`references/write-smarttests.md`](references/write-smarttests.md) | SmartTest authoring (UI tests with smart steps) details used by the execution phase |
 | [`references/api-testing.md`](references/api-testing.md) | API test authoring workflow from captured browser network flows |
 | [`references/test-planning.md`](references/test-planning.md) | Plan folder layout, frontmatter, `/testchimp plan`, MCP plan authoring |
