@@ -2,7 +2,7 @@
   "mcpServers": {
     "testchimp": {
       "command": "npx",
-      "args": ["-y", "testchimp-mcp-client@latest"],
+      "args": ["-y", "@testchimp/cli@latest", "mcp"],
       "env": {
         "TESTCHIMP_API_KEY": "PASTE_YOUR_PROJECT_API_KEY_HERE"
       }

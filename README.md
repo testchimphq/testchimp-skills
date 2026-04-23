@@ -1,6 +1,6 @@
 # testchimp-skills
 
-TestChimp skill for **`/testchimp`** flows: `/init`, `/test`, `/audit`, plus **TrueCoverage** (`/testchimp setup truecoverage`, `/testchimp instrument` — see `references/truecoverage.md`). Use with **`testchimp-mcp-client`** and **`TESTCHIMP_API_KEY`**.
+TestChimp skill for **`/testchimp`** flows: `/init`, `/test`, `/audit`, plus **TrueCoverage** (`/testchimp setup truecoverage`, `/testchimp instrument` — see `references/truecoverage.md`). Use with **`@testchimp/cli`** and **`TESTCHIMP_API_KEY`**.
 
 Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environments-skill](https://github.com/bunnyshell/bunnyshell-environments-skill)): **`SKILL.md` at the repository root**, with **`references/`** and **`assets/`** beside it. **`name` in `SKILL.md` is `testchimp`**, so the install directory must be named **`testchimp`** (see [Agent Skills spec — `name` matches directory](https://agentskills.io/specification)).
 
@@ -20,6 +20,7 @@ testchimp-skills/
 │   ├── write-smarttests.md
 │   ├── audit-coverage.md
 │   ├── truecoverage.md
+│   ├── cli.md
 │   └── ai-wright-usage.md
 └── assets/
     ├── template_playwright.config.js
@@ -148,4 +149,4 @@ Update the TestChimp skill from Git
 
 ## MCP
 
-**`testchimp-mcp-client`** is not part of this skill tree. Install it in the app repo (**`testchimp-mcp-client@latest`**), ask user to configure **`TESTCHIMP_API_KEY`** in the env block of mcp.json (have a placeholder so that it is clear where to update). Use **`npx`** with **`testchimp-mcp-client@latest`** in **`args`** so **`npx`** picks up new releases. Sample: **`assets/sample-mcp.json`**. Full steps: **`references/init-testchimp.md`**. **`SKILL.md`** frontmatter includes **`required_mcp_client_version`** so agents can verify compatibility (see **Preamble checks** there).
+**`@testchimp/cli`** is not part of this skill tree. Install it in the app repo (**`@testchimp/cli@latest`**), ask user to configure **`TESTCHIMP_API_KEY`** in the env block of mcp.json (have a placeholder so that it is clear where to update). Use **`npx`** with **`@testchimp/cli@latest`** in **`args`** so **`npx`** picks up new releases. Sample: **`assets/sample-mcp.json`**. Full steps: **`references/init-testchimp.md`**. **`SKILL.md`** frontmatter includes **`required_cli_version`** so agents can verify compatibility (see **Preamble checks** there).

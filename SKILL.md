@@ -1,9 +1,9 @@
 ---
 name: testchimp
-description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP), coverage, and MCP tools. Use when the user mentions TestChimp, /testchimp commands (init, test, plan, audit), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
-compatibility: Requires Node.js; @playwright/test and playwright >= required_playwright_test_version (see Preamble checks); TESTCHIMP_API_KEY for MCP and ai-wright. Network access for TestChimp APIs when using MCP or AI steps.
-version: 0.1.9
-required_mcp_client_version: "0.0.4"
+description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP or CLI), coverage, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, audit), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
+compatibility: Requires Node.js; @playwright/test and playwright >= 1.59.0 (see Preamble checks); TESTCHIMP_API_KEY for MCP, CLI, and ai-wright. Network access for TestChimp APIs when using MCP, CLI, or AI steps.
+version: 0.2.0
+required_cli_version: "0.1.0"
 ---
 
 # TestChimp
@@ -30,18 +30,18 @@ Before executing a TestChimp flow:
 3. **`TESTCHIMP_API_KEY` prerequisite (BLOCKING)** — before starting **any** Playwright processes (headed or headless) or authoring AI steps:
    - **Resolve the key source via SmartTests-root walk-up**:
      - Find the **SmartTests root** (the folder containing `.testchimp-tests`) per **[Marker files](#marker-files)** under *How TestChimp works*.
-     - Starting from that folder, walk **upwards** (parent → parent → …) looking for a `.cursor/mcp.json`.
-     - Continue walking upwards until you find a `.cursor/mcp.json` whose `mcpServers` contains a `testchimp` entry (i.e. the MCP server config that actually defines the TestChimp MCP client).
+     - Starting from that folder, walk **upwards** (parent → parent → …) looking for the **host’s project MCP config file** (e.g. Cursor often uses **`.cursor/mcp.json`**; Claude Code, VS Code, and others use their own documented paths — **`.cursor` is an example, not universal**).
+     - Continue walking upwards until you find a config whose `mcpServers` contains a `testchimp` entry (i.e. the MCP server config that actually defines the TestChimp client).
      - Use `mcpServers.testchimp.env.TESTCHIMP_API_KEY` from that file as the key source. (This supports monorepos / nested workspaces where the nearest `.cursor` is not the one that defines TestChimp.)
-   - If no `.cursor/mcp.json` is found on the walk-up, or none of them contain a `testchimp` MCP server, or `TESTCHIMP_API_KEY` is missing/blank/placeholder, **stop** and tell the user to populate it, then **reload MCP / restart the IDE** so the MCP server process restarts with the env applied.
+   - If no suitable MCP config is found on the walk-up, or none of them contain a `testchimp` MCP server, or `TESTCHIMP_API_KEY` is missing/blank/placeholder, **stop** and tell the user to populate it, then **reload MCP / restart the IDE** so the MCP server process restarts with the env applied.
    - When present, **read it and export it into the Playwright run environment** (agent-run shells often do not inherit IDE/MCP env). This ensures `ai-wright` and `@testchimp/playwright` can authenticate.
    - **Never print the key** in logs or chat output.
 
-4. **MCP client compatibility check** — read **`required_mcp_client_version`** from this file's frontmatter (semver). Run **`npm view testchimp-mcp-client version`** and treat the result as **registry latest**. Find the project's MCP server config (for example **`.cursor/mcp.json`**, or the host's documented MCP config path) and locate the server entry whose **`args`** include **`testchimp-mcp-client`** (often the server name **`testchimp`**).
-   - If **`args`** use **`testchimp-mcp-client@latest`** or **`testchimp-mcp-client`** with **no** `@` version suffix, treat the **effective** runtime version as **registry latest** (because **`npx -y`** will resolve **`@latest`** on each run).
-   - If **`args`** use an explicit **`testchimp-mcp-client@x.y.z`**, parse **x.y.z** as the configured version.
-   - **Pass** if the effective configured version is **>=** **`required_mcp_client_version`** (semver). **Pass** if registry latest is **>=** **`required_mcp_client_version`** when using **`@latest`** or an unpinned package name.
-   - **Corrective action** when the pinned semver or registry latest is **below** **`required_mcp_client_version`:** Update **`args`** so the package specifier is **`testchimp-mcp-client@latest`** (see [`assets/sample-mcp.json`](assets/sample-mcp.json)), **or** pin to at least **`required_mcp_client_version`**. Preserve **`env.TESTCHIMP_API_KEY`**. Tell the user to **reload MCP / restart the IDE** so the new command line applies. If registry latest is still below **`required_mcp_client_version`**, tell the user the skill expects a newer published client once it is available.
+4. **TestChimp CLI / MCP client compatibility check** — read **`required_cli_version`** from this file's frontmatter (semver). Run **`npm view @testchimp/cli version`** and treat the result as **registry latest**. Find the project's MCP server config (host-specific path; see preamble **#3**) and locate the server entry whose **`args`** include **`@testchimp/cli`** (often the server name **`testchimp`**), typically **`["-y", "@testchimp/cli@latest", "mcp"]`**.
+   - If **`args`** use **`@testchimp/cli@latest`** or **`@testchimp/cli`** with **no** `@` version suffix, treat the **effective** runtime version as **registry latest** (because **`npx -y`** will resolve **`@latest`** on each run).
+   - If **`args`** use an explicit **`@testchimp/cli@x.y.z`**, parse **x.y.z** as the configured version.
+   - **Pass** if the effective configured version is **>=** **`required_cli_version`** (semver). **Pass** if registry latest is **>=** **`required_cli_version`** when using **`@latest`** or an unpinned package name.
+   - **Corrective action** when the pinned semver or registry latest is **below** **`required_cli_version`:** Update **`args`** to **`["-y", "@testchimp/cli@latest", "mcp"]`** (see [`assets/sample-mcp.json`](assets/sample-mcp.json)), **or** pin to at least **`required_cli_version`**. Preserve **`env.TESTCHIMP_API_KEY`**. Tell the user to **reload MCP / restart the IDE** so the new command line applies.
    - If no MCP config is present yet, **do not block** the flow; point to [`assets/sample-mcp.json`](assets/sample-mcp.json) during **`/testchimp init`**.
 
 5. **Playwright toolchain check** — TestChimp requires Playwright 1.59.0+. **Before** authoring SmartTests, running **`npx playwright test`**, or doing browser-driven exploration for **`/testchimp init`** smoke, ensure the repo actually has a compliant install:
@@ -74,7 +74,7 @@ TestChimp adds **empty marker files** after mapping: **`.testchimp-tests`** at t
 
 ## Agent guardrails (must follow)
 
-1. **Scenario and story IDs — never invent.** Do **not** guess or fabricate **`#TS-…`** / **`US-…`** ids or write `// @Scenario: #TS-…` comments before those entities exist in TestChimp. **First** create user stories and test scenarios via the planning flow and MCP tools (**`create_user_story`**, **`create_test_scenario`**, etc.; see [`references/test-planning.md`](references/test-planning.md)), or use ids **returned** by the platform / present in committed plan markdown. **Then** add link comments in SmartTests so stable ids match the system.
+1. **Scenario and story IDs — never invent.** Do **not** guess or fabricate **`#TS-…`** / **`US-…`** ids or write `// @Scenario: #TS-…` comments before those entities exist in TestChimp. **First** create user stories and test scenarios via the planning flow and MCP tools (**`create-user-story`**, **`create-test-scenario`**, etc.; see [`references/test-planning.md`](references/test-planning.md)), or use ids **returned** by the platform / present in committed plan markdown. **Then** add link comments in SmartTests so stable ids match the system.
 
 2. **Run Playwright only from the mapped SmartTests root** (see **[Marker files](#marker-files)**). **`cd` there**, then run Playwright via **`npx`** (e.g. `npx playwright test …`). Do not run tests from the repo root unless that root **is** the mapped folder.
 
@@ -88,13 +88,15 @@ TestChimp adds **empty marker files** after mapping: **`.testchimp-tests`** at t
    - `blob-report/`
    - any other repo-specific generated report/output directory configured by the test runner or CI
 
-## MCP client (agents)
+## MCP client and CLI (agents)
 
-Install **`testchimp-mcp-client@latest`** (see [`references/init-testchimp.md`](references/init-testchimp.md)) and register it in the host MCP config using **`npx`** with **`testchimp-mcp-client@latest`** in **`args`** so each **`npx`** invocation resolves the **latest** published client from npm.
+Install **`@testchimp/cli@latest`** (see [`references/init-testchimp.md`](references/init-testchimp.md)) and register the MCP server using **`npx`** with **`@testchimp/cli@latest`** and the **`mcp`** subcommand in **`args`**.
 
-**Reference config:** [`assets/sample-mcp.json`](assets/sample-mcp.json) — shows **`command`**, **`args`** (`-y` + **`testchimp-mcp-client@latest`**), and **`env`** with **`TESTCHIMP_API_KEY`**. Replace the placeholder with the **project-scoped** API key from TestChimp; **do not commit** real keys. Optionally add **`TESTCHIMP_BACKEND_URL`** in **`env`** only when pointing at a non-default backend (for example staging).
+**CLI (shell / CI):** Same package exposes the **`testchimp`** binary for calling the same HTTP APIs with flags or **`--json-input`**. See [`references/cli.md`](references/cli.md) for env resolution, stdout/stderr, and when to prefer CLI vs MCP.
 
-**Minimum versions:** This skill declares **`required_mcp_client_version`**  in frontmatter. Agents must run the **MCP client compatibility check** and **Playwright toolchain check** in **Preamble checks**.
+**Reference config:** [`assets/sample-mcp.json`](assets/sample-mcp.json) — shows **`command`**, **`args`** (`-y` + **`@testchimp/cli@latest`** + **`mcp`**), and **`env`** with **`TESTCHIMP_API_KEY`**. Replace the placeholder with the **project-scoped** API key from TestChimp; **do not commit** real keys.
+
+**Minimum versions:** This skill declares **`required_cli_version`** in frontmatter. Agents must run the **TestChimp CLI / MCP client compatibility check** and **Playwright toolchain check** in **Preamble checks**.
 
 Environment vars (MCP **`env`** block):
 
@@ -104,11 +106,11 @@ If MCP or API calls return **401**, see **Agent guardrails** → HTTP 401.
 
 The MCP server exposes tools grouped by area:
 
-- **Coverage & execution** — `get_requirement_coverage`, `get_execution_history`
-- **Planning (user stories & scenarios)** — `create_user_story`, `create_test_scenario`, `update_user_story`, `update_test_scenario`
-- **Environments & EaaS** — `get_eaas_config`, `get_branch_specific_endpoint_config`, `provision_ephemeral_environment_and_wait`, `provision_ephemeral_environment`, `get_ephemeral_environment_status`, `destroy_ephemeral_environment`
-- **Ephemeral deploy diagnostics (BunnyShell)** — `list_bunnyshell_environment_events`, `list_bunnyshell_workflow_jobs`, `get_bunnyshell_workflow_job_logs`
-- **TrueCoverage analytics** — `list_rum_environments`, `get_truecoverage_events`, `get_truecoverage_event_details`, `get_truecoverage_child_event_tree`, `get_truecoverage_event_transition`, `get_truecoverage_event_time_series`, `get_truecoverage_session_metadata_keys`, `get_truecoverage_event_metadata_keys`
+- **Coverage & execution** — `get-requirement-coverage`, `get-execution-history`
+- **Planning (user stories & scenarios)** — `create-user-story`, `create-test-scenario`, `update-user-story`, `update-test-scenario`
+- **Environments & EaaS** — `get-eaas-config`, `get-branch-specific-endpoint-config`, `provision-ephemeral-environment-and-wait`, `provision-ephemeral-environment`, `get-ephemeral-environment-status`, `destroy-ephemeral-environment`
+- **Ephemeral deploy diagnostics (BunnyShell)** — `list-bunnyshell-environment-events`, `list-bunnyshell-workflow-jobs`, `get-bunnyshell-workflow-job-logs`
+- **TrueCoverage analytics** — `list-rum-environments`, `get-truecoverage-events`, `get-truecoverage-event-details`, `get-truecoverage-child-event-tree`, `get-truecoverage-event-transition`, `get-truecoverage-event-time-series`, `get-truecoverage-session-metadata-keys`, `get-truecoverage-event-metadata-keys`
 
 Use the repo, plans, and those tools to decide what to test and how to run them.
 
@@ -163,7 +165,7 @@ This skill is published at **`https://github.com/testchimphq/testchimp-skills`**
 
 ## Coverage scope note
 
-`get_requirement_coverage` supports platform-rooted paths under both **`tests/...`** and **`plans/...`**.
+`get-requirement-coverage` supports platform-rooted paths under both **`tests/...`** and **`plans/...`**.
 When a `plans/...` folder is provided, coverage resolves SmartTests linked to scenarios in that plan scope.
 `scope.folderPath` should be provided using **platform paths** (rooted at `tests` or `plans`), even when the mapped repo folders use different names (for example, if mapped repo folder for `tests` in the repo is `ui_tests` then to ask for coverage for `ui_tests/checkout`, the scope you request should be for `tests/checkout`).
 
@@ -212,10 +214,11 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`references/audit-coverage.md`](references/audit-coverage.md) | Coverage and execution audit playbook |
 | [`references/truecoverage.md`](references/truecoverage.md) | TrueCoverage RUM setup, `plans/events/*.event.md`, MCP analytics |
 | [`references/ai-wright-usage.md`](references/ai-wright-usage.md) | `ai-wright` install, env, API depth |
-| [`references/environment-management.md`](references/environment-management.md) | Persistent vs ephemeral envs, Bunnyshell, Branch Management, MCP `get_branch_specific_endpoint_config` |
+| [`references/environment-management.md`](references/environment-management.md) | Persistent vs ephemeral envs, Bunnyshell, Branch Management, MCP `get-branch-specific-endpoint-config` |
+| [`references/cli.md`](references/cli.md) | `@testchimp/cli`: shell usage, `--json-input`, key export for CLI, stdout/stderr |
 | [`references/mocking_strategy.md`](references/mocking_strategy.md) | `page.route` vs optional AIMock, `<tests_root>/assets/goldens`, init plan/execute split |
 | [`references/seeding-endpoints.md`](references/seeding-endpoints.md) | Test-only seed, teardown, and read endpoints; discovery, proxy pattern, idempotency |
 | [`references/fixture-usage.md`](references/fixture-usage.md) | `mergeTests`, `<tests_root>/fixtures/`, `testInfo`, agent probe specs |
 | [`assets/template_playwright.config.js`](assets/template_playwright.config.js) | Sample Playwright config (copy into SmartTests root) |
-| [`assets/sample-mcp.json`](assets/sample-mcp.json) | Sample Cursor-style MCP config: `npx`, `testchimp-mcp-client@latest`, `TESTCHIMP_API_KEY` |
+| [`assets/sample-mcp.json`](assets/sample-mcp.json) | Sample MCP config: `npx`, `@testchimp/cli@latest`, `mcp`, `TESTCHIMP_API_KEY` |
 

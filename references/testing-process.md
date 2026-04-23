@@ -111,7 +111,7 @@ Before planning scenarios and tests, derive the **change context**.
 2. **Fallback when on `main`**
    - If the user is on `main` (or no clear PR branch exists), approximate the PR delta by reviewing the **last few commits** (commit messages + file changes) and infer which user journeys could be affected.
 
-Use the derived change context to (a) locate existing relevant plans/scenarios, (b) identify missing stories/scenarios, and (c) drive targeted coverage queries (`get_requirement_coverage`, `get_execution_history`) to surface gaps.
+Use the derived change context to (a) locate existing relevant plans/scenarios, (b) identify missing stories/scenarios, and (c) drive targeted coverage queries (`get-requirement-coverage`, `get-execution-history`) to surface gaps.
 
 **TrueCoverage gate:** Read `plans/knowledge/ai-test-instructions.md` first (if available) and follow **[`truecoverage.md`](./truecoverage.md)**.
 
@@ -127,7 +127,7 @@ The plan must include:
 1. **Existing relevant plans**
    - Read the mapped `plans/` tree and identify stories/scenarios impacted by the PR.
    - Review PR changes and map changed behavior to existing scenarios.
-   - Query MCP coverage for those areas (`get_requirement_coverage`, `get_execution_history`) and capture failing/missing coverage signals.
+   - Query MCP coverage for those areas (`get-requirement-coverage`, `get-execution-history`) and capture failing/missing coverage signals.
 2. **Missing plans**
    - Identify missing stories/scenarios for behavior added or changed by the PR.
    - List what new stories/scenarios should be authored.
@@ -150,7 +150,7 @@ The plan must include:
      - **Persistent backend + local/preview frontend** for frontend-only changes when sufficient. This is fast, cheap - so favourable default.
      - **Isolated full-stack ephemeral environment** when backend changes affect behavior. This enables full stack isolation and stronger consistancy guarantees, but is slow to provision (~5-10 mins), and costs (since require actual deployment). Use only when necessary.
    - If using persistent environments, infer reusable data from existing tests, **`fixtures/`**, POMs, and env files; ask user only for missing critical values.
-   - If using ephemeral environments, call `get_eaas_config`; if it returns empty/unconfigured, stop and ask user to configure EaaS in TestChimp. Refer `/references/environment-management` for more details on setup and provision.
+   - If using ephemeral environments, call `get-eaas-config`; if it returns empty/unconfigured, stop and ask user to configure EaaS in TestChimp. Refer `/references/environment-management` for more details on setup and provision.
 5. **Infra gaps**
    - Identify missing seed/teardown/read endpoints or missing harness infrastructure (see **[`seeding-endpoints.md`](./seeding-endpoints.md)**).
    - Include remediation tasks in the plan before test authoring.
@@ -190,8 +190,8 @@ Before proceeding to **Setup**, the agent must confirm:
 Goal: create the environment and prerequisites needed to author and run tests.
 
 1. **Environment provision (when needed)**
-   - If plan selected ephemeral env and `get_eaas_config` is configured, call `provision_ephemeral_environment` with current branch name.
-   - Poll with `get_ephemeral_environment_status` roughly every minute until ready (typical provisioning time is several minutes). After 20 minutes if still not provisioned, inform the user to check the provider and ask whether to kill or keep trying. If user says to kill the environment, use mcp tool to kill the environment.
+   - If plan selected ephemeral env and `get-eaas-config` is configured, call `provision-ephemeral-environment` with current branch name.
+   - Poll with `get-ephemeral-environment-status` roughly every minute until ready (typical provisioning time is several minutes). After 20 minutes if still not provisioned, inform the user to check the provider and ask whether to kill or keep trying. If user says to kill the environment, use mcp tool to kill the environment.
 2. **Address infra gaps**
    - Implement or wire missing seed/teardown/read endpoints and **`fixtures/`** modules that the **plan** marked as missing, so tests can declare the needed fixtures and run.
 3. **TrueCoverage setup (when planned / enabled)**
@@ -252,7 +252,7 @@ Before proceeding to **Cleanup and report**, the agent must confirm:
 
 Goal: remove temporary resources and avoid leaked infrastructure. Communicate results to user.
 
-1. If an ephemeral environment was provisioned, destroy it via `destroy_ephemeral_environment` using the returned environment id.
+1. If an ephemeral environment was provisioned, destroy it via `destroy-ephemeral-environment` using the returned environment id.
 2. Delete temporary storage-state files created for login/session reuse.
 3. Report what was done, flag any things that require user attention (such as failing tests etc.).
 4. Include a summary of:

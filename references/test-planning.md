@@ -67,22 +67,22 @@ Use the **`#TS-<n>`** from the scenario markdown **`id`**.
 
 ## Authoring new stories and scenarios (MCP)
 
-Creating a file **only on disk** is **not** enough: the TestChimp project needs **entities** with real ordinals. Use **`testchimp-mcp-client`** to create the entities in this **order**:
+Creating a file **only on disk** is **not** enough: the TestChimp project needs **entities** with real ordinals. Use **`@testchimp/cli`** to create the entities in this **order**:
 
-1. **`create_user_story`** — pass **`platformFilePath`** (e.g. `plans/stories/area/my-feature.md`) and **`title`**. Response includes **`ordinalId`** (number).
+1. **`create-user-story`** — pass **`platformFilePath`** (e.g. `plans/stories/area/my-feature.md`) and **`title`**. Response includes **`ordinalId`** (number).
 2. **Write** the markdown file under the repo’s mapped plans root, and **the first on-disk version must already include** frontmatter **`id: US-<ordinalId>`** (do not write a stub with blank `id:`).
-3. **`update_user_story`** — pass the **full file contents** (frontmatter + body) so the platform stays in sync.
+3. **`update-user-story`** — pass the **full file contents** (frontmatter + body) so the platform stays in sync.
 
 For scenarios:
 
 1. Ensure the **parent story** exists and you know its **`US-<n>`**.
-2. **`create_test_scenario`** — **`platformFilePath`** under `plans/scenarios/...`, **`title`**, **`userStoryOrdinalId`** = **`n`** from **`US-n`**. Response includes scenario **`ordinalId`**.
+2. **`create-test-scenario`** — **`platformFilePath`** under `plans/scenarios/...`, **`title`**, **`userStoryOrdinalId`** = **`n`** from **`US-n`**. Response includes scenario **`ordinalId`**.
 3. **Write** the file locally, and **the first on-disk version must already include** **`id: TS-<ordinalId>`** and **`story: US-<n>`** (do not write a stub with blank `id:` or missing `story:`).
-4. **`update_test_scenario`** with **full markdown** after edits.
+4. **`update-test-scenario`** with **full markdown** after edits.
 
 **Filenames:** Prefer **kebab-case** and **`.md`**. **Titles** are short sentences; filenames are stable identifiers.
 
-If **`story:`** (or the parent link) changes on a scenario, call **`update_test_scenario`** so the platform updates **DB linking**, not only file text.
+If **`story:`** (or the parent link) changes on a scenario, call **`update-test-scenario`** so the platform updates **DB linking**, not only file text.
 
 ---
 
@@ -90,7 +90,7 @@ If **`story:`** (or the parent link) changes on a scenario, call **`update_test_
 
 When the user asks for **`/testchimp plan`** (or equivalent: fill gaps in the test plan, add missing stories/scenarios):
 
-1. Call **`get_requirement_coverage`** with a **`scope.folderPath`** under **`plans`** (e.g. `["plans","stories","checkout"]` or `["plans","scenarios"]`) and set **`includeNonCoveredUserStories`** / **`includeNonCoveredTestScenarios`** as needed.
+1. Call **`get-requirement-coverage`** with a **`scope.folderPath`** under **`plans`** (e.g. `["plans","stories","checkout"]` or `["plans","scenarios"]`) and set **`includeNonCoveredUserStories`** / **`includeNonCoveredTestScenarios`** as needed.
 2. From the response and the recent changes made in the current working branch, decide **missing or thin** stories and scenarios.
 3. **Create parent stories before scenarios.** For each new artifact: **MCP create → write file → MCP update**.
 4. Keep edits **reviewable**: minimal frontmatter, clear titles, consistent folder placement.

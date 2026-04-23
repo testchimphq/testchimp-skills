@@ -4,7 +4,7 @@ This document explains **how to write SmartTests** for agents during the **Execu
 - Playwright tests in a **tests** folder mapped in TestChimp platform,
 - Ability to include natural language steps for "intent based" test steps in standard Playwright scripts
 - scenario linking via in-code structured comments in test (for built-in requirement traceability).
-- You can use the testchimp-mcp-client to query about coverage insights to decide what tests need authoring.
+- You can use **`@testchimp/cli`** (MCP) to query coverage insights to decide what tests need authoring.
 
 For **full** `ai-wright` API details (options, env vars, troubleshooting), see **[`ai-wright-usage.md`](./ai-wright-usage.md)**. The sections below summarize what you need to author tests and point there for depth.
 
@@ -19,7 +19,7 @@ For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, pla
 1. **Target URL** — Ask for preview URL or local stack URL if unclear. In the `playwright.config.js` we have set  
 `baseURL:process.env.BASE_URL,` - so tests should simply specify relative urls, the preview URL should be set as the `BASE_URL` env var so that the test picks up that.
 
-2. **Decide what to write or change** — If **`testchimp-mcp-client`** is configured in the agent environment, call the MCP tools **`get_requirement_coverage`** and **`get_execution_history`** with the request shapes in [Calling the TestChimp MCP tools](#calling-the-testchimp-mcp-tools). Combine responses with the PR diff, commits, and plan files in the repo to choose scenarios and files to touch. If MCP is not available, infer gaps from plans and existing tests.
+2. **Decide what to write or change** — If the **TestChimp MCP server** (from **`@testchimp/cli`**) is configured in the agent environment, call the MCP tools **`get-requirement-coverage`** and **`get-execution-history`** with the request shapes in [Calling the TestChimp MCP tools](#calling-the-testchimp-mcp-tools). Combine responses with the PR diff, commits, and plan files in the repo to choose scenarios and files to touch. If MCP is not available, infer gaps from plans and existing tests.
 3. **Per scenario** — Add or update a test; reuse existing page objects, fixtures, and env conventions in the repo.
 4. **Drive the real app with Playwright (no invented steps)** — Human input is often required **before** you start (URLs, accounts, feature flags, which environment to hit) **and sometimes during** a run (unexpected MFA, captcha, missing seed data, “which org should I use?”). Do not guess secrets or one-off values (unless you deem any random suitable guessed value should suffice for a specific step).
 
@@ -64,7 +64,7 @@ Recommended takeover loop:
 
 6. **Scenario link** — As the **first statement inside the test body**:
    - `// @Scenario: #TS-xxx <Scenario title>`  
-   Use the **`#TS-xxx`** id that **already exists** in TestChimp (from plan markdown **`id:`**, or from MCP **`create_test_scenario`** / **`create_user_story`** responses). **Never invent** scenario or story ids: create scenarios (and parent stories if needed) **before** adding this comment so links stay stable and real. Same pattern as: 
+   Use the **`#TS-xxx`** id that **already exists** in TestChimp (from plan markdown **`id:`**, or from MCP **`create-test-scenario`** / **`create-user-story`** responses). **Never invent** scenario or story ids: create scenarios (and parent stories if needed) **before** adding this comment so links stay stable and real. Same pattern as: 
    `// @Scenario: #TS-102 Checkout with credit card`.
 
    **Strict format rules (do not deviate):**
@@ -148,7 +148,7 @@ Use **`npx playwright …`** (install/use the project’s Playwright CLI from th
 
 ## Calling the TestChimp MCP tools
 
-These tools are provided by the **`testchimp-mcp-client`** package when it is installed and registered as an MCP server (e.g. Cursor `mcp.json`). The agent invokes them as **MCP tools** by name; arguments are JSON-shaped objects matching the schemas below.
+These tools are provided by the **`@testchimp/cli`** package when it is installed and registered as an MCP server (e.g. Cursor `mcp.json`). The agent invokes them as **MCP tools** by name; arguments are JSON-shaped objects matching the schemas below.
 
 **Environment (MCP process):**
 
@@ -158,7 +158,7 @@ These tools are provided by the **`testchimp-mcp-client`** package when it is in
 
 **Environment (Playwright / ai-wright in the same session):** Export the **same** **`TESTCHIMP_API_KEY`** in the shell when running `npx playwright …` so reporters, **`ai.*`** steps, and MCP-backed flows share one project key. For **ai-wright**, agents should **only** instruct setting **`TESTCHIMP_API_KEY`** (not user PAT / mail-based auth). On **401** responses, configure the key via TestChimp → **Project Settings** → **Key management**.
 
-### Tool: `get_requirement_coverage`
+### Tool: `get-requirement-coverage`
 
 **Purpose:** Requirement / scenario coverage for SmartTests (and plans-scoped resolution when using `plans/...` paths).
 
@@ -179,7 +179,7 @@ These tools are provided by the **`testchimp-mcp-client`** package when it is in
 
 ```json
 {
-  "tool": "get_requirement_coverage",
+  "tool": "get-requirement-coverage",
   "arguments": {
     "environment": "QA",
     "scope": { "folderPath": ["plans", "checkout"] },
@@ -192,22 +192,22 @@ These tools are provided by the **`testchimp-mcp-client`** package when it is in
 
 ```json
 {
-  "tool": "get_requirement_coverage",
+  "tool": "get-requirement-coverage",
   "arguments": {}
 }
 ```
 
-### Tool: `get_execution_history`
+### Tool: `get-execution-history`
 
 **Purpose:** Recent SmartTest execution history for the same scoping model as coverage.
 
-**Arguments:** Same as `get_requirement_coverage` except there are no `includeNonCoveredUserStories` / `includeNonCoveredTestScenarios` fields.
+**Arguments:** Same as `get-requirement-coverage` except there are no `includeNonCoveredUserStories` / `includeNonCoveredTestScenarios` fields.
 
 **Example:**
 
 ```json
 {
-  "tool": "get_execution_history",
+  "tool": "get-execution-history",
   "arguments": {
     "environment": "QA",
     "scope": { "folderPath": "tests/e2e/checkout" }

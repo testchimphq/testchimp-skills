@@ -120,12 +120,12 @@ Set **`automationEmitsOnly: true`** on **`comparisonExecutionScope`** or **`cove
 
 ### Recommended flow
 
-1. **`list_rum_environments`** — Lists environment tags present in data; pick env values for scopes.
-2. **`get_truecoverage_events`** — Body: `baseExecutionScope`, optional `comparisonExecutionScope` (add `automationEmitsOnly` on comparison when you want test-only coverage). **Returns** `eventSummaries[]` with `eventTitle`, `relativeFrequency`, `coverageStatus` (PRESENT/ABSENT vs comparison), position/histogram summaries, `numUniqueSessions`, terminal %.
+1. **`list-rum-environments`** — Lists environment tags present in data; pick env values for scopes.
+2. **`get-truecoverage-events`** — Body: `baseExecutionScope`, optional `comparisonExecutionScope` (add `automationEmitsOnly` on comparison when you want test-only coverage). **Returns** `eventSummaries[]` with `eventTitle`, `relativeFrequency`, `coverageStatus` (PRESENT/ABSENT vs comparison), position/histogram summaries, `numUniqueSessions`, terminal %.
 3. Choose high-impact gaps, then for the identified events that you want to drill in to:
-   - **`get_truecoverage_event_details`** — Time series, sample sessions, **metadata** breakdown with per-value **comparison coverage** (use `automationEmitsOnly` on `comparisonExecutionScope` to align metadata “covered” with test-tagged emits only).
-   - **`get_truecoverage_child_event_tree`** — Top **next** events after the current title; pass **`coverage_scope`** with `automationEmitsOnly` when transition coverage should ignore manual paths.
-   - **`get_truecoverage_event_transition`** / **`get_truecoverage_event_time_series`** — Deeper transition and metric series as needed.
+   - **`get-truecoverage-event-details`** — Time series, sample sessions, **metadata** breakdown with per-value **comparison coverage** (use `automationEmitsOnly` on `comparisonExecutionScope` to align metadata “covered” with test-tagged emits only).
+   - **`get-truecoverage-child-event-tree`** — Top **next** events after the current title; pass **`coverage_scope`** with `automationEmitsOnly` when transition coverage should ignore manual paths.
+   - **`get-truecoverage-event-transition`** / **`get-truecoverage-event-time-series`** — Deeper transition and metric series as needed.
 4. Turn gaps into a prioritized plan (tests, instrumentation, or both).
 
 ### Metadata keys and “coverage”
@@ -170,4 +170,4 @@ Events do **not** require server-side registration. To avoid duplicate names and
 
 ## MCP tools (TrueCoverage)
 
-Configured via **`testchimp-mcp-client`** with `TESTCHIMP_API_KEY`: `list_rum_environments`, `get_truecoverage_events`, `get_truecoverage_event_details`, `get_truecoverage_child_event_tree`, `get_truecoverage_event_transition`, `get_truecoverage_event_time_series`, `get_truecoverage_session_metadata_keys`, `get_truecoverage_event_metadata_keys`.
+Configured via **`@testchimp/cli`** with `TESTCHIMP_API_KEY`: `list-rum-environments`, `get-truecoverage-events`, `get-truecoverage-event-details`, `get-truecoverage-child-event-tree`, `get-truecoverage-event-transition`, `get-truecoverage-event-time-series`, `get-truecoverage-session-metadata-keys`, `get-truecoverage-event-metadata-keys`.
