@@ -95,7 +95,7 @@ The Analyze phase must gather:
   - Suggested queries:
     - `testchimp get-requirement-coverage --folder-path <plans/... or tests/...>` (scoped to the affected area)
     - `testchimp get-execution-history --folder-path <tests/...>` (to see recent failures/flake)
-  - Record results in the branch plan file (high level; no giant dumps).
+  - Record results (relevant summaries) in the branch plan file (high level; no giant dumps).
 
 ### Phase 1 completion gate (Analyze → Plan)
 
@@ -115,9 +115,9 @@ Goal: produce a written plan (persisted in the branch plan file) that the user e
 The Plan MUST be written under the branch plan file with these sections (in order):
 
 1. **Test plan updates** (plans layer)
-   - Stories/scenarios to create/update (use MCP/CLI; never invent ids).
+   - Stories/scenarios to create/update (use MCP/CLI; never invent ids - refer test planning md file).
 2. **System infra updates** (product/backend)
-   - Seed/teardown/read (probe) endpoints to add/update.
+   - Seed/teardown/read (probe) endpoints to add/update to setup the world-state required for the tests to be done, and assertions to be made.
    - TrueCoverage instrumentation changes (events/metadata + docs) when in scope.
 3. **Test infra updates** (tests harness)
    - Fixtures to create/update to enforce the posture using seed/probe endpoints.
@@ -163,7 +163,7 @@ During Execute, the agent MUST maintain a checklist in the branch plan file with
 
 - [ ] Provisioned/selected environment per strategy.
 - [ ] Environment is **healthy** (record how verified).
-- [ ] If system infra changed: environment restarted/reprovisioned so changes are present.
+- [ ] If system infra changed (new seed endpoints added etc.): environment restarted/reprovisioned so changes are present.
 
 ### D) Test infra updates (fixtures/mocks)
 
@@ -173,13 +173,13 @@ During Execute, the agent MUST maintain a checklist in the branch plan file with
 
 ### E) Test updates (tests themselves)
 
-- [ ] SmartTests authored/updated (UI) **using fixtures** (import merged `test` from `fixtures/index.js`).
+- [ ] SmartTests authored/updated (UI) **using fixtures** (import merged `test` from `fixtures/index.js`) -> These should be authored using a real playwright browser - refer writing smarttests guide.
 - [ ] API tests authored/updated (if planned).
 - [ ] Tests linked to scenarios **only when ids exist** (never invented).
 
 ### F) Validate test runs (NON-NEGOTIABLE)
 
-- [ ] UI tests executed with Playwright against a real browser (headed by default during triage).
+- [ ] UI tests executed with Playwright against a real browser (headed by default during triage). Note that this is an additional run (after the initial authoring run) to validate that the test that was authored can be run successfully - and gives the expected results. You may re-adjust the test and retry up to 2 attempts. If blocked - then raise the concerns to the user.
 - [ ] API tests executed against real endpoints.
 - [ ] Failing tests triaged and re-run until pass, or explicitly left failing with next steps.
 
