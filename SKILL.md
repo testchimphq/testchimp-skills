@@ -49,34 +49,43 @@ Before executing a TestChimp flow:
 
 2. **Decision memory check (project scope only)** — locate `/plans/knowledge/ai-test-instructions.md`. If it is missing or empty, tell the user that **project-level** init decisions are not yet persisted and recommend running `/testchimp init` to capture them (usually **once per repo**, then maintained as the team changes strategy). If it exists and is substantively populated, treat it as the source of truth for **project** decisions (environment strategy, TrueCoverage choices, Mocking Plan when present). **Do not** infer **workstation** readiness from this file: each developer still needs local MCP registration and **`TESTCHIMP_API_KEY`** in **`mcp.json`** (see **`/testchimp init`** → [Workstation gate](references/init-testchimp.md#workstation-gate-always-first) in [`references/init-testchimp.md`](references/init-testchimp.md)).
 
-3. **`TESTCHIMP_API_KEY` prerequisite (BLOCKING)** — before starting **any** Playwright processes (headed or headless) or authoring AI steps:
+3. **MCP-first access to TestChimp (BLOCKING)** — without TestChimp API access, the agent cannot fetch coverage, execution history, environments, or create/update stories/scenarios.
+   - **Preference order (critical)**:
+     1) **Use MCP tools first** (preferred): the MCP server already has the key configured in its `env` block.
+     2) If MCP is unresponsive (agent bridge issues, tool timeouts), **fallback to CLI**, but only after exporting the same key into the shell env (below).
+   - **Never print secrets**: do not paste the key into chat, logs, or echoed commands.
+
+4. **`TESTCHIMP_API_KEY` prerequisite for CLI + Playwright (BLOCKING)** — before starting **any** Playwright processes (headed or headless), authoring AI steps, or running TestChimp CLI:
    - **Resolve the key source via SmartTests-root walk-up**:
      - Find the **SmartTests root** (the folder containing `.testchimp-tests`) per **[Marker files](#marker-files)** under *How TestChimp works*.
      - Starting from that folder, walk **upwards** (parent → parent → …) looking for the **host’s project MCP config file** (e.g. Cursor often uses **`.cursor/mcp.json`**; Claude Code, VS Code, and others use their own documented paths — **`.cursor` is an example, not universal**).
      - Continue walking upwards until you find a config whose `mcpServers` contains a `testchimp` entry (i.e. the MCP server config that actually defines the TestChimp client).
      - Use `mcpServers.testchimp.env.TESTCHIMP_API_KEY` from that file as the key source. (This supports monorepos / nested workspaces where the nearest `.cursor` is not the one that defines TestChimp.)
    - If no suitable MCP config is found on the walk-up, or none of them contain a `testchimp` MCP server, or `TESTCHIMP_API_KEY` is missing/blank/placeholder, **stop** and tell the user to populate it, then **reload MCP / restart the IDE** so the MCP server process restarts with the env applied.
-   - When present, **read it and export it into the Playwright run environment** (agent-run shells often do not inherit IDE/MCP env). This ensures `ai-wright` and `@testchimp/playwright` can authenticate.
+   - When present, **read it and export it into the agent-run shell environment** (agent shells often do not inherit IDE/MCP env). This ensures:
+     - **CLI works** (`testchimp ...` reads `process.env.TESTCHIMP_API_KEY`)
+     - **Playwright reporting / ai-wright works** when applicable
    - **Never print the key** in logs or chat output.
+   - **No key-rotation noise**: do not tell the user to rotate keys as a default. Only raise security guidance if you detect an actual leak (key printed/committed) or the key appears to be a placeholder.
 
-4. **TestChimp CLI / MCP client compatibility check** — read **`required_cli_version`** from this file's frontmatter (semver). Run **`npm view @testchimp/cli version`** and treat the result as **registry latest**. Find the project's MCP server config (host-specific path; see preamble **#3**) and locate the server entry whose **`args`** include **`@testchimp/cli`** (often the server name **`testchimp`**), typically **`["-y", "@testchimp/cli@latest", "mcp"]`**.
+5. **TestChimp CLI / MCP client compatibility check** — read **`required_cli_version`** from this file's frontmatter (semver). Run **`npm view @testchimp/cli version`** and treat the result as **registry latest**. Find the project's MCP server config (host-specific path; see preamble **#4**) and locate the server entry whose **`args`** include **`@testchimp/cli`** (often the server name **`testchimp`**), typically **`["-y", "@testchimp/cli@latest", "mcp"]`**.
    - If **`args`** use **`@testchimp/cli@latest`** or **`@testchimp/cli`** with **no** `@` version suffix, treat the **effective** runtime version as **registry latest** (because **`npx -y`** will resolve **`@latest`** on each run).
    - If **`args`** use an explicit **`@testchimp/cli@x.y.z`**, parse **x.y.z** as the configured version.
    - **Pass** if the effective configured version is **>=** **`required_cli_version`** (semver). **Pass** if registry latest is **>=** **`required_cli_version`** when using **`@latest`** or an unpinned package name.
    - **Corrective action** when the pinned semver or registry latest is **below** **`required_cli_version`:** Update **`args`** to **`["-y", "@testchimp/cli@latest", "mcp"]`** (see [`assets/sample-mcp.json`](assets/sample-mcp.json)), **or** pin to at least **`required_cli_version`**. Preserve **`env.TESTCHIMP_API_KEY`**. Tell the user to **reload MCP / restart the IDE** so the new command line applies.
    - If no MCP config is present yet, **do not block** the flow; point to [`assets/sample-mcp.json`](assets/sample-mcp.json) during **`/testchimp init`**.
 
-5. **Playwright toolchain check** — TestChimp requires Playwright 1.59.0+. **Before** authoring SmartTests, running **`npx playwright test`**, or doing browser-driven exploration for **`/testchimp init`** smoke, ensure the repo actually has a compliant install:
+6. **Playwright toolchain check** — TestChimp requires Playwright 1.59.0+. **Before** authoring SmartTests, running **`npx playwright test`**, or doing browser-driven exploration for **`/testchimp init`** smoke, ensure the repo actually has a compliant install:
    - Resolve the **install root**: from the **SmartTests root** (see **[Marker files](#marker-files)**), walk up until you find the **`package.json`** that declares **`@playwright/test`** (often a parent such as `ui/` in a monorepo). That directory is where **`npm install`** / **`npm ci`** must succeed for Playwright to be runnable.
    - If **`node_modules`** is missing or **`npx playwright --version`** fails, **run the repo’s install** (`npm install`, `npm ci`, or documented workspace install) **at that install root** first. **Do not** treat missing **`node_modules`** as “optional”; without install, Playwright-based steps cannot be validated.
    - **Verify** the resolved **`@playwright/test`** version is **>=** 1.59.0, and that **`playwright`** (browser package) matches **`@playwright/test`** (same line as [`references/write-smarttests.md`](references/write-smarttests.md)). Use e.g. `npm ls @playwright/test --prefix <install-root>` or `npx playwright --version` with **cwd** at the install root.
    - **Corrective action** if below minimum or version mismatch: bump **`@playwright/test`** and **`playwright`** together, reinstall, then **`npx playwright install`** for browsers if needed. If the environment cannot run install commands, **tell the user** to install dependencies and re-run; **do not** silently author tests that were never executed against a real runner.
 
-6. **Headed authoring default (interactive)** — when the agent is **authoring** or **debugging** SmartTests for `/testchimp test`, default to **headed** runs so the user can watch and optionally intervene:
+7. **Headed authoring default (interactive)** — when the agent is **authoring** or **debugging** SmartTests for `/testchimp test`, default to **headed** runs so the user can watch and optionally intervene:
    - Prefer `npx playwright test --headed --debug` during authoring/debug sessions.
    - Use headless runs once the test is stable (or when the user explicitly asks for headless/CI mode).
 
-7. **Explicit key-missing flag (always)** — if Playwright output, MCP calls, or TestChimp reporter logs indicate `TESTCHIMP_API_KEY` is missing, the agent must **immediately call it out** as a blocker and point back to the resolved `mcp.json` `env` block as the required configuration, per step 3.
+8. **Explicit key-missing flag (always)** — if Playwright output, MCP calls, or TestChimp reporter logs indicate `TESTCHIMP_API_KEY` is missing, the agent must **immediately call it out** as a blocker and point back to the resolved `mcp.json` `env` block as the required configuration, per step 4.
 
 ## How TestChimp works
 
