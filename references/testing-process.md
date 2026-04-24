@@ -53,6 +53,13 @@ Before running **any** Playwright command (headed or headless), or authoring **a
 - **Environment strategy is binding**:
   - The agent MUST follow `plans/knowledge/ai-test-instructions.md` for environment provisioning (local vs ephemeral) and the “up + healthy” contract.
   - After seed/probe/backend changes, the agent MUST ensure the running environment actually includes those changes (restart/reprovision).
+  - **PR-scoped env requirement (critical)**:
+    - If the branch/PR includes **backend changes** (business logic, seed/probe endpoints, auth changes, or anything the tests depend on), the agent MUST run validation against a **PR-scoped environment** that includes the updated code. This may be:
+      - **Local** stack built from the current branch, or
+      - **Ephemeral/EaaS** environment provisioned from the branch.
+    - Follow the repo’s environment contract in `plans/knowledge/ai-test-instructions.md` (local vs ephemeral/EaaS, “up + healthy” criteria, restart/reprovision rules).
+    - **Super critical:** If you run tests against an existing stable environment that does **not** include the PR’s backend changes, you are **not testing the change**.
+    - Do **not** validate backend changes against a stable/staging backend unless you have verified those specific changes are already deployed there. Typically, `.env-` files in tests folder will contain `BASE_URL` that points to such stable environments. If you are using them - you MUST ensure that the changes are present in that env - by confirming with the user. Default approach should be consulting the ai-test-instructions file and see how to spin up environments to test.
 - **TrueCoverage belongs in the Plan**:
   - If the PR adds or changes **user journeys / user-facing behaviors**, the Plan must explicitly decide whether to instrument.
   - If TrueCoverage is **not configured yet** and there is **no explicit opt-out** recorded in `plans/knowledge/ai-test-instructions.md`, the agent must **ask the user** whether to enable it for this repo and include **RUM wiring + event docs** work in the Plan when the user agrees.
