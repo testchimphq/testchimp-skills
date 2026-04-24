@@ -5,7 +5,7 @@ This document explains how to **read and author** TestChimp **markdown test plan
 **Ids (hard rules):**
 - **Never hallucinate** **`US-…`** or **`TS-…`** ids (the ordinals are TestChimp-generated, not freetext).
 - **Never create** (even temporarily) story/scenario markdown files with a **blank `id:`** in frontmatter.
-- **Always provision first via MCP** to get the real ordinal id, **then** write the markdown file with `id: US-…` / `id: TS-…` already populated.
+- **Always provision first via MCP / CLI** to get the real ordinal id, **then** write the markdown file with `id: US-…` / `id: TS-…` already populated.
 
 Further reading: [Test planning as code](https://docs.testchimp.io/test-planning/intro) (philosophy, Git export, default-branch scope for plans).
 
@@ -24,9 +24,9 @@ plans/
   scenarios/     # Test scenarios (*.md), optional subfolders
 ```
 
-Place an empty **`.testchimp-plans`** marker at the **mapped plans root** in the repo (Project Settings → Integrations) so TestChimp recognizes the root—mirrors **`.testchimp-tests`** under the mapped tests folder.
+When user syncs the plans folder from TestChimp platform to Git repo, a `.testchimp-plans` file is created in the mapped folder. This can be used to identify the mapped folder correctly. Note that glob might not find files starting with dot, so use find / ls tools instead.
 
-**Branch scope:** Test planning is **project-level**, not tied to a Git branch. SmartTests and runs are branch-aware; **stories and scenarios are a single product-level plan** (default branch source of truth). Do not vary plan authoring by current Git branch.
+**Branch scope:** Test planning is **project-level**, not tied to a Git branch. SmartTests and runs are branch-aware; **stories and scenarios are a single product-level plan** (default branch source of truth).
 
 ---
 
@@ -94,6 +94,7 @@ When the user asks for **`/testchimp plan`** (or equivalent: fill gaps in the te
 2. From the response and the recent changes made in the current working branch, decide **missing or thin** stories and scenarios.
 3. **Create parent stories before scenarios.** For each new artifact: **MCP create → write file → MCP update**.
 4. Keep edits **reviewable**: minimal frontmatter, clear titles, consistent folder placement.
+5. Make sure that created stories and scenarios are created under sub-folders for better organization. Not directly under the `plans/stories` or `plans/scenarios` but in a sub-folder within those - based on the the relevant area the story / scenario affects.
 
 ---
 

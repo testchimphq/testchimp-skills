@@ -148,7 +148,7 @@ The Plan MUST be written under the branch plan file with these sections (in orde
    - Stories/scenarios to create/update.
      - **Never invent IDs** means: never assume fake `#US-...` / `#TS-...` ids.
      - If scenarios / stories are missing for the PR changes, the Plan must explicitly list the **new** stories/scenarios to be created so the platform generates **real IDs**.
-     - **Timing rule**: the actual `create-user-story` / `create-test-scenario` calls must be performed **only in Execute**, **after** the user approves the Plan generated.
+     - **Timing rule**: the actual `create-user-story` / `create-test-scenario` calls (and subsequent `update-user-story` and `update-test-scenario`) must be performed **only in Execute**, **after** the user approves the Plan generated.
 2. **System infra updates** (product/backend)
    - Seed/teardown/read (probe) endpoints to add/update to support the **posture** required by the planned tests.
    - Seed authoring MUST follow the project’s recorded strategy in `plans/knowledge/ai-test-instructions.md`.
