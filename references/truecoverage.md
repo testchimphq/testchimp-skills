@@ -1,6 +1,14 @@
 # TrueCoverage
 
-TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the app with **`@testchimp/rum-js`**; [`@testchimp/playwright`](https://github.com/testchimphq/playwright-testchimp-reporter) tags the same events during runs with test identity. TestChimp aggregates both streams for coverage insights.
+TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the app with **`@testchimp/rum-js`**; [`@testchimp/playwright`](https://github.com/testchimphq/playwright-testchimp-reporter) tags the same events during test runs with test identity. TestChimp aggregates both streams for coverage insights.
+
+As an intelligent QA workflow executor agent, TrueCoverage is a capability that you can leverage to instrument the code to "learn about how real users are interacting with the app" - sliced by dimensions as you see fit. These instrumented events are captured by TestChimp, to generated summarized insights, which you can later read during `/testchimp evolve` workflow to optimize QA work.
+
+A few ways this can be used strategically:
+
+   - Fixture authoring: metadata slices that refer entity fields (refer below for dot-notation metadata keys) at an event interaction helps write fixtures that mimic real world setups (eg: Users with no form-of-payment (FOP) setup attempts to do a checkout in real world. If you had instrumented whether user has form-of-payment in checkout event emits, you can use this information to identify how frequently this "situation" occurs, and prioritize creating fixtures that mimic that entity condition and write a test that verifies "behaviour when user with no FOP attempts checkout")
+   - Covering common event sequences: TrueCoverage data endpoints expose ability to fetch detailed info about an event - which includes - what events immediately follow the given event (and the frequency distribution). This can be used to identify common journeys that are under tested - and author useful tests.
+   - Understanding user interaction funnel and optimizing fixing of coverage gaps. Per-event analytics exposed by TestChimp follow the **4Ds** (RUM-based QA strategy—full metric mapping in [How TrueCoverage metrics work](https://docs.testchimp.io/truecoverage/how-it-works)): **Demand** — how often an action appears (relative frequency, occurrences, unique sessions); **Duration** — dwell and pacing (time to next event, time since previous event, time from session start to first occurrence, time from event to session end); **Drop-off** — abandonment signals (share of sessions where the event is terminal, reverse index from session end, time from event to session end); **Depth** — funnel ordering and friction to reach a step (position in session, reverse index, time to first occurrence in session). Together they prioritize which real-user paths deserve tests, beyond raw transition lists alone.
 
 **Authoritative RUM library docs (read before implementing):** [@testchimp/rum-js on GitHub](https://github.com/testchimphq/testchimp-rum-js) (README covers `init`, `emit`, `flush`, `resetSession`, configuration options, event constraints, and batching). **npm:** [`@testchimp/rum-js`](https://www.npmjs.com/package/@testchimp/rum-js).
 
@@ -12,12 +20,12 @@ TrueCoverage connects **real user behavior** (from production) with **test execu
 
 1. Install: `npm install @testchimp/rum-js` in the **app under test** (frontend / runtime bundle), not only in the SmartTests package.
 2. Call **`testchimp.init()` once** at app bootstrap (see [library README](https://github.com/testchimphq/testchimp-rum-js)). Required top-level fields per README:
-   - **`projectId`** — TestChimp project ID (from **TestChimp → Project Settings → Key management**).
-   - **`apiKey`** — project API key for RUM (same source).
+   - **`projectId`** — TestChimp project ID (from **TestChimp → Project Settings → Key management**). Should be stored in some env-properties file and referred in code.
+   - **`apiKey`** — project API key for RUM (same source - have it configured and loaded from an env properties file).
    - **`environment`** — logical tag for the session (e.g. `production`, `staging`, `QA`); use one consistent scheme per deploy.
    - Optional: `sessionId`, `release`, `branchName`, `sessionMetadata`, and nested **`config`** (see below).
 3. Prefer **one helper** (e.g. `emitProductEvent`) that wraps **`testchimp.emit()`** after init. Read credentials from your app’s env/build config (e.g. map `TESTCHIMP_PROJECT_ID` / `TESTCHIMP_API_KEY` into `init()`); avoid scattering raw `emit` calls. Do **not** put these secrets in SmartTests `.env-QA`—those are for test execution vars like `BASE_URL`.
-4. **Vocabulary:** If you already use product analytics (PostHog, Segment, etc.), align event names where it helps—but TrueCoverage goals differ: prefer **semantic journey steps** (e.g. checkout completed) over noise (“button clicked”). Keep **metadata cardinality** low; follow **Event constraints** in the [GitHub README](https://github.com/testchimphq/testchimp-rum-js) (title length, metadata keys/values, max serialized size).
+4. **Vocabulary:** If you already use product analytics (PostHog, Segment, etc.), align event names where it helps—but TrueCoverage goals differ: prefer **semantic journey steps** (e.g. checkout-completed) over noise (“button clicked”). Keep **metadata cardinality** low; follow **Event constraints** in the [GitHub README](https://github.com/testchimphq/testchimp-rum-js) (title length, metadata keys/values, max serialized size).
 
 ### RUM `config` (volume / “sampling” behavior)
 
@@ -35,6 +43,29 @@ The library does not use a separate “sampling percentage” API; **event volum
 | `enableDefaultSessionMetadata` | Session init metadata from client (`navigator` / `Intl`); set `false` if you want only your `sessionMetadata`. |
 
 For a **first instrumentation slice**, prefer **conservative** limits (the README includes an example “high-frequency sampling” block). Reuse existing tuning from the repo when present.
+
+Sampling can be done using any custom logic on your app side, and for the session, determine whether the capturing should be done or not (based on the sampling logic). Then set the `captureEnabled` for the session. So if you want simple 1% random sampling, a logic like below:
+
+```js
+// Decide once per browser session (before or inside init).
+SAMPLE_RATE := 0.01
+roll := random_uniform_0_to_1()  // cryptographically weak RNG is fine here
+
+captureEnabled := (roll < SAMPLE_RATE)
+
+testchimp.init({
+  projectId: "...",
+  apiKey: "...",
+  environment: "production",
+  config: {
+    captureEnabled: captureEnabled,
+    // ...maxEventsPerSession, maxRepeatsPerEvent, etc.
+  },
+})
+// When captureEnabled is false, emit() is a no-op for that session.
+```
+
+For **deterministic** cohorts (same user always in or out), hash a stable **non-PII** key (e.g. anonymous id or session id) to a bucket in `[0, 1)` and compare to `SAMPLE_RATE` instead of `random_uniform_0_to_1()`.
 
 ### After init
 
@@ -59,7 +90,7 @@ Guidance:
 
 ## Ongoing: `/testchimp test`
 
-When `enabled=true` and the PR adds or changes **meaningful user journeys**:
+When `enabled=true` (or just deferred) and the PR adds or changes **meaningful user journeys**:
 
 1. **Plan:** Note TrueCoverage needs: new or updated events, helper placement, env config.
 2. **Execute:** Emit events from the app code where it adds signal; use **`plans/events/`** (below) to document event types and metadata for consistency.
@@ -143,7 +174,7 @@ When in doubt, refer documentation: https://docs.testchimp.io/truecoverage/how-i
 
 **Mental model:** `testchimp.emit()` is how you **learn how real users move through the product** at the level of *journeys + slicing dimensions*, not raw logs. Before instrumenting, ask: *What slices matter for risk, for prioritizing tests, and for building fixtures that resemble production?* (examples: role, org tier, cart state, entitlements.)
 
-**Convention (domain entities only):** When metadata describes a **domain entity** (user, org, cart, subscription, …), prefer keys shaped **`{entity}.{attribute}`** with a **stable, low-cardinality** first segment:
+**Convention (domain entities only):** When metadata describes a **domain entity** (eg: user, org, cart, subscription, …), prefer keys shaped **`{entity}.{attribute}`** with a **stable, low-cardinality** first segment:
 
 - `user.role`, `user.has_fop` (boolean or enum—not raw payment instrument ids)
 - `org.plan_tier`

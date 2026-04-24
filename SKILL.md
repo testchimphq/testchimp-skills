@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP or CLI), coverage, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
 compatibility: Requires Node.js; @playwright/test and playwright >= 1.59.0 (see Preamble checks); TESTCHIMP_API_KEY for MCP, CLI, and ai-wright. Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.2.3
+version: 0.2.4
 required_cli_version: "0.1.1"
 ---
 
@@ -142,6 +142,7 @@ If MCP or API calls return **401**, see **Agent guardrails** → HTTP 401.
 The MCP server exposes tools grouped by area:
 
 - **Coverage & execution** — `get-requirement-coverage`, `get-execution-history`
+- **Execution debugging** — `fetch-execution-report`
 - **Planning (user stories & scenarios)** — `create-user-story`, `create-test-scenario`, `update-user-story`, `update-test-scenario`
 - **Environments & EaaS** — `get-eaas-config`, `get-branch-specific-endpoint-config`, `provision-ephemeral-environment-and-wait`, `provision-ephemeral-environment`, `get-ephemeral-environment-status`, `destroy-ephemeral-environment`
 - **Ephemeral deploy diagnostics (BunnyShell)** — `list-bunnyshell-environment-events`, `list-bunnyshell-workflow-jobs`, `get-bunnyshell-workflow-job-logs`
@@ -155,6 +156,7 @@ Use the repo, plans, and those tools to decide what to test and how to run them.
 |-----------|------|
 | `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — opening message → phased workflow (requirement gather → plan → execute). **Between phases:** complete each **phase completion gate** in the reference; every line **done** or **`N/A`** + one-line justification (persist in `plans/knowledge/ai-test-instructions.md` where noted). |
 | `/testchimp test` | [`references/testing-process.md`](references/testing-process.md) — Plan → Setup → Execute → Cleanup. **Between phases:** complete each **phase completion gate**; every line **done** or **`N/A`** + one-line justification (record on the **branch plan** file). |
+| `/testchimp fix` | [`references/fix-failing-tests.md`](references/fix-failing-tests.md) — Fetch execution report by `batch_invocation_id` (for multiple tests run in a single batch job) or `job_id` (for an individual test run), troubleshoot, apply fixes, and re-run failing tests per `plans/knowledge/ai-test-instructions.md`. |
 | `/testchimp plan` | [`references/test-planning.md`](references/test-planning.md) |
 | `/testchimp evolve` | [`references/evolve-coverage.md`](references/evolve-coverage.md) — Analyze → Plan → Execute; same **done / `N/A` + justify** gating on phase gates and completion checklists. |
 | `/testchimp setup truecoverage` / setup-truecoverage | [`references/truecoverage.md`](references/truecoverage.md) |

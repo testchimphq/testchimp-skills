@@ -84,6 +84,9 @@ For scenarios:
 
 If **`story:`** (or the parent link) changes on a scenario, call **`update-test-scenario`** so the platform updates **DB linking**, not only file text.
 
+- The story files should ALWAYS be created under a subfolder under `<PLANS_ROOT>/stories/`.
+- The scenario files should ALWAYS be created under a subfolder under `<PLANS_ROOT>/scenarios/`.
+
 ---
 
 ## `/testchimp plan` playbook (gap-driven planning)
