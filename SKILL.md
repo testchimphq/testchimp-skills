@@ -123,6 +123,9 @@ TestChimp adds **empty marker files** after mapping: **`.testchimp-tests`** at t
    - `blob-report/`
    - any other repo-specific generated report/output directory configured by the test runner or CI
 
+6. **Persist infra learnings (required).**
+   - If you discover any environment/infra behavior that future runs would benefit from (e.g. minimal stack bring-up, health-check pitfalls, DB volume staleness, required restart order), you MUST write it down in `plans/knowledge/ai-test-instructions.md` so future `/testchimp test` and `/testchimp evolve` runs can reuse it deterministically. Basically - any learnings you gain during test authoring / execution that you deem as useful for future iterations of testing / evolve flows, persist them in the above file, since your future self will be reading that to figure out how to do certain things, unblock certain common issues - specific to the project.
+
 ## MCP client and CLI (agents)
 
 Install **`@testchimp/cli@latest`** (see [`references/init-testchimp.md`](references/init-testchimp.md)) and register the MCP server using **`npx`** with **`@testchimp/cli@latest`** and the **`mcp`** subcommand in **`args`**.
