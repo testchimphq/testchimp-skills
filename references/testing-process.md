@@ -2,6 +2,27 @@
 
 This document defines the **strict workflow** for testing a PR with TestChimp.
 
+## Primary outcome: automated tests (not manual QA)
+
+The objective of **`/testchimp test`** is to **produce and run automated coverage**: **API tests** and **UI SmartTests** (Playwright), with fixtures, seeds, and probes as needed. **Strongly prefer** shipping executable specs over delegating verification to humans.
+
+- **Recommend manual testing only as a last resort**—when automation is genuinely blocked after documented attempts (e.g. missing credentials the user must supply, hardware-only flows, legal restriction), and the branch plan must state **why** automation was not completed and what remains.
+- Do **not** substitute “user should click through X” for missing SmartTests/API tests when the stack and requirements support automation.
+
+## Arrange, Act, Assert: universal shape for every test
+
+**Every** automated test you add or extend—**UI SmartTest** (Playwright) or **API test**—follows **Arrange → Act → Assert** (same order, same meaning):
+
+| Phase | Meaning | What the Plan must capture |
+|--------|---------|----------------------------|
+| **Arrange** | **World state before the first meaningful step** | What entities, relationships, flags, auth, and external posture must be true *before* **Act** runs. This is where you choose **strategy** (fixtures, seeds, mocks, clock)—not implementation yet. |
+| **Act** | **The behavior under test** | Ordered **steps** the user or client performs (navigation, clicks, form fills, API calls). This is the **stimulus** you will automate. |
+| **Assert** | **Expected outcomes after Act** | **UI**: what must be visible or absent on screen. **Backend / system**: persisted or async truth the UI might not show—via **probe/read** endpoints when needed. |
+
+**Why the Plan forces three headings per test:** Vague plans skip straight to “write a test” and then discover missing data or no way to verify the backend. Requiring **Arrange**, **Act**, and **Assert** as separate written sections **forces** you to (1) define posture clearly enough for a **fixture / seed audit** to run, (2) bound scope so **Act** is not a grab bag, and (3) decide **how** you will prove success (**DOM-only vs probes**). **Execute** then follows **[Batched order (Execute phase)](#batched-order-execute-phase)**: implement support for **Arrange** (seeds + fixtures) and **Assert** (probes) before coding **Act** in the spec.
+
+**Naming in the branch plan:** Use the exact headings **`### Arrange`**, **`### Act`**, **`### Assert`** under each test (see [Required structure for each proposed test (Plan phase)](#required-structure-for-each-proposed-test-plan-phase)). Do not collapse Arrange into Act or hide assertions inside Act prose.
+
 `/testchimp test` MUST follow this flow in order:
 
 1. **Analyze**
@@ -10,9 +31,9 @@ This document defines the **strict workflow** for testing a PR with TestChimp.
 4. **Validate**
 5. **Cleanup**
 
-Use this as the primary reference for `/testchimp test`. For SmartTest authoring patterns and examples, load **[`write-smarttests.md`](./write-smarttests.md)** during the **Execute** phase. For **Playwright fixtures** (`mergeTests`, `<tests_root>/fixtures/`), **`testInfo`** scoping, and **probe** specs (`page.pause()`), load **[`fixture-usage.md`](./fixture-usage.md)**. For **test-only seed, teardown, and read** endpoints (discovery, proxy pattern, idempotency, post-UI assertions), load **[`seeding-endpoints.md`](./seeding-endpoints.md)**. For TrueCoverage rules (instrumentation, `plans/events/*.event.md`), load **[`truecoverage.md`](./truecoverage.md)** when RUM is in scope.
+Use this as the primary reference for `/testchimp test`. For SmartTest authoring patterns and examples, load **[`write-smarttests.md`](./write-smarttests.md)** during the **Execute** phase. For **Playwright fixtures** (`mergeTests`, `<tests_root>/fixtures/`), **`testInfo`** scoping, and **probe** specs (`page.pause()`), load **[`fixture-usage.md`](./fixture-usage.md)**. For **test-only seed, teardown, and read** endpoints (discovery, proxy pattern, idempotency, post-UI assertions), load **[`seeding-endpoints.md`](./seeding-endpoints.md)**. For TrueCoverage rules (instrumentation, `plans/events/*.event.md`), load **[`truecoverage.md`](./truecoverage.md)** when RUM is in scope. **Environment:** follow **[Binding: ai-test-instructions (environment and FAQ playbook)](#binding-ai-test-instructions-environment-and-faq-playbook)** below; [`environment-management.md`](./environment-management.md) supplements that file but does **not** override it.
 
-**Per-test planning:** In **Plan**, the agent must **list every test** it will write, then for **each** test define **Arrange / Act / Assert** with the nested subsections in [Required structure for each proposed test (Plan phase)](#required-structure-for-each-proposed-test-plan-phase). In **Execute**, follow the [Batched order (Execute phase)](#batched-order-execute-phase) so seed/probe work is done **once** for the whole batch before fixtures and test authoring (avoiding unnecessary backend restarts per test).
+**Per-test planning:** In **Plan**, the agent must **list every test**, then for **each** test write **Arrange → Act → Assert** using the template in [Required structure for each proposed test (Plan phase)](#required-structure-for-each-proposed-test-plan-phase)—see [Arrange, Act, Assert: universal shape for every test](#arrange-act-assert-universal-shape-for-every-test). In **Execute**, follow [Batched order (Execute phase)](#batched-order-execute-phase) so Arrange-supporting seeds and Assert-supporting probes land **once** per batch before fixtures and test code.
 
 ### Phase gating (required)
 
@@ -30,13 +51,14 @@ Before running **any** Playwright command (headed or headless), or authoring **a
 - **Plan first (no upfront smoke runs)**:
   - Do **not** start by “running a few smoke tests” or spinning up a local/ephemeral environment just to smoke the app.
   - Go through **Analyze → Plan** first so the plan can decide the required **stories/scenarios**, **the exact list of tests to author**, and any required **seed/teardown/read (probe) endpoints** and **fixtures**.
-  - Only provision/start an environment in **Execute** (after the plan makes infra needs explicit—and **seed/probe endpoint implementations are done all done** per [Batched order (Execute phase)](#batched-order-execute-phase), so the backend is not restarted needlessly after each test).
+  - Only provision/start an environment in **Execute** (after the plan makes infra needs explicit—and **seed/probe endpoint implementations are all done** per [Batched order (Execute phase)](#batched-order-execute-phase), so the backend is not restarted needlessly after each test).
 - **Test list in Plan (REQUIRED)**:
   - The Plan MUST include an explicit **enumerated list of tests** to be written (e.g. one bullet or table row per SmartTest/API test, with a working title and mapping intent to scenarios).
-- **Per-test Arrange / Act / Assert (REQUIRED)**:
-  - For **each** test in that list, the Plan MUST use the full structure in [Required structure for each proposed test (Plan phase)](#required-structure-for-each-proposed-test-plan-phase). **Arrange** is prerequisite **world state**; **Act** is what the test does; **Assert** splits **UI validations** and **backend validations** (with probe endpoints when backend state must be read).
+- **Per-test Arrange → Act → Assert (REQUIRED)**:
+  - For **each** test in the inventory, the Plan MUST use the full structure in [Required structure for each proposed test (Plan phase)](#required-structure-for-each-proposed-test-plan-phase): three top-level sections **in order**—**Arrange** (world state + fixtures plan + seed endpoint updates), **Act** (ordered steps under test), **Assert** (UI validations + backend validations / probes). This is the **same** AAA shape every spec will follow; the Plan is invalid without all three.
+  - **Purpose check:** **Arrange** must be rich enough that [World-state → seed/fixture traceability](#world-state--seedfixture-traceability-required) can map every prerequisite to an existing fixture/seed or to **new** work. **Act** must list **concrete** steps (no “exercise the feature”). **Assert** must state **both** UI expectations and whether **backend/probe** checks are required (`N/A` only with rationale).
 - **Plan structure guard (REQUIRED)**:
-  - Before asking for user approval, the agent MUST **self-check every proposed test**: the Arrange / Act / Assert structure is **strictly** followed, and **each section is either complete** (plain-English, actionable content) **or explicitly marked** as requiring **user input** (with what is missing). When the user later supplies data, those sections MUST be **updated** in the branch plan (no silent gaps).
+  - Before asking for user approval, the agent MUST **self-check every proposed test**: **Arrange → Act → Assert** headings are present **in that order**, nested subsections (**Fixtures plan**, **Seed endpoint updates**, **UI validations**, **Backend validations**) are filled or honestly **`TBD`**, and **each section is either complete** (plain-English, actionable) **or explicitly marked** as requiring **user input** (with what is missing). When the user later supplies data, those sections MUST be **updated** in the branch plan (no silent gaps).
 - **Persist and reuse a per-branch Plan artifact (REQUIRED)**:
   - **Always** create/update the **current branch** plan at:
     - `<MAPPED_PLANS_ROOT>/knowledge/branch_test_plans/branch_<branch_slug>.md`
@@ -47,27 +69,18 @@ Before running **any** Playwright command (headed or headless), or authoring **a
     - `LastRunOnCommit: <commit_sha>` (commit at which this branch plan was last updated by `/testchimp test`)
   - The plan body must contain a **checklist** of action items, where each item is explicitly marked **done** (`- [x]`) or **not done** (`- [ ]`), so reruns are deterministic.
 - **Get explicit agreement on the Plan**: the agent MUST pause after writing/updating the branch plan and wait for user approval before running Setup/Execute work.
-- **Backend posture first (no assumptions; world-state driven)** (aligns with **Arrange**):
-  - For each planned test, **Arrange** must define the **required world state** as if the environment is **empty** other than what the selected fixtures will establish.
+- **Arrange drives infra (no assumptions; world-state first)**:
+  - For each planned test, **Arrange** must define the **required world state** as if the environment is **empty** other than what the selected fixtures will establish—that definition is what the **fixture / seed audit** consumes to find gaps.
   - If posture requires data that cannot be created with existing fixtures, the Plan MUST prefer this chain and list the missing pieces as Execute blockers:
     1) **Reuse existing fixtures** (`<tests_root>/fixtures/`) by adding the fixture dependency to the test signature.
     2) **Create/update fixtures** (per-test, retry-safe; `testInfo` scoped) that call seed/probe endpoints (see [`references/fixture-usage.md`](./fixture-usage.md)).
     3) **Create/update seed/probe/teardown endpoints** to support the fixture; document under **Arrange → Fixtures plan → Seed endpoint updates** and batch-implement in Execute per [Batched order (Execute phase)](#batched-order-execute-phase).
   - If seed/probe endpoints or fixtures are missing, that is a **Plan output** and a **hard Execute blocker** until addressed in Execute.
-- **Environment strategy is binding**:
-  - The agent MUST follow `plans/knowledge/ai-test-instructions.md` for environment provisioning (local vs ephemeral) and the “up + healthy” contract.
-  - After seed/probe/backend changes, the agent MUST ensure the running environment actually includes those changes (restart/reprovision **after** batched endpoint work—see [Batched order (Execute phase)](#batched-order-execute-phase)).
-  - **PR-scoped env requirement (critical)**:
-    - If the branch/PR includes **backend changes** (business logic, seed/probe endpoints, auth changes, or anything the tests depend on), the agent MUST run validation against a **PR-scoped environment** that includes the updated code. This may be:
-      - **Local** stack built from the current branch, or
-      - **Ephemeral/EaaS** environment provisioned from the branch.
-    - Follow the repo’s environment contract in `plans/knowledge/ai-test-instructions.md` (local vs ephemeral/EaaS, “up + healthy” criteria, restart/reprovision rules).
-    - **Super critical:** If you run tests against an existing stable environment that does **not** include the PR’s backend changes, you are **not testing the change**.
-    - Do **not** validate backend changes against a stable/staging backend unless you have verified those specific changes are already deployed there. Typically, `.env-` files in tests folder will contain `BASE_URL` that points to such stable environments. If you are using them - you MUST ensure that the changes are present in that env - by confirming with the user. Default approach should be consulting the ai-test-instructions file and see how to spin up environments to test.
-- **TrueCoverage belongs in the Plan**:
-  - If the PR adds or changes **user journeys / user-facing behaviors**, the Plan must explicitly decide whether to instrument.
-  - If TrueCoverage is **not configured yet** and there is **no explicit opt-out** recorded in `plans/knowledge/ai-test-instructions.md`, the agent must **ask the user** whether to enable it for this repo and include **RUM wiring + event docs** work in the Plan when the user agrees.
-  - If TrueCoverage **is already configured**, the agent should **consider** whether there are **key user events** worth instrumenting for the changed behavior, and include them (with `plans/events/*.event.md` updates) when appropriate.
+- **Environment and provisioning:** non‑negotiable rules live under **[Binding: ai-test-instructions (environment and FAQ playbook)](#binding-ai-test-instructions-environment-and-faq-playbook)**—read that subsection before **Execute** and whenever provisioning or validation misbehaves.
+- **TrueCoverage belongs in the Plan** (default **opted-in** per [`truecoverage.md`](./truecoverage.md)):
+  - If the PR adds or changes **user journeys / user-facing behaviors**, the Plan must include TrueCoverage work unless `plans/knowledge/ai-test-instructions.md` **explicitly** opts out.
+  - If RUM is **not yet wired**, the Plan must include **RUM install, init/emit helper, reporter, env, `plans/events/`**, and progress-tracker updates—**without** treating “not configured” as permission to skip. Only skip when **`### TrueCoverage Plan`** (or an explicit equivalent) states **opt-out**.
+  - If TrueCoverage **is already configured**, the agent should **consider** which **key user events** need new or updated emits for the changed behavior, and include them (with `plans/events/*.event.md` updates—including required **`## Rationale`** and metadata sections per [`truecoverage.md`](./truecoverage.md)) when appropriate.
 - **Mocking belongs in the Plan (always)**:
   - Explicitly decide per test case: **real backend**, **Playwright HTTP mocking** (`page.route` / `context.route`), and (when applicable) **AIMock** for LLM-backed flows.
   - If AIMock is selected, the Plan must include: wiring tasks, enablement mechanism (env flag / config), and how to validate it is actually being used.
@@ -89,6 +102,35 @@ Before running **any** Playwright command (headed or headless), or authoring **a
   - Any environment created or started during Execute (local stack, dev server, ephemeral/EaaS env) MUST be torn down in Cleanup, and the plan must record what was stopped/destroyed (or `N/A` with reason).
 - **Blockers must be called out in the Plan**: list every known blocker with (a) owner (agent vs user), (b) the exact action required, and (c) the earliest phase it blocks.
 
+### Binding: ai-test-instructions (environment and FAQ playbook)
+
+`plans/knowledge/ai-test-instructions.md` is the **only authoritative contract** for how this repo provisions environments for **test authoring** and **validation**. Agents routinely break runs by ignoring it or improvising (wrong compose profile, ad hoc staging URL, skipping health wait). Treat the file as **law** unless the user explicitly agrees to change it (then **update the file** so the next run stays deterministic).
+
+**Strict rules**
+
+1. **Read before you provision** — At the start of **Analyze** (env-relevant context) and again at the start of **Execute**, read `ai-test-instructions.md` in full enough to apply **`## Environment Provision Strategy`** (and subsections such as **Local - Test Authoring**, EaaS/Bunnyshell, Branch Management, CI) exactly as written: commands, profiles, env vars, **`BASE_URL` / `BACKEND_URL`** resolution, MCP provision steps, and “healthy” criteria.
+2. **No freelance environments** — Do **not** switch to a different stack (e.g. “I’ll just use staging”) because it is convenient. If the documented path fails, **fix the path or document a blocker**—do not silently pick another target.
+3. **FAQ first on blockers** — The file MUST include a **FAQ-style** section for recurring pitfalls (recommended heading: **`## Past learnings — authoring & validation (FAQ)`**; see [`init-testchimp.md`](./init-testchimp.md) template). **Whenever** you hit provisioning, health-check, auth, URL, port, volume, or seed-order friction: **search that FAQ next** after re-reading **`## Environment Provision Strategy`**. Treat matching entries as the **preferred playbook** before experimenting.
+4. **Update after novel resolutions** — If the current issue is **not** already in the FAQ and you **resolve** it in this cycle, you MUST append a new entry: **`### Q:`** short symptom / error / situation; **`**A:**`** concrete fix (exact commands, file paths, env values to set, order of operations, MCP tool used). Keep entries project-specific and actionable. Same rule applies after **successful** workarounds the team would want again (not only failed attempts).
+5. **Restart/reprovision** — After seed/probe/backend changes, ensure the running environment includes those changes per the **same** file (restart order, reprovision, push-before-EaaS, etc.—see [Batched order (Execute phase)](#batched-order-execute-phase)).
+
+**PR-scoped environment (critical)**
+
+- If the branch/PR includes **backend changes** (business logic, seed/probe endpoints, auth changes, or anything the tests depend on), validation MUST run against a **PR-scoped** environment that includes that code: **local** stack from the current branch **or** **ephemeral/EaaS** from the branch—**as `ai-test-instructions.md` prescribes**.
+- **Super critical:** Running against a **stable/staging** URL that does **not** include the PR’s backend changes is **not** validating the change. Do **not** use stable backends for that unless the file explicitly allows it **and** you have verified the change is deployed there. If tests use `.env-*` with a fixed `BASE_URL`, that choice must still match the contract in `ai-test-instructions.md`.
+
+### World-state → seed/fixture traceability (required)
+
+This checklist is the **fixture / seed audit** for **Arrange**: it turns the written world state into a concrete gap list (fixtures, seed routes, teardown, probes). Agents often under-specify **Arrange** and mark **Seed endpoint updates** as `N/A` (“lazy N/A”) while the **world state** actually requires new data, flags, or entities—that breaks **Act** (the run fails or lies) and **Assert** (you prove the wrong post-state). That is a **Plan defect**. For **every** proposed test, before the Plan structure guard passes:
+
+1. **Enumerate entities and flags** implied by **Arrange** (users, orgs, roles, billing state, feature flags, inventory, time windows, third-party stub posture, etc.).
+2. **Map each item** to an existing fixture + seed/read API **or** mark it as **missing**.
+3. **If any item is missing**, the Plan MUST list **concrete** seed/teardown/read endpoint changes (routes, payloads, guards) and **fixture** file changes—not a vague “may need seed.” **`N/A`** for seed updates is allowed **only** when every Arrange requirement is already satisfied by **existing** fixtures and endpoints (name them).
+4. **Cross-check Act**: steps that create or mutate data may require **teardown** or idempotent seed patterns; call that out in the consolidated **System infra updates** section.
+5. **Cross-check Assert → Backend validations**: every probe must exist or be listed as new probe work—same batched implementation order as seeds.
+
+During **Analyze**, skim **`fixtures/`** and existing seed routes **before** claiming `N/A`. During **Execute**, do not start fixture or test authoring until seed **and** probe implementations for the batch are done and the stack is restarted if required ([`seeding-endpoints.md`](./seeding-endpoints.md), [`fixture-usage.md`](./fixture-usage.md)).
+
 ### Validation failure triage
 
 When **UI** or **backend** validations fail (during Execute or when re-running tests), the agent MUST reason whether the failure is a **bug in the system under test** or a **defect in the test** (wrong steps, incomplete Arrange, wrong expectation, unstable locator, incorrect probe).
@@ -100,48 +142,62 @@ When **UI** or **backend** validations fail (during Execute or when re-running t
 
 ## Required structure for each proposed test (Plan phase)
 
-The branch plan MUST contain a subsection **per test** (SmartTest and/or API test), using this template. **Do not omit** headings; use **`TBD (needs user: …)`** when a section is incomplete.
+The branch plan MUST contain one block **per test** (SmartTest and/or API test), using the template below. Each block is the **written specification** of that test’s **Arrange → Act → Assert** before any code is written—see [Arrange, Act, Assert: universal shape for every test](#arrange-act-assert-universal-shape-for-every-test).
+
+**Do not omit** the three top-level headings **`### Arrange`**, **`### Act`**, **`### Assert`**; use **`TBD (needs user: …)`** inside a subsection when something is still unknown.
 
 ### Tests to write (inventory)
 
-First, a short **numbered list of all tests** to be authored in this run (titles only; maps to the subsections below).
+First, a short **numbered list of all tests** to be authored in this run (titles only; each numbered item maps to a full **Arrange / Act / Assert** block below).
 
-For **each** test, include:
+For **each** test, include **in this order**:
 
 ### Arrange
 
-Describe the **world state** in which the test will run: prerequisite entities and the **state they must be in** before any UI/API actions (e.g. “a signed-in user whose saved payment method is an **expired** card”).
+**Goal:** Make the **starting reality** unambiguous so the team (and the agent in **Execute**) knows **exactly** what must exist before the first step of **Act**. Poor Arrange text is the main reason seed and fixture work is underestimated.
 
-- This is a **plain-English** description of what must exist and how it should be set up—**not** the implementation yet.
+Describe the **world state** in which the test will run: prerequisite entities and the **state they must be in** before any UI/API actions (e.g. “a signed-in user whose saved payment method is an **expired** card”, “org on trial with feature flag X off”).
+
+- **Plain-English only** here—what must be true, not how to code it.
+- **Scope:** Include auth/session, feature flags, billing or entitlements, third-party stub posture, and time-sensitive state if the scenario depends on it—anything **Act** assumes is already true.
 
 #### Fixtures plan
 
-**How** that world state will be materialized for automation:
+**Goal:** Declare **how Arrange becomes true in automation**—which Playwright fixtures (or API client setup) will run before the test body. This is what **Execute** step “fixtures” will implement.
 
-- **Existing fixtures to use** (names/paths; what each contributes).
+- **Existing fixtures to use** (names/paths; what each contributes toward Arrange).
 - **New or updated fixtures** (what to add, and why).
 - Reuse-first: prefer extending existing `mergeTests` / fixture modules over duplicating setup.
 
 #### Seed endpoint updates
 
-Include **only** when new or updated fixtures require **new or changed** seed (or test-only data) **APIs** on the app-under-test:
+**Goal:** List every **backend/test-only** change required so **Arrange** is achievable. This feeds the consolidated **System infra updates** section and **Execute** batch 1 (seeds).
 
-- List each **seed endpoint** to **create** or **update** so fixtures can build the required posture.
-- If no seed work is required (fixtures only compose existing data), state **`N/A`** with one line.
+List **every** seed/teardown (or test-only data) **API** change required—not only net-new routes but **updates** to existing handlers (new fields, new entity types, new idempotency keys, new guards).
+
+- For each **missing** Arrange dimension identified in the [world-state trace](#world-state--seedfixture-traceability-required), list the **endpoint**, **method/path**, and **what posture** it establishes.
+- If you write **`N/A`**, the line must justify that **all** Arrange dimensions are covered by **already-implemented** seeds/fixtures you named in **Fixtures plan**—not “probably fine.”
 
 ### Act
 
-Plain-English list of **actions** the test will perform (user journey, API calls, navigation)—the **test steps** as the user or client would do them, in order. This is what Playwright (or an API client) will automate.
+**Goal:** Specify the **ordered stimulus**—what the test will *do*—so automation is bounded and reviewable. **Act** is not a second place to describe Arrange; it is **steps only** (user journey or API sequence).
+
+Plain-English **numbered or bulleted** list of actions in **execution order** (navigation, clicks, form fields, API calls, waits that are part of the scenario). This is exactly what Playwright (or an API client) will reproduce.
+
+- One step = one user- or client-visible action (split “open modal then submit” into two steps when both matter).
+- If **Act** creates or mutates data that **Assert** will check via the backend, that should already be anticipated under **Assert → Backend validations** (and probes).
 
 ### Assert
 
+**Goal:** Split **how you know the test passed** into **surface (UI)** and **truth (backend/async)** so you do not accidentally ship tests that only check the happy path in the DOM while the server is wrong.
+
 #### UI validations
 
-Plain-English: what the test will **verify in the browser** (visible text, navigation outcome, error banners, disabled buttons, etc.).
+Plain-English: what the test will **verify in the browser** after **Act** (visible text, URL, error banners, disabled buttons, toasts, empty states).
 
 #### Backend validations
 
-Plain-English: the **expected backend state** after the act phase (e.g. order in **accepted** state, event enqueued, DB row). Include:
+Plain-English: the **expected system state** after **Act** (e.g. order **accepted**, message enqueued, row soft-deleted). Include:
 
 - What should be true in persistence, queues, or domain state.
 - **Probe / read endpoints:** when state cannot be inferred from the UI, specify **test-only read/probe** HTTP endpoints that return the data the test will assert (DB snapshots, queue depth, record lookups). If new probe endpoints are needed, list them here; implement them in the batched **probe** step in [Batched order (Execute phase)](#batched-order-execute-phase).
@@ -151,17 +207,18 @@ Plain-English: the **expected backend state** after the act phase (e.g. order in
 
 For **each** test in the inventory:
 
-- [ ] **Arrange** has a clear world-state description.
+- [ ] **World-state trace** completed: entities/flags from **Arrange** mapped to fixtures/seeds or explicitly listed as new work ([World-state → seed/fixture traceability](#world-state--seedfixture-traceability-required)).
+- [ ] **Arrange** states a clear **world state** (not implementation); **Fixtures plan** and **Seed endpoint updates** align with that state.
 - [ ] **Fixtures plan** names existing + new/updated fixtures (or `N/A` with justification if no Playwright fixture is used—rare for UI tests).
-- [ ] **Seed endpoint updates** is complete or `N/A` (with no hidden missing seeds).
-- [ ] **Act** lists concrete steps in order.
-- [ ] **Assert** has both **UI validations** and **Backend validations** subsections; each is complete **or** explicitly **`TBD (needs user: …)`** / blocked.
+- [ ] **Seed endpoint updates** is complete or **`N/A`** only with the **strict** justification above (named existing coverage); no “TBD” hidden as `N/A`.
+- [ ] **Act** lists **concrete, ordered** steps (the automation script); no Arrange-only prose mixed in as “steps.”
+- [ ] **Assert** has **UI validations** and **Backend validations** subsections; probes listed where backend truth matters; each subsection is complete **or** explicitly **`TBD (needs user: …)`** / blocked.
 
 ---
 
 ## Batched order (Execute phase)
 
-After the user approves the Plan, during **Execute** implement work in this order **across all tests** in the plan (so the backend is not cycled for every test):
+After the user approves the Plan, during **Execute** implement work in this order **across all tests** in the plan (so the backend is not cycled for every test). This order mirrors **Arrange → Act → Assert** in code: **support Arrange** (seeds, then fixtures), **support Assert** (probes), **then implement Act and Assert** in the spec (with **Assert** already specified so you do not author blind).
 
 1. **Seed endpoint updates (implementation)**  
    Add or change **all** seed-related routes/handlers required by **any** test’s **Arrange → Seed endpoint updates**.
@@ -176,12 +233,12 @@ After the user approves the Plan, during **Execute** implement work in this orde
    Create or update **all** Playwright fixtures (and related helpers) needed so each test can obtain the **Arrange** world state.
 
 5. **Test authoring (per test; follow the plan)**  
-   For each test, in spec code:
+   For each test, in spec code—**map 1:1 from the Plan’s Arrange / Act / Assert**:
 
-   - Use the **fixtures** identified in that test’s **Fixtures plan** so the browser (or client) starts from the right posture.
+   - **Arrange (code):** Use the **fixtures** from that test’s **Fixtures plan** so the browser (or client) starts from the documented posture.
    - Add **`// @Scenario: #TS-…`** link comment(s) per existing workflow (stories/scenarios created in **Execute** after approval; use **real** ids from MCP/CLI).
-   - Implement **Act** (UI or API steps).
-   - Implement **Assert**: **UI validations** plus **probe-based API checks** as planned.
+   - **Act (code):** Implement the ordered steps from the Plan’s **Act** section (UI or API automation).
+   - **Assert (code):** Implement the Plan’s **Assert** section: **UI validations** plus **probe-based API checks** from **Backend validations** where specified.
 
 6. **Run and triage**  
    Execute the real runner. On failure, apply [Validation failure triage](#validation-failure-triage) (system bug → fix product; test bug → fix test).
@@ -226,7 +283,7 @@ The Analyze phase must gather:
   - Existing stories/scenarios under `plans/` that match the change context.
   - Whether new stories/scenarios are needed.
 - **Candidate tests and posture (high level; no implementation yet)**
-  - A preliminary list of **which tests** might be needed and rough **Arrange** sketches; full **Arrange/Act/Assert** is written in Plan.
+  - A preliminary list of **which tests** might be needed. For each, jot **rough Arrange / Act / Assert** so Phase 2 is not cold-starting—the full three-section template is still required in **Plan**.
 - **Platform evidence (via TestChimp CLI/MCP when available)**
   - Use **TestChimp CLI** (`testchimp ...`) when MCP tools are not available.
   - Suggested queries:
@@ -241,6 +298,8 @@ Before proceeding to **Plan**, the agent must record **done/blocked/`N/A`** for 
 - [ ] Branch plan exists and was read/created.
 - [ ] Change context captured (diff vs base or explicit fallback).
 - [ ] Relevant existing plan docs identified (stories/scenarios/events/knowledge).
+- [ ] **Fixture/seed discovery:** scanned `<tests_root>/fixtures/` (or recorded `N/A` if no fixtures tree yet) and noted existing seed/read routes relevant to the change (or `N/A` + reason).
+- [ ] **`ai-test-instructions.md`:** re-read (or created stub via user direction) **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`** (or `N/A` + reason if plans root missing—then stop and recommend `/testchimp init`).
 - [ ] Coverage/execution history queried via CLI/MCP where applicable (or `N/A`).
 
 ---
@@ -256,8 +315,8 @@ The Plan MUST be written under the branch plan file. It MUST include the followi
      - **Never invent IDs** means: never assume fake `#US-...` / `#TS-...` ids.
      - If scenarios / stories are missing for the PR changes, the Plan must explicitly list the **new** stories/scenarios to be created so the platform generates **real IDs**.
      - **Timing rule**: the actual `create-user-story` / `create-test-scenario` calls (and subsequent `update-user-story` and `update-test-scenario`) must be performed **only in Execute**, **after** the user approves the Plan generated.
-2. **Tests to write (inventory) + per-test Arrange / Act / Assert**
-   - Use **[Tests to write (inventory)](#tests-to-write-inventory)** and, for each test, the full template under [Required structure for each proposed test (Plan phase)](#required-structure-for-each-proposed-test-plan-phase).
+2. **Tests to write (inventory) + per-test Arrange → Act → Assert**
+   - Use **[Tests to write (inventory)](#tests-to-write-inventory)** and, for **each** test, the full template under [Required structure for each proposed test (Plan phase)](#required-structure-for-each-proposed-test-plan-phase). The three sections are **mandatory** so **Arrange** drives the seed/fixture audit, **Act** defines executable steps, and **Assert** commits to UI vs probe proof—see [Arrange, Act, Assert: universal shape for every test](#arrange-act-assert-universal-shape-for-every-test).
    - **Cross-link:** The older **“Posture table”** (prerequisite entities, fixture deps, seed/probe, mocks, post-UI assertions) is **subsumed** by **Arrange** (world state + fixtures + seed updates) and **Assert** (UI + backend + probes). Mocks, if any, can be noted under **Arrange** (e.g. “HTTP mock for payment provider”) or in a short **Notes** line under that test.
 3. **System infra updates** (product/backend) — *summary / deduplication layer*
    - A consolidated list of all **seed** and **probe** endpoint work (may duplicate what each test’s **Seed endpoint updates** and **Backend validations** already state—intentional for a single “build list”).
@@ -282,9 +341,10 @@ Before proceeding to **Execute**, the agent must record **done/blocked/`N/A`** f
 
 - [ ] Plan includes **Tests to write (inventory)** and **per-test** Arrange / Act / Assert for **each** test.
 - [ ] [Plan structure guard (before user approval)](#plan-structure-guard-before-user-approval) satisfied for every test (or only `TBD` with explicit user-input labels—**not** silent blanks).
+- [ ] **World-state → seed/fixture** trace done for every test: consolidated **System infra** / **Test infra** lists match per-test **Arrange** (no orphan `N/A` seeds).
 - [ ] Stories/scenarios to create (no fake ids) and timing rule clear.
 - [ ] System infra and test infra summaries align with the per-test subsections.
-- [ ] Environment strategy chosen per `plans/knowledge/ai-test-instructions.md`.
+- [ ] Environment strategy **matches** `plans/knowledge/ai-test-instructions.md` (no improvised alternate URLs); FAQ section **consulted** for known env pitfalls affecting this PR scope.
 - [ ] User explicitly approved the plan to proceed.
 
 ---
@@ -293,7 +353,9 @@ Before proceeding to **Execute**, the agent must record **done/blocked/`N/A`** f
 
 Preamble before execution: Verify that the plan doc created above is present. Verify that it indicates the user has approved. If not—**PAUSE** and do **not** continue.
 
-Goal: execute the approved plan in **[Batched order (Execute phase)](#batched-order-execute-phase)**, and keep the plan checklists updated so reruns are deterministic.
+**Execute preamble — environment (mandatory):** Immediately after approval, re-open `plans/knowledge/ai-test-instructions.md` and confirm how this run will provision and target the app (**commands**, **URLs**, **MCP flows**, **health gates**). If anything is ambiguous, resolve it **before** seed/probe work—**do not** guess `BASE_URL`. If you hit a blocker, apply **[Binding: ai-test-instructions (environment and FAQ playbook)](#binding-ai-test-instructions-environment-and-faq-playbook)** step 3 (FAQ first); after a **novel** fix, apply step 4 (append FAQ entry).
+
+Goal: execute the approved plan in **[Batched order (Execute phase)](#batched-order-execute-phase)**, and keep the branch plan checklists updated so reruns are deterministic.
 
 During Execute, the agent MUST maintain a checklist in the branch plan file and mark each line as **done / blocked / N/A**.
 
@@ -338,7 +400,7 @@ Your tests must establish a **world-state posture** in the target project (seed 
 
 ## Phase 4: Validate (linkage + anomalies)
 
-Goal: ensure the resulting test suite is correctly linked to requirements and can be trusted by TestChimp coverage/reporting. Per-test **Act/Assert** validation already happened in **Execute**; this phase closes **gaps in scenario linkage** only.
+Goal: ensure the resulting test suite is correctly linked to requirements and can be trusted by TestChimp coverage/reporting. Per-test **Act** and **Assert** checks already ran in **Execute**; this phase closes **gaps in scenario linkage** only.
 
 ### What to validate
 
@@ -391,3 +453,4 @@ At the end, report:
 - What tests were added/updated and their run results.
 - Validate outcomes (scenario-link audit: pass/fail/anomalies fixed).
 - Any cleanup done (local env stop, ephemeral env destroy, temp artifacts removed, generated artifacts not committed).
+- Whether **`ai-test-instructions.md`** FAQ (**`## Past learnings — authoring & validation (FAQ)`**) was **updated** with any new Q/A entries from this run (or explicitly **none**).

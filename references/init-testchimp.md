@@ -45,9 +45,22 @@ At minimum, `/testchimp init` should ensure this file contains the following sec
 ## TrueCoverage Plan
 
 ## Mocking Plan
+
+## Past learnings — authoring & validation (FAQ)
+
+<!-- FAQ-style playbook: each entry = symptom / blocker → resolution. Agents MUST consult this before improvising env fixes; MUST append a new Q/A after resolving any issue not already listed. See `references/testing-process.md` (ai-test-instructions binding). -->
+
+### Q: (example) Local stack reports healthy but tests hit wrong API host
+
+**A:** (example) `BASE_URL` in `.env-QA` pointed at staging; local compose only brought up UI. Document the correct export and which service owns `BASE_URL` for local runs.
+
 ```
 
 Keep this file **project-level only** (avoid workstation-specific progress like “installed MCP client on my laptop”).
+
+**`## Past learnings — authoring & validation (FAQ)`:** Maintain this section as a **running FAQ** for test authoring and validation: wrong ports, compose profiles, stale volumes, auth to preview envs, EaaS provision failures, flaky health checks, seed order, etc. Use a consistent **`### Q: …` / `**A:** …`** pattern so agents (and humans) can scan quickly. Init should **create** the heading (even if only the example stub remains until the first real incident); `/testchimp test` and evolve runs **grow** it whenever a blocker is hit and fixed.
+
+**TrueCoverage opt-in / opt-out:** Do **not** restate policy here—use **[Key Area 4 — TrueCoverage](#key-area-4-truecoverage-infra-rum-journey-events)** (single canonical block) and [`truecoverage.md`](./truecoverage.md).
 
 ### Two scopes: workstation vs project
 
@@ -225,16 +238,15 @@ Why this area (quick education):
     - **Usage:** imports or calls from `@testchimp/rum-js` and/or **`testchimp.init`** / **`testchimp.emit`** (or a thin wrapper module that delegates to them) in application source.
     - If both are present, **call this out explicitly** in discovery findings (e.g. “RUM library installed and referenced for emits—init can focus on gaps vs `truecoverage-instrument-progress`, not greenfield wiring”). Optionally ask the user whether to **plan additional events** to instrument (expand `plans/knowledge/truecoverage-instrument-progress.md` and follow the `plans/events/` vs `plans/knowledge/` rules) versus only documenting what already exists.
   - Check `plans/knowledge/truecoverage-instrument-progress.md` (if present) for planned vs done events; optionally list existing `plans/events/*.event.md` files (these document **instrumented** event types only—see below).
-- If TrueCoverage is **enabled now** (or the user opts in during init), init must:
+- **Decision policy** (downstream `/testchimp test` / evolve behavior is also spelled out in [`truecoverage.md`](./truecoverage.md) → *Project decision*):
+  - **Explicit opt-out / disabled** under `### TrueCoverage Plan` → complete discovery above; **skip** new RUM wiring in Phase 3 unless the user reverses the decision.
+  - **Any other state** (missing section, empty, deferred, enabled, or user re-opening the choice) → TrueCoverage stays **in scope**. Record a deliberate outcome: **Yes now**, **Later** (defer + progress tracker), or **No** where **No** is **only** a **persisted explicit opt-out**—not “we never discussed it.” **Defer** is a **schedule snooze**, not an opt-out for later test flows.
+- **Phase 3 — implement RUM** when the recorded choice is **Yes now**, or the repo is already **enabled** and init is executing remaining wiring (**not** when the user chose **Later** with no wiring in this pass):
   - set up **basic wiring** and instrument a **small initial event slice** (and create `plans/events/*.event.md` only for events actually instrumented), and
   - generate `plans/knowledge/truecoverage-instrument-progress.md` so the rest can be completed incrementally via `/testchimp instrument` (and/or during `/testchimp evolve`). See [`truecoverage.md`](./truecoverage.md). For evolve cadence and persisted evolve plans, see [`evolve-coverage.md`](./evolve-coverage.md).
-- If TrueCoverage decision state is missing OR the user wants to change it:
-  - Decide TrueCoverage timing explicitly: set up **now**, **later** (defer with snooze file), or **no**.
-  - **Authoritative references (agents must follow these for wiring and limits):**
-    - Project TrueCoverage playbook: [`references/truecoverage.md`](./truecoverage.md) (setup, progress tracker, MCP analytics, event docs).
-    - Browser RUM library (API, `init`/`emit`, configuration, batching, event constraints): **[@testchimp/rum-js on GitHub](https://github.com/testchimphq/testchimp-rum-js)** — read the README for **`testchimp.init`**, optional `config` tuning (sampling-like limits), and **`emit()`** rules before writing wrapper code.
-  - If setting up now: confirm the user should provide **`projectId`** and **`apiKey`** to the **app runtime** (the RUM SDK expects them in `testchimp.init({ projectId, apiKey, environment, ... })` per the library README). Use the app’s project environment files as appropriate; do **not** put these in `.env-QA` under the SmartTests root (those are for test execution vars like `BASE_URL`). The platform labels match TestChimp: `TESTCHIMP_PROJECT_ID` / `TESTCHIMP_API_KEY` in env often map into `init()`—see [`truecoverage.md`](./truecoverage.md).
-  - If setting up now, the agent should take a stance and propose a minimal instrumentation slice:
+  - **References:** [`references/truecoverage.md`](./truecoverage.md); **[@testchimp/rum-js on GitHub](https://github.com/testchimphq/testchimp-rum-js)** (`testchimp.init`, `config`, **`emit()`** rules).
+  - Confirm **`projectId`** and **`apiKey`** go to the **app runtime** via project env files (`testchimp.init({ projectId, apiKey, environment, ... })`); do **not** put them in `.env-QA` under the SmartTests root (`BASE_URL` lives there). See [`truecoverage.md`](./truecoverage.md).
+  - **Minimal instrumentation slice** (agent stance):
     - Helper wrapper location: pick (or create) a single app-runtime module dedicated to TrueCoverage emits - in the webapp-under-tests' frontend code (NOT inside the tests root). Prefer an existing telemetry/analytics module if one exists; otherwise create a dedicated file. Call **`testchimp.init()` once** (see GitHub README), then **`emit()`** from the wrapper for journey events.
     - **Sampling / volume:** RUM volume is controlled by the library’s **`config`** object on `init()` (e.g. `maxEventsPerSession`, `maxRepeatsPerEvent`, `eventSendInterval`, `maxBufferSize`, `captureEnabled`)—see **[@testchimp/rum-js README](https://github.com/testchimphq/testchimp-rum-js)** and the **Configuration / sampling** subsection in [`truecoverage.md`](./truecoverage.md). For the first slice, prefer **conservative** limits; reuse any existing tuning in the repo/env when present; only introduce new limits when none exist.
     - Basic events to instrument (minimal, stable set):
@@ -286,7 +298,7 @@ Do **not** open Phase 2 until **all** are satisfied (each **done** or **`N/A`** 
 - [ ] **Key Area 1** — markers / SmartTests root **discovered and reported** (or **blocker** + owner recorded).
 - [ ] **Key Area 2** — suite classification + user’s import/migration stance (or **greenfield `N/A`** + justification).
 - [ ] **Key Area 3** — AIMock choice + **`### Mocking Plan`** inputs ready for Phase 2 (or explicit deferral + reason).
-- [ ] **Key Area 4** — TrueCoverage discovery + **enabled / deferred / disabled** path decided and noted for Phase 2.
+- [ ] **Key Area 4** — TrueCoverage discovery + **enabled / deferred / explicit opt-out (disabled)** path decided and noted for Phase 2 (empty section counts as “not decided,” not opt-out).
 - [ ] **Key Area 5** — environment strategy **decided enough** to draft local-up + health contract in Phase 2.
 - [ ] **Key Area 6** — CI discovery + intended direction recorded for Phase 2.
 
@@ -328,7 +340,7 @@ Acceptance criteria (success checks):
   - if AIMock **deferred** or **not applicable**: explicitly recorded with reason
 - TrueCoverage Infra
   - `plans/knowledge/truecoverage-instrument-progress.md` exists with planned vs done (and planned-not-yet-instrumented events live there, not under `plans/events/`)
-  - for each event type **actually instrumented** during init, a matching `plans/events/<title>.event.md` exists; emit helper wrapper defined with configuration setup
+  - for each event type **actually instrumented** during init, a matching `plans/events/<title>.event.md` exists (**`## Rationale`** + metadata sections per **Event documentation** in [`truecoverage.md`](./truecoverage.md)); emit helper wrapper defined with configuration setup
 - Environment provision strategy
   - depends on the decision, and `ai-test-instructions` contains the user agreed-upon decision AFTER it has been discussed
   - for **Local - Test Authoring**, `ai-test-instructions` includes a single runnable “local up” command/script **and** explicit “wait until healthy” criteria (so agents can reliably provision and wait before testing)
@@ -488,24 +500,20 @@ Success check (Mocking):
 
 - `### Mocking Plan` reflects **`http_mocking`** and **`aimock`**; if AIMock enabled, goldens path + env wiring exist and are documented for local runs; CI path noted when CI is in scope (final CI wiring may complete in action H).
 
-### Action item I - TrueCoverage opt-in
+### Action item I - TrueCoverage setup
 
-Read `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan`.
+Execute **[Key Area 4 — TrueCoverage](#key-area-4-truecoverage-infra-rum-journey-events)** in Phase 1–3 and follow [`truecoverage.md`](./truecoverage.md). Read / update `### TrueCoverage Plan` in `ai-test-instructions.md`.
 
-If decision is missing or the user requests a change, explain value and ask:
+When the user must pick timing (no **explicit opt-out** yet), persist one of—meanings align with Key Area 4 **Decision policy**:
 
-- **Yes now**: install `@testchimp/rum-js` (in the application package), implement a single emit helper wrapper, configure runtime env vars (`TESTCHIMP_PROJECT_ID` + `TESTCHIMP_API_KEY` via app project environment files, not `.env-QA` under the tests root), set up sampling, identify a minimal set of basic events, wire those **instrumented** events through the emit helper, align reporter config, and persist the decision + notes under `### TrueCoverage Plan` in `plans/knowledge/ai-test-instructions.md`.
-
-  Additionally, during init you must generate the instrumentation tracker:
-  - scan the frontend to identify core routes/pages and the semantic events planned for each area
-  - create `plans/knowledge/truecoverage-instrument-progress.md` to track **planned vs done** (including events not yet instrumented)
-  - mark any existing emits as **done**
-  - add `plans/events/<title>.event.md` **only** for event types **actually wired** in init; planned-but-not-instrumented events stay in the knowledge progress tracker until `/testchimp instrument` lands them
-- **Later**: persist as deferred under `### TrueCoverage Plan` and direct user to `/testchimp setup truecoverage`.
-- **No**: persist as disabled under `### TrueCoverage Plan`.
+- **Yes now**: `@testchimp/rum-js` in the **app** package, single emit helper, app env for `TESTCHIMP_PROJECT_ID` / `TESTCHIMP_API_KEY` (not SmartTests `.env-QA`), sampling, minimal **instrumented** emits, reporter alignment; **`plans/knowledge/truecoverage-instrument-progress.md`** (scan routes → planned vs done; mark existing emits **done**); **`plans/events/<title>.event.md`** only for types **actually wired** in init.
+- **Later**: record **deferred** under `### TrueCoverage Plan`; point user to `/testchimp setup truecoverage` / `/testchimp instrument` for follow-up.
+- **No**: **only** as **persisted explicit opt-out** under `### TrueCoverage Plan` with a short rationale.
 
 Success check (TrueCoverage Infra):
-- if `enabled=true`, `plans/knowledge/truecoverage-instrument-progress.md` exists, the emit helper wrapper is defined with configuration setup (env wiring + sampling + basic event emits), and `plans/events/*.event.md` exists for each event type instrumented in init (planned-only events appear only under `plans/knowledge/` until instrumented).
+
+- If **Yes now** (or already enabled and wired this run): `truecoverage-instrument-progress.md` exists, emit helper + env wiring + sampling + basic emits are in place, and each **instrumented** event has a matching `plans/events/*.event.md` (planned-only events stay under `plans/knowledge/` until instrumented).
+- If **Later** or **explicit opt-out**: plan file reflects that choice; no silent “undecided” state.
 
 ### Action item G - Environment strategy
 
@@ -565,20 +573,13 @@ Critical behavior:
 
 ### TrueCoverage decision memory details
 
-Read `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` before prompting.
+**Policy** (opt-in default, explicit opt-out, defer ≠ opt-out, `/testchimp test` behavior): single source — **[Key Area 4](#key-area-4-truecoverage-infra-rum-journey-events)** **Decision policy** bullet and [`truecoverage.md`](./truecoverage.md) → *Project decision*. Do not restate here.
 
-- If enabled: do not reprompt unless user asks to revisit.
-- If disabled: skip instrumentation unless user changes decision.
-- If deferred: treat as **deferred during init** (a snooze), not a permanent opt-out.
-  - In **init**: do not proceed unless the user chooses “setup now”; record the deferral explicitly as “deferred during init”.
-  - In **test runs (`/testchimp test`)**: do **not** assume this means “skip forever” — proceed with TrueCoverage for the PR scope (wire missing framework pieces and define/document required events) unless the user has explicitly opted out/disabled.
+**Operational only:**
 
-If user chooses setup now, include:
-
-- `@testchimp/rum-js` installation in application package,
-- one shared emit helper,
-- request args wiring (`TESTCHIMP_API_KEY`, project id, environment tags),
-- alignment with reporter and event documentation flow.
+- **Explicit opt-out in file** → skip new RUM unless the user reverses.
+- **Enabled / wired** → do not re-prompt unless the user asks to revisit.
+- **Deferred** → init may skip wiring that run; record **deferred during init** clearly. Downstream flows still treat TrueCoverage as **in scope** unless the file has **explicit opt-out** (see Key Area 4 / `truecoverage.md`).
 
 ### Environment strategy decision details
 

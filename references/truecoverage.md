@@ -78,24 +78,30 @@ For **deterministic** cohorts (same user always in or out), hash a stable **non-
 
 TrueCoverage decisions are project-level and must be persisted in `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` (not in workstation marker files).
 
-Guidance:
+### Default: opted in
 
-- If TrueCoverage is **enabled** in the project plan: follow setup/instrument steps below.
-- If it is **disabled**: do not prompt again unless the user explicitly asks (e.g. `/testchimp setup truecoverage`).
-- If it is **deferred during init**: this is a **snooze**, not a permanent opt-out.
-  - During **`/testchimp test`**, treat TrueCoverage as **in-scope** for the PR and proceed to wire missing framework pieces (if any) and define/document the **event slice required by the changed journeys**.
-  - During **`/testchimp init`**, “deferred” should mean “not doing additional instrumentation in init” (commonly because `plans/events/` is still empty), but the agent must not later assume TrueCoverage is unavailable or out of scope.
+**Unless** `ai-test-instructions.md` **explicitly** states that TrueCoverage is **opted out** (e.g. a clear `### TrueCoverage Plan` entry such as “opted out,” “disabled for this repo,” “not applicable,” or equivalent team decision the file names as permanent opt-out), agents MUST treat TrueCoverage as **opted in**:
+
+- Plan RUM install (`@testchimp/rum-js`), `testchimp.init` / emit helper, Playwright reporter wiring, env vars, and **`plans/events/*.event.md`** for new or changed journeys as part of normal **`/testchimp init`**, **`/testchimp test`**, and **`/testchimp evolve`** work.
+- Do **not** skip TrueCoverage because the TrueCoverage section is missing, empty, or says only “deferred,” and do **not** treat silence as “user declined.”
+
+**Explicit opt-out only:** When the file **explicitly** records opt-out, skip new TrueCoverage instrumentation unless the user runs **`/testchimp setup truecoverage`** or otherwise asks to re-enable.
+
+**Deferred during init:** “Deferred” is a **schedule snooze** (which emits land later), **not** an opt-out.
+
+- During **`/testchimp test`**, treat TrueCoverage as **in-scope** for the PR: wire missing framework pieces, define/document the **event slice** for changed journeys, and update `plans/knowledge/truecoverage-instrument-progress.md` as appropriate.
+- During **`/testchimp init`**, “deferred” means not finishing every planned emit in that init pass; the agent must not later assume TrueCoverage is unavailable or out of scope.
 
 ---
 
 ## Ongoing: `/testchimp test`
 
-When `enabled=true` (or just deferred) and the PR adds or changes **meaningful user journeys**:
+When there is **no explicit opt-out** in `ai-test-instructions.md` and the PR adds or changes **meaningful user journeys**:
 
-1. **Plan:** Note TrueCoverage needs: new or updated events, helper placement, env config.
+1. **Plan:** Include TrueCoverage work: new or updated events, helper placement, env config, `plans/events/` docs, progress tracker updates.
 2. **Execute:** Emit events from the app code where it adds signal; use **`plans/events/`** (below) to document event types and metadata for consistency.
 
-If `enabled=false`, skip instrumentation unless the user explicitly asks.
+If **`### TrueCoverage Plan`** explicitly records **opted out**, skip new instrumentation unless the user explicitly asks (e.g. `/testchimp setup truecoverage`).
 
 ---
 
@@ -136,7 +142,7 @@ How `/testchimp evolve` uses it:
 
 ## Ongoing: `/testchimp evolve`
 
-When `enabled=true`, after requirement coverage and execution history, use MCP tools (see **SKILL.md**). Requests mirror the platform TrueCoverage API (JSON bodies use **camelCase** field names).
+When the project has **not** explicitly opted out of TrueCoverage in `ai-test-instructions.md`, after requirement coverage and execution history, use MCP tools (see **SKILL.md**). Requests mirror the platform TrueCoverage API (JSON bodies use **camelCase** field names). If explicitly opted out, omit TrueCoverage MCP analytics unless the user asks to re-evaluate.
 
 ### Execution scopes (mental model)
 
@@ -206,16 +212,33 @@ TrueCoverage setup and ongoing instrumentation is part of `init` and `test` work
 
 Events do **not** require server-side registration. To avoid duplicate names and document metadata for agents, add one **`*.event.md` file per event type** under **`plans/events/`** (under the mapped plans root). The platform treats these as **`EVENT_FILE`** (distinct from **`plans/knowledge/`** markdown).
 
+**Dual purpose:** Each file is both (1) a **schema note** for metadata and (2) **durable planning memory**. On later runs—especially **`/testchimp evolve`** and when calling TrueCoverage MCP tools to interpret funnels, coverage gaps, and metadata slices—the agent should **re-open the matching `*.event.md`** so instrumented titles are not “mystery emits.” Write the body so a **future agent** (often you, in a new session) can recover **why** the event exists, **what** you hoped to learn from analytics, and **how** that ties to product risk and requirements.
+
 **Frontmatter:**
 
 | Field | Description |
 |-------|-------------|
 | `title` | kebab-case; match the event file basename (without `.event.md`). |
-| `description` | Details about the event. Eg: When the event fires.|
+| `description` | Short factual line: when the event fires (user-visible moment or journey step). |
 | `added-on` | Date instrumentation was added (ISO date). |
 | `significance` | 1–5 for gap prioritization during evolve runs (1=low, 5=high). |
 
-**Body:** Document each metadata key using the **dot-scoped** form when it refers to a domain entity (`user.role`, `org.plan_tier`, …). For each key, specify **allowed values or value type**—prefer small **enums** or buckets (booleans, `low|med|high`) over free text. Note cardinality intent (e.g. “bounded set of roles only”). Non-entity dimensions may stay flat if clearer. Avoid documenting identifier-like keys; they must not be emitted.
+**Body — required sections (in this order):**
+
+1. **`## Rationale`** (required; this name is preferred so tools and humans can grep it—acceptable synonyms: **`## Instrumentation rationale`**, **`## Why this event`**)
+
+   Write for **your future self** when interpreting TrueCoverage stats and planning next steps. Include plain-language coverage of:
+
+   - **Thinking / intent** — Why instrument *here* (not elsewhere), what product or UX question this emit is meant to illuminate, and any tradeoffs (e.g. kept title coarse to limit cardinality).
+   - **Hypotheses / questions** — What you expect or want TrueCoverage data to answer (e.g. “Do users with `user.has_fop=false` abandon after this step disproportionately?”).
+   - **Business criticality** — Why this journey slice matters (revenue, compliance, trust, activation, etc.).
+   - **Requirement links** — Point to the **user stories / test scenarios** this event supports: `#US-…` / `#TS-…` ids and/or paths to markdown under `plans/stories/`, `plans/scenarios/`, or branch plans, so evolve and test planning stay grounded in the same scenarios you had in mind when adding the emit.
+
+   This section is **not** a substitute for `description` in frontmatter; `description` stays short and factual; **`## Rationale`** holds the narrative and planning context you will need when MCP returns time series, transitions, and metadata breakdowns.
+
+2. **`## Metadata keys`** (or keep the heading `## Metadata` if you prefer)
+
+   Document each metadata key using the **dot-scoped** form when it refers to a domain entity (`user.role`, `org.plan_tier`, …). For each key, specify **allowed values or value type**—prefer small **enums** or buckets (booleans, `low|med|high`) over free text. Note cardinality intent (e.g. “bounded set of roles only”). Non-entity dimensions may stay flat if clearer. Avoid documenting identifier-like keys; they must not be emitted.
 
 ---
 

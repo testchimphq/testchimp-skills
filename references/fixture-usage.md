@@ -2,6 +2,13 @@
 
 Use **Playwright fixtures** (`test.extend`, `mergeTests`) for data setup and teardown that must run **per test**, with the same behavior at **author time** and **CI time**. Fixtures call your **seed**, **teardown**, and **read** HTTP surfaces described in [`seeding-endpoints.md`](./seeding-endpoints.md).
 
+### When authoring or updating tests
+
+- **Never** add a new SmartTest/API test that assumes Arrange data without either importing an **existing** fixture that already seeds that posture or adding **fixture + seed endpoint** work to the plan or mocks as needed.
+- If you extend a fixture, verify the **HTTP contract** still matches the backend: new Arrange fields may require **seed handler updates**, not only client-side fixture changes.
+- Keep **one source of truth** between branch plan **Arrange → Fixtures plan / Seed endpoint updates** and the code you implement; update the plan if Execute discovers missing probes or seeds.
+- For the full gate checklist, see [`testing-process.md`](./testing-process.md) (**World-state → seed/fixture traceability** and **Batched order**).
+
 ---
 
 ## Layout

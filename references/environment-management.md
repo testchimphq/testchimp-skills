@@ -2,6 +2,8 @@
 
 Use this reference when deciding **where tests run** and **how environments are provisioned** for **per‑PR testing-before-merge**.
 
+**Project contract first:** The repo’s **`plans/knowledge/ai-test-instructions.md`** (especially **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`**) is **authoritative**. Follow that file **exactly** for commands, URLs, and health gates during `/testchimp test` and related flows. This document **supplements** it with general patterns; it does **not** override a persisted project decision. If you hit env blockers, read the FAQ there before improvising—see **[Binding: ai-test-instructions](testing-process.md#binding-ai-test-instructions-environment-and-faq-playbook)** in [`testing-process.md`](./testing-process.md).
+
 This doc intentionally focuses on two workflows only:
 
 - **Local — Test author time** (agents and humans iterating on tests)

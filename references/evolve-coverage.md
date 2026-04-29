@@ -22,7 +22,7 @@ Systematically improve **requirement coverage**, **execution health**, and **Tru
 ## Prerequisites
 
 1. **Mapped plans root:** Resolve **`<MAPPED_PLANS_ROOT>`** as the directory containing the **`.testchimp-plans`** marker (same rule as **`/testchimp test`** plan persistence in **SKILL.md**). All evolve plan files live under that root.
-2. **TrueCoverage:** If `plans/knowledge/ai-test-instructions.md` → **`### TrueCoverage Plan`** says TrueCoverage is **disabled**, skip TrueCoverage **Analyze** steps unless the user explicitly wants them. Otherwise follow **`ExecutionScope`** and metadata rules in [`truecoverage.md`](./truecoverage.md).
+2. **TrueCoverage:** Skip TrueCoverage **Analyze** steps **only** when **`### TrueCoverage Plan`** **explicitly** records **opt-out / disabled**. If the section is missing, empty, or only says **deferred**, treat TrueCoverage as **in scope** and follow **`ExecutionScope`** and metadata rules in [`truecoverage.md`](./truecoverage.md).
 3. **Guardrails:** Story/scenario IDs and MCP ordering follow **SKILL.md** → Agent guardrails and [`test-planning.md`](./test-planning.md).
 
 ---
@@ -79,7 +79,7 @@ See **`ExecutionScope`** in [`truecoverage.md`](./truecoverage.md):
 
 Do **not** open Phase 2 until **all** are satisfied. Same bar as [`init-testchimp.md`](./init-testchimp.md) and [`testing-process.md`](./testing-process.md): each line **done** or **`N/A`** + **one-line justification** (record in chat or draft notes for the plan file).
 
-- [ ] TrueCoverage subsection **skipped intentionally** (disabled + user OK) **or** scopes chosen and at least one pass of **`get-truecoverage-events`** completed.
+- [ ] TrueCoverage subsection **skipped intentionally** (**explicit** opt-out in `### TrueCoverage Plan` + user OK) **or** scopes chosen and at least one pass of **`get-truecoverage-events`** completed.
 - [ ] Requirement coverage pulled with gap-friendly flags **or** scoped intentionally narrow with user direction.
 - [ ] Execution history reviewed for the same scope/time mental model.
 - [ ] Short list of **top gaps** and **signals** (what data justified priority) , and an executive summary of the targets, is ready to paste into the plan file.
@@ -113,7 +113,7 @@ index: "01"
 Each section should include **rationale** (why it matters for this run) and a **markdown checklist** of concrete action items.
 
 1. **Analysis summary** — Bullets: key signals (TrueCoverage, requirements, execution), top risks, what surprised you.
-2. **TrueCoverage instrumentation** — Read the **existing** **`plans/knowledge/truecoverage-instrument-progress.md`** first: it holds **pre-identified** work, including items that are **planned but not yet implemented**. In this evolve cycle, **choose from that backlog** (and add any newly discovered gaps from Phase 1), ordered by **business priority** as you judge. Then list concrete work: new or updated **`testchimp.emit`** titles and **metadata** with **dot-scoped** entity keys where applicable ([`truecoverage.md`](./truecoverage.md)). Link/update **`plans/knowledge/truecoverage-instrument-progress.md`** and **`plans/events/*.event.md`** as items land or status changes.
+2. **TrueCoverage instrumentation** — Read the **existing** **`plans/knowledge/truecoverage-instrument-progress.md`** first: it holds **pre-identified** work, including items that are **planned but not yet implemented**. In this evolve cycle, **choose from that backlog** (and add any newly discovered gaps from Phase 1), ordered by **business priority** as you judge. Then list concrete work: new or updated **`testchimp.emit`** titles and **metadata** with **dot-scoped** entity keys where applicable ([`truecoverage.md`](./truecoverage.md)). Link/update **`plans/knowledge/truecoverage-instrument-progress.md`** and **`plans/events/*.event.md`** as items land or status changes. Every **`*.event.md`** must include a **`## Rationale`** body section (instrumentation intent, hypotheses, business criticality, scenario/story links) so later MCP analysis stays tied to planning context—see **Event documentation** in [`truecoverage.md`](./truecoverage.md).
 3. **Seed / probe endpoints and mocks** — Endpoints or **`page.route`** / AIMock changes needed to support new world-states of entities identified and untested.
 4. **Fixtures** — Playwright fixture work tied to **observed metadata slices** (e.g. users without FOP if production shows that slice on checkout).
 5. **New tests** — SmartTests / API tests; prioritize by **signals + requirement gaps + business criticality**.
@@ -168,7 +168,7 @@ Then complete **Verification** and **Closure** below.
 
 ### Verification
 
-- Run **new or changed** tests per **`plans/knowledge/ai-test-instructions.md`** (local vs CI, env bring-up, headed vs headless—follow what the project recorded).
+- Run **new or changed** tests per **`plans/knowledge/ai-test-instructions.md`** (local vs CI, env bring-up, headed vs headless—follow what the project recorded; consult **`## Past learnings — authoring & validation (FAQ)`** when bring-up or URLs fail—[`testing-process.md`](./testing-process.md#binding-ai-test-instructions-environment-and-faq-playbook)).
 - For SmartTest details, see [`write-smarttests.md`](./write-smarttests.md).
 
 ### Closure

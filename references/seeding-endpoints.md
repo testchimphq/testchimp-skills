@@ -6,6 +6,20 @@ For how fixtures call these endpoints, see **[`fixture-usage.md`](./fixture-usag
 
 ---
 
+## Prerequisite world-state: agent checklist
+
+Before marking **Seed endpoint updates** as `N/A` in a branch plan, work top-down:
+
+1. **Read the scenario’s Arrange** as a literal checklist of entities, relationships, and flags (e.g. “org on enterprise plan,” “user never completed onboarding,” “invoice in disputed state”). If scenario documentation doesnt have an arrange block, read the scenario to formulate what world-state the test needs before the test actions are to be executed. Objective is each test gets the correct world-state to operate on - via fixtures / mocks.
+2. **Search** existing seed/read/teardown routes and **`fixtures/`** for each line item. If nothing implements a line item, you need a **new or updated** endpoint or fixture—**not** `N/A`.
+3. **Prefer extending** an existing seed route with a new payload shape or idempotent branch over duplicating routes; document the delta in the plan’s consolidated **System infra updates**.
+4. **Teardown and idempotency:** if tests run in parallel or with retries, specify how seeds avoid collisions (`testInfo` labels, natural keys) and what teardown resets—see **Idempotency and safety** below.
+5. **After UI-heavy flows**, if **Assert** needs backend truth, pair seed work with **read/probe** endpoints; implement probes in the same batched **Execute** pass as seeds ([`testing-process.md`](./testing-process.md) → Batched order).
+
+Skipping seed (or mocks) work “to save time” while Arrange assumes non-default data is a **hard failure mode** for `/testchimp test`; treat missing seeds as **Execute blockers** until implemented.
+
+---
+
 ## After you change seed endpoints or backend code
 
 When you add or modify **seed/teardown/read** routes, **config or flags** that gate those test-only surfaces (non-production guards, env vars, etc.), or **any backend** your fixtures or tests call (using whatever **base URLs** the project documents—often `BASE_URL`, API host vars, or similar), the **running** app-under-test must pick up those changes before you execute Playwright or validate behavior.
