@@ -56,11 +56,11 @@ Recommended takeover loop:
 4. **Validate immediately**
    - Run `npx playwright test` (still in the mapped tests root) to ensure the updated test passes end-to-end.
    - If failures occur, decide: **intended behavior change** (update test + scenario), or **real regression** (call it out; prefer fixing product code over “fixing tests”).
-5. **Imports in SmartTest files** ALWAYS add those.
+5. **Imports in SmartTest files** — always include:
    - `import { ai } from 'ai-wright';`
-   - `import '@testchimp/playwright/runtime';`
+   - **`import { test, expect } from '<relative>/fixtures/index.js'`** (path from the spec file to **`tests/fixtures/index.js`**; see [`fixture-usage.md`](./fixture-usage.md)). **Never** import **`test`** from **`@playwright/test`** in **`*.spec.*`** files — TrueCoverage’s **`installTrueCoverage`** must wrap the same merged **`test`** instance.
 
-   The above enables AI steps in tests and TrueCoverage event tracking. Import **`test` / `expect` from your merged [`fixtures/`](./fixture-usage.md) entry** when tests use shared data setup.
+   Per-spec **`import '@testchimp/playwright/runtime'`** is optional legacy; the supported pattern is **`installTrueCoverage(mergeTests(...))`** in **`fixtures/index.js`** only.
 
 6. **Scenario link** — As the **first statement inside the test body**:
    - `// @Scenario: #TS-xxx <Scenario title>`  

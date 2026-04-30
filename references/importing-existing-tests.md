@@ -60,8 +60,8 @@ Teams can adopt these gradually on an existing suite:
 |----------|---------|
 | `// @Scenario` comments | Link specs to test-plan scenarios (traceability). |
 | `import { ai } from 'ai-wright'` | Natural-language **`ai.act` / `ai.verify` / `ai.extract`** steps. |
-| `@testchimp/playwright/runtime` | TrueCoverage / reporter integration (`import '@testchimp/playwright/runtime'`). |
-| `import '@testchimp/playwright/runtime'` in **every** `*.spec.{js,ts}` | Enables runtime integration (e.g. TrueCoverage test-identity metadata during runs). Include in each spec file. |
+| **`tests/fixtures/index.js`** + **`installTrueCoverage(mergeTests(...))`** | TrueCoverage registers `beforeEach` on the **same** merged `test` specs use; requires **`@testchimp/playwright` ≥ 0.1.1**. |
+| **`import { test, expect } from '<relative>/fixtures/index.js'`** in **every** `*.spec.{js,ts}` | Mandatory; do **not** use root **`test`** from **`@playwright/test`** in spec files. |
 | `@testchimp/playwright/reporter` in config | Execution reporting to TestChimp. |
 
 ---
@@ -82,20 +82,22 @@ npx playwright test
 
 ## Enabling TestChimp runtime and reporting
 
-1. **`@testchimp/playwright`** installed at the SmartTests **package root** (same `package.json` as `@playwright/test` for that folder).
+1. **`@testchimp/playwright`** installed at the SmartTests **package root** (same `package.json` as `@playwright/test` for that folder), at least **0.1.1** for **`installTrueCoverage`**.
 2. In **`playwright.config.*`**, `reporter` includes **`['@testchimp/playwright/reporter', { ... }]`**.
-3. **`import '@testchimp/playwright/runtime'`** at the top of **each** `*.spec.{js,ts}` file (per TestChimp integration expectations).
-4. **`setup/`** as a Playwright project that runs before main tests (see template); add **`fixtures/`** when tests need shared seed/teardown ([`fixture-usage.md`](./fixture-usage.md)).
+3. **`tests/fixtures/index.js`** (or platform-synced equivalent) exports **`test`** wrapped with **`installTrueCoverage(mergeTests(...))`** per [`fixture-usage.md`](./fixture-usage.md).
+4. **`setup/`** as a Playwright project that runs before main tests (see template); domain modules under **`fixtures/*.fixture.js`** as needed.
 
-### Required: runtime import in every spec file
+### Required: fixtures-first imports in spec files
 
 When **importing or aligning** an existing Playwright suite, treat this as **non-negotiable** for completion:
 
-- **Every** `*.spec.{js,ts}` under the **mapped SmartTests root** (including specs **moved** in from a legacy folder and any **`setup/**/*.spec.*`** that Playwright runs as tests) must include **`import '@testchimp/playwright/runtime'`** as a top-of-file side effect (before or alongside other imports, per project style—**do not** skip files).
+- **Every** `*.spec.{js,ts}` under the **mapped SmartTests root** (including specs **moved** in from a legacy folder and any **`setup/**/*.spec.*`** that Playwright runs as tests) must use **`import { test, expect } from '<relative>/fixtures/index.js'`** where the relative path resolves to **`tests/fixtures/index.js`**. Do **not** import **`test`** from **`@playwright/test`** in spec files.
 
-**Why:** That import wires the **test-side** TestChimp runtime used for **TrueCoverage** (test identity and related metadata during runs), **`ai-wright`** intelligent steps, and consistent integration with **`@testchimp/playwright`** reporting—without it, those features are incomplete or unreliable even if the reporter is in config.
+**Why:** TrueCoverage’s **`installTrueCoverage`** registers `beforeEach` on the **`test` instance** your specs use. If specs import the root Playwright **`test`** while **`mergeTests`** lives only in **`fixtures/index.js`**, CI metadata injection does not run on merged tests. Centralizing **`installTrueCoverage(mergeTests(...))`** in **`fixtures/index.js`** fixes that; **`ai-wright`** and the reporter work as before.
 
-During **Phase 2 (plan)**, list adding/fixing this import as an explicit task for every affected file. During **Phase 3 (execute)**, verify with a repo-wide pass (e.g. search for `*.spec.{js,ts}` and confirm each contains the import) before marking import work **done**.
+**Migration from legacy suites:** If specs currently use **`import '@testchimp/playwright/runtime'`** plus **`import { test } from '@playwright/test'`**, move to **`fixtures/index.js`** + relative **`test` / `expect`** imports, then drop redundant per-spec runtime imports once the master file uses **`installTrueCoverage`**.
+
+During **Phase 2 (plan)**, list adding **`fixtures/index.js`** (if missing) and fixing **imports** as an explicit task for every affected file. During **Phase 3 (execute)**, verify with a repo-wide pass before marking import work **done**.
 
 ---
 
@@ -108,8 +110,8 @@ During **Phase 2 (plan)**, list adding/fixing this import as an explicit task fo
 
 ## Init workflow: plan vs execute
 
-- **Phase 2 (plan):** If discovery finds **existing Playwright** outside the mapped folder, or **dual-folder** layout, include an explicit **import / alignment** subsection: moves, config path fixes, adding reporter + deps, `fixtures/`, and **adding `import '@testchimp/playwright/runtime'` to every `*.spec.{js,ts}`** in scope (see [Required: runtime import in every spec file](#required-runtime-import-in-every-spec-file) above).
-- **Phase 3 (execute):** Perform agreed **file moves** and **config edits** only after the user approves the plan—do not move tests silently. Before closing out import work, confirm **all** SmartTests specs include the runtime import.
+- **Phase 2 (plan):** If discovery finds **existing Playwright** outside the mapped folder, or **dual-folder** layout, include an explicit **import / alignment** subsection: moves, config path fixes, adding reporter + deps, **`tests/fixtures/index.js`**, and **fixtures-first `test` / `expect` imports** for every `*.spec.{js,ts}` in scope (see [Required: fixtures-first imports in spec files](#required-fixtures-first-imports-in-spec-files) above).
+- **Phase 3 (execute):** Perform agreed **file moves** and **config edits** only after the user approves the plan—do not move tests silently. Before closing out import work, confirm **all** SmartTests specs import from **`fixtures/index.js`** only.
 
 ---
 

@@ -2,6 +2,8 @@
 
 Use **Playwright fixtures** (`test.extend`, `mergeTests`) for data setup and teardown that must run **per test**, with the same behavior at **author time** and **CI time**. Fixtures call your **seed**, **teardown**, and **read** HTTP surfaces described in [`seeding-endpoints.md`](./seeding-endpoints.md).
 
+**Standard layout (mandatory for SmartTests):** Under the mapped **tests** root, keep **`tests/fixtures/`** and a master **`fixtures/index.js`** (or `index.ts`). The platform seeds this file for new projects; specs **must** import **`test` / `expect`** from it only (relative path), not from **`@playwright/test`**, so **TrueCoverage** (`installTrueCoverage` on the same merged `test` object) and reporter alignment stay correct. Requires **`@testchimp/playwright` ≥ 0.1.1** for `installTrueCoverage`.
+
 ### When authoring or updating tests
 
 - **Never** add a new SmartTest/API test that assumes Arrange data without either importing an **existing** fixture that already seeds that posture or adding **fixture + seed endpoint** work to the plan or mocks as needed.
@@ -13,31 +15,35 @@ Use **Playwright fixtures** (`test.extend`, `mergeTests`) for data setup and tea
 
 ## Layout
 
-- **`fixtures/`** lives at the **SmartTests root** (next to `e2e/`, `setup/`, `playwright.config.*`).
-- **One master file** (e.g. `fixtures/index.js` or `fixtures/index.ts`) imports **`mergeTests`** from `@playwright/test`, imports each **domain** module, and exports a single merged **`test`** (and usually **`expect`**).
-- **Domain files** (e.g. `fixtures/auth.fixture.js`, `fixtures/billing.fixture.js`) each extend `test` with fixtures for that domain. Keep domains separate so the tree stays navigable.
+- **`fixtures/`** lives under the mapped **tests** tree as **`tests/fixtures/`** (next to `e2e/`, `setup/`, `playwright.config.*`).
+- **One master file** (`fixtures/index.js` or `fixtures/index.ts`) imports **`mergeTests`** from `@playwright/test`, composes domain fixtures, wraps the result with **`installTrueCoverage`** from **`@testchimp/playwright/runtime`**, and re-exports **`test`** and **`expect`**.
+- **Domain files** (e.g. `fixtures/auth.fixture.js`, `fixtures/billing.fixture.js`) each use **`import { test as base } from '@playwright/test'`** (or extend another base) **inside the fixture module only** — not in spec files.
 
 **Discoverability:** Add a **short comment above** each fixture extension describing **what application posture** it establishes (entities, flags, roles). Agents can grep `fixtures/` to find the right dependency for a scenario.
 
 ---
 
-## Master file pattern (`mergeTests`)
+## Master file pattern (`mergeTests` + `installTrueCoverage`)
 
 ```javascript
-// fixtures/index.js — single entry: specs import from here
+// tests/fixtures/index.js — single entry: every spec imports test/expect from here
 import { mergeTests } from '@playwright/test';
-import { test as auth } from './auth.fixture';
-import { test as billing } from './billing.fixture';
+import { installTrueCoverage } from '@testchimp/playwright/runtime';
+import { test as auth } from './auth.fixture.js';
+import { test as billing } from './billing.fixture.js';
 
-export const test = mergeTests(auth, billing);
+export const test = installTrueCoverage(mergeTests(auth, billing));
 export { expect } from '@playwright/test';
 ```
 
-Specs use **one** import:
+Specs use **one** import (adjust the relative path from the spec file to `tests/fixtures/index.js`):
 
 ```javascript
-import { test, expect } from '../fixtures'; // adjust relative path
+// e.g. tests/e2e/checkout/foo.spec.js
+import { test, expect } from '../../fixtures/index.js';
 ```
+
+**Do not** import **`test`** from **`@playwright/test`** in **`*.spec.*`** files — that bypasses **`installTrueCoverage`** on the merged instance. Optional: side-effect **`import '@testchimp/playwright/runtime'`** still registers on the root Playwright `test` for backward compatibility; the supported pattern is **`installTrueCoverage`** in this master file only.
 
 ---
 
@@ -70,7 +76,7 @@ export const test = base.extend({
 
 To explore the UI **after** the same data posture a real test will use:
 
-1. Add a **temporary** spec that imports **`test` from `../fixtures`** (same merged object as production tests).
+1. Add a **temporary** spec that imports **`test` from your relative `fixtures/index.js`** (same merged object as production tests).
 2. Declare the **fixture dependencies** the scenario needs in the test signature.
 3. After navigation/setup lines, add **`await page.pause()`**.
 4. Run: **`npx playwright test path/to/probe.spec.js --headed --debug`** (see [Playwright debugging](https://playwright.dev/docs/debug)). Fixtures run in the normal test lifecycle **before** the pause; use the inspector to resume or step. **Delete** the temp file when done so nothing lingers in the repo.

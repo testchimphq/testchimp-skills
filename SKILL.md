@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP or CLI), coverage, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve), SmartTests, agent-driven test or plan authoring, or updating this skill from Git.
 compatibility: Requires Node.js; @playwright/test and playwright >= 1.59.0 (see Preamble checks); TESTCHIMP_API_KEY for MCP, CLI, and ai-wright. Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.2.6
+version: 0.2.7
 required_cli_version: "0.1.1"
 ---
 
@@ -127,6 +127,8 @@ TestChimp adds **empty marker files** after mapping: **`.testchimp-tests`** at t
    - Project runbooks live in **`plans/knowledge/ai-test-instructions.md`**. Maintain **`## Past learnings — authoring & validation (FAQ)`** (FAQ-style **`### Q:`** / **`**A:**`** entries) for recurring provisioning, health-check, URL/`BASE_URL`, auth, compose, EaaS, volume, and seed-order issues—see **[Binding: ai-test-instructions](references/testing-process.md#binding-ai-test-instructions-environment-and-faq-playbook)** in [`references/testing-process.md`](references/testing-process.md).
    - **Before improvising** when a blocker appears during test authoring, execution, or validation: **re-read** that file (Environment Provision Strategy **and** the FAQ). If you resolve something **not** already documented, **append** a new Q/A in the same run.
    - Broader infra notes (not FAQ-shaped) may still go elsewhere in `ai-test-instructions.md`, but anything another agent would hit again belongs in the FAQ.
+
+7. **SmartTests fixtures-first (`tests/fixtures/index.js`).** Every **`*.spec.{js,ts}`** under the mapped tests tree must import **`{ test, expect }`** from **`fixtures/index.js`** using the correct **relative** path (same rule as the TestChimp **new spec** stub). **`fixtures/index.js`** must apply **`installTrueCoverage`** from **`@testchimp/playwright/runtime`** (≥ **0.1.1**) to the merged **`test`**. Do **not** import **`test`** from **`@playwright/test`** in spec files. Domain fixture modules may still use **`@playwright/test`** internally—see [`references/fixture-usage.md`](references/fixture-usage.md).
 
 ## MCP client and CLI (agents)
 
