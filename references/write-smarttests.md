@@ -97,6 +97,22 @@ Recommended takeover loop:
    });
    ```
 
+7. **Screen / state atlas workflow (`markScreenState`)** — follow this exact sequence:
+   - **Before authoring starts:** call MCP **`list-screen-states`** once and keep the returned vocabulary in working memory for naming reuse.
+   - **During authoring iterations:** focus only on getting the test stable and passing. **Do not** do screen/state naming in these early runs (this slows down iteration and produces churn).
+   - **After authoring (validation run only):** run the test again specifically to add screen/state markers.
+   - **During that validation run, for likely transition points only** (navigation, modal open/close, tab switch, major content swap, route change, wizard step change):
+     1. Wait for UI to become stable (avoid loading/transient states).
+     2. Compare current UI against the **last captured screenshot** during the test run.
+     3. If no meaningful UI change, do nothing.
+     4. If meaningful change, classify screen/state:
+        - Reuse a name from previously fetched atlas vocab when it fits.
+        - If no good existing name, come up with reasonable names, call **`upsert-screen-states`** and then use the new names.
+     5. Insert **`await markScreenState('Screen', 'State?')`** immediately after the step that established that stable state.
+     6. Update the “last screenshot” baseline to the current screenshot.
+   - Keep only one baseline screenshot in memory at a time (the latest meaningful stable state).
+   - Prefer marking only **meaningful** state changes; skip transient/loading-only states.
+
 8. **Test naming (Playwright convention)**:
    - Use a **short, human-readable title** describing the behavior (imperative/statement form).
    - **Do not** include scenario ids (`TS-...`, `#TS-...`, `US-...`) or other IDs in the `test('...')` title.
@@ -216,6 +232,78 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 ```
 
 (`folderPath` as a string is split on `/` into segments.)
+
+### Tool: `list-screen-states`
+
+**Purpose:** Load the project’s **screen/state vocabulary** (relational atlas) before naming UI states in SmartTests or aligning with exploration data.
+
+**Arguments (optional):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `environment` | string | Optional; reserved for env-scoped vocabulary when the platform uses it. |
+
+**Minimal call:**
+
+```json
+{
+  "tool": "list-screen-states",
+  "arguments": {}
+}
+```
+
+### Tool: `upsert-screen-states`
+
+**Purpose:** Merge new or updated screen names and state strings into the project atlas (idempotent).
+
+**Arguments:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `screenStates` | array | Required. Each entry: `{ "screen": "Home", "states": ["Guest", "Member"] }` (proto JSON camelCase). |
+
+**Example:**
+
+```json
+{
+  "tool": "upsert-screen-states",
+  "arguments": {
+    "screenStates": [
+      { "screen": "Checkout", "states": ["default", "payment"] }
+    ]
+  }
+}
+```
+
+Use **`list-screen-states`** first during **Validate** (see [`testing-process.md`](./testing-process.md) Phase 4), then **`upsert-screen-states`** when you introduce names not already in the atlas, then add **`markScreenState`** in the spec (below).
+
+---
+
+## Screen / state markers (`markScreenState`)
+
+**Canonical:** record which **screen** and **state** the UI is in after meaningful transitions using:
+
+```ts
+import { markScreenState } from '@testchimp/playwright/runtime';
+
+test(){
+...
+await page.goto('settings');
+// After the step that establishes the new UI:
+await markScreenState('Settings', 'Notifications tab');
+}
+```
+
+- **Second argument optional** — omit it to record a default state: `await markScreenState('Dashboard')` (treated as **`default`** downstream).
+- Calls show up as **Playwright steps** in traces (`ScreenState: …`), which helps humans and platform features reason about journeys.
+- A **screen** is a logical view (for example login, dashboard, checkout), not strictly URL bound.
+- A **state** is a meaningful variant within a screen (for example empty cart vs cart with items).
+- Place `markScreenState` only after the UI has settled to a stable state; do not mark loading spinners/skeleton/transient overlays as durable states.
+- Marker insertion is expected during the **post-authoring validation pass**, not during the first drafting/debug loops.
+
+**Legacy:** `// @Screen: … @State: …` (and block-comment variants) still parse on old specs; **do not** teach or add these for new work — prefer **`markScreenState`** only.
+
+---
 
 ## AI steps (`ai-wright`): when to use what
 

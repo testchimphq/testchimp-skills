@@ -400,14 +400,19 @@ Your tests must establish a **world-state posture** in the target project (seed 
 
 ## Phase 4: Validate (linkage + anomalies)
 
-Goal: ensure the resulting test suite is correctly linked to requirements and can be trusted by TestChimp coverage/reporting. Per-test **Act** and **Assert** checks already ran in **Execute**; this phase closes **gaps in scenario linkage** only.
+Goal: ensure the resulting test suite is correctly linked to requirements and can be trusted by TestChimp coverage/reporting. Per-test **Act** and **Assert** checks already ran in **Execute**; this phase closes **gaps in scenario linkage** and **screen/state vocabulary** for traces and atlas-backed tooling.
 
 ### What to validate
 
 1. **Scenario-link comment audit (required)**
    - For every SmartTest that should correspond to a scenario:
      - Confirm there is at least one `// @Scenario: #TS-<n> <Title>` comment INSIDE the test body.
-2. **Anomaly handling (required)**
+2. **Screen-state atlas (SmartTests) — during Validate only**
+   - **Do not** spend multi-iteration **Execute** time naming every screen/state; do vocabulary work **here**, after tests pass functionally.
+   - **Before** the validation run (or before editing specs for trace quality): call the MCP tool **`list-screen-states`** (from `@testchimp/cli`) to load existing project vocabulary.
+   - During validation, after **stable** UI following a real transition (navigation, modal, meaningful DOM change), compare to the prior checkpoint; when the UI meaningfully changes, **reuse** an existing screen/state name from the list when it fits; otherwise call **`upsert-screen-states`** with the new names. Either way, after deciding on the naming for the current screen-state, then add **`await markScreenState('<Screen>', '<State>')`** (or omit the second argument for **`default`**) on the correct line in the spec so it appears in Playwright traces. Import from **`@testchimp/playwright/runtime`**.
+   - **Do not** add or rely on legacy **`// @Screen:`** / **`// @State:`** comment annotations for new or updated work — that path is **legacy**; **`markScreenState`** is canonical for new specs.
+3. **Anomaly handling (required)**
    - If a test is missing `// @Scenario:`:
      - Treat it as an anomaly.
      - Determine whether a relevant scenario already exists (from plans, or by querying TestChimp).
@@ -421,6 +426,8 @@ Record in branch plan file:
 
 - [ ] Scenario-link comment audit completed for all touched/new SmartTests.
 - [ ] Any missing links remediated (scenario created if needed; comments added).
+- [ ] Screen/state vocabulary: **`list-screen-states`** was used before atlas edits (or **`N/A`** with reason — e.g. no UI SmartTests touched).
+- [ ] Meaningful UI transitions in touched SmartTests have **`markScreenState`** at the right step, or **`N/A`** with reason (no meaningful transitions in scope).
 - [ ] Any remaining anomalies explicitly listed with next steps (only if blocked).
 
 ---
