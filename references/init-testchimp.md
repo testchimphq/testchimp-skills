@@ -46,6 +46,10 @@ At minimum, `/testchimp init` should ensure this file contains the following sec
 
 ## Mocking Plan
 
+## ExploreChimp
+
+<!-- Persist: NETWORK regex when NETWORK source is used (or document sources without NETWORK), default EXPLORECHIMP_SOURCES_TO_ANALYZE if narrowed, which tests/areas we explore on PRs, blockers resolved. Agents MUST read this before ExploreChimp runs. See references/exploratory_runs.md. -->
+
 ## Past learnings — authoring & validation (FAQ)
 
 <!-- FAQ-style playbook: each entry = symptom / blocker → resolution. Agents MUST consult this before improvising env fixes; MUST append a new Q/A after resolving any issue not already listed. See `references/testing-process.md` (ai-test-instructions binding). -->
@@ -464,7 +468,7 @@ Target structure inside SmartTests root:
 - `setup`: global setup / project dependencies (see template [`template_playwright.config.js`](../assets/template_playwright.config.js)),
 - `e2e`: UI-focused tests,
 - `api`: API-focused tests (optional project),
-- **`tests/fixtures/`** (under the mapped SmartTests root): **required**. A master **`fixtures/index.js`** (or `index.ts`) must wrap the Playwright `test` object with **`installTrueCoverage`** from **`@testchimp/playwright/runtime`** (typically after **`mergeTests`** for domain fixtures). See [`fixture-usage.md`](./fixture-usage.md). Platform OOBE / backfill may create the file; if it is missing locally, merge the platform sync PR or run the documented backfill before marking **done**. Full **domain fixture** and **seed endpoint** implementation usually lands during **`/testchimp test`** when scenarios require it.
+- **`tests/fixtures/`** (under the mapped SmartTests root): **required**. A master **`fixtures/index.js`** (or `index.ts`) must wrap the Playwright `test` object with **`installTestChimp`** from **`@testchimp/playwright/runtime`** (typically after **`mergeTests`** for domain fixtures). **`installTrueCoverage`** is a **deprecated alias** with the same behavior—prefer **`installTestChimp`**. See [`fixture-usage.md`](./fixture-usage.md). Platform OOBE / backfill may create the file; if it is missing locally, merge the platform sync PR or run the documented backfill before marking **done**. Full **domain fixture** and **seed endpoint** implementation usually lands during **`/testchimp test`** when scenarios require it.
 
 During init, **discover** whether test-only seed/teardown/read routes already exist (see [`seeding-endpoints.md`](./seeding-endpoints.md)) and **record** findings in `plans/knowledge/ai-test-instructions.md` for later test authoring. Do **not** block init on authoring every endpoint or domain fixture module.
 
@@ -476,12 +480,12 @@ Read `plans/knowledge/ai-test-instructions.md` for Key Area 2 decisions and foll
 
 - If Phase 2 marked this area **skipped** / **N/A** (greenfield), mark action K **skipped** and do not move files.
 - Otherwise: perform the **approved** moves, config path fixes, `@testchimp/playwright` reporter + deps, and **`tests/fixtures/`** + master **`fixtures/index.js`** as listed in the init plan—**only** after user approval of the plan.
-- **Every** executable **`*.spec.{js,ts}`** / SmartTest under the mapped tree must import **`test` and `expect` only** from **`fixtures/index.js`** (relative path from the spec file)—never the root **`test`** from **`@playwright/test`** in spec files. TrueCoverage hooks live on the merged `test` via **`installTrueCoverage`** in that master file; see [`importing-existing-tests.md`](./importing-existing-tests.md#required-fixtures-first-imports-in-spec-files).
+- **Every** executable **`*.spec.{js,ts}`** / SmartTest under the mapped tree must import **`test` and `expect` only** from **`fixtures/index.js`** (relative path from the spec file)—never the root **`test`** from **`@playwright/test`** in spec files. TestChimp runtime hooks (TrueCoverage CI metadata, **`markScreenState`**, ExploreChimp when enabled) live on the merged `test` via **`installTestChimp`** in that master file; see [`importing-existing-tests.md`](./importing-existing-tests.md#required-fixtures-first-imports-in-spec-files).
 
 Success check (Import strategy):
 
 - SmartTests root matches the agreed strategy (**parallel-folder** migration state or **retrofit** complete to the extent planned); `npx playwright test` from the mapped folder is the canonical command; platform path expectations in [`importing-existing-tests.md`](./importing-existing-tests.md) are satisfied.
-- **Every** in-scope **`*.spec.{js,ts}`** imports **`{ test, expect }`** from the correct relative **`fixtures/index.js`** (verify with a repo search before marking **done**). Legacy per-spec **`import '@testchimp/playwright/runtime'`** is optional once **`installTrueCoverage(mergeTests(...))`** is applied in **`fixtures/index.js`**.
+- **Every** in-scope **`*.spec.{js,ts}`** imports **`{ test, expect }`** from the correct relative **`fixtures/index.js`** (verify with a repo search before marking **done**). Legacy per-spec **`import '@testchimp/playwright/runtime'`** is optional once **`installTestChimp(mergeTests(...))`** is applied in **`fixtures/index.js`**.
 
 ### Action item J - Mocking (Playwright `page.route` + optional AIMock)
 

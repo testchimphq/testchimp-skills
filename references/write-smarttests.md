@@ -1,6 +1,6 @@
 # /testchimp test
 
-This document explains **how to write SmartTests** for agents during the **Execution phase** of `/testchimp test` (phased flow in [`testing-process.md`](./testing-process.md)). SmartTests are "Playwright with intelligent steps". Here are the key points:
+This document explains **how to write SmartTests** for agents during the **Execution phase** of `/testchimp test` (phased flow in [`testing-process.md`](./testing-process.md)). SmartTests are "Playwright with intelligent steps". Optional **ExploreChimp** UX analytics reuse the same UI tests when **`markScreenState`** is in place—see **[`exploratory_runs.md`](./exploratory_runs.md)**. Here are the key points:
 - Playwright tests in a **tests** folder mapped in TestChimp platform,
 - Ability to include natural language steps for "intent based" test steps in standard Playwright scripts
 - scenario linking via in-code structured comments in test (for built-in requirement traceability).
@@ -58,9 +58,9 @@ Recommended takeover loop:
    - If failures occur, decide: **intended behavior change** (update test + scenario), or **real regression** (call it out; prefer fixing product code over “fixing tests”).
 5. **Imports in SmartTest files** — always include:
    - `import { ai } from 'ai-wright';`
-   - **`import { test, expect } from '<relative>/fixtures/index.js'`** (path from the spec file to **`tests/fixtures/index.js`**; see [`fixture-usage.md`](./fixture-usage.md)). **Never** import **`test`** from **`@playwright/test`** in **`*.spec.*`** files — TrueCoverage’s **`installTrueCoverage`** must wrap the same merged **`test`** instance.
+   - **`import { test, expect } from '<relative>/fixtures/index.js'`** (path from the spec file to **`tests/fixtures/index.js`**; see [`fixture-usage.md`](./fixture-usage.md)). **Never** import **`test`** from **`@playwright/test`** in **`*.spec.*`** files — **`installTestChimp`** must wrap the same merged **`test`** instance (TrueCoverage, **`markScreenState`**, ExploreChimp when enabled).
 
-   Per-spec **`import '@testchimp/playwright/runtime'`** is optional legacy; the supported pattern is **`installTrueCoverage(mergeTests(...))`** in **`fixtures/index.js`** only.
+   Per-spec **`import '@testchimp/playwright/runtime'`** is optional legacy; the supported pattern is **`installTestChimp(mergeTests(...))`** in **`fixtures/index.js`** only.
 
 6. **Scenario link** — As the **first statement inside the test body**:
    - `// @Scenario: #TS-xxx <Scenario title>`  
@@ -281,12 +281,12 @@ Use **`list-screen-states`** first during **Validate** (see [`testing-process.md
 
 ## Screen / state markers (`markScreenState`)
 
-**Canonical:** `markScreenState` is a **Playwright fixture** registered by **`installTrueCoverage`** on the same merged **`test`** instance your specs import from **`tests/fixtures/index.js`** (see [`fixture-usage.md`](./fixture-usage.md)). **Do not** named-import `markScreenState` from `@testchimp/playwright/runtime` — it is not exported as a function.
+**Canonical:** `markScreenState` is a **Playwright fixture** registered by **`installTestChimp`** on the same merged **`test`** instance your specs import from **`tests/fixtures/index.js`** (see [`fixture-usage.md`](./fixture-usage.md)). **`installTrueCoverage`** is a **deprecated alias** of **`installTestChimp`** (identical behavior). **Do not** named-import `markScreenState` from `@testchimp/playwright/runtime` — it is not exported as a function.
 
 Record which **screen** and **state** the UI is in after meaningful transitions:
 
 ```ts
-// Spec imports { test, expect } from relative `tests/fixtures/index.js` (installTrueCoverage applied there).
+// Spec imports { test, expect } from relative `tests/fixtures/index.js` (installTestChimp applied there).
 
 test('settings notifications', async ({ page, markScreenState }) => {
   await page.goto('/settings');
@@ -296,7 +296,7 @@ test('settings notifications', async ({ page, markScreenState }) => {
 ```
 
 - **Second argument optional** — omit it to record a default state: `await markScreenState('Dashboard')` (treated as **`default`** downstream).
-- With **ExploreChimp** env enabled, the same fixture drives local analytics; with it off, it still emits a **`test.step`** so traces show `ScreenState: …`.
+- With **`EXPLORECHIMP_ENABLED`**, the same fixture drives **ExploreChimp** local analytics (env vars, sources, network regex, batch id—see **[`exploratory_runs.md`](./exploratory_runs.md)**); with it off, it still emits a **`test.step`** so traces show `ScreenState: …`.
 - A **screen** is a logical view (for example login, dashboard, checkout), not strictly URL bound.
 - A **state** is a meaningful variant within a screen (for example empty cart vs cart with items).
 - Place `markScreenState` only after the UI has settled to a stable state; do not mark loading spinners/skeleton/transient overlays as durable states.
@@ -378,7 +378,7 @@ const title = await ai.extract(
 
 ## Example SmartTest (full file)
 
-Illustrative end-to-end shape: **`test` / `expect` from `tests/fixtures/index.js`** (merged `test` wrapped with **`installTrueCoverage`**), scenario comment, plain Playwright plus one AI step. Adjust the relative import and selectors to match the repo.
+Illustrative end-to-end shape: **`test` / `expect` from `tests/fixtures/index.js`** (merged `test` wrapped with **`installTestChimp`**), scenario comment, plain Playwright plus one AI step. Adjust the relative import and selectors to match the repo.
 
 ```ts
 import { test, expect } from '../fixtures/index.js';
