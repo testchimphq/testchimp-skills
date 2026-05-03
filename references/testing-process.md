@@ -416,8 +416,9 @@ Goal: ensure the resulting test suite is correctly linked to requirements and ca
      - Confirm there is at least one `// @Scenario: #TS-<n> <Title>` comment INSIDE the test body.
 2. **Screen-state atlas (SmartTests) — during Validate only**
    - **Do not** spend multi-iteration **Execute** time naming every screen/state; do vocabulary work **here**, after tests pass functionally.
-   - **Before** the validation run (or before editing specs for trace quality): call the MCP tool **`list-screen-states`** (from `@testchimp/cli`) to load existing project vocabulary.
-   - During validation, after **stable** UI following a real transition (navigation, modal, meaningful DOM change), compare to the prior checkpoint; when the UI meaningfully changes, **reuse** an existing screen/state name from the list when it fits; otherwise call **`upsert-screen-states`** with the new names. Either way, after deciding on the naming for the current screen-state, ensure the test callback includes **`markScreenState`** (fixture from **`installTestChimp`** on the merged `test` in **`fixtures/index.js`**), then add **`await markScreenState('<Screen>', '<State>')`** (or omit the second argument for **`default`**) on the correct line in the spec so it appears in Playwright traces. **Do not** add `import { markScreenState } from '@testchimp/playwright/runtime'`.
+   - **Before** the validation run (or before editing specs for trace quality): load existing project vocabulary with **`testchimp list-screen-states`** in the **shell** (preferred for agents; see [`cli.md`](./cli.md) § **Screen-state atlas**) **or** MCP **`list-screen-states`** when MCP is available. Parse the JSON response and keep **`(screen, state)`** pairs in working memory for reuse.
+   - Run the touched UI specs **headed** for this pass when possible (per **`SKILL.md`** — e.g. `npx playwright test … --headed`) and **inspect the live UI** at each transition so names match **user-visible** surfaces; do not invent markers from code paths alone. Use trace/screenshot evidence if headed runs are not possible.
+   - After **stable** UI following a real transition (navigation, modal, meaningful DOM change), compare to the prior checkpoint; when the UI meaningfully changes, **reuse** an existing **`(screen, state)`** from the list when it fits; otherwise call **`testchimp upsert-screen-states`** (or MCP **`upsert-screen-states`**) **before** editing the spec, then add **`await markScreenState`** with the **exact** strings you registered. Ensure the test callback includes **`markScreenState`** (fixture from **`installTestChimp`** on the merged `test` in **`fixtures/index.js`**), then add **`await markScreenState('<Screen>', '<State>')`** (or omit the second argument for **`default`**) on the correct line so it appears in Playwright traces. **Do not** add `import { markScreenState } from '@testchimp/playwright/runtime'`.
    - **Do not** add or rely on legacy **`// @Screen:`** / **`// @State:`** comment annotations for new or updated work — that path is **legacy**; the **`markScreenState` fixture** is canonical for new specs.
 3. **Anomaly handling (required)**
    - If a test is missing `// @Scenario:`:
@@ -433,7 +434,7 @@ Record in branch plan file:
 
 - [ ] Scenario-link comment audit completed for all touched/new SmartTests.
 - [ ] Any missing links remediated (scenario created if needed; comments added).
-- [ ] Screen/state vocabulary: **`list-screen-states`** was used before atlas edits (or **`N/A`** with reason — e.g. no UI SmartTests touched).
+- [ ] Screen/state vocabulary: **`testchimp list-screen-states`** (CLI) or MCP **`list-screen-states`** was used before atlas / `markScreenState` edits (or **`N/A`** with reason — e.g. no UI SmartTests touched).
 - [ ] Meaningful UI transitions in touched SmartTests have **`markScreenState`** at the right step, or **`N/A`** with reason (no meaningful transitions in scope).
 - [ ] Any remaining anomalies explicitly listed with next steps (only if blocked).
 

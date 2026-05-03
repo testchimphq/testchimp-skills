@@ -4,6 +4,8 @@ Use the **CLI** when the agent runs **shell commands** (CI, scripts, or hosts wi
 
 This page lists **every subcommand and flag** as implemented in the CLI (kebab-case flags; request bodies use **camelCase**). **`--json-input`** is available on every tool subcommand below except where noted; it merges **over** flags (JSON wins on conflicts).
 
+**Screen-state atlas** (for **`markScreenState`** / ExploreChimp vocabulary): see § [**Screen-state atlas (SmartTests, traces, ExploreChimp)**](#screen-state-atlas-smarttests-traces-explorechimp) — **`list-screen-states`**, **`upsert-screen-states`**.
+
 ## Install
 
 ```bash
@@ -32,6 +34,8 @@ Optional: **`TESTCHIMP_BACKEND_URL`** — overrides the default API host (see `t
 testchimp --help
 testchimp get-requirement-coverage --branch-name main
 testchimp create-user-story --platform-file-path plans/stories/auth.md --title "Auth"
+testchimp list-screen-states
+testchimp upsert-screen-states --json-input @screen-states.json
 testchimp <subcommand> -h   # flags for installed package version
 ```
 
@@ -95,6 +99,59 @@ Start the TestChimp MCP server (stdio transport). **No flags.** Typically invoke
 | `--file-paths <csv>` | No | `scope.filePaths` | Comma-separated under platform tests or plans root. |
 | `--folder-path <path>` | No | `scope.folderPath` | Slash-separated; same normalization as coverage. |
 | `--json-input …` | No | (merge) | For any extra fields accepted by the backend. |
+
+---
+
+## Screen-state atlas (SmartTests, traces, ExploreChimp)
+
+Project **screen / state vocabulary** for **`markScreenState`** checkpoints. Same HTTP APIs as MCP **`list-screen-states`** and **`upsert-screen-states`**. **Agents in shell** should use these commands after **`TESTCHIMP_API_KEY`** is exported (see [Authentication](#authentication-testchimp_api_key)); parse **stdout JSON** for machine use (see [Output contract](#output-contract)).
+
+**When to run:** **before** adding or renaming **`markScreenState`** calls in specs (Validate / Phase 4), per [`write-smarttests.md`](./write-smarttests.md) §7 — fetch atlas first, run the spec **headed** to align names with the live UI, **`upsert-screen-states`** for any new **`(screen, state)`** pairs, then edit the test.
+
+Authoring workflow (headed UI inspection, order of operations): [`write-smarttests.md`](./write-smarttests.md) §7 and **Phase 4** in [`testing-process.md`](./testing-process.md).
+
+### `list-screen-states`
+
+**API:** `POST /api/mcp/list_screen_states`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|-------|
+| `--environment <s>` | No | `environment` | Forward-compatible env tag. |
+| `--json-input …` | No | (merge) | Rarely needed; use for extra body fields. |
+
+**Example (from SmartTests root or any cwd with key in env):**
+
+```bash
+export TESTCHIMP_API_KEY=…   # from MCP config walk-up; never echo
+testchimp list-screen-states
+# stdout: JSON payload describing existing screens and their state strings — reuse exact strings in markScreenState(...)
+```
+
+With **`--environment <s>`** when your project uses env-scoped vocabulary (forward-compatible; optional on v1).
+
+### `upsert-screen-states`
+
+**API:** `POST /api/mcp/upsert_screen_states`
+
+Merge **`screenStates`** into the relational atlas (idempotent). Body uses **camelCase** per tool schema.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|-------|
+| `--json-input <json>` | **Yes** (typical) | `screenStates` | Array of `{ "screen": "…", "states": ["…", …] }`. |
+
+**Example (inline JSON):**
+
+```bash
+testchimp upsert-screen-states --json-input '{"screenStates":[{"screen":"TestPlanning","states":["explorer_ready","insights_tab_open"]}]}'
+```
+
+**Example (body from file — avoids shell quoting issues):**
+
+```bash
+testchimp upsert-screen-states --json-input @./screen-states.json
+```
+
+`screen-states.json` should be a JSON object containing **`screenStates`**: `[{ "screen": "…", "states": ["…"] }, …]` (camelCase). The command is **idempotent**: safe to re-run when extending **`states`** for an existing **`screen`**.
 
 ---
 

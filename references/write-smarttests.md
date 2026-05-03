@@ -97,21 +97,22 @@ Recommended takeover loop:
    });
    ```
 
-7. **Screen / state atlas workflow (`markScreenState`)** — follow this exact sequence:
-   - **Before authoring starts:** call MCP **`list-screen-states`** once and keep the returned vocabulary in working memory for naming reuse.
-   - **During authoring iterations:** focus only on getting the test stable and passing. **Do not** do screen/state naming in these early runs (this slows down iteration and produces churn).
-   - **After authoring (validation run only):** run the test again specifically to add screen/state markers.
-   - **During that validation run, for likely transition points only** (navigation, modal open/close, tab switch, major content swap, route change, wizard step change):
-     1. Wait for UI to become stable (avoid loading/transient states).
-     2. Compare current UI against the **last captured screenshot** during the test run.
-     3. If no meaningful UI change, do nothing.
-     4. If meaningful change, classify screen/state:
-        - Reuse a name from previously fetched atlas vocab when it fits.
-        - If no good existing name, come up with reasonable names, call **`upsert-screen-states`** and then use the new names.
-     5. Ensure the test uses **`async ({ …, markScreenState })`** (see [Screen / state markers](#screen--state-markers-markscreenstate)), then insert **`await markScreenState('Screen', 'State?')`** immediately after the step that established that stable state.
-     6. Update the “last screenshot” baseline to the current screenshot.
-   - Keep only one baseline screenshot in memory at a time (the latest meaningful stable state).
-   - Prefer marking only **meaningful** state changes; skip transient/loading-only states.
+7. **Screen / state atlas workflow (`markScreenState`)** — follow this exact sequence (CLI details: [`cli.md`](./cli.md) § **Screen-state atlas**):
+
+   - **Before any Playwright run whose purpose is placing or changing `markScreenState` names:** load the project atlas **first**. In **agent shells**, prefer the **CLI** (after **`export TESTCHIMP_API_KEY=…`** from the SmartTests-root MCP walk-up per **`SKILL.md`**; **never print** the key): run **`testchimp list-screen-states`** (optional **`--environment <s>`**), parse **stdout JSON**, and keep existing **`screen` / `states[]`** pairs in working memory for reuse. **MCP** **`list-screen-states`** is equivalent when the bridge works.
+
+   - **During authoring iterations (Execute):** focus only on getting the test stable and passing. **Do not** finalize atlas vocabulary in those early runs (it slows iteration and causes rename churn).
+
+   - **After the test is functionally green (Validate / Phase 4):** run the spec again **for marker placement**, default **headed** (per **`SKILL.md`** — e.g. `npx playwright test path/to.spec.js --headed`, or **`--debug`**) so you can **inspect the live UI**. **Derive names from what a user would recognize on screen** (app shell, primary heading, selected tab, modal title, obvious step in a flow)—**not** from internal route strings, spec file names, or implementation-only selectors alone. When headed observation is impossible, use **Playwright trace / screenshot** evidence from that validation run instead of guessing.
+
+   - **At each candidate transition** (navigation, modal open/close, tab switch, major content swap, route change, wizard step change):
+     1. Wait until the UI is **stable** (avoid naming while the main surface is still a loading skeleton or placeholder).
+     2. Compare the visible UI to the **previous** stable checkpoint; if there is **no meaningful user-visible change**, skip a new marker.
+     3. If the UI **did** change in a user-meaningful way: pick **`Screen`** and **`State`**. **Reuse** an exact **`(screen, state)`** from the fetched atlas when it still describes the surface truthfully.
+     4. If no existing pair fits: **register new vocabulary before editing the spec** — call **`testchimp upsert-screen-states --json-input '…'`** (or MCP **`upsert-screen-states`**) with **`screenStates`**: `[{ "screen": "…", "states": ["…"] }, …]`, then use those **exact** strings in **`await markScreenState('Screen', 'State')`**. Upsert is **idempotent**; calling it when a teammate already added a similar entry is safe.
+     5. Ensure the test uses **`async ({ …, markScreenState })`** (see [Screen / state markers](#screen--state-markers-markscreenstate)), then insert **`await markScreenState('Screen', 'State?')`** immediately after the Playwright step that established that stable state.
+
+   - Prefer markers only at **meaningful** boundaries; skip transient overlays-only states.
 
 8. **Test naming (Playwright convention)**:
    - Use a **short, human-readable title** describing the behavior (imperative/statement form).
@@ -164,7 +165,7 @@ Use **`npx playwright …`** (install/use the project’s Playwright CLI from th
 
 ## Calling the TestChimp MCP tools
 
-These tools are provided by the **`@testchimp/cli`** package when it is installed and registered as an MCP server (e.g. Cursor `mcp.json`). The agent invokes them as **MCP tools** by name; arguments are JSON-shaped objects matching the schemas below.
+These tools are provided by the **`@testchimp/cli`** package when it is installed and registered as an MCP server (e.g. Cursor `mcp.json`). The agent invokes them as **MCP tools** by name; arguments are JSON-shaped objects matching the schemas below. **Shell / CI equivalents** (kebab-case subcommands, flags, **`--json-input @file`**) are listed in [`cli.md`](./cli.md) — including **§ Screen-state atlas** for **`list-screen-states`** and **`upsert-screen-states`**.
 
 **Environment (MCP process):**
 
@@ -275,7 +276,7 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 }
 ```
 
-Use **`list-screen-states`** first during **Validate** (see [`testing-process.md`](./testing-process.md) Phase 4), then **`upsert-screen-states`** when you introduce names not already in the atlas, then add the **`markScreenState` fixture** to the test callback and **`await markScreenState(...)`** calls in the spec ([Screen / state markers](#screen--state-markers-markscreenstate)).
+During **Validate** (see [`testing-process.md`](./testing-process.md) Phase 4): run **`testchimp list-screen-states`** (or MCP **`list-screen-states`**) **before** marker edits; run the spec **headed** to align names with the live UI; call **`testchimp upsert-screen-states`** (or MCP **`upsert-screen-states`**) **before** adding new **`(screen, state)`** pairs to the spec; then add **`markScreenState`** to the test callback and **`await markScreenState(...)`** on the correct lines ([Screen / state markers](#screen--state-markers-markscreenstate)).
 
 ---
 
@@ -301,6 +302,7 @@ test('settings notifications', async ({ page, markScreenState }) => {
 - A **state** is a meaningful variant within a screen (for example empty cart vs cart with items).
 - Place `markScreenState` only after the UI has settled to a stable state; do not mark loading spinners/skeleton/transient overlays as durable states.
 - Marker insertion is expected during the **post-authoring validation pass**, not during the first drafting/debug loops.
+- **Strings in code must match the atlas** you fetched with **`list-screen-states`** or registered with **`upsert-screen-states`**—avoid casual drift (e.g. `TeamSettings` vs `Team Settings`) so traces, ExploreChimp, and the relational atlas stay aligned.
 
 **Legacy:** `// @Screen: … @State: …` (and block-comment variants) still parse on old specs; **do not** teach or add these for new work — prefer the **`markScreenState` fixture** only.
 

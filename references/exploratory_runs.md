@@ -27,7 +27,7 @@ ExploreChimp **requires** meaningful **`markScreenState`** calls on stable UI—
 In this skill’s **`/testchimp test`** flow, **`markScreenState`** placement and atlas vocabulary are defined in **Phase 4: Validate** (see [`testing-process.md`](./testing-process.md)) and in **[`write-smarttests.md`](./write-smarttests.md)**:
 
 - **[Screen / state markers (`markScreenState`)](./write-smarttests.md#screen--state-markers-markscreenstate)** — fixture wiring via **`installTestChimp`** on **`tests/fixtures/index.js`** (never named-import `markScreenState` from the runtime package).
-- **Atlas workflow** — **`list-screen-states`** / **`upsert-screen-states`** and the **post-authoring validation** sequence in [Test writing workflow §7](./write-smarttests.md#test-writing-workflow).
+- **Atlas workflow** — MCP **`list-screen-states`** / **`upsert-screen-states`** (shell: **`testchimp list-screen-states`**, **`testchimp upsert-screen-states`** — [`cli.md`](./cli.md) § **Screen-state atlas**) and the **post-authoring validation** sequence in [Test writing workflow §7](./write-smarttests.md#test-writing-workflow).
 
 **Order of operations:** Complete **functional** tests and **Validate** (including **`markScreenState`** where required) **before** turning on **`EXPLORECHIMP_ENABLED`** for an exploration batch, so checkpoints match stable product states.
 
@@ -43,7 +43,7 @@ In this skill’s **`/testchimp test`** flow, **`markScreenState`** placement an
 | **Journey** | Stable identity for **one Playwright test** (derived from spec file + title path). Groups steps and analytics for that test in the product UI. |
 | **Journey execution** | A **single execution instance** of that test (aligned with job manifest `jobId` when present; otherwise a generated id). |
 | **Bug** | A **filed UX issue** produced by the analysis pipeline from one or more data sources, with deduplication and project rules applied server-side. |
-| **Atlas** | Project **screen/state vocabulary** (MCP **`list-screen-states`** / **`upsert-screen-states`**) and the TestChimp **exploration/journey** surfaces used to review runs and findings. |
+| **Atlas** | Project **screen/state vocabulary** (MCP **`list-screen-states`** / **`upsert-screen-states`**; CLI **`testchimp list-screen-states`** / **`testchimp upsert-screen-states`**) and the TestChimp **exploration/journey** surfaces used to review runs and findings. |
 | **Screen-state** | A **`(screen name, state name)`** pair passed to **`markScreenState`**. Interval data since the **previous** mark is attributed to the **prior** screen-state; **screenshot + DOM (+ axe)** attach to the **current** screen-state. |
 
 ### Deduplication
@@ -111,6 +111,7 @@ Mirror **FAQ-worthy** runner issues in **`## Past learnings — authoring & vali
 ## Related references
 
 - [`write-smarttests.md`](./write-smarttests.md) — **`markScreenState`**, atlas MCP tools, authoring order
+- [`cli.md`](./cli.md) — **`testchimp list-screen-states`**, **`testchimp upsert-screen-states`** (§ **Screen-state atlas**)
 - [`testing-process.md`](./testing-process.md) — **Phase 4** markers + **ExploreChimp** between Validate and Cleanup
 - [`evolve-coverage.md`](./evolve-coverage.md) — **TrueCoverage → test selection → ExploreChimp** in **`/testchimp evolve`**
 - [`fixture-usage.md`](./fixture-usage.md) — `mergeTests` / **`fixtures/index.js`**

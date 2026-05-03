@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP or CLI), coverage, ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve, explore), SmartTests, agent-driven test or plan authoring, ExploreChimp, or updating this skill from Git.
 compatibility: Requires Node.js; @playwright/test and playwright >= 1.59.0 (see Preamble checks); TESTCHIMP_API_KEY for MCP, CLI, and ai-wright. Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.2.9
+version: 0.2.10
 required_cli_version: "0.1.3"
 ---
 
@@ -130,7 +130,7 @@ TestChimp adds **empty marker files** after mapping: **`.testchimp-tests`** at t
    - **Before improvising** when a blocker appears during test authoring, execution, or validation: **re-read** that file (Environment Provision Strategy **and** the FAQ). If you resolve something **not** already documented, **append** a new Q/A in the same run.
    - Broader infra notes (not FAQ-shaped) may still go elsewhere in `ai-test-instructions.md`, but anything another agent would hit again belongs in the FAQ.
 
-7. **SmartTests fixtures-first (`tests/fixtures/index.js`).** Every **`*.spec.{js,ts}`** under the mapped tests tree must import **`{ test, expect }`** from **`fixtures/index.js`** using the correct **relative** path (same rule as the TestChimp **new spec** stub). **`fixtures/index.js`** must apply **`installTestChimp`** from **`@testchimp/playwright/runtime`** (≥ **0.1.8**) to the merged **`test`**. That merged **`test`** registers a **`markScreenState` Playwright fixture** (screen/state markers and traces; ExploreChimp when enabled). **`installTrueCoverage`** is a **deprecated alias** of **`installTestChimp`** (same implementation; the preferred name reflects TrueCoverage **plus** ExploreChimp and other TestChimp runtime wiring). Use **`test('…', async ({ page, markScreenState, … }) => { await markScreenState('Screen', 'State'); })`** — do **not** named-import **`markScreenState`** from the runtime package. Do **not** import **`test`** from **`@playwright/test`** in spec files. Domain fixture modules may still use **`@playwright/test`** internally—see [`references/fixture-usage.md`](references/fixture-usage.md).
+7. **SmartTests fixtures-first (`tests/fixtures/index.js`).** Every **`*.spec.{js,ts}`** under the mapped tests tree must import **`{ test, expect }`** from **`fixtures/index.js`** using the correct **relative** path (same rule as the TestChimp **new spec** stub). **`fixtures/index.js`** must apply **`installTestChimp`** from **`@testchimp/playwright/runtime`** (≥ **0.1.8**) to the merged **`test`**. That merged **`test`** registers a **`markScreenState` Playwright fixture** (screen/state markers and traces; ExploreChimp when enabled). **`installTrueCoverage`** is a **deprecated alias** of **`installTestChimp`** (same implementation; the preferred name reflects TrueCoverage **plus** ExploreChimp and other TestChimp runtime wiring). Use **`test('…', async ({ page, markScreenState, … }) => { await markScreenState('Screen', 'State'); })`** — do **not** named-import **`markScreenState`** from the runtime package. Do **not** import **`test`** from **`@playwright/test`** in spec files. Domain fixture modules may still use **`@playwright/test`** internally—see [`references/fixture-usage.md`](references/fixture-usage.md). **Atlas:** before editing **`markScreenState`** names, fetch vocabulary with **`testchimp list-screen-states`** (CLI) or MCP **`list-screen-states`**; register new pairs with **`testchimp upsert-screen-states`** or MCP **`upsert-screen-states`**; run **headed** and inspect the UI when naming — see [`references/cli.md`](references/cli.md) § **Screen-state atlas** and [`references/write-smarttests.md`](references/write-smarttests.md) §7.
 
 ## MCP client and CLI (agents)
 
@@ -151,6 +151,7 @@ If MCP or API calls return **401**, see **Agent guardrails** → HTTP 401.
 The MCP server exposes tools grouped by area:
 
 - **Coverage & execution** — `get-requirement-coverage`, `get-execution-history`
+- **Screen-state atlas (SmartTests / traces / ExploreChimp)** — `list-screen-states`, `upsert-screen-states` (same as **`testchimp list-screen-states`** / **`testchimp upsert-screen-states`** in [`references/cli.md`](references/cli.md))
 - **Execution debugging** — `fetch-execution-report`
 - **Planning (user stories & scenarios)** — `create-user-story`, `create-test-scenario`, `update-user-story`, `update-test-scenario`
 - **Environments & EaaS** — `get-eaas-config`, `get-branch-specific-endpoint-config`, `provision-ephemeral-environment-and-wait`, `provision-ephemeral-environment`, `get-ephemeral-environment-status`, `destroy-ephemeral-environment`
@@ -266,7 +267,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`references/truecoverage.md`](references/truecoverage.md) | TrueCoverage RUM setup, `plans/events/*.event.md`, MCP analytics |
 | [`references/ai-wright-usage.md`](references/ai-wright-usage.md) | `ai-wright` install, env, API depth |
 | [`references/environment-management.md`](references/environment-management.md) | Persistent vs ephemeral envs, Bunnyshell, Branch Management, MCP `get-branch-specific-endpoint-config` |
-| [`references/cli.md`](references/cli.md) | `@testchimp/cli`: shell usage, `--json-input`, key export for CLI, stdout/stderr |
+| [`references/cli.md`](references/cli.md) | `@testchimp/cli`: shell usage, `--json-input`, key export for CLI, stdout/stderr; **screen-state atlas** (`list-screen-states`, `upsert-screen-states`) |
 | [`references/mocking_strategy.md`](references/mocking_strategy.md) | `page.route` vs optional AIMock, `<tests_root>/assets/goldens`, init plan/execute split |
 | [`references/seeding-endpoints.md`](references/seeding-endpoints.md) | Test-only seed, teardown, and read endpoints; discovery, proxy pattern, idempotency |
 | [`references/fixture-usage.md`](references/fixture-usage.md) | `mergeTests`, `<tests_root>/fixtures/`, `testInfo`, agent probe specs |
