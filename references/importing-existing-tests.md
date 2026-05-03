@@ -60,7 +60,7 @@ Teams can adopt these gradually on an existing suite:
 |----------|---------|
 | `// @Scenario` comments | Link specs to test-plan scenarios (traceability). |
 | `import { ai } from 'ai-wright'` | Natural-language **`ai.act` / `ai.verify` / `ai.extract`** steps. |
-| **`tests/fixtures/index.js`** + **`installTrueCoverage(mergeTests(...))`** | TrueCoverage registers `beforeEach` on the **same** merged `test` specs use; requires **`@testchimp/playwright` ≥ 0.1.1**. |
+| **`tests/fixtures/index.js`** + **`installTrueCoverage(mergeTests(...))`** | TrueCoverage registers `beforeEach` on the **same** merged `test` specs use; **`markScreenState`** fixture for screen/state markers; requires **`@testchimp/playwright` ≥ 0.1.8**. |
 | **`import { test, expect } from '<relative>/fixtures/index.js'`** in **every** `*.spec.{js,ts}` | Mandatory; do **not** use root **`test`** from **`@playwright/test`** in spec files. |
 | `@testchimp/playwright/reporter` in config | Execution reporting to TestChimp. |
 
@@ -82,7 +82,7 @@ npx playwright test
 
 ## Enabling TestChimp runtime and reporting
 
-1. **`@testchimp/playwright`** installed at the SmartTests **package root** (same `package.json` as `@playwright/test` for that folder), at least **0.1.1** for **`installTrueCoverage`**.
+1. **`@testchimp/playwright`** installed at the SmartTests **package root** (same `package.json` as `@playwright/test` for that folder), at least **0.1.8** for **`installTrueCoverage`** and the **`markScreenState`** fixture.
 2. In **`playwright.config.*`**, `reporter` includes **`['@testchimp/playwright/reporter', { ... }]`**.
 3. **`tests/fixtures/index.js`** (or platform-synced equivalent) exports **`test`** wrapped with **`installTrueCoverage(mergeTests(...))`** per [`fixture-usage.md`](./fixture-usage.md).
 4. **`setup/`** as a Playwright project that runs before main tests (see template); domain modules under **`fixtures/*.fixture.js`** as needed.

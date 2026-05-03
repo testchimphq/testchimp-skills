@@ -108,7 +108,7 @@ Recommended takeover loop:
      4. If meaningful change, classify screen/state:
         - Reuse a name from previously fetched atlas vocab when it fits.
         - If no good existing name, come up with reasonable names, call **`upsert-screen-states`** and then use the new names.
-     5. Insert **`await markScreenState('Screen', 'State?')`** immediately after the step that established that stable state.
+     5. Ensure the test uses **`async ({ …, markScreenState })`** (see [Screen / state markers](#screen--state-markers-markscreenstate)), then insert **`await markScreenState('Screen', 'State?')`** immediately after the step that established that stable state.
      6. Update the “last screenshot” baseline to the current screenshot.
    - Keep only one baseline screenshot in memory at a time (the latest meaningful stable state).
    - Prefer marking only **meaningful** state changes; skip transient/loading-only states.
@@ -275,33 +275,34 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 }
 ```
 
-Use **`list-screen-states`** first during **Validate** (see [`testing-process.md`](./testing-process.md) Phase 4), then **`upsert-screen-states`** when you introduce names not already in the atlas, then add **`markScreenState`** in the spec (below).
+Use **`list-screen-states`** first during **Validate** (see [`testing-process.md`](./testing-process.md) Phase 4), then **`upsert-screen-states`** when you introduce names not already in the atlas, then add the **`markScreenState` fixture** to the test callback and **`await markScreenState(...)`** calls in the spec ([Screen / state markers](#screen--state-markers-markscreenstate)).
 
 ---
 
 ## Screen / state markers (`markScreenState`)
 
-**Canonical:** record which **screen** and **state** the UI is in after meaningful transitions using:
+**Canonical:** `markScreenState` is a **Playwright fixture** registered by **`installTrueCoverage`** on the same merged **`test`** instance your specs import from **`tests/fixtures/index.js`** (see [`fixture-usage.md`](./fixture-usage.md)). **Do not** named-import `markScreenState` from `@testchimp/playwright/runtime` — it is not exported as a function.
+
+Record which **screen** and **state** the UI is in after meaningful transitions:
 
 ```ts
-import { markScreenState } from '@testchimp/playwright/runtime';
+// Spec imports { test, expect } from relative `tests/fixtures/index.js` (installTrueCoverage applied there).
 
-test(){
-...
-await page.goto('settings');
-// After the step that establishes the new UI:
-await markScreenState('Settings', 'Notifications tab');
-}
+test('settings notifications', async ({ page, markScreenState }) => {
+  await page.goto('/settings');
+  // After the step that establishes the new UI:
+  await markScreenState('Settings', 'Notifications tab');
+});
 ```
 
 - **Second argument optional** — omit it to record a default state: `await markScreenState('Dashboard')` (treated as **`default`** downstream).
-- Calls show up as **Playwright steps** in traces (`ScreenState: …`), which helps humans and platform features reason about journeys.
+- With **ExploreChimp** env enabled, the same fixture drives local analytics; with it off, it still emits a **`test.step`** so traces show `ScreenState: …`.
 - A **screen** is a logical view (for example login, dashboard, checkout), not strictly URL bound.
 - A **state** is a meaningful variant within a screen (for example empty cart vs cart with items).
 - Place `markScreenState` only after the UI has settled to a stable state; do not mark loading spinners/skeleton/transient overlays as durable states.
 - Marker insertion is expected during the **post-authoring validation pass**, not during the first drafting/debug loops.
 
-**Legacy:** `// @Screen: … @State: …` (and block-comment variants) still parse on old specs; **do not** teach or add these for new work — prefer **`markScreenState`** only.
+**Legacy:** `// @Screen: … @State: …` (and block-comment variants) still parse on old specs; **do not** teach or add these for new work — prefer the **`markScreenState` fixture** only.
 
 ---
 
@@ -377,15 +378,14 @@ const title = await ai.extract(
 
 ## Example SmartTest (full file)
 
-Illustrative end-to-end shape: env-driven base URL, scenario comment, plain Playwright plus one AI step, and typical imports. Adjust names and selectors to match the repo.
+Illustrative end-to-end shape: **`test` / `expect` from `tests/fixtures/index.js`** (merged `test` wrapped with **`installTrueCoverage`**), scenario comment, plain Playwright plus one AI step. Adjust the relative import and selectors to match the repo.
 
 ```ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures/index.js';
 import { ai } from 'ai-wright';
-import '@testchimp/playwright/runtime';
 
 test.describe('Checkout (illustrative)', () => {
-  test('guest can reach checkout with valid cart', async ({ page }) => {
+  test('guest can reach checkout with valid cart', async ({ page, test, markScreenState }) => {
     // @Scenario: #TS-204 Guest checkout with single item
 
     await page.goto(`/shop`);
@@ -395,6 +395,7 @@ test.describe('Checkout (illustrative)', () => {
     await ai.act('Open the cart and proceed to checkout', { page, test });
 
     await expect(page.getByRole('heading', { name: /checkout/i })).toBeVisible();
+    await markScreenState('Checkout', 'default');
     await ai.verify('Shipping form is visible with empty fields', { page, test });
   });
 });
