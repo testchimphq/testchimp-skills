@@ -67,6 +67,7 @@ Server-side analysis uses **per-exploration / per-screen-state** dedup (aligned 
 | **`EXPLORECHIMP_ENABLED`** | Yes for analytics | `true` / `1` / `TRUE` turns on ExploreChimp wiring and backend calls. |
 | **`TESTCHIMP_API_KEY`** | Yes | Same project key as MCP/shell (never commit; not in `.env-QA`). |
 | **`TESTCHIMP_BATCH_INVOCATION_ID`** | Yes for correlation | **Exploration id**; also read from **`.testchimp-batch-invocation-id`** if env unset. |
+| **`TESTCHIMP_BRANCH_NAME`** | **Strongly recommended on local / agent shells** | **Canonical env to teach:** human git branch name (e.g. `git rev-parse --abbrev-ref HEAD`). `@testchimp/playwright` sets JSON **`branchName`** on ExploreChimp analyze requests via `getBranchName()`, which reads **`TESTCHIMP_BRANCH_NAME`** first, then **`TESTCHIMP_BRANCH`**, then CI/git vars. The server resolves **`branchName`** to **`branch_id`** on explorations, journeys, and bugs. If both name vars are unset and no CI branch is available, **`branch_id`** may stay empty. |
 | **`TESTCHIMP_BACKEND_URL`** | Optional | Featureservice base URL (package defaults if omitted). |
 | **`EXPLORECHIMP_SOURCES_TO_ANALYZE`** | Optional | Comma-separated: **`DOM`**, **`SCREENSHOT`**, **`CONSOLE`**, **`NETWORK`**, **`METRICS`**. **Default if unset:** all five enabled. |
 | **`EXPLORECHIMP_REQUEST_REGEX_TO_ANALYZE`** | **Required when `NETWORK` is included** | JavaScript **regex** string; URLs must **match** to be captured. If `NETWORK` is requested but this is missing/invalid, **network capture is disabled** (warning logged). |
@@ -102,9 +103,10 @@ Mirror **FAQ-worthy** runner issues in **`## Past learnings — authoring & vali
 2. **`@testchimp/playwright` ≥ 0.1.8**; **`fixtures/index.js`** applies **`installTestChimp`** to merged **`test`** per guardrails.
 3. **`markScreenState`** in place per **Phase 4** / [`write-smarttests.md`](./write-smarttests.md).
 4. Set **`TESTCHIMP_BATCH_INVOCATION_ID`** (or file) for this exploration batch.
-5. Set **`EXPLORECHIMP_ENABLED=true`**; configure sources / **network regex** as needed.
-6. `cd` **SmartTests root**; `npx playwright test …` for chosen UI specs.
-7. Review findings in TestChimp exploration/journey UI; update **`## ExploreChimp`** with new stable decisions.
+5. Set **`TESTCHIMP_BRANCH_NAME`** to the current git branch when running locally (so the server can resolve **`branch_id`** for analytics and bugs).
+6. Set **`EXPLORECHIMP_ENABLED=true`**; configure sources / **network regex** as needed.
+7. `cd` **SmartTests root**; `npx playwright test …` for chosen UI specs.
+8. Review findings in TestChimp exploration/journey UI; update **`## ExploreChimp`** with new stable decisions.
 
 ---
 
