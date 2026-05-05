@@ -70,6 +70,37 @@ Use **DB/ORM analysis** and **reading existing flows** to determine **call order
 
 ---
 
+## Seed request header propagation (recommended)
+
+When seed endpoints delegate into normal service flows, they can still trigger expensive or non-deterministic side effects (third-party API calls, webhooks, async fanout, notifications). To keep test setup deterministic, prefer a **seed-request marker header** that is forwarded through internal hops.
+
+**Recommended contract:**
+
+- Accept a dedicated request header at the seed entrypoint (example: `X-Testchimp-Seed-Request: 1`).
+- Propagate that header across internal HTTP/gRPC/message hops so downstream services can detect seed mode.
+- In downstream services, use the marker to **skip external dependency actions** and return deterministic fake/stubbed outcomes where appropriate.
+- Keep core domain writes/validation intact; only short-circuit non-essential external side effects.
+- Keep behavior explicit and scoped to test-only paths/guards so production traffic cannot accidentally enable it.
+
+**Typical use cases in seed mode:**
+
+- Skip outbound calls to payment/email/crm providers (unless the test needs those to actually be invoked for world-state).
+- Skip webhook publishing or background fanout not required for test assertions.
+- Return deterministic placeholders for provider IDs/tokens/status values that tests can assert against.
+
+This pattern centralizes "seed mode" intent in request context, avoids ad hoc per-service toggles, and makes cross-service setup behavior consistent.
+
+### Guardrails for fake outcomes
+
+- Use stable and clearly synthetic values (for example, `seed_<entity_id>`), not random values.
+- Document which side effects are skipped and which fields are faked so assertions remain predictable.
+- Ensure read endpoints expose the resulting persisted/faked state needed by tests.
+- Add explicit code comments in seed endpoint handlers (and any helper that applies faking) that explain:
+  - which external actions are intentionally skipped,
+  - which values/results are faked, and
+  - why the fake is safe for test setup semantics.
+- Treat those comments as required maintenance metadata for future agents and contributors; keep them updated when fake behavior changes.
+
 ## Read endpoints
 
 **Purpose:** After **UI** actions (e.g. create via the browser), assert **backend truth**—not only what the DOM shows. Reads are **entity- and state-oriented**: they return **persisted** or **observable** information the test needs to verify.

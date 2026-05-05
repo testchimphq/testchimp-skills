@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP or CLI), coverage, ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve, explore), SmartTests, agent-driven test or plan authoring, ExploreChimp, or updating this skill from Git.
 compatibility: Requires Node.js; @playwright/test and playwright >= 1.59.0 (see Preamble checks); TESTCHIMP_API_KEY for MCP, CLI, and ai-wright. Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.2.11
+version: 0.2.12
 required_cli_version: "0.1.3"
 ---
 
@@ -269,7 +269,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`references/environment-management.md`](references/environment-management.md) | Persistent vs ephemeral envs, Bunnyshell, Branch Management, MCP `get-branch-specific-endpoint-config` |
 | [`references/cli.md`](references/cli.md) | `@testchimp/cli`: shell usage, `--json-input`, key export for CLI, stdout/stderr; **screen-state atlas** (`list-screen-states`, `upsert-screen-states`) |
 | [`references/mocking_strategy.md`](references/mocking_strategy.md) | `page.route` vs optional AIMock, `<tests_root>/assets/goldens`, init plan/execute split |
-| [`references/seeding-endpoints.md`](references/seeding-endpoints.md) | Test-only seed, teardown, and read endpoints; discovery, proxy pattern, idempotency |
+| [`references/seeding-endpoints.md`](references/seeding-endpoints.md) | Test-only seed, teardown, and read endpoints; discovery, proxy pattern, idempotency, propagated seed-request header guidance |
 | [`references/fixture-usage.md`](references/fixture-usage.md) | `mergeTests`, `<tests_root>/fixtures/`, `testInfo`, agent probe specs |
 | [`assets/template_playwright.config.js`](assets/template_playwright.config.js) | Sample Playwright config (copy into SmartTests root) |
 | [`assets/sample-mcp.json`](assets/sample-mcp.json) | Sample MCP config: `npx`, `@testchimp/cli@latest`, `mcp`, `TESTCHIMP_API_KEY` |
