@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright with Natural Language Steps), markdown test plans (read/author via MCP or CLI), coverage, ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve, explore), SmartTests, agent-driven test or plan authoring, ExploreChimp, or updating this skill from Git.
 compatibility: Requires Node.js; @playwright/test and playwright >= 1.59.0 (see Preamble checks); TESTCHIMP_API_KEY for MCP, CLI, and ai-wright. Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.2.12
+version: 0.2.13
 required_cli_version: "0.1.3"
 ---
 
@@ -165,7 +165,7 @@ Use the repo, plans, and those tools to decide what to test and how to run them.
 | User says | Read |
 |-----------|------|
 | `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — opening message → phased workflow (requirement gather → plan → execute). **Between phases:** complete each **phase completion gate** in the reference; every line **done** or **`N/A`** + one-line justification (persist in `plans/knowledge/ai-test-instructions.md` where noted). |
-| `/testchimp test` | [`references/testing-process.md`](references/testing-process.md) — **Analyze → Plan → Execute → Validate → Phase 5 (ExploreChimp, optional) → Phase 6 (Cleanup)**. **Between phases:** complete each **phase completion gate**; every line **done** or **`N/A`** + one-line justification (record on the **branch plan** file). |
+| `/testchimp test` | [`references/testing-process.md`](references/testing-process.md) — **first read `plans/knowledge/ai-test-instructions.md` (Environment Strategy + FAQ)**, then **Analyze → Plan → Execute → Validate → Phase 5 (ExploreChimp, optional) → Phase 6 (Cleanup)**. **Between phases:** complete each **phase completion gate**; every line **done** or **`N/A`** + one-line justification (record on the **branch plan** file). |
 | `/testchimp explore` | [`references/exploratory_runs.md`](references/exploratory_runs.md) — Run **ExploreChimp** on chosen UI SmartTests (`EXPLORECHIMP_ENABLED`, `markScreenState`, batch id, data sources / network regex). Use when exploration is the **primary** task or the user specifies scope; align with **`/testchimp test`** when part of full PR QA. |
 | `/testchimp fix` | [`references/fix-failing-tests.md`](references/fix-failing-tests.md) — Fetch execution report by `batch_invocation_id` (for multiple tests run in a single batch job) or `job_id` (for an individual test run), troubleshoot, apply fixes, and re-run failing tests per `plans/knowledge/ai-test-instructions.md`. |
 | `/testchimp plan` | [`references/test-planning.md`](references/test-planning.md) |
@@ -195,6 +195,7 @@ TrueCoverage planning source of truth:
 
 - **Opt-in policy:** TrueCoverage is **in scope by default**. Only skip or omit RUM / reporter / event-doc work when `plans/knowledge/ai-test-instructions.md` **explicitly** records an **opt-out** (see [`references/truecoverage.md`](references/truecoverage.md)). Absence of a TrueCoverage section, “deferred,” or incomplete init does **not** imply opt-out.
 - `plans/knowledge/truecoverage-instrument-progress.md` tracks **planned vs done** TrueCoverage instrumentation. Agents should consult it during `/testchimp init`, `/testchimp instrument`, and `/testchimp evolve`.
+- **Do not mis-diagnose under-coverage:** when SmartTests are wired through `fixtures/index.js` with `installTestChimp()` (default scaffold), test-identity linking for emits is already handled by `@testchimp/playwright/runtime`. Under-covered events usually mean tests are not traversing those business paths/slices yet; fix with scenario-driven test authoring (and scenario creation when missing), not synthetic "event tick" tests.
 
 ## Updating this skill from Git
 
@@ -243,7 +244,9 @@ Environment provisioning contract:
 - During `/testchimp init`, persist the **chosen** environment provisioning strategy under `plans/knowledge/ai-test-instructions.md` → `## Environment Provision Strategy`.\n  - If **Local - Test Authoring** is the chosen path, persist a single **local environment up** command/script and explicit **wait-for-healthy** criteria (so the agent can reliably bring the stack up locally, wait until it’s ready, then run seeds/tests).\n  - If **EaaS (Bunnyshell)** or **Branch Management** is chosen, persist the provisioning + wait approach (and how `BASE_URL`/`BACKEND_URL` are resolved).
 - Ensure the same file contains **`## Past learnings — authoring & validation (FAQ)`** (see template in [`references/init-testchimp.md`](references/init-testchimp.md)) so agents have a **known playbook** before improvising env fixes.
 - During **`/testchimp test`**, the agent must **strictly** follow `ai-test-instructions.md` for bring-up, URLs, and teardown—see **[Binding: ai-test-instructions](references/testing-process.md#binding-ai-test-instructions-environment-and-faq-playbook)** in [`references/testing-process.md`](references/testing-process.md).
-- During `/testchimp test`, the agent must consult that decision file and bring the environment up (and wait until healthy) before executing any test cases (including fixture-driven seed/teardown where tests use shared setup).
+- During `/testchimp test`, treat reading `ai-test-instructions.md` as a **hard prerequisite** before **Analyze/Plan** and again before **Execute**; the environment strategy and URL resolution recorded there must drive plan decisions and run-time provisioning.
+- During `/testchimp test`, the agent must consult that decision file and bring the environment up (and wait until healthy) before authoring or executing any test cases (including fixture-driven seed/teardown where tests use shared setup).
+- During `/testchimp evolve`, treat reading `ai-test-instructions.md` as a **hard prerequisite** before **Analyze/Plan** and before any test authoring/execution work; follow pre-agreed environment decisions exactly (local, Bunnyshell/EaaS, staging/branch strategy as recorded).
 
 **Backend / seed changes: restart or reprovision the app-under-test.** When authoring or changing tests, **fixtures**, or **backend** code that affects what the app-under-test runs (including **seed/teardown/read** routes, **config or flags** that enable test-only behavior, or any service your tests target per `ai-test-instructions.md`), **do not assume a running stack already includes those changes**. Follow the **Environment Provision Strategy** recorded in `plans/knowledge/ai-test-instructions.md`:
 

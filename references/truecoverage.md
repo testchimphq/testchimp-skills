@@ -2,6 +2,8 @@
 
 TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the app with **`@testchimp/rum-js`**; [`@testchimp/playwright`](https://github.com/testchimphq/playwright-testchimp-reporter) tags the same events during test runs with test identity. TestChimp aggregates both streams for coverage insights.
 
+**Critical implementation rule (do not misrepresent):** no additional "test-linking instrumentation" is required once SmartTests are wired correctly. If `fixtures/index.js` applies `installTestChimp()` from `@testchimp/playwright/runtime` to the merged `test` (the init scaffold default), runtime emit tracking is automatically augmented with test identity for coverage comparison. Do not plan extra linking hooks just to make emits count as test coverage.
+
 As an intelligent QA workflow executor agent, TrueCoverage is a capability that you can leverage to instrument the code to "learn about how real users are interacting with the app" - sliced by dimensions as you see fit. These instrumented events are captured by TestChimp, to generated summarized insights, which you can later read during `/testchimp evolve` workflow to optimize QA work.
 
 A few ways this can be used strategically:
@@ -164,11 +166,30 @@ Set **`automationEmitsOnly: true`** on **`comparisonExecutionScope`** or **`cove
    - **`get-truecoverage-event-details`** — Time series, sample sessions, **metadata** breakdown with per-value **comparison coverage** (use `automationEmitsOnly` on `comparisonExecutionScope` to align metadata “covered” with test-tagged emits only).
    - **`get-truecoverage-child-event-tree`** — Top **next** events after the current title; pass **`coverage_scope`** with `automationEmitsOnly` when transition coverage should ignore manual paths.
    - **`get-truecoverage-event-transition`** / **`get-truecoverage-event-time-series`** — Deeper transition and metric series as needed.
-4. Turn gaps into a prioritized plan (tests, instrumentation, or both).
+4. Turn gaps into a prioritized plan (tests and scenario coverage first; instrumentation only when truly missing in product code).
+
+### Interpreting "not covered" events (strict)
+
+When TrueCoverage marks an event (or metadata slice) as under-covered, the default interpretation is:
+
+- Production sees that emit path, but automated tests are not traversing that path (or not traversing the same slice).
+- The primary fix is **not** to add synthetic emits or shallow "just hit event once" tests.
+- The fix is to identify the relevant **business scenarios** where the event occurs, ensure those scenarios exist in plan artifacts, and author/extend SmartTests or API tests that execute those scenarios end-to-end with meaningful assertions.
+
+Required remediation order:
+
+1. Map uncovered event/slice to business behavior and user scenario(s).
+2. If scenario/story artifacts are missing, add them to the plan and create them **after user approval** per workflow guardrails.
+3. Author or update tests for those scenarios; add `// @Scenario:` links with real IDs.
+4. Validate that tests now traverse the previously uncovered event path/slice.
+
+Do not resolve gaps by writing minimal "emit tick" tests that are detached from business use cases.
 
 ### Metadata keys and “coverage”
 
 Use metadata for gap analysis **only when the key is a meaningful product dimension** (e.g. role, plan tier, payment readiness) where behavior or risk differs.
+
+For priority setting, treat metadata slices as first-class coverage targets: when a high-impact event is "covered" overall but important slices are not (for example a specific role/tier/state), plan tests for those slices using business-relevant scenarios and fixture posture aligned to those slice values.
 
 Hard rule: **do not emit identifiers** as metadata keys or values (or plan for them in `plans/events/*.event.md`). In practice this means avoiding keys like `project_id`, `org_id`, `user_id`, any `*_id`, UUIDs, raw emails, or other high-cardinality identifiers. These explode cardinality and are not useful for sliced coverage.
 

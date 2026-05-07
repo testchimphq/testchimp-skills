@@ -8,6 +8,7 @@ Systematically improve **requirement coverage**, **execution health**, **TrueCov
 
 - **Bridge signals:** (1) what the product *should* do (requirements / scenarios), (2) what tests *actually* test (execution history), (3) what users *really* do (TrueCoverage event emits in Production), (4) optional **UX risk** on the same slices via **ExploreChimp** (DOM, screenshot, console, network, metrics) along **SmartTest pathways** that reach those areas—see [ExploreChimp in evolve](#explorechimp-in-evolve-truecoverage-to-targeted-ux-runs).
 - **Optimize for business impact:** Prefer gaps where analytics show **high frequency**, meaningful **drop-off**, **depth** in funnels (top-of-funnel being higher priority), or **duration** / **high-demand** events (where users engage a lot or paths are hot). When the platform exposes histograms or time series, use **percentile-style** reading (e.g. p90) alongside averages—wording should match what the API returns; do not invent metrics. Prefer percentiles over averages. Use those same signals to **prioritize which UI tests** to run with **`EXPLORECHIMP_ENABLED`** so UX bugs surface where real usage and risk concentrate.
+- **Coverage semantics (strict):** Treat TrueCoverage gaps as "tests are not traversing those emitted business paths/slices yet." Do not misstate this as a missing test-link instrumentation issue when `installTestChimp()` is already wired in `fixtures/index.js` (default scaffold path).
 
 ---
 
@@ -24,6 +25,7 @@ Systematically improve **requirement coverage**, **execution health**, **TrueCov
 1. **Mapped plans root:** Resolve **`<MAPPED_PLANS_ROOT>`** as the directory containing the **`.testchimp-plans`** marker (same rule as **`/testchimp test`** plan persistence in **SKILL.md**). All evolve plan files live under that root.
 2. **TrueCoverage:** Skip TrueCoverage **Analyze** steps **only** when **`### TrueCoverage Plan`** **explicitly** records **opt-out / disabled**. If the section is missing, empty, or only says **deferred**, treat TrueCoverage as **in scope** and follow **`ExecutionScope`** and metadata rules in [`truecoverage.md`](./truecoverage.md).
 3. **Guardrails:** Story/scenario IDs and MCP ordering follow **SKILL.md** → Agent guardrails and [`test-planning.md`](./test-planning.md).
+4. **Environment contract (strict, before planning):** Before starting **Analyze** or authoring the evolve plan, read `plans/knowledge/ai-test-instructions.md` and extract the project's pre-agreed environment decision points from **`## Environment Provision Strategy`** (for example local spin-up, Bunnyshell/EaaS, or staging/branch environment rules). Use that guidance to shape the plan and execution ordering. Re-read the same sections again immediately before any test authoring/execution work, and follow them exactly (no improvised target URLs or provisioning flow).
 
 ---
 
@@ -51,6 +53,8 @@ flowchart LR
 ## Phase 1 — Analyze (read-only)
 
 **Goal:** Collect evidence from TestChimp (default analytics scope unless the user asks for a specific branch). **Do not** change application code or write the evolve plan file yet beyond rough notes if needed.
+
+**Mandatory pre-step:** Re-open `plans/knowledge/ai-test-instructions.md` first and confirm the environment provisioning strategy for this run (how to provision, which URL source of truth to use, and what "healthy" means). Do this before any analytics-driven planning so later test authoring runs against the agreed environment strategy.
 
 ### Default branch / scope
 
@@ -138,6 +142,12 @@ Each section should include **rationale** (why it matters for this run) and a **
 6. **Updates to existing tests** — Behavior drift, failing tests, reporter/scenario links.
 7. **Planning debt** — User stories / scenarios for under-specified areas (create via MCP per guardrails before writing traced tests).
 8. **ExploreChimp (targeted UX exploration)** — Whether to run **ExploreChimp** this cycle; **which UI specs** (existing and/or **new** SmartTests from section 5 once implemented); how each choice ties to **TrueCoverage** signals (drop-off, duration, demand, automation gap). Record **`N/A`** when opt-out, API-only cycle, or user declines extra runtime. Require **user agreement** for **yes** (same bar as infra cost). Execution detail: [`exploratory_runs.md`](./exploratory_runs.md); persist regex/source decisions under **`plans/knowledge/ai-test-instructions.md` → `## ExploreChimp`**.
+
+For section 2, apply this guardrail:
+
+- If events already exist in production and are visible in TrueCoverage, do **not** add extra linking instrumentation for tests when runtime wiring already uses `installTestChimp()` in fixtures.
+- Treat under-covered events as a **test coverage problem** first: add/update business-sensible scenarios and tests that traverse those event paths.
+- Use metadata breakdowns to target high-priority slices (role/tier/state/etc.) with scenario-driven tests, not synthetic one-off event touches.
 
 ### Phase 2 gate (before Phase 3)
 

@@ -49,6 +49,10 @@ Do **not** advance **Analyze → Plan → Execute → Validate → Phase 5 (Expl
 
 Before running **any** Playwright command (headed or headless), or authoring **any** `ai-wright` steps, the agent MUST follow the flow below and satisfy the gates.
 
+- **Hard prerequisite before Analyze/Plan (decision memory):**
+  - Before starting **Analyze** or drafting the branch plan, read `plans/knowledge/ai-test-instructions.md` and extract pre-agreed environment decisions from **`## Environment Provision Strategy`** (for example local spin-up vs Bunnyshell/EaaS vs staging/branch environment path, URL resolution, and health gates).
+  - The Plan must reflect and preserve those decisions. Do not defer this read until Execute.
+
 - **Plan first (no upfront smoke runs)**:
   - Do **not** start by “running a few smoke tests” or spinning up a local/ephemeral environment just to smoke the app.
   - Go through **Analyze → Plan** first so the plan can decide the required **stories/scenarios**, **the exact list of tests to author**, and any required **seed/teardown/read (probe) endpoints** and **fixtures**.
@@ -78,6 +82,8 @@ Before running **any** Playwright command (headed or headless), or authoring **a
     3) **Create/update seed/probe/teardown endpoints** to support the fixture; document under **Arrange → Fixtures plan → Seed endpoint updates** and batch-implement in Execute per [Batched order (Execute phase)](#batched-order-execute-phase).
   - If seed/probe endpoints or fixtures are missing, that is a **Plan output** and a **hard Execute blocker** until addressed in Execute.
 - **Environment and provisioning:** non‑negotiable rules live under **[Binding: ai-test-instructions (environment and FAQ playbook)](#binding-ai-test-instructions-environment-and-faq-playbook)**—read that subsection before **Execute** and whenever provisioning or validation misbehaves.
+- **Environment before test authoring (strict):**
+  - In both first-pass execution and reruns, confirm environment provisioning and target URL decisions from `ai-test-instructions.md` **before authoring or executing tests** (including fixture-driven test setup). Tests are authored by executing real steps, so environment provisioning must be settled first.
 - **TrueCoverage belongs in the Plan** (default **opted-in** per [`truecoverage.md`](./truecoverage.md)):
   - If the PR adds or changes **user journeys / user-facing behaviors**, the Plan must include TrueCoverage work unless `plans/knowledge/ai-test-instructions.md` **explicitly** opts out.
   - If RUM is **not yet wired**, the Plan must include **RUM install, init/emit helper, reporter, env, `plans/events/`**, and progress-tracker updates—**without** treating “not configured” as permission to skip. Only skip when **`### TrueCoverage Plan`** (or an explicit equivalent) states **opt-out**.
@@ -251,6 +257,8 @@ After the user approves the Plan, during **Execute** implement work in this orde
 ## Phase 1: Analyze
 
 Goal: gather evidence and inputs needed to produce a high-signal Plan. This phase is *read-only* (no production code changes; no tests authored yet).
+
+**Mandatory pre-step (first action):** Before any Analyze work, open `plans/knowledge/ai-test-instructions.md` and read **`## Environment Provision Strategy`** plus **`## Past learnings — authoring & validation (FAQ)`**. Use those pre-agreed decisions as constraints for planning and later execution; do not postpone this read to Execute.
 
 ### Locate the branch plan file (always first)
 
