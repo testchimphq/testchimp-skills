@@ -85,7 +85,7 @@ When **`/testchimp init`** starts, the **first substantive message to the user**
 
 **Include the following substance** (adapt wording slightly for tone; keep meaning):
 
-- **During init**, TestChimp sets up **complete QA infrastructure** for the project: seeding endpoints, test environment management, CI setup, fixtures, TrueCoverage instrumentation, and test scaffolds with proper TestChimp integration.
+- **During init**, TestChimp sets up **complete QA infrastructure** for the project: seeding endpoints, test environment management, CI setup, fixtures, **TrueCoverage instrumentation (web projects; not applicable to native mobile yet)**, and test scaffolds with proper TestChimp integration (Playwright on web, Mobilewright on **`project_type=android|ios`** — see **`.testchimp-tests`** and [`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
 - **After init**, the user mainly runs **`/testchimp test`** when they finish a PR and want it tested.
 - **Ongoing**, the agent runs the full QA workflow — when speaking to the user, use first person: *I will run the complete QA workflow* to author tests for relevant scenarios, make the necessary QA infrastructure adjustments, identify coverage gaps, and address them.
 - **Periodically**, run **`/testchimp evolve`** to analyze test coverage gaps and TrueCoverage insights, address them, and improve the suite. Persist each evolve run as a dated plan markdown file under **`<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/`** (see [`evolve-coverage.md`](./evolve-coverage.md)) so later runs have traceability.
@@ -119,20 +119,20 @@ Use this explanation:
 
 ### 0.2 If user chooses quick smoke
 
-Complete the **Playwright toolchain check** (**`SKILL.md`** Preamble check **#4**) first so **`npm install`** has been run at the correct package root and **`@playwright/test` ≥ 1.59.0**. Smoke authoring should also prefer **browser- or Playwright-driven validation** of flows (not only static inference) when the environment allows.
+Complete the **Playwright toolchain check** (**`SKILL.md`** Preamble check **#6**) first so **`npm install`** has been run at the correct package root. **Web:** **`@playwright/test` ≥ 1.59.0**. **Mobile:** install **mobilewright** + **`@mobilewright/test`** per [`mobilewright-smarttests.md`](./mobilewright-smarttests.md). Smoke authoring should prefer **real runner validation** (browser or device) when the environment allows.
 
 Collaborate with the user to collect:
 
-- target URL to test,
+- **Web:** target URL to test; **mobile:** app build path / simulator or device target as needed,
 - test authentication approach (credentials/session/token; never store secrets in git),
 - a small set of critical verification flows.
 
 Then:
 
-1. Use browser/Playwright-driven exploration to validate key flows.
+1. Use **web:** browser/Playwright-driven exploration; **mobile:** device/emulator-driven runs per Mobilewright — to validate key flows.
 2. Author **2-3 SmartTests** under the SmartTests root (directory containing `.testchimp-tests`).
-3. Ensure tests demonstrate natural-language smart steps with a few `ai.act` and `ai.verify` usages where they make sense (optionally `ai.extract`).
-4. Follow patterns in [`write-smarttests.md`](./write-smarttests.md) and [`ai-wright-usage.md`](./ai-wright-usage.md).
+3. **Web:** ensure tests demonstrate **`ai.act` / `ai.verify`** where they make sense (optionally **`ai.extract`**). **Mobile:** **no** ai-wright — use Mobilewright APIs and **`markScreenState`** only.
+4. Follow patterns in [`write-smarttests.md`](./write-smarttests.md); for AI steps on web, [`ai-wright-usage.md`](./ai-wright-usage.md); for mobile, [`mobilewright-smarttests.md`](./mobilewright-smarttests.md).
 
 Important prerequisite:
 
@@ -231,7 +231,10 @@ Agent stance (preferred behavior):
 - **Phase 3:** Document or add **`page.route`** patterns as agreed. **Only if AIMock was enabled:** install AIMock, create `assets/goldens` when needed, refactor OpenAI-compatible URLs into **config/env** for tests, and document local + CI runs—per [`mocking_strategy.md`](./mocking_strategy.md) and vendor AIMock docs.
 
 ### Key Area 4 — TrueCoverage Infra (RUM + journey events)
-Why this area (quick education):
+
+**Native mobile:** If **`.testchimp-tests`** sets **`project_type=android`** or **`project_type=ios`**, **skip** Key Area 4 RUM work for the **native app** — TrueCoverage is **not supported** there yet ([`truecoverage.md`](./truecoverage.md)). Mark the area **`N/A`** in the init plan with that justification; still complete other init areas (Mobilewright harness, ExploreChimp-capable SmartTests, etc.).
+
+Why this area (quick education — **web**):
 - TrueCoverage is extremely useful because it turns **production behavior** into **real coverage gaps**: what users actually do (features people engage with, where they spend time, where they drop off, and top-of-funnel vs later behavior, funnel flows etc.).
 - Those signals are exposed through data APIs that are consumed via MCP by AI agents to identify critical gaps and to drive coverage improvements, and exploratory testing for UX issue identification, in a tight feedback loop.
 - We still start with a minimal, consistent event slice so the initial setup is fast and stable, but the data remains actionable (not just noisy).
@@ -412,17 +415,28 @@ If markers are missing:
 
 Platform path note: MCP APIs use platform-rooted paths (`plans/...` or `tests/...`) even if repo folder names differ.
 
+**`project_type` in `.testchimp-tests`:** Read the marker file. **Empty or no `project_type` line** → **web**. Lines like **`project_type=android`** or **`project_type=ios`** (case-insensitive) → **mobile** — use Mobilewright deps, **`mobilewright.config.ts`**, and **`@mobilewright/test`** in fixtures ([`mobilewright-smarttests.md`](./mobilewright-smarttests.md), [`fixture-usage.md`](./fixture-usage.md)). Optionally record the detected type in **`plans/knowledge/ai-test-instructions.md`**.
+
 Success check (Basic TestChimp integration - markers): both `.testchimp-plans` and `.testchimp-tests` marker files exist.
 
 ### Action item B - Dependencies (Node / Playwright)
 
-TestChimp SmartTests require **`@playwright/test`** / **`playwright`** at **`>= 1.59.0`** (see **`required_playwright_test_version`** in **`SKILL.md`** frontmatter and the **Playwright toolchain check** in **Preamble checks** — agents must verify install root, **`npm install`**, and semver **before** relying on Playwright).
+**Web (default):** SmartTests require **`@playwright/test`** / **`playwright`** at **`>= 1.59.0`** (**`SKILL.md`** Preamble **Playwright toolchain check** — verify install root and semver before relying on the runner).
 
-Run installs from the directory containing `.testchimp-tests` (or the monorepo package root that owns Playwright deps, if tests are nested):
+**Mobile:** Install **`mobilewright`**, **`@mobilewright/test`**, and **`@testchimp/playwright`**. Keep **`mobilewright`** and **`@mobilewright/test`** on the **same** version ([`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
+
+Run installs from the directory containing `.testchimp-tests` (or the monorepo package root that owns test deps, if tests are nested):
 
 ```bash
 npm install @testchimp/playwright
 npm install -D @testchimp/cli@latest
+```
+
+**Mobile — additionally:**
+
+```bash
+npm install mobilewright
+npm install @mobilewright/test
 ```
 
 Use **`@latest`** for the dev dependency so installs track the current default npm release. The MCP entry should use **`npx`** with **`["-y", "@testchimp/cli@latest", "mcp"]`** in **`args`** (see [`../assets/sample-mcp.json`](../assets/sample-mcp.json)); that ensures **`npx`** resolves the latest published client when the MCP server starts.
@@ -441,9 +455,16 @@ CI:
 
 ### Action item D - Playwright config
 
-- Keep `playwright.config.js` directly in the SmartTests root (`.testchimp-tests` directory).
+**Web:**
+
+- Keep `playwright.config.js` directly in the SmartTests root (folder with `.testchimp-tests`).
 - Enable `@testchimp/playwright`, retain-on-failure trace, screenshots on failure.
 - Use [`../assets/template_playwright.config.js`](../assets/template_playwright.config.js) as baseline.
+
+**Mobile:**
+
+- Use **`mobilewright.config.ts`** in the SmartTests root. Start from [`../assets/template_android_mobilewright.config.ts`](../assets/template_android_mobilewright.config.ts) or [`../assets/template_ios_mobilewright.config.ts`](../assets/template_ios_mobilewright.config.ts) matching **`project_type`**. Set **`bundleId`** and **`installApps`** to real artifact paths (APK / IPA / local simulator build — see Mobilewright docs).
+- For CI with **mobile-use**, set **`MOBILE_USE_API_KEY`**; document that in **`ai-test-instructions.md`** ([`environment-management.md`](./environment-management.md)).
 
 ### Action item E - MCP install (Cursor)
 
@@ -463,16 +484,20 @@ After install, MCP tools can be used for:
 
 ### Action item F - Test harness setup (`setup`, `e2e`, `api`, `fixtures`)
 
-Target structure inside SmartTests root:
+**Web** target structure inside SmartTests root:
 
 - `setup`: global setup / project dependencies (see template [`template_playwright.config.js`](../assets/template_playwright.config.js)),
 - `e2e`: UI-focused tests,
 - `api`: API-focused tests (optional project),
-- **`tests/fixtures/`** (under the mapped SmartTests root): **required**. A master **`fixtures/index.js`** (or `index.ts`) must wrap the Playwright `test` object with **`installTestChimp`** from **`@testchimp/playwright/runtime`** (typically after **`mergeTests`** for domain fixtures). **`installTrueCoverage`** is a **deprecated alias** with the same behavior—prefer **`installTestChimp`**. See [`fixture-usage.md`](./fixture-usage.md). Platform OOBE / backfill may create the file; if it is missing locally, merge the platform sync PR or run the documented backfill before marking **done**. Full **domain fixture** and **seed endpoint** implementation usually lands during **`/testchimp test`** when scenarios require it.
+- **`tests/fixtures/`** (under the mapped SmartTests root): **required**. A master **`fixtures/index.js`** (or `index.ts`) must wrap the merged **`test`** with **`installTestChimp`** from **`@testchimp/playwright/runtime`** (typically after **`mergeTests`** from **`@playwright/test`**). **`installTrueCoverage`** is a **deprecated alias** with the same behavior—prefer **`installTestChimp`**. See [`fixture-usage.md`](./fixture-usage.md).
+
+**Mobile:** Same **`tests/fixtures/`** + **`installTestChimp`** requirement, but **`mergeTests`** and domain fixture bases use **`@mobilewright/test`**. Config projects follow **`mobilewright.config.ts`** (setup + mobile). See [`mobilewright-smarttests.md`](./mobilewright-smarttests.md). **Do not** plan **TrueCoverage** RUM for the native app during init ([`truecoverage.md`](./truecoverage.md)).
+
+Platform OOBE / backfill may create **`fixtures/index.js`**; if it is missing locally, merge the platform sync PR or run the documented backfill before marking **done**. Full **domain fixture** and **seed endpoint** implementation usually lands during **`/testchimp test`** when scenarios require it.
 
 During init, **discover** whether test-only seed/teardown/read routes already exist (see [`seeding-endpoints.md`](./seeding-endpoints.md)) and **record** findings in `plans/knowledge/ai-test-instructions.md` for later test authoring. Do **not** block init on authoring every endpoint or domain fixture module.
 
-Success check (Test harness): SmartTests root matches the template’s project layout (`setup` project, main test project, `testIgnore` for `setup/**`); **`tests/fixtures/index.js`** exists (or will exist after platform sync / backfill you confirm); no `world-states` path required.
+Success check (Test harness): SmartTests root matches the chosen template’s project layout (`setup` project, main test project, `testIgnore` for `setup/**`); **`tests/fixtures/index.js`** exists (or will exist after platform sync / backfill you confirm); no `world-states` path required.
 
 ### Action item K - Import / align existing Playwright suite (when planned)
 
@@ -480,7 +505,7 @@ Read `plans/knowledge/ai-test-instructions.md` for Key Area 2 decisions and foll
 
 - If Phase 2 marked this area **skipped** / **N/A** (greenfield), mark action K **skipped** and do not move files.
 - Otherwise: perform the **approved** moves, config path fixes, `@testchimp/playwright` reporter + deps, and **`tests/fixtures/`** + master **`fixtures/index.js`** as listed in the init plan—**only** after user approval of the plan.
-- **Every** executable **`*.spec.{js,ts}`** / SmartTest under the mapped tree must import **`test` and `expect` only** from **`fixtures/index.js`** (relative path from the spec file)—never the root **`test`** from **`@playwright/test`** in spec files. TestChimp runtime hooks (TrueCoverage CI metadata, **`markScreenState`**, ExploreChimp when enabled) live on the merged `test` via **`installTestChimp`** in that master file; see [`importing-existing-tests.md`](./importing-existing-tests.md#required-fixtures-first-imports-in-spec-files).
+- **Every** executable **`*.spec.{js,ts}`** / SmartTest under the mapped tree must import **`test` and `expect` only** from **`fixtures/index.js`** (relative path from the spec file)—never the root **`test`** from **`@playwright/test`** or **`@mobilewright/test`** in spec files. TestChimp runtime hooks (**`markScreenState`**, ExploreChimp when enabled; TrueCoverage metadata where applicable on web) live on the merged `test` via **`installTestChimp`** in that master file; see [`importing-existing-tests.md`](./importing-existing-tests.md#required-fixtures-first-imports-in-spec-files).
 
 Success check (Import strategy):
 

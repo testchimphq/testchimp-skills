@@ -120,6 +120,31 @@ If you modify **seed/teardown/read** routes, **config or flags** that gate test-
 
 Details: main skill **`SKILL.md`** (*Backend / seed changes* under Environment provisioning contract) and [`seeding-endpoints.md`](./seeding-endpoints.md) (*After you change seed endpoints or backend code*).
 
+## Mobile app tests (Android / iOS — Mobilewright)
+
+Use this subsection when **`.testchimp-tests`** indicates **`project_type=android`** or **`project_type=ios`** (see [`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
+
+### Backend / API environments
+
+Spinning up **servers** (local compose, Bunnyshell/EaaS, branch previews) for APIs the app calls can follow the **same** patterns as web projects — record commands and URLs in **`plans/knowledge/ai-test-instructions.md`** as usual. Mobile-specific work is on the **device + app install** side.
+
+### Local runs (author time)
+
+- **Emulators / simulators:** The user (or agent) must have a working Android emulator, iOS Simulator, or physical device path per [Mobilewright](https://github.com/mobile-next/mobilewright) expectations.
+- **Doctor:** Run **`npx mobilewright doctor`** from the SmartTests/install root and fix reported gaps. If something cannot be automated (e.g. Xcode license, SDK install), **tell the user exactly** what to install or enable and **record** a short FAQ entry in **`ai-test-instructions.md`**.
+- **App binary:** Ensure **`mobilewright.config.ts`** **`installApps`** points at a real **APK** / **IPA** / **`.app`** build the user can produce; document the build command in **`ai-test-instructions.md`** if non-obvious.
+
+### CI / cloud devices (mobile-use)
+
+When tests run against **cloud devices** via Mobilewright’s **mobile-use** driver:
+
+- Set **`MOBILE_USE_API_KEY`** in CI secrets (and locally if using cloud devices). Without it, configs that branch on this key typically fall back to **local** drivers.
+- Inform the user that **mobile-use** is a separate credential from **`TESTCHIMP_API_KEY`**; both may be required for full reporting + device allocation.
+
+### ExploreChimp on mobile projects
+
+Set **`TESTCHIMP_PROJECT_TYPE`** to **`android`** or **`ios`** (and **`web`** on browser projects) on **every** SmartTest / ExploreChimp run so **`@testchimp/playwright`** uses the correct fixture model — see [`exploratory_runs.md`](./exploratory_runs.md).
+
 ## Related
 
 - **`/testchimp init`** — follow the phased flow (optional quick smoke -> collaborative plan -> execute), and capture environment strategy plus per-item progress into `plans/knowledge/ai-test-instructions.md` (see [`init-testchimp.md`](./init-testchimp.md)).

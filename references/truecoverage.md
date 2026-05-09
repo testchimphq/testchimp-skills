@@ -1,5 +1,11 @@
 # TrueCoverage
 
+## Native mobile (Android / iOS) — not supported yet
+
+For TestChimp projects whose **`.testchimp-tests`** marker sets **`project_type=android`** or **`project_type=ios`**, **do not** plan or implement **TrueCoverage** / **`@testchimp/rum-js`** instrumentation for the **native app** under this skill. Treat **ExploreChimp**, SmartTests, and requirement traceability as in scope; use **[`mobilewright-smarttests.md`](./mobilewright-smarttests.md)** for the test stack. The sections below apply to **web** (and other non-mobile-native) apps unless the product explicitly documents otherwise.
+
+---
+
 TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the app with **`@testchimp/rum-js`**; [`@testchimp/playwright`](https://github.com/testchimphq/playwright-testchimp-reporter) tags the same events during test runs with test identity. TestChimp aggregates both streams for coverage insights.
 
 **Critical implementation rule (do not misrepresent):** no additional "test-linking instrumentation" is required once SmartTests are wired correctly. If `fixtures/index.js` applies `installTestChimp()` from `@testchimp/playwright/runtime` to the merged `test` (the init scaffold default), runtime emit tracking is automatically augmented with test identity for coverage comparison. Do not plan extra linking hooks just to make emits count as test coverage.

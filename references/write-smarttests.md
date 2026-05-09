@@ -1,12 +1,12 @@
 # /testchimp test
 
-This document explains **how to write SmartTests** for agents during the **Execution phase** of `/testchimp test` (phased flow in [`testing-process.md`](./testing-process.md)). SmartTests are "Playwright with intelligent steps". Optional **ExploreChimp** UX analytics reuse the same UI tests when **`markScreenState`** is in place—see **[`exploratory_runs.md`](./exploratory_runs.md)**. Here are the key points:
-- Playwright tests in a **tests** folder mapped in TestChimp platform,
-- Ability to include natural language steps for "intent based" test steps in standard Playwright scripts
+This document explains **how to write SmartTests** for agents during the **Execution phase** of `/testchimp test` (phased flow in [`testing-process.md`](./testing-process.md)). SmartTests are **Playwright-class tests** with optional **intelligent steps** on **web** only. Optional **ExploreChimp** UX analytics reuse the same UI tests when **`markScreenState`** is in place—see **[`exploratory_runs.md`](./exploratory_runs.md)**. Here are the key points:
+- Playwright / Mobilewright tests in a **tests** folder mapped in TestChimp platform,
+- **Web:** natural language / intelligent steps via **ai-wright** where appropriate. **Mobile:** deterministic Mobilewright steps only (no ai-wright yet).
 - scenario linking via in-code structured comments in test (for built-in requirement traceability).
 - You can use **`@testchimp/cli`** (MCP) to query coverage insights to decide what tests need authoring.
 
-For **full** `ai-wright` API details (options, env vars, troubleshooting), see **[`ai-wright-usage.md`](./ai-wright-usage.md)**. The sections below summarize what you need to author tests and point there for depth.
+For **full** `ai-wright` API details (options, env vars, troubleshooting), see **[`ai-wright-usage.md`](./ai-wright-usage.md)** — **web projects only**. **Mobile** projects (**`project_type=android`** or **`ios`** in **`.testchimp-tests`**) use **Mobilewright** (`@mobilewright/test`, **`screen`** / **`device`**, etc.): see **[`mobilewright-smarttests.md`](./mobilewright-smarttests.md)**. **Do not** use **`ai.act` / `ai.verify` / `ai.extract`** or **`import { ai } from 'ai-wright'`** on mobile — **ai-wright does not support Mobilewright yet**.
 
 For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, platform paths, and MCP tools to **create** plan files), see **[`test-planning.md`](./test-planning.md)**.
 
@@ -29,9 +29,9 @@ For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, pla
     - Prefer running with **`--headed`** during authoring, or setting Playwright config **`use.headless = false`** for the local authoring workflow.
     - Keep CI headless unless explicitly needed; headed is mainly for interactive authoring and debugging.
    - **Multi-pass authoring (recommended):**
-     1. **First pass — record behavior:** Write the flow as real **`await page…` / `expect(…)`** calls. Where the UI is unclear, add a short **`// intent:`** comment above the line describing what you are trying to do, then the concrete Playwright line. Do not skip browser verification.
-     2. **Second pass — harden brittle steps:** Re-read the spec. Where a selector-based step is likely **brittle** or **non-semantic**, replace it with **`ai.act` / `ai.verify` / `ai.extract`**, using the intent comments as guidance for natural-language objective. Remove redundant intent comments; **keep only comments that demarcate major sections** of the test (long flows, distinct phases).
-     3. **Third pass — fit the suite:** Wire in **hooks**, **fixtures**, **`process.env`**, **page objects**, shared **timeouts**, and project **imports** (e.g. reporter runtime) so the test matches how neighboring files are structured.
+     1. **First pass — record behavior:** **Web:** Write the flow as real **`await page…` / `expect(…)`** calls. **Mobile:** Write the flow using **Mobilewright** fixtures (**`screen`**, **`device`**, …) per [`mobilewright-smarttests.md`](./mobilewright-smarttests.md) and upstream docs — not **`page.goto`** for native UI. Where the UI is unclear, add a short **`// intent:`** comment above the line, then the concrete API call. Do not skip on-device verification.
+     2. **Second pass — harden brittle steps:** **Web only:** Re-read the spec. Where a selector-based step is likely **brittle** or **non-semantic**, replace it with **`ai.act` / `ai.verify` / `ai.extract`**, using the intent comments as guidance. **Mobile:** Improve selectors and stability using Mobilewright patterns only — **no** ai-wright. Remove redundant intent comments; **keep only comments that demarcate major sections** of the test (long flows, distinct phases).
+     3. **Third pass — fit the suite:** Wire in **hooks**, **fixtures**, **`process.env`**, **page objects** (web) or shared helpers (mobile), shared **timeouts**, and project **imports** (e.g. reporter runtime) so the test matches how neighboring files are structured.
 
 ### User takeover (headed) when the agent gets stuck
 
@@ -57,8 +57,9 @@ Recommended takeover loop:
    - Run `npx playwright test` (still in the mapped tests root) to ensure the updated test passes end-to-end.
    - If failures occur, decide: **intended behavior change** (update test + scenario), or **real regression** (call it out; prefer fixing product code over “fixing tests”).
 5. **Imports in SmartTest files** — always include:
-   - `import { ai } from 'ai-wright';`
-   - **`import { test, expect } from '<relative>/fixtures/index.js'`** (path from the spec file to **`tests/fixtures/index.js`**; see [`fixture-usage.md`](./fixture-usage.md)). **Never** import **`test`** from **`@playwright/test`** in **`*.spec.*`** files — **`installTestChimp`** must wrap the same merged **`test`** instance (TrueCoverage, **`markScreenState`**, ExploreChimp when enabled).
+   - **`import { test, expect } from '<relative>/fixtures/index.js'`** (path from the spec file to **`tests/fixtures/index.js`**; see [`fixture-usage.md`](./fixture-usage.md)). **Never** import **`test`** from **`@playwright/test`** or **`@mobilewright/test`** directly in **`*.spec.*`** files — **`installTestChimp`** must wrap the same merged **`test`** instance (**`markScreenState`**, ExploreChimp when enabled; TrueCoverage reporter metadata where applicable on web).
+   - **Web (default):** also `import { ai } from 'ai-wright';` when using intelligent steps.
+   - **Mobile:** **do not** import **ai-wright**. Use **`screen`** / **`device`** in the test callback signature per [`mobilewright-smarttests.md`](./mobilewright-smarttests.md).
 
    Per-spec **`import '@testchimp/playwright/runtime'`** is optional legacy; the supported pattern is **`installTestChimp(mergeTests(...))`** in **`fixtures/index.js`** only.
 
@@ -309,6 +310,8 @@ test('settings notifications', async ({ page, markScreenState }) => {
 ---
 
 ## AI steps (`ai-wright`): when to use what
+
+**Web projects only.** On **mobile** (**`project_type=android|ios`** in **`.testchimp-tests`**), skip this entire section — use Mobilewright APIs only ([`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
 
 ### Standard Playwright (locators, actions, `expect`)
 
