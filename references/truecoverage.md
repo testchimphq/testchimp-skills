@@ -1,41 +1,49 @@
 # TrueCoverage
 
-## Native mobile (Android / iOS) — not supported yet
+## What it is (all platforms)
 
-For TestChimp projects whose **`.testchimp-tests`** marker sets **`project_type=android`** or **`project_type=ios`**, **do not** plan or implement **TrueCoverage** / **`@testchimp/rum-js`** instrumentation for the **native app** under this skill. Treat **ExploreChimp**, SmartTests, and requirement traceability as in scope; use **[`mobilewright-smarttests.md`](./mobilewright-smarttests.md)** for the test stack. The sections below apply to **web** (and other non-mobile-native) apps unless the product explicitly documents otherwise.
+TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the **client app** with the platform RUM SDK; [`@testchimp/playwright`](https://github.com/testchimphq/playwright-testchimp-reporter) attaches **test identity** during SmartTest runs so emits from automation can be compared to real-user traffic in TestChimp.
 
----
+| Surface | How test identity reaches the app |
+|--------|-----------------------------------|
+| **Web** | Reporter injects CI metadata into the page (e.g. `__TC_CI_TEST_INFO`) when fixtures use `installTestChimp` on the merged `test`. |
+| **iOS / Android** | When **`TESTCHIMP_PROJECT_TYPE`** is **`ios`** or **`android`**, the reporter uses Mobilewright **`device.openUrl`** (or equivalent) with **`testchimp-rum://truecoverage/...`** URLs so the **native SDK** picks up the same CI JSON. Requires the app to register the URL scheme / intent filter and forward to the SDK (see platform sections below). |
 
-TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the app with **`@testchimp/rum-js`**; [`@testchimp/playwright`](https://github.com/testchimphq/playwright-testchimp-reporter) tags the same events during test runs with test identity. TestChimp aggregates both streams for coverage insights.
+**Critical implementation rule (do not misrepresent):** no additional “test-linking instrumentation” is required once SmartTests are wired correctly. If `fixtures/index.js` applies `installTestChimp()` from `@testchimp/playwright/runtime` to the merged `test` (the init scaffold default), runtime emit tracking is automatically augmented with test identity for coverage comparison. Do not plan extra linking hooks just to make emits count as test coverage.
 
-**Critical implementation rule (do not misrepresent):** no additional "test-linking instrumentation" is required once SmartTests are wired correctly. If `fixtures/index.js` applies `installTestChimp()` from `@testchimp/playwright/runtime` to the merged `test` (the init scaffold default), runtime emit tracking is automatically augmented with test identity for coverage comparison. Do not plan extra linking hooks just to make emits count as test coverage.
+As an intelligent QA workflow executor agent, TrueCoverage is a capability you can use to instrument the codebase to learn how real users interact with the app—sliced by dimensions you choose. Those events feed TestChimp for summarized insights, which you can read during **`/testchimp evolve`** to prioritize QA work.
 
-As an intelligent QA workflow executor agent, TrueCoverage is a capability that you can leverage to instrument the code to "learn about how real users are interacting with the app" - sliced by dimensions as you see fit. These instrumented events are captured by TestChimp, to generated summarized insights, which you can later read during `/testchimp evolve` workflow to optimize QA work.
+### How to use TrueCoverage strategically
 
-A few ways this can be used strategically:
+- **Fixture authoring:** Metadata slices that reference entity fields (see dot-notation metadata keys below) at an event help write fixtures that mimic real setups (for example: users without a form of payment attempting checkout—if you emit `user.has_fop` on checkout events, you can see how often that slice appears and prioritize fixtures and tests).
+- **Covering common event sequences:** TrueCoverage APIs expose what events typically follow a given event (and frequency). Use that to find common journeys that are under-tested and author useful tests.
+- **Funnels and gaps:** Per-event analytics follow the **4Ds** (RUM-based QA strategy—full mapping in [How TrueCoverage metrics work](https://docs.testchimp.io/truecoverage/how-it-works)): **Demand**, **Duration**, **Drop-off**, **Depth**. Together they prioritize which real-user paths deserve tests beyond raw transition lists.
 
-   - Fixture authoring: metadata slices that refer entity fields (refer below for dot-notation metadata keys) at an event interaction helps write fixtures that mimic real world setups (eg: Users with no form-of-payment (FOP) setup attempts to do a checkout in real world. If you had instrumented whether user has form-of-payment in checkout event emits, you can use this information to identify how frequently this "situation" occurs, and prioritize creating fixtures that mimic that entity condition and write a test that verifies "behaviour when user with no FOP attempts checkout")
-   - Covering common event sequences: TrueCoverage data endpoints expose ability to fetch detailed info about an event - which includes - what events immediately follow the given event (and the frequency distribution). This can be used to identify common journeys that are under tested - and author useful tests.
-   - Understanding user interaction funnel and optimizing fixing of coverage gaps. Per-event analytics exposed by TestChimp follow the **4Ds** (RUM-based QA strategy—full metric mapping in [How TrueCoverage metrics work](https://docs.testchimp.io/truecoverage/how-it-works)): **Demand** — how often an action appears (relative frequency, occurrences, unique sessions); **Duration** — dwell and pacing (time to next event, time since previous event, time from session start to first occurrence, time from event to session end); **Drop-off** — abandonment signals (share of sessions where the event is terminal, reverse index from session end, time from event to session end); **Depth** — funnel ordering and friction to reach a step (position in session, reverse index, time to first occurrence in session). Together they prioritize which real-user paths deserve tests, beyond raw transition lists alone.
+### Authoritative SDKs (read before implementing)
 
-**Authoritative RUM library docs (read before implementing):** [@testchimp/rum-js on GitHub](https://github.com/testchimphq/testchimp-rum-js) (README covers `init`, `emit`, `flush`, `resetSession`, configuration options, event constraints, and batching). **npm:** [`@testchimp/rum-js`](https://www.npmjs.com/package/@testchimp/rum-js).
+| Platform | Package | Docs |
+|----------|---------|------|
+| **Web** | `@testchimp/rum-js` (npm) | [GitHub](https://github.com/testchimphq/testchimp-rum-js), [npm](https://www.npmjs.com/package/@testchimp/rum-js) |
+| **iOS** | `TestChimpRum` (Swift Package) | [testchimp-rum-ios](https://github.com/testchimphq/testchimp-rum-ios) |
+| **Android** | **JitPack** (primary for public installs), local module, optional Maven Central | [testchimp-rum-android](https://github.com/testchimphq/testchimp-rum-android) — **§ Android** |
+| **SmartTests runner** | `@testchimp/playwright` | [playwright-testchimp-reporter](https://github.com/testchimphq/playwright-testchimp-reporter) — `installTestChimp`, reporter; set **`TESTCHIMP_PROJECT_TYPE`** (`web` / `ios` / `android`) on every run |
 
 **Product overview:** [TrueCoverage intro](https://docs.testchimp.io/truecoverage/intro)
 
 ---
 
-## Setup (library and credentials)
+## Web (browser) instrumentation
 
-1. Install: `npm install @testchimp/rum-js` in the **app under test** (frontend / runtime bundle), not only in the SmartTests package.
-2. Call **`testchimp.init()` once** at app bootstrap (see [library README](https://github.com/testchimphq/testchimp-rum-js)). Required top-level fields per README:
-   - **`projectId`** — TestChimp project ID (from **TestChimp → Project Settings → Key management**). Should be stored in some env-properties file and referred in code.
-   - **`apiKey`** — project API key for RUM (same source - have it configured and loaded from an env properties file).
+1. **Install:** `npm install @testchimp/rum-js` in the **app under test** (frontend / runtime bundle), not only in the SmartTests package.
+2. **Init once** at app bootstrap: call **`testchimp.init()`** (see [library README](https://github.com/testchimphq/testchimp-rum-js)). Required top-level fields per README:
+   - **`projectId`** — TestChimp project ID (from **TestChimp → Project Settings → Key management**). Load from env / build config.
+   - **`apiKey`** — project API key for RUM (same source).
    - **`environment`** — logical tag for the session (e.g. `production`, `staging`, `QA`); use one consistent scheme per deploy.
    - Optional: `sessionId`, `release`, `branchName`, `sessionMetadata`, and nested **`config`** (see below).
-3. Prefer **one helper** (e.g. `emitProductEvent`) that wraps **`testchimp.emit()`** after init. Read credentials from your app’s env/build config (e.g. map `TESTCHIMP_PROJECT_ID` / `TESTCHIMP_API_KEY` into `init()`); avoid scattering raw `emit` calls. Do **not** put these secrets in SmartTests `.env-QA`—those are for test execution vars like `BASE_URL`.
+3. Prefer **one helper** (e.g. `emitProductEvent`) that wraps **`testchimp.emit()`** after init. Read credentials from the app’s env/build config (e.g. map `TESTCHIMP_PROJECT_ID` / `TESTCHIMP_API_KEY` into `init()`); avoid scattering raw `emit` calls. Do **not** put these secrets in SmartTests `.env-QA`—those are for test execution vars like `BASE_URL`.
 4. **Vocabulary:** If you already use product analytics (PostHog, Segment, etc.), align event names where it helps—but TrueCoverage goals differ: prefer **semantic journey steps** (e.g. checkout-completed) over noise (“button clicked”). Keep **metadata cardinality** low; follow **Event constraints** in the [GitHub README](https://github.com/testchimphq/testchimp-rum-js) (title length, metadata keys/values, max serialized size).
 
-### RUM `config` (volume / “sampling” behavior)
+### RUM `config` (volume / “sampling” behavior) — web
 
 The library does not use a separate “sampling percentage” API; **event volume and repeat caps** are controlled via the optional **`config`** object passed to **`testchimp.init({ ..., config })`**. Defaults and meanings are defined in the [@testchimp/rum-js README — Configuration options](https://github.com/testchimphq/testchimp-rum-js). Use this table as the agent checklist (align with README for exact defaults):
 
@@ -52,7 +60,7 @@ The library does not use a separate “sampling percentage” API; **event volum
 
 For a **first instrumentation slice**, prefer **conservative** limits (the README includes an example “high-frequency sampling” block). Reuse existing tuning from the repo when present.
 
-Sampling can be done using any custom logic on your app side, and for the session, determine whether the capturing should be done or not (based on the sampling logic). Then set the `captureEnabled` for the session. So if you want simple 1% random sampling, a logic like below:
+Sampling can be done with custom logic on the app side: for the session, decide whether capturing should run, then set `captureEnabled`. Example:
 
 ```js
 // Decide once per browser session (before or inside init).
@@ -75,10 +83,118 @@ testchimp.init({
 
 For **deterministic** cohorts (same user always in or out), hash a stable **non-PII** key (e.g. anonymous id or session id) to a bucket in `[0, 1)` and compare to `SAMPLE_RATE` instead of `random_uniform_0_to_1()`.
 
-### After init
+### After init (web)
 
 - Use **`testchimp.emit({ title, metadata? })`** for journey events; call **`testchimp.flush()`** before navigation/redirect if you need immediate delivery.
 - Invalid or over-limit events are **dropped** (console warning per README)—design titles and metadata accordingly.
+
+---
+
+## iOS (native) instrumentation
+
+### Installing the Swift package (public repo — default)
+
+For a **public** [testchimp-rum-ios](https://github.com/testchimphq/testchimp-rum-ios) repo, consumers do **not** need a GitHub token for normal SPM resolution: Xcode and SwiftPM fetch over **HTTPS** from the public Git URL.
+
+1. **Pick a released version:** The upstream repo should publish **SemVer git tags** (e.g. `0.1.0`). Pin the app to **`from:` / “Up to Next Major”** on that tag (or an exact **`exact("0.1.0")`** if the team wants a lockstep pin). **Do not** depend on an un-tagged default branch in production apps unless the team explicitly accepts churn.
+2. **Xcode:** **File → Add Package Dependencies…** → enter **`https://github.com/testchimphq/testchimp-rum-ios.git`** (or the org’s fork URL) → add product **`TestChimpRum`** to the app target.
+3. **`Package.swift` (app or workspace package):**
+
+   ```swift
+   .package(url: "https://github.com/testchimphq/testchimp-rum-ios.git", from: "0.1.0")
+   ```
+
+   Adjust the URL and lower bound to match the tag you support.
+
+**When a token *is* needed:** Only for **private** forks, **private** transitive deps, or unusual corporate proxies. Then the developer configures Xcode / git credential manager or a **read-only** PAT locally—**not** in chat, **not** in `plans/*.md`. The agent may ask: “Is the dependency public on GitHub?” and “Which **tag** should we pin?”—not “paste your PAT.”
+
+**Publishing (maintainers):** SPM “release” = **push a SemVer tag** to the library repo (helper: **`./scripts/release-spm-tag.sh`** in that repo); consumers point the URL at that repo. No separate registry login (unlike npm). Optional: GitHub **Release** notes for humans; the tag is what SwiftPM uses.
+
+### Instrumentation steps
+
+1. **Add the library** (as above).
+2. **Initialize once** (early app lifecycle), then emit from UI code:
+
+   ```swift
+   import TestChimpRum
+
+   TestChimpRum.initialize(TestChimpRumConfig(
+       projectId: "YOUR_PROJECT_ID",
+       apiKey: "YOUR_API_KEY",
+       environment: "staging"
+   ))
+   TestChimpRum.emit(TestChimpEmitInput(title: "button_tap", metadata: ["screen": "Home"]))
+   ```
+
+   Use `config:` / inner options for the same knobs as JS (`captureEnabled`, `maxEventsPerSession`, `eventSendIntervalMillis`, `testchimpEndpoint`, etc.)—see the package README.
+3. **TrueCoverage + Mobilewright:** On the **test runner**, set **`TESTCHIMP_PROJECT_TYPE=ios`**, use **`installTestChimp`** from `@testchimp/playwright/runtime` on the merged `test`, and ensure specs expose Mobilewright **`device`** so hooks can call **`device.openUrl`** with automation URLs.
+4. **Register URL scheme** **`testchimp-rum`** for the app (Xcode **Info → URL Types**), then forward incoming URLs to the SDK:
+   - **UIKit:** `application(_:open:options:)` → `TestChimpRum.handleAutomationURL(url)`
+   - **SwiftUI:** `.onOpenURL { TestChimpRum.handleAutomationURL($0) }`
+5. **Default automation URLs** (overridable on the runner with **`TESTCHIMP_RUM_AUTOMATION_SET_PREFIX`** and **`TESTCHIMP_RUM_AUTOMATION_CLEAR_URL`** — see `@testchimp/playwright` README):
+   - Set: `testchimp-rum://truecoverage/v1/set?p=<base64url(JSON)>`
+   - Clear: `testchimp-rum://truecoverage/v1/clear`
+
+Full detail: [testchimp-rum-ios README](https://github.com/testchimphq/testchimp-rum-ios).
+
+---
+
+## Android (native) instrumentation
+
+### Installing the library — JitPack (canonical for public [testchimp-rum-android](https://github.com/testchimphq/testchimp-rum-android))
+
+[JitPack](https://jitpack.io/) builds the repo on each **git tag** and serves Maven artifacts. Consumers add **`maven("https://jitpack.io")`** — **no** GitHub token for dependency resolution.
+
+This project is a **multi-module** Gradle build; JitPack’s artifact id is the **module name** `testchimp-rum`. Use a dependency version that matches the **git tag** (e.g. `0.1.0`):
+
+```kotlin
+// settings.gradle.kts — dependencyResolutionManagement { repositories { … } }
+maven(url = "https://jitpack.io")
+```
+
+```kotlin
+// app/build.gradle.kts — JitPack multi-module: groupId is com.github.<user>.<repo> (dots, not slashes)
+dependencies {
+    implementation("com.github.testchimphq.testchimp-rum-android:testchimp-rum:0.1.0")
+}
+```
+
+After the tag is built, verify the exact line on [JitPack’s project page](https://jitpack.io/#testchimphq/testchimp-rum-android) and prefer their copy-paste if it differs.
+
+**Agent / init workflow — what to ask the user**
+
+1. **Version:** Which **git tag** to pin (must exist on GitHub and have a **green** JitPack build). Do **not** ask for GitHub PATs for JitPack installs.
+2. **Fallbacks:** **Local Gradle module** (monorepo) if JitPack is blocked; **Maven Central** only when `io.testchimp:rum-android` is actually published there.
+
+**Publishing (maintainers):** Bump **`libraryVersion`** in **`testchimp-rum/build.gradle.kts`**, commit, push, then run **`./scripts/release-jitpack.sh`** (or push the same SemVer as a git tag manually). Repo includes **`jitpack.yml`** (JDK 17 + publish tasks) and a **Gradle wrapper** for reproducible JitPack builds.
+
+**Optional — GitHub Packages / PATs:** Only if the team chooses that path instead of JitPack: tokens stay in **CI secrets** and **local `gradle.properties`** (gitignored), never in chat or `plans/`. Prefer JitPack for public repos to avoid PAT rotation for consumers.
+
+Full detail: [testchimp-rum-android README](https://github.com/testchimphq/testchimp-rum-android).
+
+### Instrumentation steps
+
+1. **Add the library** (as above).
+2. **Initialize once** in `Application.onCreate`, then emit from UI code:
+
+   ```kotlin
+   TestChimpRum.initialize(
+       this,
+       TestChimpRumConfig(
+           projectId = BuildConfig.TC_PROJECT_ID,
+           apiKey = BuildConfig.TC_API_KEY,
+           environment = BuildConfig.BUILD_TYPE,
+       ),
+   )
+   TestChimpRum.emit(TestChimpEmitInput(title = "button_tap", metadata = mapOf("screen" to "Home")))
+   ```
+
+   Use **`TestChimpRumConfig.Options`** for the same tuning knobs as JS (`captureEnabled`, `maxEventsPerSession`, etc.).
+3. **TrueCoverage + Mobilewright:** Set **`TESTCHIMP_PROJECT_TYPE=android`**, **`installTestChimp`** on fixtures, **`device`** available in hooks.
+4. **Deep link:** Add an **`intent-filter`** on the activity that should receive automation (often launcher or dedicated handler) for `testchimp-rum://truecoverage/v1/...` (scheme `testchimp-rum`, host `truecoverage`, path prefix `/v1`).
+5. **Deliver to the SDK:** In `onCreate` / `onNewIntent`, call **`TestChimpRum.handleAutomationIntent(intent)`** (or the API name documented in the package for your version).
+
+Full detail: [testchimp-rum-android README](https://github.com/testchimphq/testchimp-rum-android).
 
 ---
 
@@ -90,7 +206,7 @@ TrueCoverage decisions are project-level and must be persisted in `plans/knowled
 
 **Unless** `ai-test-instructions.md` **explicitly** states that TrueCoverage is **opted out** (e.g. a clear `### TrueCoverage Plan` entry such as “opted out,” “disabled for this repo,” “not applicable,” or equivalent team decision the file names as permanent opt-out), agents MUST treat TrueCoverage as **opted in**:
 
-- Plan RUM install (`@testchimp/rum-js`), `testchimp.init` / emit helper, Playwright reporter wiring, env vars, and **`plans/events/*.event.md`** for new or changed journeys as part of normal **`/testchimp init`**, **`/testchimp test`**, and **`/testchimp evolve`** work.
+- Plan **platform RUM install** (see **Web / iOS / Android** sections above), **init** / emit helper, **`@testchimp/playwright`** reporter wiring, env vars (**including `TESTCHIMP_PROJECT_TYPE`** on every run), and **`plans/events/*.event.md`** for new or changed journeys as part of normal **`/testchimp init`**, **`/testchimp test`**, and **`/testchimp evolve`** work.
 - Do **not** skip TrueCoverage because the TrueCoverage section is missing, empty, or says only “deferred,” and do **not** treat silence as “user declined.”
 
 **Explicit opt-out only:** When the file **explicitly** records opt-out, skip new TrueCoverage instrumentation unless the user runs **`/testchimp setup truecoverage`** or otherwise asks to re-enable.
@@ -121,18 +237,20 @@ To make TrueCoverage instrumentation incremental and resumable, maintain a singl
 
 Purpose:
 
-- Track **planned vs done** event instrumentation with a route/page-based breakdown.
+- Track **planned vs done** event instrumentation with a route/page-based breakdown (web) or **screen / flow** breakdown (mobile—adapt the grouping to how the product is structured).
 - Let agents resume instrumentation consistently during `/testchimp instrument` and opportunistically during `/testchimp evolve`.
 
 Init policy:
 
 - `/testchimp init` should wire **basic TrueCoverage infra** and a **small initial event slice**.
-- `/testchimp init` should also scan the frontend routes/pages and write the progress tracker for the **full planned event list**.
+- `/testchimp init` should also scan the app’s primary navigation surfaces (routes/pages on web; main screens/flows on mobile) and write the progress tracker for the **full planned event list**.
 - Init should create `plans/events/*.event.md` files **only** for events actually instrumented in init; planned-but-not-yet-instrumented events remain tracked only in the progress doc until `/testchimp instrument` lands them.
 
 Suggested format:
 
-- Sections grouped by **routes/pages**.\n- Each event entry is marked `done | planned | deferred`.\n- When an event is marked `done`, it should have a matching `plans/events/<title>.event.md` file.
+- Sections grouped by **routes/pages** (web) or **screens/flows** (mobile).
+- Each event entry is marked `done | planned | deferred`.
+- When an event is marked `done`, it should have a matching `plans/events/<title>.event.md` file.
 
 How `/testchimp instrument` uses it:
 
@@ -162,7 +280,7 @@ Analytics messages embed **`ExecutionScope`**: environment, time window, optiona
 | **`comparisonExecutionScope`** | **Secondary** window (often **QA / staging**) used to answer “did **automated tests** cover this event?” Coverage badges compare base vs this scope. |
 | **`coverage_scope`** (child event tree) | Same idea as comparison: “which **next** events were seen under coverage” when drilling into transitions. |
 
-Set **`automationEmitsOnly: true`** on **`comparisonExecutionScope`** or **`coverage_scope`** when you want coverage to count **only RUM emits that carry test identity** (`test_id` from the Playwright reporter). That **excludes manual sessions** on the same environment so “covered” is not polluted by ad-hoc QA. Omit the field or set **`false`** to include all traffic in that scope (legacy behavior). **Do not rely on `automationEmitsOnly` on the base scope** for filtering real-user metrics—the platform ignores it for base aggregates; use it only on comparison/coverage scopes.
+Set **`automationEmitsOnly: true`** on **`comparisonExecutionScope`** or **`coverage_scope`** when you want coverage to count **only RUM emits that carry test identity** (`test_id` from the Playwright reporter, including native mobile when CI automation URLs are wired). That **excludes manual sessions** on the same environment so “covered” is not polluted by ad-hoc QA. Omit the field or set **`false`** to include all traffic in that scope (legacy behavior). **Do not rely on `automationEmitsOnly` on the base scope** for filtering real-user metrics—the platform ignores it for base aggregates; use it only on comparison/coverage scopes.
 
 ### Recommended flow
 
@@ -205,7 +323,7 @@ When in doubt, refer documentation: https://docs.testchimp.io/truecoverage/how-i
 
 ### Dot-scoped metadata (entity attributes)
 
-**Mental model:** `testchimp.emit()` is how you **learn how real users move through the product** at the level of *journeys + slicing dimensions*, not raw logs. Before instrumenting, ask: *What slices matter for risk, for prioritizing tests, and for building fixtures that resemble production?* (examples: role, org tier, cart state, entitlements.)
+**Mental model:** **`testchimp.emit()`** (browser) or the native **`TestChimpRum.emit`** equivalent is how you **learn how real users move through the product** at the level of *journeys + slicing dimensions*, not raw logs. Before instrumenting, ask: *What slices matter for risk, for prioritizing tests, and for building fixtures that resemble production?* (examples: role, org tier, cart state, entitlements.)
 
 **Convention (domain entities only):** When metadata describes a **domain entity** (eg: user, org, cart, subscription, …), prefer keys shaped **`{entity}.{attribute}`** with a **stable, low-cardinality** first segment:
 
@@ -230,7 +348,7 @@ TrueCoverage setup and ongoing instrumentation is part of `init` and `test` work
 
 | User intent | Action |
 |-------------|--------|
-| `/testchimp setup truecoverage` (or setup-truecoverage) | Walk through RUM install, env vars, helper, reporter; persist the decision and notes under `### TrueCoverage Plan` in `plans/knowledge/ai-test-instructions.md`. |
+| `/testchimp setup truecoverage` (or setup-truecoverage) | Walk through RUM install for the app’s platform, env vars, helper, reporter; persist the decision and notes under `### TrueCoverage Plan` in `plans/knowledge/ai-test-instructions.md`. |
 | `/testchimp instrument` | Instrument current PR work with emits; run setup first if TrueCoverage is not yet enabled and the user wants it. |
 
 ---

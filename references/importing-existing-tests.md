@@ -60,7 +60,7 @@ Teams can adopt these gradually on an existing suite:
 |----------|---------|
 | `// @Scenario` comments | Link specs to test-plan scenarios (traceability). |
 | `import { ai } from 'ai-wright'` | Natural-language **`ai.act` / `ai.verify` / `ai.extract`** steps. |
-| **`tests/fixtures/index.js`** + **`installTestChimp(mergeTests(...))`** | Registers TestChimp runtime on the **same** merged `test` specs use (TrueCoverage CI metadata, **`markScreenState`**, ExploreChimp when enabled); **`installTrueCoverage`** is a deprecated **alias**; requires **`@testchimp/playwright` ≥ 0.1.8**. |
+| **`tests/fixtures/index.js`** + **`installTestChimp(mergeTests(...))`** | Registers TestChimp runtime on the **same** merged `test` specs use (TrueCoverage test identity: page metadata on web, `device.openUrl` automation on mobile when configured, **`markScreenState`**, ExploreChimp when enabled); **`installTrueCoverage`** is a deprecated **alias**; requires **`@testchimp/playwright` ≥ 0.1.8**. |
 | **`import { test, expect } from '<relative>/fixtures/index.js'`** in **every** `*.spec.{js,ts}` | Mandatory; do **not** use root **`test`** from **`@playwright/test`** in spec files. |
 | `@testchimp/playwright/reporter` in config | Execution reporting to TestChimp. |
 
@@ -93,7 +93,7 @@ When **importing or aligning** an existing Playwright suite, treat this as **non
 
 - **Every** `*.spec.{js,ts}` under the **mapped SmartTests root** (including specs **moved** in from a legacy folder and any **`setup/**/*.spec.*`** that Playwright runs as tests) must use **`import { test, expect } from '<relative>/fixtures/index.js'`** where the relative path resolves to **`tests/fixtures/index.js`**. Do **not** import **`test`** from **`@playwright/test`** in spec files.
 
-**Why:** **`installTestChimp`** registers the TestChimp runtime (including TrueCoverage `beforeEach` hooks) on the **`test` instance** your specs use. If specs import the root Playwright **`test`** while **`mergeTests`** lives only in **`fixtures/index.js`**, CI metadata injection does not run on merged tests. Centralizing **`installTestChimp(mergeTests(...))`** in **`fixtures/index.js`** fixes that; **`ai-wright`** and the reporter work as before.
+**Why:** **`installTestChimp`** registers the TestChimp runtime (including TrueCoverage hooks: web page injection; mobile automation URLs when **`TESTCHIMP_PROJECT_TYPE`** is **`ios`** / **`android`**) on the **`test` instance** your specs use. If specs import the root Playwright **`test`** while **`mergeTests`** lives only in **`fixtures/index.js`**, CI metadata injection does not run on merged tests. Centralizing **`installTestChimp(mergeTests(...))`** in **`fixtures/index.js`** fixes that; **`ai-wright`** and the reporter work as before.
 
 **Migration from legacy suites:** If specs currently use **`import '@testchimp/playwright/runtime'`** plus **`import { test } from '@playwright/test'`**, move to **`fixtures/index.js`** + relative **`test` / `expect`** imports, then drop redundant per-spec runtime imports once the master file uses **`installTestChimp`** (replace legacy **`installTrueCoverage`** calls when you touch the file).
 

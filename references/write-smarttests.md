@@ -57,7 +57,7 @@ Recommended takeover loop:
    - Run `npx playwright test` (still in the mapped tests root) to ensure the updated test passes end-to-end.
    - If failures occur, decide: **intended behavior change** (update test + scenario), or **real regression** (call it out; prefer fixing product code over “fixing tests”).
 5. **Imports in SmartTest files** — always include:
-   - **`import { test, expect } from '<relative>/fixtures/index.js'`** (path from the spec file to **`tests/fixtures/index.js`**; see [`fixture-usage.md`](./fixture-usage.md)). **Never** import **`test`** from **`@playwright/test`** or **`@mobilewright/test`** directly in **`*.spec.*`** files — **`installTestChimp`** must wrap the same merged **`test`** instance (**`markScreenState`**, ExploreChimp when enabled; TrueCoverage reporter metadata where applicable on web).
+   - **`import { test, expect } from '<relative>/fixtures/index.js'`** (path from the spec file to **`tests/fixtures/index.js`**; see [`fixture-usage.md`](./fixture-usage.md)). **Never** import **`test`** from **`@playwright/test`** or **`@mobilewright/test`** directly in **`*.spec.*`** files — **`installTestChimp`** must wrap the same merged **`test`** instance (**`markScreenState`**, ExploreChimp when enabled; TrueCoverage: page injection on **web**, `device.openUrl` automation hooks on **iOS/Android** when **`TESTCHIMP_PROJECT_TYPE`** matches — see [`truecoverage.md`](./truecoverage.md)).
    - **Web (default):** also `import { ai } from 'ai-wright';` when using intelligent steps.
    - **Mobile:** **do not** import **ai-wright**. Use **`screen`** / **`device`** in the test callback signature per [`mobilewright-smarttests.md`](./mobilewright-smarttests.md).
 
