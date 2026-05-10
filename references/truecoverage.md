@@ -143,9 +143,9 @@ Full detail: [testchimp-rum-ios README](https://github.com/testchimphq/testchimp
 
 ### Installing the library — JitPack (canonical for public [testchimp-rum-android](https://github.com/testchimphq/testchimp-rum-android))
 
-[JitPack](https://jitpack.io/) builds the repo on each **git tag** and serves Maven artifacts. Consumers add **`maven("https://jitpack.io")`** — **no** GitHub token for dependency resolution.
+[JitPack](https://jitpack.io/) builds the repo on each **git tag** (or branch snapshot, e.g. `master-SNAPSHOT`) and serves Maven artifacts. Consumers add **`maven("https://jitpack.io")`** — **no** GitHub token for dependency resolution.
 
-This project is a **multi-module** Gradle build; JitPack’s artifact id is the **module name** `testchimp-rum`. Use a dependency version that matches the **git tag** (e.g. `0.1.0`):
+**Coordinates** match what [JitPack shows for this repo](https://jitpack.io/#testchimphq/testchimp-rum-android): **`com.github.testchimphq:testchimp-rum-android:<Tag>`** — use your **git tag** as `<Tag>` (e.g. `0.1.0`), or the version string JitPack lists for snapshots.
 
 ```kotlin
 // settings.gradle.kts — dependencyResolutionManagement { repositories { … } }
@@ -153,13 +153,13 @@ maven(url = "https://jitpack.io")
 ```
 
 ```kotlin
-// app/build.gradle.kts — JitPack multi-module: groupId is com.github.<user>.<repo> (dots, not slashes)
+// app/build.gradle.kts
 dependencies {
-    implementation("com.github.testchimphq.testchimp-rum-android:testchimp-rum:0.1.0")
+    implementation("com.github.testchimphq:testchimp-rum-android:0.1.0")
 }
 ```
 
-After the tag is built, verify the exact line on [JitPack’s project page](https://jitpack.io/#testchimphq/testchimp-rum-android) and prefer their copy-paste if it differs.
+Always confirm the **exact** Gradle line on [jitpack.io/#testchimphq/testchimp-rum-android](https://jitpack.io/#testchimphq/testchimp-rum-android) after your tag builds (green log)—prefer **their** copy-paste if it differs.
 
 **Agent / init workflow — what to ask the user**
 
