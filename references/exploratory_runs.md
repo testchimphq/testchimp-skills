@@ -2,12 +2,14 @@
 
 This reference supports **local ExploreChimp** runs: Playwright UI tests drive the browser to **deterministic screen-states**, and `@testchimp/playwright` sends **DOM, screenshot, console, network, and performance metrics** to TestChimp for **UX-oriented bug finding** (layout, visual regressions, usability, accessibility via axe, performance signals, console recorded issues, suspicious network patterns, and similar). Client behavior is implemented in **`@testchimp/playwright`** (`EXPLORECHIMP_ENABLED`, `markScreenState` fixture; **≥ 0.1.8**); analysis is routed via TestChimp backend services.
 
+**P0 — same as all SmartTest runs:** The **process** that executes Playwright/Mobilewright with **`@testchimp/playwright`** must have **`TESTCHIMP_API_KEY`** in its **environment** (not only MCP/IDE). **Resolution order:** SmartTests-root walk-up → host MCP **`mcpServers.*.env.TESTCHIMP_API_KEY`** (never print) → export/inject into the shell, CI job, or wrapper **before** spawn — see **`SKILL.md`** Preamble **#4** and [`testing-process.md`](./testing-process.md) non-negotiables. **Reporter disabled**, **401**, missing-key logs → same remediation.
+
 ## When to use this doc vs commands
 
 | User intent | Where to go |
 |-------------|-------------|
 | **ExploreChimp as the primary goal** (pick tests, scope, env, interpret results) | This file + user’s scope. Treat semantically like **`/testchimp explore`**: same playbook, with **extra user instructions** on area, depth, or test list when needed. |
-| **Explorations inside full PR QA** | [`testing-process.md`](./testing-process.md) — Branch plan **Phase 2, section 6 — ExploreChimp (optional)** gates **yes** vs **`N/A`**; when **yes**, the run is **Phase 5** after **Phase 4: Validate** (tests green, scenario links + **`markScreenState`** / atlas in shape), then **Phase 6: Cleanup**. |
+| **Explorations inside full PR QA** | [`testing-process.md`](./testing-process.md) — Branch plan **[Phase 2 §6 — ExploreChimp branch plan (yes or documented N/A)](./testing-process.md#6-explorechimp-branch-plan-yes-or-documented-na)** records **`yes`** (default for **new or materially changed UI SmartTests**) or **`N/A`** with one-line rationale (same approval as the rest of the plan). **Phase 5** runs after **Phase 4: Validate** is green when **`yes`**; then **Phase 6: Cleanup**. |
 | **`/testchimp evolve`** (coverage improvement cycle) | [`evolve-coverage.md`](./evolve-coverage.md) — Use **TrueCoverage** signals (drop-offs, high-duration / high-demand events, automation gaps) to choose **which UI SmartTests** to run with ExploreChimp; **new tests** written in the same evolve cycle are valid targets once stable with **`markScreenState`**. |
 
 ---
@@ -70,7 +72,7 @@ Server-side analysis uses **per-exploration / per-screen-state** dedup (aligned 
 |----------|----------|------|
 | **`EXPLORECHIMP_ENABLED`** | Yes for analytics | `true` / `1` / `TRUE` turns on ExploreChimp wiring and backend calls. |
 | **`TESTCHIMP_PROJECT_TYPE`** | **Yes (always set)** | **`web`** for browser / Playwright SmartTests; **`android`** or **`ios`** (lowercase) for native mobile (match **`project_type`** in **`.testchimp-tests`**). Required so `@testchimp/playwright` uses the correct primary UI fixture (**`page`** vs **`screen`**) and runtime wiring for **every** run (tests + explorations). |
-| **`TESTCHIMP_API_KEY`** | Yes | Same project key as MCP/shell (never commit; not in `.env-QA`). |
+| **`TESTCHIMP_API_KEY`** | **Yes (P0 — on the runner process)** | Must be set in the **environment of the Playwright/Mobilewright process** (export from MCP config per **`SKILL.md`** walk-up, CI secret, or `env:` block). **MCP/IDE-only** is insufficient. Never commit; not in `.env-QA`. |
 | **`TESTCHIMP_BATCH_INVOCATION_ID`** | Yes for correlation | **Exploration id**; also read from **`.testchimp-batch-invocation-id`** if env unset. |
 | **`TESTCHIMP_BRANCH_NAME`** | **Strongly recommended on local / agent shells** | **Canonical env to teach:** human git branch name (e.g. `git rev-parse --abbrev-ref HEAD`). `@testchimp/playwright` sets JSON **`branchName`** on ExploreChimp analyze requests via `getBranchName()`, which reads **`TESTCHIMP_BRANCH_NAME`** first, then **`TESTCHIMP_BRANCH`**, then CI/git vars. The server resolves **`branchName`** to **`branch_id`** on explorations, journeys, and bugs. If both name vars are unset and no CI branch is available, **`branch_id`** may stay empty. |
 | **`TESTCHIMP_BACKEND_URL`** | Optional | Featureservice base URL (package defaults if omitted). |
@@ -105,7 +107,7 @@ Mirror **FAQ-worthy** runner issues in **`## Past learnings — authoring & vali
 
 ## Operator checklist
 
-1. **`SKILL.md`** preamble + **`TESTCHIMP_API_KEY`** in shell.
+1. **`SKILL.md`** preamble: resolve **`TESTCHIMP_API_KEY`** and **export/inject** it into the **runner** process env (verify before spawn; do not rely on MCP-only).
 2. Set **`TESTCHIMP_PROJECT_TYPE`** to **`web`**, **`android`**, or **`ios`** per **`.testchimp-tests`** (same as for normal SmartTest runs — see [`testing-process.md`](./testing-process.md)).
 3. **`@testchimp/playwright` ≥ 0.1.8**; **`fixtures/index.js`** applies **`installTestChimp`** to merged **`test`** per guardrails.
 4. **`markScreenState`** in place per **Phase 4** / [`write-smarttests.md`](./write-smarttests.md).
@@ -122,7 +124,7 @@ Mirror **FAQ-worthy** runner issues in **`## Past learnings — authoring & vali
 - [`mobilewright-smarttests.md`](./mobilewright-smarttests.md) — native mobile stack, **`TESTCHIMP_PROJECT_TYPE`**, no ai-wright
 - [`write-smarttests.md`](./write-smarttests.md) — **`markScreenState`**, atlas MCP tools, authoring order
 - [`cli.md`](./cli.md) — **`testchimp list-screen-states`**, **`testchimp upsert-screen-states`** (§ **Screen-state atlas**)
-- [`testing-process.md`](./testing-process.md) — **Phase 4** markers + **ExploreChimp** between Validate and Cleanup
+- [`testing-process.md`](./testing-process.md) — **Phase 4** markers + **Phase 5** ExploreChimp (**default-on** for UI SmartTest deltas; **[§6](./testing-process.md#6-explorechimp-branch-plan-yes-or-documented-na)** **`yes`** or **`N/A`**) between Validate and Cleanup
 - [`evolve-coverage.md`](./evolve-coverage.md) — **TrueCoverage → test selection → ExploreChimp** in **`/testchimp evolve`**
 - [`fixture-usage.md`](./fixture-usage.md) — `mergeTests` / **`fixtures/index.js`**
 - [`init-testchimp.md`](./init-testchimp.md) — `ai-test-instructions.md` template

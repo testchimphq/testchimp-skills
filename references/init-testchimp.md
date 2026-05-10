@@ -98,8 +98,8 @@ When **`/testchimp init`** starts, the **first substantive message to the user**
 
 Run this **before** optional smoke (Phase 0) or project requirement gathering (Phase 1–3). On **every** `/testchimp init`, complete:
 
-1. **Resolve MCP config** — From the SmartTests root (folder with `.testchimp-tests`), walk **up** the directory tree for the **host’s project MCP config** (Cursor often **`.cursor/mcp.json`**; other hosts differ — same resolution rules as **`SKILL.md`** Preamble check **#3**) until you find one whose **`mcpServers`** defines the TestChimp client (typically **`testchimp`**).
-2. **Verify client + key** — Apply **`SKILL.md`** Preamble checks **#3** (`TESTCHIMP_API_KEY` resolvable and usable) and **#4** (CLI/MCP client version / `args` for **`@testchimp/cli`** including **`mcp`**). If the server entry is missing or wrong: update the host MCP config using **`["-y", "@testchimp/cli@latest", "mcp"]`** from [`../assets/sample-mcp.json`](../assets/sample-mcp.json), then re-check (e.g. MCP tool **`get-eaas-config`** must not return **401**).
+1. **Resolve MCP config** — From the SmartTests root (folder with `.testchimp-tests`), walk **up** the directory tree for the **host’s project MCP config** (Cursor often **`.cursor/mcp.json`**; other hosts differ — same walk-up as **`SKILL.md`** Preamble check **#4**) until you find one whose **`mcpServers`** defines the TestChimp client (typically **`testchimp`**).
+2. **Verify client + key** — Apply **`SKILL.md`** Preamble checks **#4** (`TESTCHIMP_API_KEY` resolvable; export for shell/Playwright per that item) and **#5** (CLI/MCP client version / `args` for **`@testchimp/cli`** including **`mcp`**). If the server entry is missing or wrong: update the host MCP config using **`["-y", "@testchimp/cli@latest", "mcp"]`** from [`../assets/sample-mcp.json`](../assets/sample-mcp.json), then re-check (e.g. MCP tool **`get-eaas-config`** must not return **401**).
 3. **Never skip** this block because **`ai-test-instructions.md`** exists or looks complete.
 
 Only after the workstation gate passes should you use **`ai-test-instructions.md`** to decide how much **project-level** Phase 1–3 work remains.

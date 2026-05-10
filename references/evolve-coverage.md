@@ -16,7 +16,7 @@ Systematically improve **requirement coverage**, **execution health**, **TrueCov
 
 - **MCP:** Same tools as in **SKILL.md** (coverage & execution, TrueCoverage analytics, planning). JSON request bodies use **camelCase** field names. **ExploreChimp** runs use Playwright + env vars (not an MCP “run exploration” tool)—see [`exploratory_runs.md`](./exploratory_runs.md).
 - **CLI:** [`cli.md`](./cli.md) — `testchimp get-requirement-coverage`, `get-execution-history`, TrueCoverage subcommands, etc. Prefer **`--json-input`** (or `@file.json`) for nested bodies such as **`baseExecutionScope`** / **`comparisonExecutionScope`**.
-- **Authentication:** Export **`TESTCHIMP_API_KEY`** in the shell that runs the CLI (see **cli.md** — agent shells often do not inherit IDE MCP env).
+- **Authentication:** Export **`TESTCHIMP_API_KEY`** in the shell that runs the CLI **and** any Playwright/Mobilewright child process using **`@testchimp/playwright`** (see **`SKILL.md`** Preamble **#4** / **cli.md** — agent shells often do not inherit IDE MCP env).
 
 ---
 
@@ -201,7 +201,7 @@ Then complete **Verification** and **Closure** below.
 
 - Run **new or changed** tests per **`plans/knowledge/ai-test-instructions.md`** (local vs CI, env bring-up, headed vs headless—follow what the project recorded; consult **`## Past learnings — authoring & validation (FAQ)`** when bring-up or URLs fail—[`testing-process.md`](./testing-process.md#binding-ai-test-instructions-environment-and-faq-playbook)).
 - For SmartTest details, see [`write-smarttests.md`](./write-smarttests.md).
-- Before **ExploreChimp**, confirm **UI** specs used for exploration have appropriate **`markScreenState`** coverage for the flows you are analyzing (same bar as **Phase 4: Validate** in [`testing-process.md`](./testing-process.md); **`/testchimp test`** runs explorations as **Phase 5** after that gate).
+- Before **ExploreChimp**, confirm **UI** specs used for exploration have appropriate **`markScreenState`** coverage for the flows you are analyzing (same bar as **Phase 4: Validate** in [`testing-process.md`](./testing-process.md)). In **`/testchimp test`**, **Phase 5** is **default-on** for UI SmartTest deltas unless branch plan **[§6](./testing-process.md#6-explorechimp-branch-plan-yes-or-documented-na)** records **`N/A`** with rationale (evolve remains plan-gated per evolve plan section **8**).
 
 ### Closure
 
