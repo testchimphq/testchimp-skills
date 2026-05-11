@@ -32,13 +32,36 @@ As an intelligent QA workflow executor agent, TrueCoverage is a capability you c
 
 ---
 
+## RUM environment tag (TrueCoverage analytics alignment)
+
+**Contract:** **`@testchimp/rum-js`**, **testchimp-rum-ios**, and **testchimp-rum-android** all take an **`environment`** string in **`init` / `initialize`**. That value is the **logical tag on RUM sessions** and payloads. **They do not automatically read** shell **`TESTCHIMP_ENV`**, **`NODE_ENV`**, or other **process** environment variables—the **app integration must supply** `environment` explicitly (build-time bundle, plist/xcconfig, `BuildConfig` / product flavor, or a small bootstrap helper that reads **one** canonical source your team owns).
+
+**Why it matters:** TrueCoverage **`ExecutionScope`** fields, **`list-rum-environments`**, and related MCP tools **filter on this tag**. Instrumenting with **project id + API key + deep link / reporter** alone is **not** sufficient for analytics alignment if **`environment`** is wrong, missing, or inconsistent—**base** vs **comparison** scopes will not line up with how the team thinks about deploys.
+
+**Map team naming into the SDK:** Reuse the same vocabulary as SmartTests / backends where it makes sense—for example the logical name behind **`TESTCHIMP_ENV`** and **`.env-${TESTCHIMP_ENV}`** (e.g. `QA`, `staging`, `production`)—and pass **that** into **`environment`**, unless the product uses a different RUM taxonomy (then document it).
+
+**Parity (test harness vs app):** If SmartTests default **`TESTCHIMP_ENV=QA`** (or similar), **recommend** the **native (or web) app** RUM tag for **local / simulator / CI** builds **match** that tag **unless** the team **deliberately** separates “automation / test RUM” from “real user RUM” environments. **Tradeoff:** if tags **diverge**, TrueCoverage **comparison** scopes must use the **same** `environment` values as the traffic being compared; arbitrary splits (e.g. app hard-coded `#if DEBUG` → `development` while MCP scopes use `QA`) **break** overlay analysis until scopes and tags are reconciled.
+
+**Runtime overrides (optional):** Teams may support **staging** (or per-branch) tags **without** a full rebuild—e.g. **iOS:** Xcode scheme **Environment Variables**, **`ProcessInfo.processInfo.environment`**, or build-setting injection before **`initialize`**; **Android:** `BuildConfig` from flavor + `resValue` / manifest placeholders, or debug-only reads of **`System.getenv`** if policy allows—**only** if the project standardizes one pattern and documents it.
+
+**Checklist (agents + implementers — do not skip on native):**
+
+- [ ] **`environment`** is set on **every** code path that calls **`initialize`** / **`init`** (not assumed from process env).
+- [ ] The tag **matches** the team’s **deploy / staging / prod** naming and what they will pass to **`list-rum-environments`** / **`baseExecutionScope`** / **`comparisonExecutionScope`**.
+- [ ] **Parity** with SmartTests **`.env-*` / `TESTCHIMP_ENV`** is **explicit** (aligned **or** deliberately split, with scope implications written down).
+- [ ] Recorded under **`### TrueCoverage Plan`** or **`## Environment Provision Strategy`** / notes in **`plans/knowledge/ai-test-instructions.md`** (and the app **README** for self-serve teams).
+
+**Avoid:** Describing mobile TrueCoverage as only “install SDK + credentials + URL scheme / intent filter” **without** calling out **`environment`** mapping—**`#if DEBUG` defaults** alone often **won’t** match production TrueCoverage filters.
+
+---
+
 ## Web (browser) instrumentation
 
 1. **Install:** `npm install @testchimp/rum-js` in the **app under test** (frontend / runtime bundle), not only in the SmartTests package.
 2. **Init once** at app bootstrap: call **`testchimp.init()`** (see [library README](https://github.com/testchimphq/testchimp-rum-js)). Required top-level fields per README:
    - **`projectId`** — TestChimp project ID (from **TestChimp → Project Settings → Key management**). Load from env / build config.
    - **`apiKey`** — project API key for RUM (same source).
-   - **`environment`** — logical tag for the session (e.g. `production`, `staging`, `QA`); use one consistent scheme per deploy.
+   - **`environment`** — logical tag for the session (e.g. `production`, `staging`, `QA`); use one consistent scheme per deploy. **Not auto-filled** from **`TESTCHIMP_ENV`** on the shell: map build-time / runtime config into this parameter (see **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**).
    - Optional: `sessionId`, `release`, `branchName`, `sessionMetadata`, and nested **`config`** (see below).
 3. Prefer **one helper** (e.g. `emitProductEvent`) that wraps **`testchimp.emit()`** after init. Read credentials from the app’s env/build config (e.g. map `TESTCHIMP_PROJECT_ID` / `TESTCHIMP_API_KEY` into `init()`); avoid scattering raw `emit` calls. Do **not** put these secrets in SmartTests `.env-QA`—those are for test execution vars like `BASE_URL`.
 4. **Vocabulary:** If you already use product analytics (PostHog, Segment, etc.), align event names where it helps—but TrueCoverage goals differ: prefer **semantic journey steps** (e.g. checkout-completed) over noise (“button clicked”). Keep **metadata cardinality** low; follow **Event constraints** in the [GitHub README](https://github.com/testchimphq/testchimp-rum-js) (title length, metadata keys/values, max serialized size).
@@ -127,6 +150,9 @@ For a **public** [testchimp-rum-ios](https://github.com/testchimphq/testchimp-ru
    ```
 
    Use `config:` / inner options for the same knobs as JS (`captureEnabled`, `maxEventsPerSession`, `eventSendIntervalMillis`, `testchimpEndpoint`, etc.)—see the package README.
+
+   **`environment`:** Must follow **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**—do not ship with a placeholder (e.g. hard-coded `"staging"`) that does not match **`list-rum-environments`** or SmartTests **`TESTCHIMP_ENV` / `.env-*`** without an explicit team decision. Prefer **Info.plist / xcconfig / build setting → bootstrap**; optional **scheme env vars** or **`ProcessInfo`** for CI/local overrides without rebuilding if the project supports it.
+
 3. **TrueCoverage + Mobilewright:** On the **test runner**, set **`TESTCHIMP_PROJECT_TYPE=ios`**, use **`installTestChimp`** from `@testchimp/playwright/runtime` on the merged `test`, and ensure specs expose Mobilewright **`device`** so hooks can call **`device.openUrl`** with automation URLs.
 4. **Register URL scheme** **`testchimp-rum`** for the app (Xcode **Info → URL Types**), then forward incoming URLs to the SDK:
    - **UIKit:** `application(_:open:options:)` → `TestChimpRum.handleAutomationURL(url)`
@@ -183,13 +209,17 @@ Full detail: [testchimp-rum-android README](https://github.com/testchimphq/testc
        TestChimpRumConfig(
            projectId = BuildConfig.TC_PROJECT_ID,
            apiKey = BuildConfig.TC_API_KEY,
-           environment = BuildConfig.BUILD_TYPE,
+           // Example only: map a dedicated RUM tag (e.g. BuildConfig.TC_RUM_ENV / flavor)—
+           // not raw BUILD_TYPE unless your team uses "debug"/"release" as TrueCoverage filters.
+           environment = BuildConfig.TC_RUM_ENV,
        ),
    )
    TestChimpRum.emit(TestChimpEmitInput(title = "button_tap", metadata = mapOf("screen" to "Home")))
    ```
 
    Use **`TestChimpRumConfig.Options`** for the same tuning knobs as JS (`captureEnabled`, `maxEventsPerSession`, etc.).
+
+   **`environment`:** Must follow **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**. **`BuildConfig.BUILD_TYPE`** alone is usually **`debug` / `release`** and **does not** match typical **`QA` / `staging` / `production`** tags—define **`BuildConfig`** fields, **product flavors**, or **manifest placeholders** so the RUM tag matches team + MCP scope naming; use **runtime overrides** only if standardized (e.g. debug `System.getenv` behind a flag).
 3. **TrueCoverage + Mobilewright:** Set **`TESTCHIMP_PROJECT_TYPE=android`**, **`installTestChimp`** on fixtures, **`device`** available in hooks.
 4. **Deep link:** Add an **`intent-filter`** on the activity that should receive automation (often launcher or dedicated handler) for `testchimp-rum://truecoverage/v1/...` (scheme `testchimp-rum`, host `truecoverage`, path prefix `/v1`).
 5. **Deliver to the SDK:** In `onCreate` / `onNewIntent`, call **`TestChimpRum.handleAutomationIntent(intent)`** (or the API name documented in the package for your version).
@@ -206,7 +236,7 @@ TrueCoverage decisions are project-level and must be persisted in `plans/knowled
 
 **Unless** `ai-test-instructions.md` **explicitly** states that TrueCoverage is **opted out** (e.g. a clear `### TrueCoverage Plan` entry such as “opted out,” “disabled for this repo,” “not applicable,” or equivalent team decision the file names as permanent opt-out), agents MUST treat TrueCoverage as **opted in**:
 
-- Plan **platform RUM install** (see **Web / iOS / Android** sections above), **init** / emit helper, **`@testchimp/playwright`** reporter wiring, env vars (**including `TESTCHIMP_PROJECT_TYPE`** on every run), and **`plans/events/*.event.md`** for new or changed journeys as part of normal **`/testchimp init`**, **`/testchimp test`**, and **`/testchimp evolve`** work.
+- Plan **platform RUM install** (see **Web / iOS / Android** sections above), **init** / emit helper, **documented RUM `environment` tag mapping** (see **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**), **`@testchimp/playwright`** reporter wiring, env vars (**including `TESTCHIMP_PROJECT_TYPE`** on every run), and **`plans/events/*.event.md`** for new or changed journeys as part of normal **`/testchimp init`**, **`/testchimp test`**, and **`/testchimp evolve`** work.
 - Do **not** skip TrueCoverage because the TrueCoverage section is missing, empty, or says only “deferred,” and do **not** treat silence as “user declined.”
 
 **Explicit opt-out only:** When the file **explicitly** records opt-out, skip new TrueCoverage instrumentation unless the user runs **`/testchimp setup truecoverage`** or otherwise asks to re-enable.
