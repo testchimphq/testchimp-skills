@@ -7,7 +7,9 @@ TrueCoverage connects **real user behavior** (from production) with **test execu
 | Surface | How test identity reaches the app |
 |--------|-----------------------------------|
 | **Web** | Reporter injects CI metadata into the page (e.g. `__TC_CI_TEST_INFO`) when fixtures use `installTestChimp` on the merged `test`. |
-| **iOS / Android** | When **`TESTCHIMP_PROJECT_TYPE`** is **`ios`** or **`android`**, the reporter uses Mobilewright **`device.openUrl`** (or equivalent) with **`testchimp-rum://truecoverage/...`** URLs so the **native SDK** picks up the same CI JSON. Requires the app to register the URL scheme / intent filter and forward to the SDK (see platform sections below). |
+| **iOS / Android** | When **`TESTCHIMP_PROJECT_TYPE`** is **`ios`** or **`android`**, `installTestChimp` (from `@testchimp/playwright/runtime`) extends Mobilewright’s **`device`** fixture so TrueCoverage **`SET`** runs **right after** Mobilewright’s **`launchApp`**, before **`screen`** and the test body (implementation uses **`device.openUrl`** with **`testchimp-rum://truecoverage/...`**). **`afterEach`** still sends a trailing **`SET`** + **`/v1/flush`** as needed. The **app** must register the URL scheme / intent filter and forward opens to **TestChimpRum** (see platform sections below). |
+
+**Runner timing vs in-app URL handling (native):** Improving **when** the runner sends **`SET`** (device fixture) does **not** replace **how** iOS/Android deliver automation URLs into your process. You still forward **`testchimp-rum://…`** into **`TestChimpRum`** from every entry point your UI stack actually receives (see iOS delegate + SwiftUI below).
 
 **Critical implementation rule (do not misrepresent):** no additional “test-linking instrumentation” is required once SmartTests are wired correctly. If `fixtures/index.js` applies `installTestChimp()` from `@testchimp/playwright/runtime` to the merged `test` (the init scaffold default), runtime emit tracking is automatically augmented with test identity for coverage comparison. Do not plan extra linking hooks just to make emits count as test coverage.
 
@@ -153,10 +155,23 @@ For a **public** [testchimp-rum-ios](https://github.com/testchimphq/testchimp-ru
 
    **`environment`:** Must follow **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**—do not ship with a placeholder (e.g. hard-coded `"staging"`) that does not match **`list-rum-environments`** or SmartTests **`TESTCHIMP_ENV` / `.env-*`** without an explicit team decision. Prefer **Info.plist / xcconfig / build setting → bootstrap**; optional **scheme env vars** or **`ProcessInfo`** for CI/local overrides without rebuilding if the project supports it.
 
-3. **TrueCoverage + Mobilewright:** On the **test runner**, set **`TESTCHIMP_PROJECT_TYPE=ios`**, use **`installTestChimp`** from `@testchimp/playwright/runtime` on the merged `test`, and ensure specs expose Mobilewright **`device`** so hooks can call **`device.openUrl`** with automation URLs.
-4. **Register URL scheme** **`testchimp-rum`** for the app (Xcode **Info → URL Types**), then forward incoming URLs to the SDK:
-   - **UIKit:** `application(_:open:options:)` → `TestChimpRum.handleAutomationURL(url)`
-   - **SwiftUI:** `.onOpenURL { TestChimpRum.handleAutomationURL($0) }`
+3. **TrueCoverage + Mobilewright:** On the **test runner**, set **`TESTCHIMP_PROJECT_TYPE=ios`**. In **`fixtures/index.js`** (or equivalent), apply **`installTestChimp`** from `@testchimp/playwright/runtime` to the merged `test` so specs import that wrapped `test` (not raw `@mobilewright/test`). That wires **`SET`** in the **`device`** fixture (after **`launchApp`**) plus **`afterEach`** flush behavior — see [playwright-testchimp-reporter README](https://github.com/testchimphq/playwright-testchimp-reporter).
+4. **Register URL scheme** **`testchimp-rum`** for the app (Xcode **Info → URL Types** / `CFBundleURLTypes`), then forward incoming URLs to **`TestChimpRum.handleAutomationURL(_:)`** from **every path your app receives URL opens on** — commonly **both**:
+   - **`UIApplicationDelegate`** — `application(_:open:options:)`
+   - **SwiftUI** — `.onOpenURL { … }`  
+   Using **both** is a **reliability** pattern (some stacks drop opens in one path when the app is already foreground); the device-fixture runner change does **not** remove this requirement unless you have verified a single path handles **all** automation opens for your shell.
+
+   Example (illustrative — adapt names to your app):
+
+   ```swift
+   // AppDelegate
+   func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+       TestChimpRum.handleAutomationURL(url)
+   }
+
+   // SwiftUI
+   .onOpenURL { TestChimpRum.handleAutomationURL($0) }
+   ```
 5. **Default automation URLs** (overridable on the runner with **`TESTCHIMP_RUM_AUTOMATION_SET_PREFIX`** and **`TESTCHIMP_RUM_AUTOMATION_CLEAR_URL`** — see `@testchimp/playwright` README):
    - Set: `testchimp-rum://truecoverage/v1/set?p=<base64url(JSON)>`
    - Clear: `testchimp-rum://truecoverage/v1/clear`
@@ -220,11 +235,25 @@ Full detail: [testchimp-rum-android README](https://github.com/testchimphq/testc
    Use **`TestChimpRumConfig.Options`** for the same tuning knobs as JS (`captureEnabled`, `maxEventsPerSession`, etc.).
 
    **`environment`:** Must follow **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**. **`BuildConfig.BUILD_TYPE`** alone is usually **`debug` / `release`** and **does not** match typical **`QA` / `staging` / `production`** tags—define **`BuildConfig`** fields, **product flavors**, or **manifest placeholders** so the RUM tag matches team + MCP scope naming; use **runtime overrides** only if standardized (e.g. debug `System.getenv` behind a flag).
-3. **TrueCoverage + Mobilewright:** Set **`TESTCHIMP_PROJECT_TYPE=android`**, **`installTestChimp`** on fixtures, **`device`** available in hooks.
-4. **Deep link:** Add an **`intent-filter`** on the activity that should receive automation (often launcher or dedicated handler) for `testchimp-rum://truecoverage/v1/...` (scheme `testchimp-rum`, host `truecoverage`, path prefix `/v1`).
-5. **Deliver to the SDK:** In `onCreate` / `onNewIntent`, call **`TestChimpRum.handleAutomationIntent(intent)`** (or the API name documented in the package for your version).
+3. **TrueCoverage + Mobilewright:** Set **`TESTCHIMP_PROJECT_TYPE=android`**. Apply **`installTestChimp`** from `@testchimp/playwright/runtime` in your **`fixtures/index.js`** (merged `test`) so **`SET`** runs in the **`device`** fixture and **`afterEach`** handles flush — same library as iOS; see [playwright-testchimp-reporter README](https://github.com/testchimphq/playwright-testchimp-reporter).
+4. **Deep link:** Add an **`intent-filter`** on the activity that should receive automation (often the launcher activity) for **`VIEW`** + scheme **`testchimp-rum`**, host **`truecoverage`**, path prefix **`/v1`** (matches `…/v1/set`, `…/v1/clear`, `…/v1/flush`).
+5. **Deliver to the SDK:** On each relevant lifecycle hook (**`onCreate`**, **`onNewIntent`**, and if needed **`onResume`** so repeated VIEW deliveries are not missed), obtain a **`Uri`** and call **`TestChimpRum.handleAutomationUri(uri)`**.
+
+   **`Intent` vs `Uri`:** `TestChimpRum.handleAutomationIntent(intent)` delegates to **`intent?.data`**. Some **`VIEW`** deliveries leave **`getData()`** null while **`intent.dataString`** is still set—normalize first:
+
+   ```kotlin
+   val uri = intent.data ?: intent.dataString?.takeIf { it.isNotBlank() }?.let(Uri::parse)
+   if (uri != null) TestChimpRum.handleAutomationUri(uri)
+   ```
 
 Full detail: [testchimp-rum-android README](https://github.com/testchimphq/testchimp-rum-android).
+
+### SmartTests checklist (native)
+
+- [ ] **`TESTCHIMP_PROJECT_TYPE=ios`** or **`android`** on **every** Mobilewright run (shell / CI).
+- [ ] **`TESTCHIMP_API_KEY`** in the **runner** process (see **`SKILL.md`** — Preamble checks **#4**); MCP IDE env alone is not enough.
+- [ ] **`export const test = installTestChimp(mergedTest)`** from **`fixtures/index.js`**; spec files import **`test`** from that barrel — **do not** import raw **`test`** from **`@mobilewright/test`** in specs (setup-only projects may differ).
+- [ ] **`mobilewright.config.ts`**: **`platform`**, **`bundleId`**, **`installApps`** / APK path as required.
 
 ---
 

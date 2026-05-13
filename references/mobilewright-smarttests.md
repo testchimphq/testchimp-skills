@@ -10,7 +10,7 @@ Use this reference when **`.testchimp-tests`** (or project settings) indicate a 
 | Primary UI fixture | `page` | `screen` (and related mobile fixtures such as `device` per Mobilewright) |
 | Config file (typical scaffold) | `playwright.config.js` | `mobilewright.config.ts` |
 | AI steps (`ai.act` / `ai.verify` / `ai.extract`) | Supported via **ai-wright** | **Not supported** — ai-wright does not support Mobilewright yet |
-| TrueCoverage (RUM + coverage loop) | In scope by default per [`truecoverage.md`](./truecoverage.md) | In scope: **TestChimpRum** (iOS SPM / Android Gradle), app URL scheme or intent filter, `installTestChimp` + **`TESTCHIMP_PROJECT_TYPE`**, Mobilewright **`device`** for automation URLs — see [`truecoverage.md`](./truecoverage.md) |
+| TrueCoverage (RUM + coverage loop) | In scope by default per [`truecoverage.md`](./truecoverage.md) | In scope: **TestChimpRum** (iOS SPM / Android Gradle), app URL scheme / intent filter + in-app forwarding, **`installTestChimp`**, **`TESTCHIMP_PROJECT_TYPE`**, and Mobilewright **`device`** (TrueCoverage **`SET`** runs in the extended **`device`** fixture after **`launchApp`**) — see [`truecoverage.md`](./truecoverage.md) |
 | ExploreChimp | Supported with `markScreenState` | Supported — set **`TESTCHIMP_PROJECT_TYPE`** to **`android`** or **`ios`** on **every** run; browser projects use **`web`** ([`exploratory_runs.md`](./exploratory_runs.md)) |
 | Requirement traceability | `// @Scenario: #TS-…` in tests | Same as web |
 
