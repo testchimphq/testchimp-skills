@@ -58,7 +58,8 @@ flowchart LR
 
 ### Default branch / scope
 
-- Unless the user specifies a Git branch for analytics, **omit `branchName`** from coverage and execution requests so the platform uses the **default for the connected repo** (same idea as “default branch” in integrations).
+- Unless the user specifies a Git branch for analytics, **omit `branchName`** from coverage and execution requests so results aggregate across branch copies (unscoped coverage). Pass **`branchName`** only when analytics must be limited to one Git branch.
+- For **test authoring** in evolve, a scenario is eligible only when lifecycle **`done`** on the scenario **and** on the parent user story (no “branch-implemented + validated” shortcut used in `/testchimp test` Analyze).
 - Reuse the same optional **`scope.folderPath`**, **`scope.filePaths`**, **`environment`**, **`release`** filters when comparing apples to apples across tools.
 
 ### TrueCoverage (when enabled)
@@ -201,7 +202,7 @@ Then complete **Verification** and **Closure** below.
 
 - Run **new or changed** tests per **`plans/knowledge/ai-test-instructions.md`** (local vs CI, env bring-up, headed vs headless—follow what the project recorded; consult **`## Past learnings — authoring & validation (FAQ)`** when bring-up or URLs fail—[`testing-process.md`](./testing-process.md#binding-ai-test-instructions-environment-and-faq-playbook)).
 - For SmartTest details, see [`write-smarttests.md`](./write-smarttests.md).
-- Before **ExploreChimp**, confirm **UI** specs used for exploration have appropriate **`markScreenState`** coverage for the flows you are analyzing (same bar as **Phase 4: Validate** in [`testing-process.md`](./testing-process.md)). In **`/testchimp test`**, **Phase 5** is **default-on** for UI SmartTest deltas unless branch plan **[§6](./testing-process.md#6-explorechimp-branch-plan-yes-or-documented-na)** records **`N/A`** with rationale (evolve remains plan-gated per evolve plan section **8**).
+- Before **ExploreChimp**, confirm **UI** specs used for exploration have appropriate **`markScreenState`** coverage for the flows you are analyzing (same bar as **Phase 4: Validate** in [`testing-process.md`](./testing-process.md)). In **`/testchimp test`**, **Phase 6** ExploreChimp is **default-on** for UI SmartTest deltas unless branch plan **[§7](./testing-process.md#7-explorechimp-branch-plan-yes-or-documented-na)** records **`N/A`** with rationale; run after **Phase 5: Smart regression** on **new + changed + regression-touched** specs (evolve remains plan-gated per evolve plan section **8**).
 
 ### Closure
 

@@ -82,7 +82,7 @@ Start the TestChimp MCP server (stdio transport). **No flags.** Typically invoke
 |------|----------|-------------------|--------|
 | `--release <s>` | No | `release` | |
 | `--environment <s>` | No | `environment` | |
-| `--branch-name <s>` | No | `branchName` | Git branch. |
+| `--branch-name <s>` | No | `branchName` | Optional Git branch; omit for cross-branch coverage (recommended for `/testchimp test` Analyze). |
 | `--file-paths <csv>` | No | `scope.filePaths` | Comma-separated paths under **platform tests or plans** root. |
 | `--folder-path <path>` | No | `scope.folderPath` | Slash-separated folder under tests or plans root; sent as normalized path segments. |
 | `--json-input …` | No | (merge) | e.g. `includeNonCoveredUserStories`, `includeNonCoveredTestScenarios`, or `scope.folderPath` as **array** of segments. |
@@ -99,6 +99,18 @@ Start the TestChimp MCP server (stdio transport). **No flags.** Typically invoke
 | `--file-paths <csv>` | No | `scope.filePaths` | Comma-separated under platform tests or plans root. |
 | `--folder-path <path>` | No | `scope.folderPath` | Slash-separated; same normalization as coverage. |
 | `--json-input …` | No | (merge) | For any extra fields accepted by the backend. |
+
+### `mark-plan-items-implementation-done`
+
+**API:** `POST /api/mcp/mark_plan_items_implementation_done`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--scenario-ordinal-ids <csv>` | No* | `scenarioOrdinalIds` | Numeric parts of `TS-<n>`. |
+| `--user-story-ordinal-ids <csv>` | No* | `userStoryOrdinalIds` | Numeric parts of `US-<n>`. |
+| `--json-input …` | No | (merge) | |
+
+\*At least one of the ordinal id lists should be non-empty.
 
 ---
 
@@ -460,7 +472,7 @@ Deeper product context: [truecoverage.md](./truecoverage.md).
 
 ## MCP parity (tool names)
 
-MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`create-user-story`**, **`list-rum-environments`**.
+MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`mark-plan-items-implementation-done`**, **`create-user-story`**, **`list-rum-environments`**.
 
 ## Related
 

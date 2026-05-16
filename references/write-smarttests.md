@@ -191,7 +191,7 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 | `scope.filePaths` | string[] | Paths to SmartTest files **relative to the platform tests folder root** (e.g. `e2e/checkout.spec.ts`). Prefer this over internal file ids. |
 | `includeNonCoveredUserStories` | boolean | Include user stories with no coverage. |
 | `includeNonCoveredTestScenarios` | boolean | Include scenarios with no coverage. |
-| `branchName` | string | Git branch name (e.g. `main`) when results should respect branch-scoped assets. Prefer this over internal branch ids. |
+| `branchName` | string | Optional Git branch name when results must be limited to **one** branch. **Omit** for cross-branch coverage (default for Analyze in `/testchimp test`): aggregates all active branch copies; execution jobs are deduped by stable hash of tests-root-relative file path + Playwright test name. |
 
 **Example MCP tool call (conceptual):**
 
@@ -215,13 +215,36 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 }
 ```
 
+**Response identifiers:** Coverage payloads use **`scenarioOrdinalId`** / **`userStoryOrdinalId`** (and lifecycle fields on coverage records), not platform UUID primary keys. MCP/CLI/skills contracts use ordinals only (`TS-<n>` / `US-<n>`).
+
 ### Tool: `get-execution-history`
 
 **Purpose:** Recent SmartTest execution history for the same scoping model as coverage.
 
 **Arguments:** Same as `get-requirement-coverage` except there are no `includeNonCoveredUserStories` / `includeNonCoveredTestScenarios` fields.
 
+### Tool: `mark-plan-items-implementation-done`
+
+**Purpose:** After validated implementation, mark stories/scenarios **`done`** in platform lifecycle (DB only).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `scenarioOrdinalIds` | number[] | Numeric parts of `TS-<n>` ids. |
+| `userStoryOrdinalIds` | number[] | Numeric parts of `US-<n>` ids. |
+
 **Example:**
+
+```json
+{
+  "tool": "mark-plan-items-implementation-done",
+  "arguments": {
+    "scenarioOrdinalIds": [107],
+    "userStoryOrdinalIds": [118]
+  }
+}
+```
+
+**Example (execution history):**
 
 ```json
 {
