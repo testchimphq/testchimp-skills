@@ -155,7 +155,7 @@ The MCP server exposes tools grouped by area:
 - **Planning (user stories & scenarios)** — `create-user-story`, `create-test-scenario`, `update-user-story`, `update-test-scenario`
 - **Environments & EaaS** — `get-eaas-config`, `get-branch-specific-endpoint-config`, `provision-ephemeral-environment-and-wait`, `provision-ephemeral-environment`, `get-ephemeral-environment-status`, `destroy-ephemeral-environment`
 - **Ephemeral deploy diagnostics (BunnyShell)** — `list-bunnyshell-environment-events`, `list-bunnyshell-workflow-jobs`, `get-bunnyshell-workflow-job-logs`
-- **TrueCoverage analytics** — `list-rum-environments`, `get-truecoverage-events`, `get-truecoverage-event-details`, `get-truecoverage-child-event-tree`, `get-truecoverage-event-transition`, `get-truecoverage-event-time-series`, `get-truecoverage-session-metadata-keys`, `get-truecoverage-event-metadata-keys`
+- **TrueCoverage analytics** — `list-rum-environments`, `get-truecoverage-events`, `get-truecoverage-event-details`, `get-truecoverage-child-event-tree`, `get-truecoverage-event-transition`, `get-truecoverage-event-time-series`, `get-truecoverage-session-metadata-keys`, `get-truecoverage-event-metadata-keys` — set **`platform`** on each **`ExecutionScope`** in `--json-input` (see [`references/cli.md`](references/cli.md) § TrueCoverage)
 
 Use the repo, plans, and those tools to decide what to test and how to run them.
 

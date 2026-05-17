@@ -331,20 +331,21 @@ When the project has **not** explicitly opted out of TrueCoverage in `ai-test-in
 
 ### Execution scopes (mental model)
 
-Analytics messages embed **`ExecutionScope`**: environment, time window, optional release/branch/metadata filters, and optionally **`automationEmitsOnly`**.
+Analytics messages embed **`ExecutionScope`**: environment, time window, optional release/branch/metadata filters, optional **`platform`**, and optionally **`automationEmitsOnly`**.
 
 | Scope field | Typical use |
 |-------------|-------------|
 | **`baseExecutionScope`** | **Real-user / production** (or the environment that best reflects real behavior). Drives funnel stats: relative frequency, funnel position, histograms, terminal %, session counts. |
 | **`comparisonExecutionScope`** | **Secondary** window (often **QA / staging**) used to answer “did **automated tests** cover this event?” Coverage badges compare base vs this scope. |
 | **`coverage_scope`** (child event tree) | Same idea as comparison: “which **next** events were seen under coverage” when drilling into transitions. |
+| **`platform`** | **`WEB_EXECUTION_PLATFORM`**, **`IOS_EXECUTION_PLATFORM`**, or **`ANDROID_EXECUTION_PLATFORM`** — limits analytics to RUM rows stamped at ingest. Web/iOS/Android SDKs send **`testchimp-rum-platform: 1|2|3`** on **`/rum/session/start`** and **`/rum/events`**. Use on base and comparison scopes in multi-platform repos so web prod traffic is not mixed with native mobile. |
 
 Set **`automationEmitsOnly: true`** on **`comparisonExecutionScope`** or **`coverage_scope`** when you want coverage to count **only RUM emits that carry test identity** (`test_id` from the Playwright reporter, including native mobile when CI automation URLs are wired). That **excludes manual sessions** on the same environment so “covered” is not polluted by ad-hoc QA. Omit the field or set **`false`** to include all traffic in that scope (legacy behavior). **Do not rely on `automationEmitsOnly` on the base scope** for filtering real-user metrics—the platform ignores it for base aggregates; use it only on comparison/coverage scopes.
 
 ### Recommended flow
 
 1. **`list-rum-environments`** — Lists environment tags present in data; pick env values for scopes.
-2. **`get-truecoverage-events`** — Body: `baseExecutionScope`, optional `comparisonExecutionScope` (add `automationEmitsOnly` on comparison when you want test-only coverage). **Returns** `eventSummaries[]` with `eventTitle`, `relativeFrequency`, `coverageStatus` (PRESENT/ABSENT vs comparison), position/histogram summaries, `numUniqueSessions`, terminal %.
+2. **`get-truecoverage-events`** — Body: `baseExecutionScope`, optional `comparisonExecutionScope` (add `automationEmitsOnly` on comparison when you want test-only coverage; set **`platform`** on each scope for web vs iOS vs Android — see [`cli.md`](./cli.md) § `ExecutionScope`). **Returns** `eventSummaries[]` with `eventTitle`, `relativeFrequency`, `coverageStatus` (PRESENT/ABSENT vs comparison), position/histogram summaries, `numUniqueSessions`, terminal %.
 3. Choose high-impact gaps, then for the identified events that you want to drill in to:
    - **`get-truecoverage-event-details`** — Time series, sample sessions, **metadata** breakdown with per-value **comparison coverage** (use `automationEmitsOnly` on `comparisonExecutionScope` to align metadata “covered” with test-tagged emits only).
    - **`get-truecoverage-child-event-tree`** — Top **next** events after the current title; pass **`coverage_scope`** with `automationEmitsOnly` when transition coverage should ignore manual paths.

@@ -68,6 +68,7 @@ See **`ExecutionScope`** in [`truecoverage.md`](./truecoverage.md):
 
 - **`baseExecutionScope`** — real-user / primary environment (frequency, funnels, impact).
 - **`comparisonExecutionScope`** — where automated tests run; set **`automationEmitsOnly: true`** on comparison (and on **`coverage_scope`** when drilling) so “covered” means **test-tagged emits only**. Before calling those, call list_rum_environments to get the list of environments - so that you know what env to set for base and comparison scopes.
+- **`platform`** on each scope (**`WEB_EXECUTION_PLATFORM`**, **`IOS_EXECUTION_PLATFORM`**, **`ANDROID_EXECUTION_PLATFORM`**) when the repo ingests multiple RUM platforms — e.g. compare prod **iOS** real users to **QA** **iOS** automation only. See [`cli.md`](./cli.md) § TrueCoverage and [`truecoverage.md`](./truecoverage.md) § Execution scopes.
 
 **Suggested order:**
 

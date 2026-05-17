@@ -374,7 +374,8 @@ Same requirement as **`update-user-story`**: provide content via flag(s) or JSON
 MCP/CLI TrueCoverage endpoints deserialize the POST body with **Protobuf `JsonFormat`** (same as `/rum/analytics/*` in featureservice). Use **camelCase** JSON keys everywhere (proto sources use `snake_case`; **do not** send `snake_case` in JSON).
 
 - **Proto sources:** `rum_service.proto` (`ListEventsRequest`, `GetEventDetailsRequest`, …), `common.proto` (`TimeWindow`, `TypedValue`).
-- **Invocation:** almost every tool is **`--json-input '<json>'`** only (no other flags), except **`get-truecoverage-event-metadata-keys`** (required **`--event-title`** or `eventTitle` in JSON).
+- **Invocation:** almost every tool is **`--json-input '<json>'`** only (no other flags), except **`get-truecoverage-event-metadata-keys`** (required **`--event-title`** or `eventTitle` in JSON). Set **`platform`** inside each **`ExecutionScope`** object (same as **`environment`**, **`timeWindow`**, etc.).
+- **RUM ingest:** client SDKs stamp platform on every batch via HTTP header **`testchimp-rum-platform`** (`1` = web, `2` = iOS, `3` = Android). Analytics scopes filter on the stored enum, not on request-body platform fields on individual events.
 
 ### TrueCoverage subcommand → API route
 
@@ -396,7 +397,7 @@ For **`get-truecoverage-event-metadata-keys`**, supply **`eventTitle`** via **`-
 | Concept | JSON shape |
 |--------|------------|
 | Field names | **camelCase** (e.g. `branchName`, `baseExecutionScope`, `timeWindow`). |
-| Enums | **String** enum name, e.g. **`"EQUALS"`**, **`"SESSION_COUNT"`** (not numeric wire values). |
+| Enums | **String** enum name, e.g. **`"EQUALS"`**, **`"SESSION_COUNT"`**, **`"WEB_EXECUTION_PLATFORM"`** (not numeric wire values). |
 | `google.protobuf.Timestamp` | **RFC 3339** string, e.g. **`"2024-03-05T00:00:00.000Z"`**. |
 | `google.protobuf.Duration` | **String** ending in **`s`**, e.g. **`"604800s"`** (seven days), **`"1.5s"`**. Do **not** rely on `{ "seconds": … }` objects for MCP JSON; use the string form. |
 | `oneof` | Only the chosen branch’s field appears (e.g. either **`relativeWindow`** or **`fixedWindow`** under **`timeWindow`**, not both). |
@@ -450,6 +451,7 @@ Exactly **one** of:
 | `release` | string | Optional filter. |
 | `branchName` | string | Optional filter. |
 | `metadataFilters` | array of `MetadataFilter` | Optional. |
+| `platform` | string (`ExecutionPlatform`) | Optional — **`WEB_EXECUTION_PLATFORM`**, **`IOS_EXECUTION_PLATFORM`**, **`ANDROID_EXECUTION_PLATFORM`**. Filters rows stamped at ingest (RUM header **`testchimp-rum-platform`**). Omit to include all platforms in the scope’s environment/window. |
 | `automationEmitsOnly` | boolean | When **`true`** on **`comparisonExecutionScope`** (or coverage-style scopes below), coverage alignment uses only RUM emits that carry **test** identity (`test_id`). **Ignored** for **`baseExecutionScope`** / **`baseScope`** per proto comments. |
 
 ### Per-request JSON payloads (`--json-input`)
@@ -526,6 +528,12 @@ Event details:
 
 ```bash
 testchimp get-truecoverage-event-details --json-input '{"eventTitle":"Checkout completed","baseExecutionScope":{"environment":"QA","timeWindow":{"relativeWindow":"2592000s"}}}'
+```
+
+Prod iOS real users vs QA iOS automation:
+
+```bash
+testchimp get-truecoverage-events --json-input '{"baseExecutionScope":{"environment":"prod","platform":"IOS_EXECUTION_PLATFORM","timeWindow":{"relativeWindow":"2592000s"}},"comparisonExecutionScope":{"environment":"QA","platform":"IOS_EXECUTION_PLATFORM","timeWindow":{"relativeWindow":"2592000s"},"automationEmitsOnly":true}}'
 ```
 
 Deeper product context: [truecoverage.md](./truecoverage.md).
