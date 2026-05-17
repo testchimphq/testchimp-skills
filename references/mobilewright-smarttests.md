@@ -1,56 +1,70 @@
 # SmartTests on mobile (Mobilewright)
 
-Use this reference when **`.testchimp-tests`** (or project settings) indicate a **mobile** project (`project_type=android` or `project_type=ios`). Authoritative upstream docs: [mobile-next/mobilewright](https://github.com/mobile-next/mobilewright).
+Use this reference when **`.testchimp-tests`** has **`project_type=mobile`**, **`multi-platform`**, or legacy **`ios`/`android`**. Layout and paths: [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md). Upstream: [mobile-next/mobilewright](https://github.com/mobile-next/mobilewright).
 
 ## Stack vs web
 
-| Concern | Web (default) | Mobile |
-|--------|----------------|--------|
-| Test runner package in fixtures / setup | `@playwright/test` | `@mobilewright/test` |
-| Primary UI fixture | `page` | `screen` (and related mobile fixtures such as `device` per Mobilewright) |
-| Config file (typical scaffold) | `playwright.config.js` | `mobilewright.config.ts` |
-| AI steps (`ai.act` / `ai.verify` / `ai.extract`) | Supported via **ai-wright** | **Not supported** — ai-wright does not support Mobilewright yet |
-| TrueCoverage (RUM + coverage loop) | In scope by default per [`truecoverage.md`](./truecoverage.md) | In scope: **TestChimpRum** (iOS SPM / Android Gradle), app URL scheme / intent filter + in-app forwarding, **`installTestChimp`**, **`TESTCHIMP_PROJECT_TYPE`**, and Mobilewright **`device`** (TrueCoverage **`SET`** runs in the extended **`device`** fixture after **`launchApp`**) — see [`truecoverage.md`](./truecoverage.md) |
-| ExploreChimp | Supported with `markScreenState` | Supported — set **`TESTCHIMP_PROJECT_TYPE`** to **`android`** or **`ios`** on **every** run; browser projects use **`web`** ([`exploratory_runs.md`](./exploratory_runs.md)) |
-| Requirement traceability | `// @Scenario: #TS-…` in tests | Same as web |
+| Concern | Web | Mobile |
+|--------|-----|--------|
+| Test runner in fixture barrels | `@playwright/test` | `@mobilewright/test` in **`mobile/fixtures/`** |
+| Primary UI fixture | `page` | `screen`, `device` |
+| Config | `playwright.config.js` | `mobilewright.config.ts` (`setup`, `api`, `ios`, `android`) |
+| AI steps (ai-wright) | Supported | **Not supported** |
+| TrueCoverage | `@testchimp/rum-js` + `installTestChimp` on web barrel | TestChimpRum in app + **`installTestChimp(..., { uiFixture: 'screen' })`** on **`mobile/fixtures/index.js`**; **`projects[].use.platform`** (`ios`/`android`) — [`truecoverage.md`](./truecoverage.md) |
+| ExploreChimp | `markScreenState` + `page` | Same fixture on **`screen`** — [`exploratory_runs.md`](./exploratory_runs.md) |
+| Traceability | `// @Scenario: #TS-…` | Same |
+
+## Where to put tests
+
+| Intent | Folder |
+|--------|--------|
+| Both iOS and Android | `mobile/e2e/common/` |
+| iOS-only | `mobile/e2e/ios/` |
+| Android-only | `mobile/e2e/android/` |
+| API / request-only | `api/` (import **`api/fixtures/index.js`**) |
+| Shared seed factories | `shared/` (not specs) |
+
+**Multi-platform** web UI lives under **`web/e2e/`** with **`web/fixtures/index.js`** — not in `mobile/`.
 
 ## Dependencies
 
-From the SmartTests package root (same place as other test deps):
-
 ```bash
-npm install mobilewright
-npm install @mobilewright/test
-npm install @testchimp/playwright
+npm install mobilewright @mobilewright/test @testchimp/playwright
 ```
 
-Keep **`mobilewright`** and **`@mobilewright/test` on the same version** (see comments in template configs under [`../assets/`](../assets/)). Verify with `npm ls @mobilewright/test mobilewright`.
+Keep **`mobilewright`** and **`@mobilewright/test`** on the **same version** (>= **0.0.37** for per-project `installApps`). Verify: `npm ls @mobilewright/test mobilewright`.
 
-## Config: app binary path
+## Config: apps and platform
 
-Scaffolded **`mobilewright.config.ts`** includes **`installApps`** with a placeholder path:
+- **`installApps`:** APK (Android) / IPA or `.app` (iOS) paths in **`mobilewright.config.ts`**.
+- **`bundleId`:** app under test.
+- **`projects[].use.platform`:** `ios` or `android` on UI projects — required for `@testchimp/playwright` TrueCoverage/ExploreChimp per test.
 
-- **Android:** replace with the path to your **`.apk`** (local emulator builds often use a debug APK from Gradle output; CI with cloud devices may use a release APK).
-- **iOS:** replace with the path to your **`.ipa`** or simulator **`.app`** as required by your workflow (see Mobilewright docs and your build pipeline).
-
-Also set **`bundleId`** to the app under test.
+Templates: [`../assets/template_mobile_mobilewright.config.ts`](../assets/template_mobile_mobilewright.config.ts), [`../assets/template_multi_platform_mobilewright.config.ts`](../assets/template_multi_platform_mobilewright.config.ts).
 
 ## Authoring rules
 
-1. **Specs** import **`{ test, expect }`** only from **`tests/fixtures/index.js`** (relative path), same as web. The platform scaffold uses **`@mobilewright/test`** as the base **`test`** inside that file for mobile projects.
-2. **Use `screen` (and `device`, etc.)** for UI automation per Mobilewright — not **`page.goto`**-style web patterns unless the upstream API explicitly exposes them.
-3. **Use `await markScreenState('ScreenName', 'stateName')`** at stable points (same traceability / ExploreChimp model as web).
-4. **Do not** add **`import { ai } from 'ai-wright'`** or **`ai.act` / `ai.verify` / `ai.extract`** steps on mobile projects.
-5. **Prefer** selector-based or Mobilewright-documented APIs for interactions; follow the same Arrange / Act / Assert and fixture/seed patterns as web for world-state.
+1. **Specs** import **`{ test, expect }`** only from **`mobile/fixtures/index.js`** (relative path) — never raw `@mobilewright/test`.
+2. Use **`screen`** / **`device`** for UI — not web **`page.goto`** patterns.
+3. **`await markScreenState('Screen', 'state')`** at stable UI boundaries.
+4. **No** ai-wright on mobile.
+5. Same Arrange / Act / Assert and fixture/seed patterns as web; cross-platform helpers in **`shared/`**.
 
 ## Running tests
 
-- Run from the **SmartTests root** (folder with **`.testchimp-tests`**).
-- Use the repo’s documented command; typical pattern is **`npx playwright test`** with config pointing at **`mobilewright.config.ts`** (for example **`npx playwright test -c mobilewright.config.ts`** if no npm script wraps it).
-- For environment/doctor/simulator setup, see [`environment-management.md`](./environment-management.md) § Mobile.
+From the **SmartTests root** (`.testchimp-tests`):
+
+```bash
+npx mobilewright test -c mobilewright.config.ts --project ios
+npx mobilewright test -c mobilewright.config.ts --project android
+npx mobilewright test -c mobilewright.config.ts --project api
+```
+
+See [`environment-management.md`](./environment-management.md) for device/simulator setup.
 
 ## Related
 
-- [`fixture-usage.md`](./fixture-usage.md) — mergeTests + `installTestChimp` for web vs mobile bases
-- [`write-smarttests.md`](./write-smarttests.md) — scenario links, `markScreenState`, mobile limitations
-- [`exploratory_runs.md`](./exploratory_runs.md) — **`TESTCHIMP_PROJECT_TYPE`**
+- [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)
+- [`fixture-usage.md`](./fixture-usage.md)
+- [`write-smarttests.md`](./write-smarttests.md)
+- [`exploratory_runs.md`](./exploratory_runs.md)

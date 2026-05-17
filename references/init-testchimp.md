@@ -85,7 +85,7 @@ When **`/testchimp init`** starts, the **first substantive message to the user**
 
 **Include the following substance** (adapt wording slightly for tone; keep meaning):
 
-- **During init**, TestChimp sets up **complete QA infrastructure** for the project: seeding endpoints, test environment management, CI setup, fixtures, **TrueCoverage instrumentation** (web: `@testchimp/rum-js`; native: **TestChimpRum** on iOS/Android per [`truecoverage.md`](./truecoverage.md)), and test scaffolds with proper TestChimp integration (Playwright on web, Mobilewright on **`project_type=android|ios`** — see **`.testchimp-tests`** and [`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
+- **During init**, TestChimp sets up **complete QA infrastructure** for the project: seeding endpoints, test environment management, CI setup, fixtures, **TrueCoverage instrumentation** (web: `@testchimp/rum-js`; native: **TestChimpRum** on iOS/Android per [`truecoverage.md`](./truecoverage.md)), and test scaffolds with proper TestChimp integration (Playwright on web; Mobilewright on **`mobile`** / **`multi-platform`** — see **`.testchimp-tests`**, [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md), [`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
 - **After init**, the user mainly runs **`/testchimp test`** when they finish a PR and want it tested.
 - **Ongoing**, the agent runs the full QA workflow — when speaking to the user, use first person: *I will run the complete QA workflow* to author tests for relevant scenarios, make the necessary QA infrastructure adjustments, identify coverage gaps, and address them.
 - **Periodically**, run **`/testchimp evolve`** to analyze test coverage gaps and TrueCoverage insights, address them, and improve the suite. Persist each evolve run as a dated plan markdown file under **`<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/`** (see [`evolve-coverage.md`](./evolve-coverage.md)) so later runs have traceability.
@@ -232,7 +232,7 @@ Agent stance (preferred behavior):
 
 ### Key Area 4 — TrueCoverage Infra (RUM + journey events)
 
-**Native mobile:** If **`.testchimp-tests`** sets **`project_type=android`** or **`project_type=ios`**, Key Area 4 still applies to the **native app**: wire **TestChimpRum** (SPM / Gradle), init + emit helper, URL scheme or intent filter + SDK automation handlers, and confirm SmartTests use **`installTestChimp`** with **`TESTCHIMP_PROJECT_TYPE=android|ios`** ([`truecoverage.md`](./truecoverage.md), [`mobilewright-smarttests.md`](./mobilewright-smarttests.md)). If **`### TrueCoverage Plan`** records **explicit opt-out**, treat RUM wiring as **skipped** with that rationale—not “unsupported platform.”
+**Native mobile:** If **`.testchimp-tests`** is **`mobile`** or **`multi-platform`** (legacy **`ios`/`android`** → mobile), Key Area 4 applies to the **native app**: wire **TestChimpRum**, URL scheme / intent filter, **`mobile/fixtures/index.js`** with **`installTestChimp(..., { uiFixture: 'screen' })`**, and **`use.platform`** on UI config projects ([`truecoverage.md`](./truecoverage.md), [`mobilewright-smarttests.md`](./mobilewright-smarttests.md)). Explicit opt-out under **`### TrueCoverage Plan`** → skip with rationale.
 
 Why this area (quick education):
 - TrueCoverage is extremely useful because it turns **production behavior** into **real coverage gaps**: what users actually do (features people engage with, where they spend time, where they drop off, and top-of-funnel vs later behavior, funnel flows etc.).
@@ -388,7 +388,7 @@ Init touches a lot of surface area. **By default**, prefer **separate PRs** for 
 **Ask the user explicitly:** do they want **one combined PR** or **separate PRs**? Execute and branch/push accordingly; do not assume a single mega-PR.
 
 Execute the **6** key areas in this order and treat them as grouped action-item blocks:
-- **Basic TestChimp integration + test harness:** actions A–F (markers, deps, config, MCP, Playwright layout including `setup` / `e2e` / `api` and **required** `tests/fixtures/` + `fixtures/index.js`—see [`fixture-usage.md`](./fixture-usage.md))
+- **Basic TestChimp integration + test harness:** actions A–F (markers, deps, config, MCP, scaffold layout per [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) — `setup`, `e2e` or `web/e2e` + `mobile/e2e`, `api/`, fixture barrels — see [`fixture-usage.md`](./fixture-usage.md))
 - **Existing suite import / alignment (when planned):** action K—skip when greenfield / N/A
 - **Mocking:** action J ([`mocking_strategy.md`](./mocking_strategy.md))
 - **TrueCoverage Infra:** action I
@@ -419,7 +419,7 @@ If markers are missing:
 
 Platform path note: MCP APIs use platform-rooted paths (`plans/...` or `tests/...`) even if repo folder names differ.
 
-**`project_type` in `.testchimp-tests`:** Read the marker file. **Empty or no `project_type` line** → **web**. Lines like **`project_type=android`** or **`project_type=ios`** (case-insensitive) → **mobile** — use Mobilewright deps, **`mobilewright.config.ts`**, and **`@mobilewright/test`** in fixtures ([`mobilewright-smarttests.md`](./mobilewright-smarttests.md), [`fixture-usage.md`](./fixture-usage.md)). Optionally record the detected type in **`plans/knowledge/ai-test-instructions.md`**.
+**`project_type` in `.testchimp-tests`:** Read the marker file. **Empty** → **web**. **`mobile`** or legacy **`ios`/`android`** → mobile scaffold. **`multi-platform`** → both configs + `web/` + `mobile/` + `api/`. Full tree: [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md). Record detected type in **`plans/knowledge/ai-test-instructions.md`** when useful.
 
 Success check (Basic TestChimp integration - markers): both `.testchimp-plans` and `.testchimp-tests` marker files exist.
 
@@ -493,22 +493,22 @@ After install, MCP tools can be used for:
 - `setup`: global setup / project dependencies (see template [`template_playwright.config.js`](../assets/template_playwright.config.js)),
 - `e2e`: UI-focused tests,
 - `api`: API-focused tests (optional project),
-- **`tests/fixtures/`** (under the mapped SmartTests root): **required**. A master **`fixtures/index.js`** (or `index.ts`) must wrap the merged **`test`** with **`installTestChimp`** from **`@testchimp/playwright/runtime`** (typically after **`mergeTests`** from **`@playwright/test`**). **`installTrueCoverage`** is a **deprecated alias** with the same behavior—prefer **`installTestChimp`**. See [`fixture-usage.md`](./fixture-usage.md).
+- **Fixture barrels** (per scaffold): **`fixtures/index.js`** (web-only), **`api/fixtures/index.js`**, **`mobile/fixtures/index.js`** (`installTestChimp(..., { uiFixture: 'screen' })`), **`web/fixtures/index.js`** (multi-platform). Each wraps **`mergeTests`** with **`installTestChimp`**. See [`fixture-usage.md`](./fixture-usage.md), [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md).
 
-**Mobile:** Same **`tests/fixtures/`** + **`installTestChimp`** requirement, but **`mergeTests`** and domain fixture bases use **`@mobilewright/test`**. Config projects follow **`mobilewright.config.ts`** (setup + mobile). See [`mobilewright-smarttests.md`](./mobilewright-smarttests.md). **Do not** plan **TrueCoverage** RUM for the native app during init ([`truecoverage.md`](./truecoverage.md)).
+**Mobile / multi-platform:** **`@mobilewright/test`** in **`mobile/fixtures`**; **`mobilewright.config.ts`** with **`use.platform`** on UI projects. Native RUM per [`truecoverage.md`](./truecoverage.md) unless opted out.
 
 Platform OOBE / backfill may create **`fixtures/index.js`**; if it is missing locally, merge the platform sync PR or run the documented backfill before marking **done**. Full **domain fixture** and **seed endpoint** implementation usually lands during **`/testchimp test`** when scenarios require it.
 
 During init, **discover** whether test-only seed/teardown/read routes already exist (see [`seeding-endpoints.md`](./seeding-endpoints.md)) and **record** findings in `plans/knowledge/ai-test-instructions.md` for later test authoring. Do **not** block init on authoring every endpoint or domain fixture module.
 
-Success check (Test harness): SmartTests root matches the chosen template’s project layout (`setup` project, main test project, `testIgnore` for `setup/**`); **`tests/fixtures/index.js`** exists (or will exist after platform sync / backfill you confirm); no `world-states` path required.
+Success check (Test harness): SmartTests root matches the chosen scaffold ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)); required fixture barrel(s) exist after platform sync / backfill; no `world-states` path required.
 
 ### Action item K - Import / align existing Playwright suite (when planned)
 
 Read `plans/knowledge/ai-test-instructions.md` for Key Area 2 decisions and follow [`references/importing-existing-tests.md`](./importing-existing-tests.md).
 
 - If Phase 2 marked this area **skipped** / **N/A** (greenfield), mark action K **skipped** and do not move files.
-- Otherwise: perform the **approved** moves, config path fixes, `@testchimp/playwright` reporter + deps, and **`tests/fixtures/`** + master **`fixtures/index.js`** as listed in the init plan—**only** after user approval of the plan.
+- Otherwise: perform the **approved** moves, config path fixes, `@testchimp/playwright` reporter + deps, and scaffold folders / fixture barrels as listed in the init plan—**only** after user approval.
 - **Every** executable **`*.spec.{js,ts}`** / SmartTest under the mapped tree must import **`test` and `expect` only** from **`fixtures/index.js`** (relative path from the spec file)—never the root **`test`** from **`@playwright/test`** or **`@mobilewright/test`** in spec files. TestChimp runtime hooks (**`markScreenState`**, ExploreChimp when enabled; TrueCoverage test identity on **web** and automation URLs on **mobile** when wired) live on the merged `test` via **`installTestChimp`** in that master file; see [`importing-existing-tests.md`](./importing-existing-tests.md#required-fixtures-first-imports-in-spec-files).
 
 Success check (Import strategy):
@@ -539,7 +539,7 @@ Execute **[Key Area 4 — TrueCoverage](#key-area-4-truecoverage-infra-rum-journ
 
 When the user must pick timing (no **explicit opt-out** yet), persist one of—meanings align with Key Area 4 **Decision policy**:
 
-- **Yes now**: Platform RUM in the **app** (web: `@testchimp/rum-js`; iOS/Android: **TestChimpRum** per [`truecoverage.md`](./truecoverage.md)), single emit helper, app/runtime env for project id + API key (not SmartTests `.env-QA`), sampling, minimal **instrumented** emits, **`installTestChimp`** + **`TESTCHIMP_PROJECT_TYPE`**, native URL scheme / intent filter when on mobile; **`plans/knowledge/truecoverage-instrument-progress.md`** (scan surfaces → planned vs done; mark existing emits **done**); **`plans/events/<title>.event.md`** only for types **actually wired** in init.
+- **Yes now**: Platform RUM in the **app** (web: `@testchimp/rum-js`; iOS/Android: **TestChimpRum** per [`truecoverage.md`](./truecoverage.md)), single emit helper, app/runtime env for project id + API key (not SmartTests `.env-QA`), sampling, minimal **instrumented** emits, correct **`installTestChimp`** barrels + mobile **`use.platform`**, native URL scheme / intent filter when on mobile; **`plans/knowledge/truecoverage-instrument-progress.md`**; **`plans/events/<title>.event.md`** only for types **actually wired** in init.
 - **Later**: record **deferred** under `### TrueCoverage Plan`; point user to `/testchimp setup truecoverage` / `/testchimp instrument` for follow-up.
 - **No**: **only** as **persisted explicit opt-out** under `### TrueCoverage Plan` with a short rationale.
 

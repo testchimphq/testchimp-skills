@@ -18,9 +18,9 @@ This reference supports **local ExploreChimp** runs: Playwright UI tests drive t
 
 ExploreChimp helps agents **find UX bugs** by analyzing **multiple data sources along the pathways of real UI tests**, not by guessing URLs. Each **`await markScreenState(screen, state?)`** call is a **checkpoint**: the reporter attributes console logs, network traffic, and performance metrics to the **prior** screen-state interval, and captures **screenshot + DOM (+ axe)** for the **current** screen-state. That yields evidence-backed issues (performance, layout, visual, usability, accessibility, console noise, API shape/status) tied to **named states** the suite already reaches.
 
-ExploreChimp applies to **both** **web** SmartTests (Playwright + **`page`**) and **native mobile** SmartTests (Mobilewright + **`screen`**). The `@testchimp/playwright` runtime switches fixture/runtime behavior from **`TESTCHIMP_PROJECT_TYPE`**.
+ExploreChimp applies to **both** **web** SmartTests (Playwright + **`page`**) and **native mobile** SmartTests (Mobilewright + **`screen`**). `@testchimp/playwright` chooses **`page`** vs **`screen`** from the fixture barrel (`installTestChimp` default vs `{ uiFixture: 'screen' }`) and, on mobile, **`testInfo.project.use.platform`** (`ios` | `android`) from **`mobilewright.config.ts`**.
 
-**Always set `TESTCHIMP_PROJECT_TYPE` in the shell (or CI env) for exploration runs** — and for **any** SmartTest run where `@testchimp/playwright` is active — so behavior is explicit and matches the repo: **`web`** for browser projects; **`android`** or **`ios`** (lowercase) when **`.testchimp-tests`** has **`project_type=android|ios`**. Derive the value from **`.testchimp-tests`** and keep it the same for normal test runs, Validate passes, and ExploreChimp. See [`mobilewright-smarttests.md`](./mobilewright-smarttests.md) for mobile authoring.
+**Mobile UI runs:** use a config project with **`use.platform`** set; import specs from **`mobile/fixtures/index.js`** (or **`web/fixtures/`** / flat **`fixtures/`** for web). See [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) and [`mobilewright-smarttests.md`](./mobilewright-smarttests.md).
 
 **Out of scope:** **Pure API tests** (no UI fixture journey) are **not** ExploreChimp targets. ExploreChimp is for **UI SmartTests** (web: Playwright + browser; mobile: Mobilewright + device/simulator).
 
@@ -32,7 +32,7 @@ ExploreChimp **requires** meaningful **`markScreenState`** calls on stable UI—
 
 In this skill’s **`/testchimp test`** flow, **`markScreenState`** placement and atlas vocabulary are defined in **Phase 4: Validate** (see [`testing-process.md`](./testing-process.md)) and in **[`write-smarttests.md`](./write-smarttests.md)**:
 
-- **[Screen / state markers (`markScreenState`)](./write-smarttests.md#screen--state-markers-markscreenstate)** — fixture wiring via **`installTestChimp`** on **`tests/fixtures/index.js`** (never named-import `markScreenState` from the runtime package).
+- **[Screen / state markers (`markScreenState`)](./write-smarttests.md#screen--state-markers-markscreenstate)** — **`installTestChimp`** on the correct barrel (`fixtures/`, `web/fixtures/`, or `mobile/fixtures/`); never named-import `markScreenState` from the runtime package.
 - **Atlas workflow** — MCP **`list-screen-states`** / **`upsert-screen-states`** (shell: **`testchimp list-screen-states`**, **`testchimp upsert-screen-states`** — [`cli.md`](./cli.md) § **Screen-state atlas**) and the **post-authoring validation** sequence in [Test writing workflow §7](./write-smarttests.md#test-writing-workflow).
 
 **Order of operations:** Complete **functional** tests and **Validate** (including **`markScreenState`** where required) **before** turning on **`EXPLORECHIMP_ENABLED`** for an exploration batch, so checkpoints match stable product states.
@@ -72,7 +72,7 @@ Server-side analysis uses **per-exploration / per-screen-state** dedup (aligned 
 | Variable | Required | Role |
 |----------|----------|------|
 | **`EXPLORECHIMP_ENABLED`** | Yes for analytics | `true` / `1` / `TRUE` turns on ExploreChimp wiring and backend calls. |
-| **`TESTCHIMP_PROJECT_TYPE`** | **Yes (always set)** | **`web`** for browser / Playwright SmartTests; **`android`** or **`ios`** (lowercase) for native mobile (match **`project_type`** in **`.testchimp-tests`**). Required so `@testchimp/playwright` uses the correct primary UI fixture (**`page`** vs **`screen`**) and runtime wiring for **every** run (tests + explorations). |
+| **Config `use.platform`** | **Yes on mobile UI projects** | Set **`ios`** or **`android`** on Mobilewright UI projects in **`mobilewright.config.ts`** so `@testchimp/playwright` branches TrueCoverage/ExploreChimp per test. Web/API projects omit it. |
 | **`TESTCHIMP_API_KEY`** | **Yes (P0 — on the runner process)** | Must be set in the **environment of the Playwright/Mobilewright process** (export from MCP config per **`SKILL.md`** walk-up, CI secret, or `env:` block). **MCP/IDE-only** is insufficient. Never commit; not in `.env-QA`. |
 | **`TESTCHIMP_BATCH_INVOCATION_ID`** | Yes for correlation | **Exploration id**; also read from **`.testchimp-batch-invocation-id`** if env unset. |
 | **`TESTCHIMP_BRANCH_NAME`** | **Strongly recommended on local / agent shells** | **Canonical env to teach:** human git branch name (e.g. `git rev-parse --abbrev-ref HEAD`). `@testchimp/playwright` sets JSON **`branchName`** on ExploreChimp analyze requests via `getBranchName()`, which reads **`TESTCHIMP_BRANCH_NAME`** first, then **`TESTCHIMP_BRANCH`**, then CI/git vars. The server resolves **`branchName`** to **`branch_id`** on explorations, journeys, and bugs. If both name vars are unset and no CI branch is available, **`branch_id`** may stay empty. |
@@ -95,7 +95,7 @@ Use the dedicated **`## ExploreChimp`** section (see template in [`init-testchim
 ```md
 ## ExploreChimp
 
-- **TESTCHIMP_PROJECT_TYPE:** `web` | `android` | `ios` (match `.testchimp-tests`; use for every run — tests + explorations)
+- **Mobile UI project:** `ios` / `android` via `mobilewright.config.ts` `use.platform` (and correct `mobile/fixtures` barrel)
 - **NETWORK regex:** `...` (or: omit NETWORK from sources; document override)
 - **Default sources:** (only if team narrowed from all-five)
 - **Scope notes:** folders/tests we usually explore on PRs
@@ -109,20 +109,21 @@ Mirror **FAQ-worthy** runner issues in **`## Past learnings — authoring & vali
 ## Operator checklist
 
 1. **`SKILL.md`** preamble: resolve **`TESTCHIMP_API_KEY`** and **export/inject** it into the **runner** process env (verify before spawn; do not rely on MCP-only).
-2. Set **`TESTCHIMP_PROJECT_TYPE`** to **`web`**, **`android`**, or **`ios`** per **`.testchimp-tests`** (same as for normal SmartTest runs — see [`testing-process.md`](./testing-process.md)).
-3. **`@testchimp/playwright` ≥ 0.1.8**; **`fixtures/index.js`** applies **`installTestChimp`** to merged **`test`** per guardrails.
+2. Confirm **`mobilewright.config.ts`** UI projects set **`use.platform`** when exploring native mobile specs ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)).
+3. **`@testchimp/playwright` ≥ 0.1.8**; each spec imports from the barrel where **`installTestChimp`** was applied ([`fixture-usage.md`](./fixture-usage.md)).
 4. **`markScreenState`** in place per **Phase 4** / [`write-smarttests.md`](./write-smarttests.md).
 5. Set **`TESTCHIMP_BATCH_INVOCATION_ID`** (or file) for this exploration batch.
 6. Set **`TESTCHIMP_BRANCH_NAME`** to the current git branch when running locally (so the server can resolve **`branch_id`** for analytics and bugs).
 7. Set **`EXPLORECHIMP_ENABLED=true`**; configure sources / **network regex** as needed.
-8. `cd` **SmartTests root**; run the project’s test command (typically **`npx playwright test …`**, with **`-c mobilewright.config.ts`** on mobile if that is how the repo is wired).
+8. `cd` **SmartTests root**; run per scaffold ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)) — e.g. **`npx playwright test -c playwright.config.js --project web`**, **`npx mobilewright test -c mobilewright.config.ts --project ios`**.
 9. Review findings in TestChimp exploration/journey UI; update **`## ExploreChimp`** with new stable decisions.
 
 ---
 
 ## Related references
 
-- [`mobilewright-smarttests.md`](./mobilewright-smarttests.md) — native mobile stack, **`TESTCHIMP_PROJECT_TYPE`**, no ai-wright
+- [`mobilewright-smarttests.md`](./mobilewright-smarttests.md) — native mobile stack, `use.platform`, no ai-wright
+- [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) — spec/fixture paths
 - [`write-smarttests.md`](./write-smarttests.md) — **`markScreenState`**, atlas MCP tools, authoring order
 - [`cli.md`](./cli.md) — **`testchimp list-screen-states`**, **`testchimp upsert-screen-states`** (§ **Screen-state atlas**)
 - [`testing-process.md`](./testing-process.md) — **Phase 4** markers + **Phase 5** Smart regression + **Phase 6** ExploreChimp (**default-on** for UI SmartTest deltas; **[§7](./testing-process.md#7-explorechimp-branch-plan-yes-or-documented-na)** **`yes`** or **`N/A`**) on **new + changed + regression-touched** UI specs

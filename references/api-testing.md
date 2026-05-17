@@ -2,8 +2,7 @@
 
 Use this reference when the Plan phase decides a scenario is better automated as an **API test** than a UI SmartTest.
 
-API tests are authored in **`tests/api`** (under the mapped tests root).  
-Reference payload fixtures, if needed, should be stored in **`tests/assets`**.
+API tests are authored in **`api/`** at the SmartTests root (folder with **`.testchimp-tests`**). On **mobile** and **multi-platform** scaffolds, import **`{ test, expect }`** from **`api/fixtures/index.js`** and run with the config’s **`api`** project ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)). Reference payloads live in **`assets/`**.
 
 ---
 
@@ -13,7 +12,7 @@ Convert a validated user flow into a robust Playwright API test by:
 
 1. Capturing real request/response traffic while running the scenario in the browser.
 2. Selecting only the API calls relevant to the scenario outcome.
-3. Rebuilding that sequence as deterministic API assertions in `tests/api`.
+3. Rebuilding that sequence as deterministic API assertions in **`api/`**.
 
 ## Workflow
 
@@ -36,8 +35,8 @@ Convert a validated user flow into a robust Playwright API test by:
    - Trim payloads to required fields only (remove large or irrelevant blobs, transient metadata, and sensitive values).
    - Identify which calls are core business flow vs noise (analytics, polling, unrelated background calls).
 
-4. **Author API test in `tests/api`**
-   - Create or update a spec under `tests/api`.
+4. **Author API test in `api/`**
+   - Create or update a spec under **`api/`**; import from **`api/fixtures/index.js`** when using merged fixtures.
    - API tests are also just plain Playwright scripts - just executing API calls and no browser interactions.
    - Sequence calls in dependency order - including only the absolutely necessary calls.
    - Extract values from earlier responses and pass them into later requests (ids, tokens, generated resource keys).
@@ -55,14 +54,14 @@ Convert a validated user flow into a robust Playwright API test by:
 
 - `ai.act`, `ai.verify`, and `ai.extract` are **UI interaction helpers** and are **not used** inside API tests.
 - Prefer deterministic request construction and explicit assertions for API suites.
-- If new API tests are introduced and the project lacks an API Playwright project, update `playwright.config.js` to define a `tests/api` project that depends on the setup project.
+- If the project lacks an **`api`** Playwright/Mobilewright project, update **`playwright.config.js`** or **`mobilewright.config.ts`** so **`testDir: 'api'`** (or equivalent) and **`api/fixtures`** are wired — see templates in [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md).
 
 ---
 
 ## Execution checklist
 
 - Capture regex approved and persisted in `plans/knowledge/ai-test-instructions.md`.
-- API test file added under `tests/api`.
-- Optional payload fixtures (if any) stored under `tests/assets`.
+- API test file added under **`api/`**.
+- Optional payload fixtures (if any) stored under **`assets/`**.
 - Playwright config includes API project with setup dependency.
 - Test passes locally in the intended environment.

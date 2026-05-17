@@ -6,11 +6,13 @@ This document explains **how to write SmartTests** for agents during the **Execu
 - scenario linking via in-code structured comments in test (for built-in requirement traceability).
 - You can use **`@testchimp/cli`** (MCP) to query coverage insights to decide what tests need authoring.
 
-For **full** `ai-wright` API details (options, env vars, troubleshooting), see **[`ai-wright-usage.md`](./ai-wright-usage.md)** — **web projects only**. **Mobile** projects (**`project_type=android`** or **`ios`** in **`.testchimp-tests`**) use **Mobilewright** (`@mobilewright/test`, **`screen`** / **`device`**, etc.): see **[`mobilewright-smarttests.md`](./mobilewright-smarttests.md)**. **Do not** use **`ai.act` / `ai.verify` / `ai.extract`** or **`import { ai } from 'ai-wright'`** on mobile — **ai-wright does not support Mobilewright yet**.
+For **full** `ai-wright` API details (options, env vars, troubleshooting), see **[`ai-wright-usage.md`](./ai-wright-usage.md)** — **web projects only**. **Mobile** projects use **Mobilewright** — see **[`mobilewright-smarttests.md`](./mobilewright-smarttests.md)**. **Do not** use **`ai.act` / `ai.verify` / `ai.extract`** on mobile.
 
-For **`plans/`** markdown (story vs scenario frontmatter, `US-` / `TS-` ids, platform paths, and MCP tools to **create** plan files), see **[`test-planning.md`](./test-planning.md)**.
+For **`plans/`** markdown, see **[`test-planning.md`](./test-planning.md)**.
 
-**Fixtures:** Decide which **fixture dependencies** each UI test needs during **planning**; add or extend **`fixtures/`** (and any missing seed/teardown/read APIs) in **plan / setup**—see **[`testing-process.md`](./testing-process.md)** and **[`fixture-usage.md`](./fixture-usage.md)** (`mergeTests`, master `index`, `testInfo`). When a scenario must assert **backend persistence** or **observable** state after UI steps (not only the DOM), plan **test-only read** endpoints or `request` calls per **[`seeding-endpoints.md`](./seeding-endpoints.md)** (reads also support **read-before-write** idempotency in fixture teardown).
+**Where files go:** Read **`.testchimp-tests`**, then **[`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)** — spec paths (`web/e2e`, `mobile/e2e/common|ios|android`, `api/`), **`shared/`** seed helpers, and which **`fixtures/index.js`** barrel each spec imports. Required during **Plan** and **Execute** ([`testing-process.md`](./testing-process.md)).
+
+**Fixtures:** Decide **fixture dependencies** per test during planning; extend the correct barrel (`fixtures/`, `api/fixtures/`, `mobile/fixtures/`, `web/fixtures/`) and **`shared/`** helpers—see **[`fixture-usage.md`](./fixture-usage.md)**. Backend assertions: **[`seeding-endpoints.md`](./seeding-endpoints.md)**.
 
 ---
 
@@ -56,12 +58,21 @@ Recommended takeover loop:
 4. **Validate immediately**
    - Run `npx playwright test` (still in the mapped tests root) to ensure the updated test passes end-to-end.
    - If failures occur, decide: **intended behavior change** (update test + scenario), or **real regression** (call it out; prefer fixing product code over “fixing tests”).
-5. **Imports in SmartTest files** — always include:
-   - **`import { test, expect } from '<relative>/fixtures/index.js'`** (path from the spec file to **`tests/fixtures/index.js`**; see [`fixture-usage.md`](./fixture-usage.md)). **Never** import **`test`** from **`@playwright/test`** or **`@mobilewright/test`** directly in **`*.spec.*`** files — **`installTestChimp`** must wrap the same merged **`test`** instance (**`markScreenState`**, ExploreChimp when enabled; TrueCoverage: page injection on **web**, `device.openUrl` automation hooks on **iOS/Android** when **`TESTCHIMP_PROJECT_TYPE`** matches — see [`truecoverage.md`](./truecoverage.md)).
-   - **Web (default):** also `import { ai } from 'ai-wright';` when using intelligent steps.
-   - **Mobile:** **do not** import **ai-wright**. Use **`screen`** / **`device`** in the test callback signature per [`mobilewright-smarttests.md`](./mobilewright-smarttests.md).
+5. **Imports in SmartTest files** — always import from the **correct fixture barrel** ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)):
 
-   Per-spec **`import '@testchimp/playwright/runtime'`** is optional legacy; the supported pattern is **`installTestChimp(mergeTests(...))`** in **`fixtures/index.js`** only.
+   | Spec location | Import from |
+   |---------------|-------------|
+   | `e2e/` (**web** scaffold) | `../fixtures/index.js` (adjust depth) |
+   | `web/e2e/` (**multi-platform**) | `../fixtures/index.js` → **`web/fixtures/index.js`** |
+   | `api/` | `./fixtures/index.js` or `../api/fixtures/index.js` |
+   | `mobile/e2e/**` | `../../fixtures/index.js` → **`mobile/fixtures/index.js`** |
+
+   **Never** import **`test`** from **`@playwright/test`** or **`@mobilewright/test`** in **`*.spec.*`** — only from the barrel where **`installTestChimp`** was applied ([`fixture-usage.md`](./fixture-usage.md), [`truecoverage.md`](./truecoverage.md)).
+
+   - **Web UI:** `import { ai } from 'ai-wright'` when using intelligent steps.
+   - **Mobile UI:** **`screen`** / **`device`** in the callback; no ai-wright ([`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
+
+   **`installTestChimp`** lives only in each barrel’s **`index.js`**, not in spec files.
 
 6. **Scenario link** — As the **first statement inside the test body**:
    - `// @Scenario: #TS-xxx <Scenario title>`  
@@ -145,7 +156,7 @@ SmartTests live under whatever folder the team mapped as **tests** in TestChimp 
 - **`e2e/`** (and siblings) — SmartTests use **`*.spec.{js,ts}`** under the tests root.
 - **`assets/`** — Static files (uploads, etc.).
 - **`.env-*`** — Per-environment variables for **exercising the app under test** (e.g. **`BASE_URL`**); **QA** is a common default. Read with `process.env.VAR_NAME`. **Not** for **`TESTCHIMP_API_KEY`** (use shell + MCP config).
-- **`playwright.config.js`** — Playwright config; projects using TestChimp add **`@testchimp/playwright`**.
+- **`playwright.config.js`** — Playwright config; projects using TestChimp add **`@testchimp/playwright`** reporter (≥ **0.2.0** for **`executionContext`** / per-platform coverage rollup).
 
 Keep **`@playwright/test`** and **`playwright`** on the **same** version; use npm `overrides` if dependencies pull mismatched Playwright versions. TestChimp requires **`@playwright/test`** **>= 1.59.0** in **`SKILL.md`**. Agents should run the **Playwright toolchain check** in **`SKILL.md` Preamble checks** before authoring or executing SmartTests so the install is real, not assumed.
 
@@ -192,6 +203,7 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 | `includeNonCoveredUserStories` | boolean | Include user stories with no coverage. |
 | `includeNonCoveredTestScenarios` | boolean | Include scenarios with no coverage. |
 | `branchName` | string | Optional Git branch name when results must be limited to **one** branch. **Omit** for cross-branch coverage (default for Analyze in `/testchimp test`): aggregates all active branch copies; execution jobs are deduped by stable hash of tests-root-relative file path + Playwright test name. |
+| `platform` | string | Optional: `web`, `ios`, or `android`. When set, each scenario returns at most one coverage record for that platform. When omitted, rollup follows project scaffold (see [`cli.md`](./cli.md) § Platform execution reporting). Requires **`@testchimp/cli` ≥ 0.1.6** and ingested runs from **`@testchimp/playwright` ≥ 0.2.0**. |
 
 **Example MCP tool call (conceptual):**
 
@@ -215,13 +227,21 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 }
 ```
 
-**Response identifiers:** Coverage payloads use **`scenarioOrdinalId`** / **`userStoryOrdinalId`** (and lifecycle fields on coverage records), not platform UUID primary keys. MCP/CLI/skills contracts use ordinals only (`TS-<n>` / `US-<n>`).
+**Response identifiers:** Coverage payloads use **`scenarioOrdinalId`** / **`userStoryOrdinalId`** (and lifecycle fields on coverage records), not platform UUID primary keys. MCP/CLI/skills contracts use ordinals only (`TS-<n>` / `US-<n>`). Each **`coverageRecords[]`** entry may include **`platform`** (`web` / `ios` / `android` semantics) when the project has multi-platform rollup.
 
 ### Tool: `get-execution-history`
 
-**Purpose:** Recent SmartTest execution history for the same scoping model as coverage.
+**Purpose:** Recent SmartTest execution history — folder-scoped like coverage, or **scenario-scoped** when `scenarioId` is set (runs for tests linked to that scenario).
 
-**Arguments:** Same as `get-requirement-coverage` except there are no `includeNonCoveredUserStories` / `includeNonCoveredTestScenarios` fields.
+**Arguments:** Same as `get-requirement-coverage` except there are no `includeNonCoveredUserStories` / `includeNonCoveredTestScenarios` fields. Additional fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `scenarioId` | string | Platform scenario UUID. Restricts to linked SmartTests; returns device fields (`platform`, `deviceFamily`, `osVersion`, `screenResolution`, `screenOrientation`) per run. |
+| `platform` | string | Optional `web` \| `ios` \| `android` — applied as a platform dimension filter. |
+| `dimensionFilters` | array | `{ dimension, values[] }` — enum dimension names (e.g. `PLATFORM_EXECUTION_JOB_FILTER_DIMENSION`) and values (`WEB`, `IOS`, `ANDROID`, device family strings, etc.). OR within dimension, AND across dimensions. |
+| `limit` | number | Scenario history pagination (default 100, max 500). |
+| `offset` | number | Pagination offset when `scenarioId` is set. |
 
 ### Tool: `mark-plan-items-implementation-done`
 
@@ -244,7 +264,7 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 }
 ```
 
-**Example (execution history):**
+**Example (folder-scoped execution history):**
 
 ```json
 {
@@ -257,6 +277,22 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 ```
 
 (`folderPath` as a string is split on `/` into segments.)
+
+**Example (scenario-scoped, iOS only):**
+
+```json
+{
+  "tool": "get-execution-history",
+  "arguments": {
+    "scenarioId": "<platform-scenario-uuid>",
+    "environment": "QA",
+    "platform": "ios",
+    "limit": 100
+  }
+}
+```
+
+Shell equivalent: `testchimp get-execution-history --scenario-id <uuid> --environment QA --platform ios` (see [`cli.md`](./cli.md)).
 
 ### Tool: `list-screen-states`
 
@@ -306,12 +342,12 @@ During **Validate** (see [`testing-process.md`](./testing-process.md) Phase 4): 
 
 ## Screen / state markers (`markScreenState`)
 
-**Canonical:** `markScreenState` is a **Playwright fixture** registered by **`installTestChimp`** on the same merged **`test`** instance your specs import from **`tests/fixtures/index.js`** (see [`fixture-usage.md`](./fixture-usage.md)). **`installTrueCoverage`** is a **deprecated alias** of **`installTestChimp`** (identical behavior). **Do not** named-import `markScreenState` from `@testchimp/playwright/runtime` — it is not exported as a function.
+**Canonical:** `markScreenState` is registered by **`installTestChimp`** on the merged **`test`** from the **correct fixture barrel** ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md), [`fixture-usage.md`](./fixture-usage.md)). **`installTrueCoverage`** is a **deprecated alias** of **`installTestChimp`** (identical behavior). **Do not** named-import `markScreenState` from `@testchimp/playwright/runtime` — it is not exported as a function.
 
 Record which **screen** and **state** the UI is in after meaningful transitions:
 
 ```ts
-// Spec imports { test, expect } from relative `tests/fixtures/index.js` (installTestChimp applied there).
+// Spec imports { test, expect } from the barrel for that spec tree (e.g. mobile/fixtures/index.js).
 
 test('settings notifications', async ({ page, markScreenState }) => {
   await page.goto('/settings');
@@ -334,7 +370,7 @@ test('settings notifications', async ({ page, markScreenState }) => {
 
 ## AI steps (`ai-wright`): when to use what
 
-**Web projects only.** On **mobile** (**`project_type=android|ios`** in **`.testchimp-tests`**), skip this entire section — use Mobilewright APIs only ([`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
+**Web projects only.** On **mobile** / **multi-platform** native UI, skip this section — use Mobilewright ([`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
 
 ### Standard Playwright (locators, actions, `expect`)
 
@@ -406,7 +442,7 @@ const title = await ai.extract(
 
 ## Example SmartTest (full file)
 
-Illustrative end-to-end shape: **`test` / `expect` from `tests/fixtures/index.js`** (merged `test` wrapped with **`installTestChimp`**), scenario comment, plain Playwright plus one AI step. Adjust the relative import and selectors to match the repo.
+Illustrative end-to-end shape: **`test` / `expect` from the correct `fixtures/index.js` barrel** (merged `test` wrapped with **`installTestChimp`**), scenario comment, plain Playwright plus one AI step. Adjust the relative import and selectors to match the repo scaffold.
 
 ```ts
 import { test, expect } from '../fixtures/index.js';

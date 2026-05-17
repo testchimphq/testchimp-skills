@@ -9,10 +9,13 @@ This page lists **every subcommand and flag** as implemented in the CLI (kebab-c
 ## Install
 
 ```bash
-npm install -D @testchimp/cli@latest
+npm install -D @testchimp/cli@0.1.6
+# or: npm install -D @testchimp/cli@latest
 ```
 
 Invoke via `npx @testchimp/cli@latest <subcommand>` or the **`testchimp`** binary from `node_modules/.bin` after a local install.
+
+**Minimum for platform execution reporting:** **`@testchimp/cli` ≥ 0.1.6** (this doc) and **`@testchimp/playwright` ≥ 0.2.0** on the SmartTests package (reporter sends `executionContext` on each test end).
 
 ## Authentication (`TESTCHIMP_API_KEY`)
 
@@ -83,6 +86,7 @@ Start the TestChimp MCP server (stdio transport). **No flags.** Typically invoke
 | `--release <s>` | No | `release` | |
 | `--environment <s>` | No | `environment` | |
 | `--branch-name <s>` | No | `branchName` | Optional Git branch; omit for cross-branch coverage (recommended for `/testchimp test` Analyze). |
+| `--platform <web\|ios\|android>` | No | `platform` | Optional filter: latest coverage for that platform only (`web`, `ios`, or `android`). |
 | `--file-paths <csv>` | No | `scope.filePaths` | Comma-separated paths under **platform tests or plans** root. |
 | `--folder-path <path>` | No | `scope.folderPath` | Slash-separated folder under tests or plans root; sent as normalized path segments. |
 | `--json-input …` | No | (merge) | e.g. `includeNonCoveredUserStories`, `includeNonCoveredTestScenarios`, or `scope.folderPath` as **array** of segments. |
@@ -96,9 +100,67 @@ Start the TestChimp MCP server (stdio transport). **No flags.** Typically invoke
 | `--release <s>` | No | `release` | |
 | `--environment <s>` | No | `environment` | |
 | `--branch-name <s>` | No | `branchName` | |
+| `--scenario-id <id>` | No | `scenarioId` | When set, returns runs for tests linked to this scenario (Insights execution history). |
+| `--platform <web\|ios\|android>` | No | `platform` | Optional platform filter (`web`, `ios`, `android`). Prefer `dimensionFilters` for device/OS/resolution/orientation. |
 | `--file-paths <csv>` | No | `scope.filePaths` | Comma-separated under platform tests or plans root. |
 | `--folder-path <path>` | No | `scope.folderPath` | Slash-separated; same normalization as coverage. |
-| `--json-input …` | No | (merge) | For any extra fields accepted by the backend. |
+| `--json-input …` | No | (merge) | e.g. `dimensionFilters` (`[{ "dimension": "PLATFORM_EXECUTION_JOB_FILTER_DIMENSION", "values": ["WEB"] }]`), `limit`, `offset`. |
+
+### Platform execution reporting
+
+**Ingest:** `@testchimp/playwright` reporter attaches **`executionContext`** on each test end (platform from Mobilewright **`projects[].use.platform`** or web project config; device fields from viewport or mobile device annotations). TestChimp stores this on the execution job and denormalized columns for queries.
+
+**Requirement coverage (`get-requirement-coverage`):**
+
+| `platform` | Behavior |
+|------------|----------|
+| omitted | Rollup per project scaffold: **web** → one coverage row per scenario (WEB); **mobile** → up to **iOS** + **Android** rows; **multi-platform** → **web** + **iOS** + **Android**. Missing platform in time window → `NOT_ATTEMPTED` status for that platform. |
+| `web` / `ios` / `android` | Latest job for that platform only (one row per scenario). Invalid platform for project type → empty result (not HTTP 400). |
+
+Coverage records include a **`platform`** field when multiple platforms are returned. Dedup key is **(logical test path + name, platform)**.
+
+**Execution history (`get-execution-history`):**
+
+| Mode | How |
+|------|-----|
+| Folder scope | `scope.folderPath` / `scope.filePaths` (same as coverage). |
+| Scenario scope | `scenarioId` = platform scenario UUID (Insights execution history). Omit folder scope or combine per server rules. |
+| Platform filter | `--platform web\|ios\|android` **or** `dimensionFilters` with `PLATFORM_EXECUTION_JOB_FILTER_DIMENSION` and values `WEB`, `IOS`, `ANDROID`. |
+| Device drill-down | `dimensionFilters` in JSON: `DEVICE_FAMILY`, `OS_VERSION`, `SCREEN_RESOLUTION`, `SCREEN_ORIENTATION` (enum dimension names + string values). OR within a dimension, AND across dimensions. |
+
+**Example — iOS-only coverage for a plan folder:**
+
+```bash
+testchimp get-requirement-coverage \
+  --environment QA \
+  --folder-path plans/checkout \
+  --platform ios
+```
+
+**Example — scenario execution history with platform filter:**
+
+```bash
+testchimp get-execution-history \
+  --scenario-id "<scenario-uuid>" \
+  --environment QA \
+  --release default \
+  --platform ios \
+  --json-input '{"limit":100}'
+```
+
+**Example — dimension filters (MCP or `--json-input`):**
+
+```json
+{
+  "scenarioId": "<scenario-uuid>",
+  "environment": "QA",
+  "dimensionFilters": [
+    { "dimension": "PLATFORM_EXECUTION_JOB_FILTER_DIMENSION", "values": ["IOS"] },
+    { "dimension": "DEVICE_FAMILY_EXECUTION_JOB_FILTER_DIMENSION", "values": ["iPhone 15"] }
+  ],
+  "limit": 100
+}
+```
 
 ### `mark-plan-items-implementation-done`
 

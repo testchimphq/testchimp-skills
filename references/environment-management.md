@@ -122,7 +122,7 @@ Details: main skill **`SKILL.md`** (*Backend / seed changes* under Environment p
 
 ## Mobile app tests (Android / iOS — Mobilewright)
 
-Use this subsection when **`.testchimp-tests`** indicates **`project_type=android`** or **`project_type=ios`** (see [`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
+Use this subsection when **`.testchimp-tests`** indicates **`mobile`** or **`multi-platform`** (legacy **`ios`/`android`** → mobile) — see [`mobilewright-smarttests.md`](./mobilewright-smarttests.md), [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md).
 
 ### Backend / API environments
 
@@ -143,7 +143,7 @@ When tests run against **cloud devices** via Mobilewright’s **mobile-use** dri
 
 ### ExploreChimp on mobile projects
 
-Set **`TESTCHIMP_PROJECT_TYPE`** to **`android`** or **`ios`** (and **`web`** on browser projects) on **every** SmartTest / ExploreChimp run so **`@testchimp/playwright`** uses the correct fixture model — see [`exploratory_runs.md`](./exploratory_runs.md).
+Mobile UI runs need **`projects[].use.platform`** in **`mobilewright.config.ts`** and specs importing from **`mobile/fixtures/index.js`** — see [`exploratory_runs.md`](./exploratory_runs.md).
 
 ## Related
 

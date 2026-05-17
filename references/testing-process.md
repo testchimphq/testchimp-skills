@@ -4,9 +4,9 @@ This document defines the **strict workflow** for testing a PR with TestChimp.
 
 ## Primary outcome: automated tests (not manual QA)
 
-The objective of **`/testchimp test`** is to **produce and run automated coverage**: **API tests** and **UI SmartTests** (Playwright on web; **Mobilewright** on native mobile when **`project_type`** in **`.testchimp-tests`** is **`android`** or **`ios`**), with fixtures, seeds, and probes as needed. **Strongly prefer** shipping executable specs over delegating verification to humans.
+The objective of **`/testchimp test`** is to **produce and run automated coverage**: **API tests** and **UI SmartTests** (Playwright on web; **Mobilewright** on native mobile when **`project_type`** is **`mobile`**, **`multi-platform`**, or legacy **`ios`/`android`**), with fixtures, seeds, and probes as needed. **Strongly prefer** shipping executable specs over delegating verification to humans.
 
-**Project type:** After locating the SmartTests root (**`.testchimp-tests`**), read that file. **Empty or missing `project_type`** → **web** (`@playwright/test`, **`page`**, TrueCoverage in scope per policy below). **`project_type=android|ios`** → **mobile** — follow [`fixture-usage.md`](./fixture-usage.md) and [`mobilewright-smarttests.md`](./mobilewright-smarttests.md): **`@mobilewright/test`**, **`screen`** / **`device`**, **no** ai-wright steps; **TrueCoverage** for the native app uses the iOS/Android RUM SDKs plus **`TESTCHIMP_PROJECT_TYPE`** and `installTestChimp` ([`truecoverage.md`](./truecoverage.md)).
+**Project type:** After locating the SmartTests root (**`.testchimp-tests`**), read that file. **Empty or missing `project_type`** → **`web`**. **`project_type=mobile`** or legacy **`ios`/`android`** → **mobile** (unified `mobilewright.config.ts`, `mobile/e2e/{common,ios,android}/`, `api/`). **`project_type=multi-platform`** → **both** configs + `web/` + `mobile/` + shared `api/`. **Authoring paths, fixture barrels, and `shared/` helpers:** [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) (required for Plan/Execute). **Mobile UI:** [`mobilewright-smarttests.md`](./mobilewright-smarttests.md) — **`screen`** / **`device`**, **no** ai-wright. **Fixtures:** [`fixture-usage.md`](./fixture-usage.md).
 
 ## “Run tests” / CI green vs `/testchimp test`
 
@@ -40,7 +40,7 @@ The objective of **`/testchimp test`** is to **produce and run automated coverag
 6. **ExploreChimp** — [Phase 6](#phase-6-explorechimp): **default-on** for UI SmartTest deltas once **Phase 5** is green; branch plan **`yes`** or documented **`N/A`** ([Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)). Run on **new + materially changed + regression-touched** UI specs (see Phase 6).
 7. **Cleanup** (see [Phase 7: Cleanup](#phase-7-cleanup-environment-teardown))
 
-Use this as the primary reference for `/testchimp test`. For SmartTest authoring patterns and examples, load **[`write-smarttests.md`](./write-smarttests.md)** during the **Execute** phase; for **mobile** UI specifics, also load **[`mobilewright-smarttests.md`](./mobilewright-smarttests.md)**. For **fixtures** (`mergeTests`, `<tests_root>/fixtures/`), **`testInfo`** scoping, and **probe** specs (`page.pause()` on web), load **[`fixture-usage.md`](./fixture-usage.md)**. For **test-only seed, teardown, and read** endpoints (discovery, proxy pattern, idempotency, post-UI assertions), load **[`seeding-endpoints.md`](./seeding-endpoints.md)**. For TrueCoverage rules (instrumentation, `plans/events/*.event.md`), load **[`truecoverage.md`](./truecoverage.md)** when RUM is in scope. For **ExploreChimp** (UX analytics on UI test pathways), load **[`exploratory_runs.md`](./exploratory_runs.md)** for env vars, operator checklist, and execution details once **Phase 2 §7** is **`yes`** (or when running **`/testchimp explore`**). **Environment:** follow **[Binding: ai-test-instructions (environment and FAQ playbook)](#binding-ai-test-instructions-environment-and-faq-playbook)** below; [`environment-management.md`](./environment-management.md) supplements that file but does **not** override it.
+Use this as the primary reference for `/testchimp test`. During **Plan** and **Execute**, load **[`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)** first so every proposed test names its **folder**, **fixture barrel**, and **runner**. For SmartTest authoring patterns, load **[`write-smarttests.md`](./write-smarttests.md)**; for **mobile** UI, **[`mobilewright-smarttests.md`](./mobilewright-smarttests.md)**. For **fixtures** (`mergeTests`, `api/fixtures`, `mobile/fixtures`, `web/fixtures`, `shared/` helpers), load **[`fixture-usage.md`](./fixture-usage.md)**. For **test-only seed, teardown, and read** endpoints (discovery, proxy pattern, idempotency, post-UI assertions), load **[`seeding-endpoints.md`](./seeding-endpoints.md)**. For TrueCoverage rules (instrumentation, `plans/events/*.event.md`), load **[`truecoverage.md`](./truecoverage.md)** when RUM is in scope. For **ExploreChimp** (UX analytics on UI test pathways), load **[`exploratory_runs.md`](./exploratory_runs.md)** for env vars, operator checklist, and execution details once **Phase 2 §7** is **`yes`** (or when running **`/testchimp explore`**). **Environment:** follow **[Binding: ai-test-instructions (environment and FAQ playbook)](#binding-ai-test-instructions-environment-and-faq-playbook)** below; [`environment-management.md`](./environment-management.md) supplements that file but does **not** override it.
 
 **Per-test planning:** In **Plan**, the agent must **list every test**, then for **each** test write **Arrange → Act → Assert** using the template in [Required structure for each proposed test (Plan phase)](#required-structure-for-each-proposed-test-plan-phase)—see [Arrange, Act, Assert: universal shape for every test](#arrange-act-assert-universal-shape-for-every-test). In **Execute**, follow [Batched order (Execute phase)](#batched-order-execute-phase) so Arrange-supporting seeds and Assert-supporting probes land **once** per batch before fixtures and test code.
 
@@ -59,7 +59,7 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
 
 - **`TESTCHIMP_API_KEY` (P0 — required on the runner process):** Any command that runs Playwright/Mobilewright with **`@testchimp/playwright`** must execute with **`TESTCHIMP_API_KEY`** set in **that process’s environment** (Execute, Validate, Phase 5, Phase 6, CI). **IDE/MCP-only** config does **not** satisfy the runner. **Resolution order:** SmartTests-root walk-up → host MCP config → read **`mcpServers.*.env.TESTCHIMP_API_KEY`** (never print) → **export** or **inject** into the shell / CI **`env:`** / wrapper used to spawn tests. If missing, blank, or placeholder, **STOP** with a blocker + fix steps (including: if only MCP was updated, reload MCP **and** ensure the **next** runner spawn inherits the key). **Reporter disabled**, **401**, and “missing key” logs → **same** remediation. If the agent **cannot verify** the key is on the test process env **before** spawning the runner, **halt** — do **not** run tests speculatively. See **`SKILL.md`** Preamble **#4** and [`exploratory_runs.md`](./exploratory_runs.md).
 
-- **`TESTCHIMP_PROJECT_TYPE` (required on every run with `@testchimp/playwright`):** Set in the **shell** or **CI env** before **`npx playwright test`** (or the repo’s wrapper) from the SmartTests root. Use **`web`** for browser / Playwright projects (**`.testchimp-tests`** empty or no mobile **`project_type`**). Use **`android`** or **`ios`** (lowercase) when **`.testchimp-tests`** has **`project_type=android|ios`**. Use the **same** value for **Execute**, **Phase 4: Validate**, **Phase 5: Smart regression**, and **Phase 6: ExploreChimp** so fixture/runtime behavior stays consistent — see [`exploratory_runs.md`](./exploratory_runs.md).
+- **Runner / config:** Use the config and `--project` from [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) (`playwright.config.js` vs `mobilewright.config.ts`, `web` / `api` / `ios` / `android`). Mobile UI projects need **`projects[].use.platform`** (`ios` | `android`) for `@testchimp/playwright` TrueCoverage ([`truecoverage.md`](./truecoverage.md)).
 
 - **Hard prerequisite before Analyze/Plan (decision memory):**
   - Before starting **Analyze** or drafting the branch plan, read `plans/knowledge/ai-test-instructions.md` and extract pre-agreed environment decisions from **`## Environment Provision Strategy`** (for example local spin-up vs Bunnyshell/EaaS vs staging/branch environment path, URL resolution, and health gates).
@@ -97,8 +97,8 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
 - **Environment before test authoring (strict):**
   - In both first-pass execution and reruns, confirm environment provisioning and target URL decisions from `ai-test-instructions.md` **before authoring or executing tests** (including fixture-driven test setup). Tests are authored by executing real steps, so environment provisioning must be settled first.
 - **TrueCoverage belongs in the Plan** (default **opted-in** per [`truecoverage.md`](./truecoverage.md)) **for web and native mobile** when the PR touches user-facing journeys:
-  - **Web:** `@testchimp/rum-js` in the app bundle, `installTestChimp`, `TESTCHIMP_PROJECT_TYPE=web`, `plans/events/`, etc.
-  - **Mobile native** (**`project_type=android|ios`**): native RUM SDK ([`truecoverage.md`](./truecoverage.md) **iOS** / **Android** sections), URL scheme / intent filter + SDK handlers, `installTestChimp`, **`TESTCHIMP_PROJECT_TYPE=android|ios`**, Mobilewright **`device`** for automation URLs—same opt-in / opt-out policy via **`### TrueCoverage Plan`**.
+  - **Web:** `@testchimp/rum-js` in the app bundle, `installTestChimp` on **`fixtures/`** or **`web/fixtures/`**, `plans/events/`, etc.
+  - **Mobile native** (**`project_type=mobile`** or legacy **`ios`/`android`**): native RUM SDK ([`truecoverage.md`](./truecoverage.md)), URL scheme / intent filter + SDK handlers, `installTestChimp` on **`mobile/fixtures/index.js`** with `{ uiFixture: 'screen' }`, Mobilewright **`device`** for automation URLs—same opt-in / opt-out policy via **`### TrueCoverage Plan`**.
   - If the PR adds or changes **user journeys / user-facing behaviors**, the Plan must include TrueCoverage work unless `plans/knowledge/ai-test-instructions.md` **explicitly** opts out.
   - If RUM is **not yet wired**, the Plan must include **RUM install for the target platform, init/emit helper, reporter, env, `plans/events/`**, and progress-tracker updates—**without** treating “not configured” as permission to skip. Only skip when **`### TrueCoverage Plan`** (or an explicit equivalent) states **opt-out**.
   - If TrueCoverage **is already configured**, the agent should **consider** which **key user events** need new or updated emits for the changed behavior, and include them (with `plans/events/*.event.md` updates—including required **`## Rationale`** and metadata sections per [`truecoverage.md`](./truecoverage.md)) when appropriate.
@@ -107,7 +107,8 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
   - If AIMock is selected, the Plan must include: wiring tasks, enablement mechanism (env flag / config), and how to validate it is actually being used.
 - **Fixtures belong in the Plan (always; favor reuse)** (lives under **Arrange → Fixtures plan** for each test):
   - For every planned UI SmartTest, the Plan MUST name the **exact fixture dependencies** (what you will add to the test signature) that establish the posture.
-  - The agent MUST **search existing fixtures first** and strongly prefer reuse over creating new fixture modules.
+  - The agent MUST **search existing fixtures first** (correct barrel: `api/fixtures/`, `mobile/fixtures/`, `web/fixtures/`, or flat `fixtures/` on **web** — see [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)) and strongly prefer reuse over creating new fixture modules.
+  - Put **cross-platform seed factories** (e.g. `createSeedUser`) in **`shared/`**; wire them from domain `*.fixture.js` files under the appropriate **`fixtures/`** barrel.
   - If reuse is impossible, the Plan MUST specify: new/extended **fixtures**, **seed/probe** needs, and how the fixture proves posture (see **Assert → Backend validations** when probes are required).
   - If new fixtures/endpoints are needed, treat them as **Execute blockers** (not “nice-to-haves”).
 - **Batched Execute order (REQUIRED)**:
@@ -312,8 +313,8 @@ The Analyze phase must gather:
 - **Platform evidence (via TestChimp CLI/MCP when available)**
   - Use **TestChimp CLI** (`testchimp ...`) when MCP tools are not available.
   - Suggested queries:
-    - `testchimp get-requirement-coverage --folder-path <plans/... or tests/...>` (scoped to the affected area; **omit `--branch-name`** so coverage aggregates across branch copies)
-    - `testchimp get-execution-history --folder-path <tests/...>` (to see recent failures/flake; omit `--branch-name` unless you need one branch only)
+    - `testchimp get-requirement-coverage --folder-path <plans/... or tests/...>` (scoped to the affected area; **omit `--branch-name`** so coverage aggregates across branch copies). On **mobile** / **multi-platform** repos, interpret multiple **`platform`** rows per scenario; add `--platform ios` or `--platform android` when analyzing one stack.
+    - `testchimp get-execution-history --folder-path <tests/...>` (recent failures/flake; omit `--branch-name` unless you need one branch only). For a single scenario’s runs: `--scenario-id <platform-scenario-uuid>` with optional `--platform web|ios|android` (CLI **≥ 0.1.6**).
   - Record results (relevant summaries) in the branch plan file (high level; no giant dumps).
 
 ### Phase 1 completion gate (Analyze → Plan)
@@ -323,7 +324,7 @@ Before proceeding to **Plan**, the agent must record **done/blocked/`N/A`** for 
 - [ ] Branch plan exists and was read/created.
 - [ ] Change context captured (diff vs base or explicit fallback).
 - [ ] Relevant existing plan docs identified (stories/scenarios/events/knowledge).
-- [ ] **Fixture/seed discovery:** scanned `<tests_root>/fixtures/` (or recorded `N/A` if no fixtures tree yet) and noted existing seed/read routes relevant to the change (or `N/A` + reason).
+- [ ] **Fixture/seed discovery:** scanned the correct **`fixtures/`** barrel(s) and **`shared/`** per scaffold type ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)); noted existing seed/read routes (or `N/A` + reason).
 - [ ] **`ai-test-instructions.md`:** re-read (or created stub via user direction) **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`** (or `N/A` + reason if plans root missing—then stop and recommend `/testchimp init`).
 - [ ] Coverage/execution history queried via CLI/MCP where applicable (or `N/A`).
 - [ ] **Smart regression:** candidate affected scenarios noted for **Plan §6** (reconnaissance; final list refined in **Phase 5**).
@@ -451,7 +452,7 @@ Goal: ensure the resulting test suite is correctly linked to requirements and ca
 2. **Screen-state atlas (SmartTests) — during Validate only**
    - **Do not** spend multi-iteration **Execute** time naming every screen/state; do vocabulary work **here**, after tests pass functionally.
    - **Before** the validation run (or before editing specs for trace quality): load existing project vocabulary with **`testchimp list-screen-states`** in the **shell** (preferred for agents; see [`cli.md`](./cli.md) § **Screen-state atlas**) **or** MCP **`list-screen-states`** when MCP is available. Parse the JSON response and keep **`(screen, state)`** pairs in working memory for reuse.
-   - With **`TESTCHIMP_PROJECT_TYPE`** set per **Non-negotiables** (same as all SmartTest runs), run the touched UI specs **headed** for this pass when possible (per **`SKILL.md`** — e.g. `npx playwright test … --headed`) and **inspect the live UI** at each transition so names match **user-visible** surfaces; do not invent markers from code paths alone. Use trace/screenshot evidence if headed runs are not possible.
+   - Run the touched UI specs **headed** for this pass when possible (correct config + `--project` per **Non-negotiables**) (per **`SKILL.md`** — e.g. `npx playwright test … --headed`) and **inspect the live UI** at each transition so names match **user-visible** surfaces; do not invent markers from code paths alone. Use trace/screenshot evidence if headed runs are not possible.
    - After **stable** UI following a real transition (navigation, modal, meaningful DOM change), compare to the prior checkpoint; when the UI meaningfully changes, **reuse** an existing **`(screen, state)`** from the list when it fits; otherwise call **`testchimp upsert-screen-states`** (or MCP **`upsert-screen-states`**) **before** editing the spec, then add **`await markScreenState`** with the **exact** strings you registered. Ensure the test callback includes **`markScreenState`** (fixture from **`installTestChimp`** on the merged `test` in **`fixtures/index.js`**), then add **`await markScreenState('<Screen>', '<State>')`** (or omit the second argument for **`default`**) on the correct line so it appears in Playwright traces. **Do not** add `import { markScreenState } from '@testchimp/playwright/runtime'`.
    - **Do not** add or rely on legacy **`// @Screen:`** / **`// @State:`** comment annotations for new or updated work — that path is **legacy**; the **`markScreenState` fixture** is canonical for new specs.
 3. **Anomaly handling (required)**
@@ -471,7 +472,7 @@ Record in branch plan file:
 - [ ] Screen/state vocabulary: **`testchimp list-screen-states`** (CLI) or MCP **`list-screen-states`** was used before atlas / `markScreenState` edits (or **`N/A`** with reason — e.g. no UI SmartTests touched).
 - [ ] Meaningful UI transitions in touched SmartTests have **`markScreenState`** at the right step, or **`N/A`** with reason (no meaningful transitions in scope).
 - [ ] Any remaining anomalies explicitly listed with next steps (only if blocked).
-- [ ] **Handoff to Phase 5:** Confirm **`TESTCHIMP_API_KEY`** and **`TESTCHIMP_PROJECT_TYPE`** on the runner for the **smart regression** suite (see non-negotiables). If branch plan **§6** is **`N/A`**, record that scenario identification still runs from PR + plans but no linked specs are expected—or skip Phase 5 per plan rationale.
+- [ ] **Handoff to Phase 5:** Confirm **`TESTCHIMP_API_KEY`** on the runner and correct config/`--project` per scaffold (see non-negotiables). If branch plan **§6** is **`N/A`**, record that scenario identification still runs from PR + plans but no linked specs are expected—or skip Phase 5 per plan rationale.
 
 ### Mark plan items implementation-done (human-gated, after Validate is green)
 
@@ -516,7 +517,7 @@ From the SmartTests root (directory containing **`.testchimp-tests`**):
 
 ### 3) Run the regression suite
 
-- **`cd`** SmartTests root; run with **`npx playwright test <files…>`** (or **`npx mobilewright …`** on mobile)—**Preamble #4** and **`TESTCHIMP_PROJECT_TYPE`** required.
+- **`cd`** SmartTests root; run per [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) — **Preamble #4** required.
 - Prefer **headless** for regression unless debugging (headed default remains for **authoring** per `SKILL.md`).
 - Re-run after fixes until **pass** or each failure is **explicitly blocked** with next steps.
 
@@ -570,7 +571,7 @@ Run ExploreChimp on the **union** of:
 
 - [ ] **`TESTCHIMP_API_KEY`** verified on the **same process** that will run Playwright/Mobilewright with **`EXPLORECHIMP_ENABLED`** (P0 — non-negotiables); do not rely on MCP-only config for the child runner.
 - [ ] Re-read **`plans/knowledge/ai-test-instructions.md`** (**`## ExploreChimp`** + **Environment Strategy**).
-- [ ] Run ExploreChimp per **[`exploratory_runs.md`](./exploratory_runs.md)** on the **UI specs in the updated §7 target list**: **`TESTCHIMP_PROJECT_TYPE`** ( **`web`** \| **`android`** \| **`ios`** — always set), **`EXPLORECHIMP_ENABLED`**, **`TESTCHIMP_BATCH_INVOCATION_ID`**, **`TESTCHIMP_API_KEY`**, optional **`EXPLORECHIMP_SOURCES_TO_ANALYZE`**, **`EXPLORECHIMP_REQUEST_REGEX_TO_ANALYZE`** when **`NETWORK`** is included.
+- [ ] Run ExploreChimp per **[`exploratory_runs.md`](./exploratory_runs.md)** on the **UI specs in the updated §7 target list**: mobile UI projects with **`use.platform`**, **`EXPLORECHIMP_ENABLED`**, **`TESTCHIMP_BATCH_INVOCATION_ID`**, **`TESTCHIMP_API_KEY`**, optional source/regex vars when **`NETWORK`** is included.
 - [ ] If the plan was **`N/A`**: ensure **`N/A`** + one-line justification is already in the branch plan, then skip execution.
 
 ### Phase 6 completion gate (Phase 6 → Phase 7)

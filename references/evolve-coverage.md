@@ -79,10 +79,12 @@ See **`ExecutionScope`** in [`truecoverage.md`](./truecoverage.md):
 ### Requirement coverage
 
 - **`get-requirement-coverage`** with **`includeNonCoveredUserStories`** / **`includeNonCoveredTestScenarios`** set to **`true`** when hunting explicit gaps.
+- On **mobile** or **multi-platform** projects, read **per-platform** rows (`platform`: web / ios / android) — a scenario can be covered on iOS but not Android. Omit **`platform`** to see all expected platforms; pass **`platform`: `ios`** or **`android`** to focus one stack ([`cli.md`](./cli.md) § Platform execution reporting). Requires ingested runs from **`@testchimp/playwright` ≥ 0.2.0**.
 
 ### Execution history
 
 - **`get-execution-history`** with the same scope shape — flakiness, failures, error patterns.
+- For a specific scenario, use **`scenarioId`** (platform UUID) plus optional **`platform`** or **`dimensionFilters`** to inspect device-level runs ([`write-smarttests.md`](./write-smarttests.md)).
 
 ### ExploreChimp in evolve: Targeted UX bug checks
 

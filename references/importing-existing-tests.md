@@ -60,7 +60,7 @@ Teams can adopt these gradually on an existing suite:
 |----------|---------|
 | `// @Scenario` comments | Link specs to test-plan scenarios (traceability). |
 | `import { ai } from 'ai-wright'` | Natural-language **`ai.act` / `ai.verify` / `ai.extract`** steps. |
-| **`tests/fixtures/index.js`** + **`installTestChimp(mergeTests(...))`** | Registers TestChimp runtime on the **same** merged `test` specs use (TrueCoverage test identity: page metadata on web, `device.openUrl` automation on mobile when configured, **`markScreenState`**, ExploreChimp when enabled); **`installTrueCoverage`** is a deprecated **alias**; requires **`@testchimp/playwright` ≥ 0.1.8**. |
+| **Fixture barrel(s)** + **`installTestChimp(mergeTests(...))`** | Per scaffold: `fixtures/`, `api/fixtures/`, `mobile/fixtures/` (`{ uiFixture: 'screen' }`), `web/fixtures/` — see [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md). Same merged `test` specs import; mobile TrueCoverage uses **`use.platform`** in config. |
 | **`import { test, expect } from '<relative>/fixtures/index.js'`** in **every** `*.spec.{js,ts}` | Mandatory; do **not** use root **`test`** from **`@playwright/test`** in spec files. |
 | `@testchimp/playwright/reporter` in config | Execution reporting to TestChimp. |
 
@@ -82,18 +82,18 @@ npx playwright test
 
 ## Enabling TestChimp runtime and reporting
 
-1. **`@testchimp/playwright`** installed at the SmartTests **package root** (same `package.json` as `@playwright/test` for that folder), at least **0.1.8** for **`installTestChimp`** and the **`markScreenState`** fixture.
+1. **`@testchimp/playwright`** installed at the SmartTests **package root** (same `package.json` as `@playwright/test` for that folder), at least **0.1.8** for **`installTestChimp`** and the **`markScreenState`** fixture; **≥ 0.2.0** for **per-platform execution context** on ingest (coverage rollup and scenario execution history).
 2. In **`playwright.config.*`**, `reporter` includes **`['@testchimp/playwright/reporter', { ... }]`**.
-3. **`tests/fixtures/index.js`** (or platform-synced equivalent) exports **`test`** wrapped with **`installTestChimp(mergeTests(...))`** per [`fixture-usage.md`](./fixture-usage.md).
+3. Correct **fixture barrel(s)** export **`test`** wrapped with **`installTestChimp(mergeTests(...))`** per [`fixture-usage.md`](./fixture-usage.md) and [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md).
 4. **`setup/`** as a Playwright project that runs before main tests (see template); domain modules under **`fixtures/*.fixture.js`** as needed.
 
 ### Required: fixtures-first imports in spec files
 
 When **importing or aligning** an existing Playwright suite, treat this as **non-negotiable** for completion:
 
-- **Every** `*.spec.{js,ts}` under the **mapped SmartTests root** (including specs **moved** in from a legacy folder and any **`setup/**/*.spec.*`** that Playwright runs as tests) must use **`import { test, expect } from '<relative>/fixtures/index.js'`** where the relative path resolves to **`tests/fixtures/index.js`**. Do **not** import **`test`** from **`@playwright/test`** in spec files.
+- **Every** `*.spec.{js,ts}` must import **`{ test, expect }`** from the **correct fixture barrel** for its tree ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) — `fixtures/`, `api/fixtures/`, `mobile/fixtures/`, `web/fixtures/`). Do **not** import **`test`** from **`@playwright/test`** or **`@mobilewright/test`** in spec files.
 
-**Why:** **`installTestChimp`** registers the TestChimp runtime (including TrueCoverage hooks: web page injection; mobile automation URLs when **`TESTCHIMP_PROJECT_TYPE`** is **`ios`** / **`android`**) on the **`test` instance** your specs use. If specs import the root Playwright **`test`** while **`mergeTests`** lives only in **`fixtures/index.js`**, CI metadata injection does not run on merged tests. Centralizing **`installTestChimp(mergeTests(...))`** in **`fixtures/index.js`** fixes that; **`ai-wright`** and the reporter work as before.
+**Why:** **`installTestChimp`** registers TrueCoverage, **`markScreenState`**, and ExploreChimp on the **`test` instance** specs use. Mobile UI uses **`installTestChimp(..., { uiFixture: 'screen' })`** and config **`use.platform`**. Centralize **`installTestChimp(mergeTests(...))`** in each barrel’s **`index.js`** only.
 
 **Migration from legacy suites:** If specs currently use **`import '@testchimp/playwright/runtime'`** plus **`import { test } from '@playwright/test'`**, move to **`fixtures/index.js`** + relative **`test` / `expect`** imports, then drop redundant per-spec runtime imports once the master file uses **`installTestChimp`** (replace legacy **`installTrueCoverage`** calls when you touch the file).
 
@@ -110,8 +110,8 @@ During **Phase 2 (plan)**, list adding **`fixtures/index.js`** (if missing) and 
 
 ## Init workflow: plan vs execute
 
-- **Phase 2 (plan):** If discovery finds **existing Playwright** outside the mapped folder, or **dual-folder** layout, include an explicit **import / alignment** subsection: moves, config path fixes, adding reporter + deps, **`tests/fixtures/index.js`**, and **fixtures-first `test` / `expect` imports** for every `*.spec.{js,ts}` in scope (see [Required: fixtures-first imports in spec files](#required-fixtures-first-imports-in-spec-files) above).
-- **Phase 3 (execute):** Perform agreed **file moves** and **config edits** only after the user approves the plan—do not move tests silently. Before closing out import work, confirm **all** SmartTests specs import from **`fixtures/index.js`** only.
+- **Phase 2 (plan):** If discovery finds **existing Playwright** outside the mapped folder, or **dual-folder** layout, include an explicit **import / alignment** subsection: moves, config path fixes, reporter + deps, scaffold folders / fixture barrels, and **fixtures-first imports** for every `*.spec.{js,ts}` in scope.
+- **Phase 3 (execute):** Perform agreed **file moves** and **config edits** only after user approval. Confirm every spec imports from the correct barrel only.
 
 ---
 

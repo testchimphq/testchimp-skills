@@ -7,7 +7,7 @@ TrueCoverage connects **real user behavior** (from production) with **test execu
 | Surface | How test identity reaches the app |
 |--------|-----------------------------------|
 | **Web** | Reporter injects CI metadata into the page (e.g. `__TC_CI_TEST_INFO`) when fixtures use `installTestChimp` on the merged `test`. |
-| **iOS / Android** | When **`TESTCHIMP_PROJECT_TYPE`** is **`ios`** or **`android`**, `installTestChimp` (from `@testchimp/playwright/runtime`) extends Mobilewright’s **`device`** fixture so TrueCoverage **`SET`** runs **right after** Mobilewright’s **`launchApp`**, before **`screen`** and the test body (implementation uses **`device.openUrl`** with **`testchimp-rum://truecoverage/...`**). **`afterEach`** still sends a trailing **`SET`** + **`/v1/flush`** as needed. The **app** must register the URL scheme / intent filter and forward opens to **TestChimpRum** (see platform sections below). |
+| **iOS / Android** | With **`installTestChimp(..., { uiFixture: 'screen' })`** on **`mobile/fixtures/index.js`** and Mobilewright UI projects setting **`use.platform`** (`ios` \| `android`), the plugin extends **`device`** so TrueCoverage **`SET`** runs **after** **`launchApp`** (via **`device.openUrl`** / `testchimp-rum://truecoverage/...`). **`afterEach`** flush as needed. The **app** must register URL scheme / intent filter and forward to **TestChimpRum** (see platform sections). |
 
 **Runner timing vs in-app URL handling (native):** Improving **when** the runner sends **`SET`** (device fixture) does **not** replace **how** iOS/Android deliver automation URLs into your process. You still forward **`testchimp-rum://…`** into **`TestChimpRum`** from every entry point your UI stack actually receives (see iOS delegate + SwiftUI below).
 
@@ -28,7 +28,7 @@ As an intelligent QA workflow executor agent, TrueCoverage is a capability you c
 | **Web** | `@testchimp/rum-js` (npm) | [GitHub](https://github.com/testchimphq/testchimp-rum-js), [npm](https://www.npmjs.com/package/@testchimp/rum-js) |
 | **iOS** | `TestChimpRum` (Swift Package) | [testchimp-rum-ios](https://github.com/testchimphq/testchimp-rum-ios) |
 | **Android** | **JitPack** (primary for public installs), local module, optional Maven Central | [testchimp-rum-android](https://github.com/testchimphq/testchimp-rum-android) — **§ Android** |
-| **SmartTests runner** | `@testchimp/playwright` | [playwright-testchimp-reporter](https://github.com/testchimphq/playwright-testchimp-reporter) — `installTestChimp`, reporter; set **`TESTCHIMP_PROJECT_TYPE`** (`web` / `ios` / `android`) on every run |
+| **SmartTests runner** | `@testchimp/playwright` | [playwright-testchimp-reporter](https://github.com/testchimphq/playwright-testchimp-reporter) — `installTestChimp`; mobile UI: **`use.platform`** in config ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)) |
 
 **Product overview:** [TrueCoverage intro](https://docs.testchimp.io/truecoverage/intro)
 
@@ -155,7 +155,7 @@ For a **public** [testchimp-rum-ios](https://github.com/testchimphq/testchimp-ru
 
    **`environment`:** Must follow **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**—do not ship with a placeholder (e.g. hard-coded `"staging"`) that does not match **`list-rum-environments`** or SmartTests **`TESTCHIMP_ENV` / `.env-*`** without an explicit team decision. Prefer **Info.plist / xcconfig / build setting → bootstrap**; optional **scheme env vars** or **`ProcessInfo`** for CI/local overrides without rebuilding if the project supports it.
 
-3. **TrueCoverage + Mobilewright:** On the **test runner**, set **`TESTCHIMP_PROJECT_TYPE=ios`**. In **`fixtures/index.js`** (or equivalent), apply **`installTestChimp`** from `@testchimp/playwright/runtime` to the merged `test` so specs import that wrapped `test` (not raw `@mobilewright/test`). That wires **`SET`** in the **`device`** fixture (after **`launchApp`**) plus **`afterEach`** flush behavior — see [playwright-testchimp-reporter README](https://github.com/testchimphq/playwright-testchimp-reporter).
+3. **TrueCoverage + Mobilewright:** In **`mobile/fixtures/index.js`**, apply **`installTestChimp(mergeTests(...), { uiFixture: 'screen' })`**. Set **`use.platform: 'ios'`** on the iOS project in **`mobilewright.config.ts`**. Specs import that wrapped `test` (not raw `@mobilewright/test`) — see [playwright-testchimp-reporter README](https://github.com/testchimphq/playwright-testchimp-reporter).
 4. **Register URL scheme** **`testchimp-rum`** for the app (Xcode **Info → URL Types** / `CFBundleURLTypes`), then forward incoming URLs to **`TestChimpRum.handleAutomationURL(_:)`** from **every path your app receives URL opens on** — commonly **both**:
    - **`UIApplicationDelegate`** — `application(_:open:options:)`
    - **SwiftUI** — `.onOpenURL { … }`  
@@ -235,7 +235,7 @@ Full detail: [testchimp-rum-android README](https://github.com/testchimphq/testc
    Use **`TestChimpRumConfig.Options`** for the same tuning knobs as JS (`captureEnabled`, `maxEventsPerSession`, etc.).
 
    **`environment`:** Must follow **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**. **`BuildConfig.BUILD_TYPE`** alone is usually **`debug` / `release`** and **does not** match typical **`QA` / `staging` / `production`** tags—define **`BuildConfig`** fields, **product flavors**, or **manifest placeholders** so the RUM tag matches team + MCP scope naming; use **runtime overrides** only if standardized (e.g. debug `System.getenv` behind a flag).
-3. **TrueCoverage + Mobilewright:** Set **`TESTCHIMP_PROJECT_TYPE=android`**. Apply **`installTestChimp`** from `@testchimp/playwright/runtime` in your **`fixtures/index.js`** (merged `test`) so **`SET`** runs in the **`device`** fixture and **`afterEach`** handles flush — same library as iOS; see [playwright-testchimp-reporter README](https://github.com/testchimphq/playwright-testchimp-reporter).
+3. **TrueCoverage + Mobilewright:** Same as iOS — **`mobile/fixtures/index.js`** with **`{ uiFixture: 'screen' }`**, **`use.platform: 'android'`** on the Android config project — see [playwright-testchimp-reporter README](https://github.com/testchimphq/playwright-testchimp-reporter).
 4. **Deep link:** Add an **`intent-filter`** on the activity that should receive automation (often the launcher activity) for **`VIEW`** + scheme **`testchimp-rum`**, host **`truecoverage`**, path prefix **`/v1`** (matches `…/v1/set`, `…/v1/clear`, `…/v1/flush`).
 5. **Deliver to the SDK:** On each relevant lifecycle hook (**`onCreate`**, **`onNewIntent`**, and if needed **`onResume`** so repeated VIEW deliveries are not missed), obtain a **`Uri`** and call **`TestChimpRum.handleAutomationUri(uri)`**.
 
@@ -250,7 +250,7 @@ Full detail: [testchimp-rum-android README](https://github.com/testchimphq/testc
 
 ### SmartTests checklist (native)
 
-- [ ] **`TESTCHIMP_PROJECT_TYPE=ios`** or **`android`** on **every** Mobilewright run (shell / CI).
+- [ ] Mobilewright UI projects set **`use.platform`** (`ios` / `android`); specs use **`mobile/fixtures/index.js`** with **`installTestChimp(..., { uiFixture: 'screen' })`**.
 - [ ] **`TESTCHIMP_API_KEY`** in the **runner** process (see **`SKILL.md`** — Preamble checks **#4**); MCP IDE env alone is not enough.
 - [ ] **`export const test = installTestChimp(mergedTest)`** from **`fixtures/index.js`**; spec files import **`test`** from that barrel — **do not** import raw **`test`** from **`@mobilewright/test`** in specs (setup-only projects may differ).
 - [ ] **`mobilewright.config.ts`**: **`platform`**, **`bundleId`**, **`installApps`** / APK path as required.
@@ -265,7 +265,7 @@ TrueCoverage decisions are project-level and must be persisted in `plans/knowled
 
 **Unless** `ai-test-instructions.md` **explicitly** states that TrueCoverage is **opted out** (e.g. a clear `### TrueCoverage Plan` entry such as “opted out,” “disabled for this repo,” “not applicable,” or equivalent team decision the file names as permanent opt-out), agents MUST treat TrueCoverage as **opted in**:
 
-- Plan **platform RUM install** (see **Web / iOS / Android** sections above), **init** / emit helper, **documented RUM `environment` tag mapping** (see **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**), **`@testchimp/playwright`** reporter wiring, env vars (**including `TESTCHIMP_PROJECT_TYPE`** on every run), and **`plans/events/*.event.md`** for new or changed journeys as part of normal **`/testchimp init`**, **`/testchimp test`**, and **`/testchimp evolve`** work.
+- Plan **platform RUM install** (see **Web / iOS / Android** sections above), **init** / emit helper, **documented RUM `environment` tag mapping** (see **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**), **`@testchimp/playwright`** reporter + correct fixture barrels / **`use.platform`**, and **`plans/events/*.event.md`** for new or changed journeys as part of normal **`/testchimp init`**, **`/testchimp test`**, and **`/testchimp evolve`** work.
 - Do **not** skip TrueCoverage because the TrueCoverage section is missing, empty, or says only “deferred,” and do **not** treat silence as “user declined.”
 
 **Explicit opt-out only:** When the file **explicitly** records opt-out, skip new TrueCoverage instrumentation unless the user runs **`/testchimp setup truecoverage`** or otherwise asks to re-enable.
