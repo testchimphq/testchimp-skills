@@ -183,7 +183,8 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `TESTCHIMP_API_KEY` | Yes | Authenticates to TestChimp; project is inferred from the key. Set in **`mcp.json`** **`env`** and in the **shell** for local runs — **not** in **`.env-QA`**. |
+| `TESTCHIMP_API_KEY` | Yes | Authenticates to TestChimp; project is inferred from the key. Set in project **`mcp.json`** **`env`** and in the **shell** for local runs — **not** in **`.env-QA`**. |
+| `TESTCHIMP_PROJECT_ID` | For RUM | Stored in the same MCP **`env`** block for TrueCoverage instrumentation (`projectId`); see [`truecoverage.md`](./truecoverage.md). |
 
 **Environment (Playwright / ai-wright in the same session):** Export the **same** **`TESTCHIMP_API_KEY`** in the shell when running `npx playwright …` so reporters, **`ai.*`** steps, and MCP-backed flows share one project key. For **ai-wright**, agents should **only** instruct setting **`TESTCHIMP_API_KEY`** (not user PAT / mail-based auth). On **401** responses, configure the key via TestChimp → **Project Settings** → **Key management**.
 

@@ -8,6 +8,13 @@ set -euo pipefail
 _say() { printf '%s\n' "$*"; }
 _warn() { printf '%s\n' "$*" >&2; }
 
+_is_placeholder() {
+  local v="$1"
+  [ -z "${v// }" ] && return 0
+  echo "$v" | grep -qiE 'paste_your|placeholder|your_project|changeme|xxx' && return 0
+  return 1
+}
+
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export SKILL_DIR
 
@@ -26,7 +33,6 @@ NODE
 fi
 
 if [ -d "$SKILL_DIR/.git" ]; then
-  # Fetch is safe; if offline, continue.
   git -C "$SKILL_DIR" fetch origin main >/dev/null 2>&1 || true
   if command -v node >/dev/null 2>&1; then
     REMOTE_VERSION="$(SKILL_DIR="$SKILL_DIR" node - <<'NODE' 2>/dev/null || true
@@ -67,37 +73,53 @@ if command -v git >/dev/null 2>&1; then
   TOP="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 fi
 
-# --- MCP config / TESTCHIMP_API_KEY discoverability (no printing) ---
-# Heuristic: prefer repo-local Cursor MCP config if present.
+# --- MCP config / TESTCHIMP_* discoverability (no printing) ---
 MCP_JSON=""
-if [ -n "${TOP:-}" ] && [ -f "$TOP/ui/.cursor/mcp.json" ]; then
-  MCP_JSON="$TOP/ui/.cursor/mcp.json"
-elif [ -n "${TOP:-}" ] && [ -f "$TOP/.cursor/mcp.json" ]; then
-  MCP_JSON="$TOP/.cursor/mcp.json"
-elif [ -f ".cursor/mcp.json" ]; then
-  MCP_JSON=".cursor/mcp.json"
-fi
+for candidate in \
+  "${TOP:+$TOP/ui/.cursor/mcp.json}" \
+  "${TOP:+$TOP/.cursor/mcp.json}" \
+  "${TOP:+$TOP/.mcp.json}" \
+  ".cursor/mcp.json" \
+  ".mcp.json"
+do
+  [ -n "$candidate" ] && [ -f "$candidate" ] && MCP_JSON="$candidate" && break
+done
 
 if [ -n "${MCP_JSON:-}" ] && command -v node >/dev/null 2>&1; then
   _say "MCP_CONFIG: $MCP_JSON"
-  HAS_KEY="$(MCP_JSON="$MCP_JSON" node - <<'NODE' 2>/dev/null || true
+  eval "$(MCP_JSON="$MCP_JSON" node - <<'NODE' 2>/dev/null || true
 const fs=require('fs');
 const p=process.env.MCP_JSON;
+function ok(v){ return v && String(v).trim() && !/paste_your|placeholder|your_project|changeme/i.test(String(v)); }
 try{
   const j=JSON.parse(fs.readFileSync(p,'utf8'));
-  const k=j?.mcpServers?.testchimp?.env?.TESTCHIMP_API_KEY;
-  if (k && String(k).trim() && !/placeholder/i.test(String(k))) process.stdout.write('yes');
-  else process.stdout.write('no');
-}catch{ process.stdout.write('no'); }
+  const env=j?.mcpServers?.testchimp?.env || {};
+  const key=env.TESTCHIMP_API_KEY;
+  const pid=env.TESTCHIMP_PROJECT_ID;
+  const hasServer=!!j?.mcpServers?.testchimp;
+  process.stdout.write(`HAS_SERVER=${hasServer?'yes':'no'}\n`);
+  process.stdout.write(`HAS_KEY=${ok(key)?'yes':'no'}\n`);
+  process.stdout.write(`HAS_PROJECT_ID=${ok(pid)?'yes':'no'}\n`);
+}catch{
+  process.stdout.write('HAS_SERVER=no\nHAS_KEY=no\nHAS_PROJECT_ID=no\n');
+}
 NODE
   )"
-  if [ "$HAS_KEY" = "yes" ]; then
+  if [ "${HAS_SERVER:-no}" != "yes" ]; then
+    _warn "BLOCKER: mcpServers.testchimp missing — run /testchimp init Workstation gate or merge assets/sample-mcp.json"
+  fi
+  if [ "${HAS_KEY:-no}" = "yes" ]; then
     _say "TESTCHIMP_API_KEY: present (not printed)"
   else
     _warn "BLOCKER: TESTCHIMP_API_KEY missing/blank/placeholder in MCP config (reload MCP after setting)"
   fi
+  if [ "${HAS_PROJECT_ID:-no}" = "yes" ]; then
+    _say "TESTCHIMP_PROJECT_ID: present (not printed)"
+  else
+    _warn "WARN: TESTCHIMP_PROJECT_ID missing/placeholder (needed for TrueCoverage RUM instrumentation)"
+  fi
 else
-  _warn "WARN: MCP config not found or node missing (cannot verify TESTCHIMP_API_KEY)"
+  _warn "WARN: project MCP config not found (.cursor/mcp.json or .mcp.json) — /testchimp init should create it from assets/sample-mcp.json"
 fi
 
 exit 0

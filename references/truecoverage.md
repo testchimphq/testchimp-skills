@@ -57,15 +57,30 @@ As an intelligent QA workflow executor agent, TrueCoverage is a capability you c
 
 ---
 
+## Resolving `projectId` and `apiKey` (all platforms)
+
+Before wiring RUM `init` / `initialize`, resolve credentials in this order:
+
+1. **App/build config already set** — use existing env vars, plist keys, `BuildConfig`, or bootstrap helpers (preferred when the team already centralizes secrets there).
+2. **Project MCP config (agent default when #1 is missing)** — From the SmartTests root (`.testchimp-tests`), walk **up** to the repo’s **project-level** MCP JSON (Cursor: **`.cursor/mcp.json`**; Claude Code: **`.mcp.json`**; same walk-up as **`SKILL.md`** Preamble **#4**). Read **`mcpServers.testchimp.env`**:
+   - **`TESTCHIMP_PROJECT_ID`** → map to RUM **`projectId`**
+   - **`TESTCHIMP_API_KEY`** → map to RUM **`apiKey`**
+   - Skip values that are empty or match placeholders (`PASTE_YOUR_…`, `placeholder`, etc.). **Never print** secrets in chat.
+3. **User prompt** — if both are still missing, ask the user to paste **project ID** and **API key** from **TestChimp → Project Settings → Key management** into the project MCP `env` block (see [`../assets/sample-mcp.json`](../assets/sample-mcp.json)) and/or the app’s build config, then reload MCP if needed.
+
+During **`/testchimp init`**, the **[Workstation gate](init-testchimp.md#workstation-gate-always-first)** should already have created or merged that MCP file with placeholders; instrumentation runs should **consume** those values rather than inventing IDs.
+
+---
+
 ## Web (browser) instrumentation
 
 1. **Install:** `npm install @testchimp/rum-js` in the **app under test** (frontend / runtime bundle), not only in the SmartTests package.
 2. **Init once** at app bootstrap: call **`testchimp.init()`** (see [library README](https://github.com/testchimphq/testchimp-rum-js)). Required top-level fields per README:
-   - **`projectId`** — TestChimp project ID (from **TestChimp → Project Settings → Key management**). Load from env / build config.
-   - **`apiKey`** — project API key for RUM (same source).
+   - **`projectId`** — TestChimp project ID. Resolve per **[Resolving `projectId` and `apiKey`](#resolving-projectid-and-apikey-all-platforms)** (MCP **`TESTCHIMP_PROJECT_ID`** when app config does not already define it).
+   - **`apiKey`** — project API key for RUM (same resolution order; MCP **`TESTCHIMP_API_KEY`** or app env).
    - **`environment`** — logical tag for the session (e.g. `production`, `staging`, `QA`); use one consistent scheme per deploy. **Not auto-filled** from **`TESTCHIMP_ENV`** on the shell: map build-time / runtime config into this parameter (see **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**).
    - Optional: `sessionId`, `release`, `branchName`, `sessionMetadata`, and nested **`config`** (see below).
-3. Prefer **one helper** (e.g. `emitProductEvent`) that wraps **`testchimp.emit()`** after init. Read credentials from the app’s env/build config (e.g. map `TESTCHIMP_PROJECT_ID` / `TESTCHIMP_API_KEY` into `init()`); avoid scattering raw `emit` calls. Do **not** put these secrets in SmartTests `.env-QA`—those are for test execution vars like `BASE_URL`.
+3. Prefer **one helper** (e.g. `emitProductEvent`) that wraps **`testchimp.emit()`** after init. Read credentials from app build config when present; otherwise from project MCP `env` per the resolution section above. Avoid scattering raw `emit` calls. Do **not** put these secrets in SmartTests `.env-QA`—those are for test execution vars like `BASE_URL`.
 4. **Vocabulary:** If you already use product analytics (PostHog, Segment, etc.), align event names where it helps—but TrueCoverage goals differ: prefer **semantic journey steps** (e.g. checkout-completed) over noise (“button clicked”). Keep **metadata cardinality** low; follow **Event constraints** in the [GitHub README](https://github.com/testchimphq/testchimp-rum-js) (title length, metadata keys/values, max serialized size).
 
 ### RUM `config` (volume / “sampling” behavior) — web
@@ -138,7 +153,8 @@ For a **public** [testchimp-rum-ios](https://github.com/testchimphq/testchimp-ru
 ### Instrumentation steps
 
 1. **Add the library** (as above).
-2. **Initialize once** (early app lifecycle), then emit from UI code:
+2. **Resolve credentials** per **[Resolving `projectId` and `apiKey`](#resolving-projectid-and-apikey-all-platforms)** — wire **`projectId`** / **`apiKey`** from xcconfig, Info.plist, or build settings (often populated from project MCP **`TESTCHIMP_PROJECT_ID`** / **`TESTCHIMP_API_KEY`** when not already in the app).
+3. **Initialize once** (early app lifecycle), then emit from UI code:
 
    ```swift
    import TestChimpRum
@@ -155,8 +171,8 @@ For a **public** [testchimp-rum-ios](https://github.com/testchimphq/testchimp-ru
 
    **`environment`:** Must follow **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**—do not ship with a placeholder (e.g. hard-coded `"staging"`) that does not match **`list-rum-environments`** or SmartTests **`TESTCHIMP_ENV` / `.env-*`** without an explicit team decision. Prefer **Info.plist / xcconfig / build setting → bootstrap**; optional **scheme env vars** or **`ProcessInfo`** for CI/local overrides without rebuilding if the project supports it.
 
-3. **TrueCoverage + Mobilewright:** In **`mobile/fixtures/index.js`**, apply **`installTestChimp(mergeTests(...), { uiFixture: 'screen' })`**. Set **`use.platform: 'ios'`** on the iOS project in **`mobilewright.config.ts`**. Specs import that wrapped `test` (not raw `@mobilewright/test`) — see [playwright-testchimp-reporter README](https://github.com/testchimphq/playwright-testchimp-reporter).
-4. **Register URL scheme** **`testchimp-rum`** for the app (Xcode **Info → URL Types** / `CFBundleURLTypes`), then forward incoming URLs to **`TestChimpRum.handleAutomationURL(_:)`** from **every path your app receives URL opens on** — commonly **both**:
+4. **TrueCoverage + Mobilewright:** In **`mobile/fixtures/index.js`**, apply **`installTestChimp(mergeTests(...), { uiFixture: 'screen' })`**. Set **`use.platform: 'ios'`** on the iOS project in **`mobilewright.config.ts`**. Specs import that wrapped `test` (not raw `@mobilewright/test`) — see [playwright-testchimp-reporter README](https://github.com/testchimphq/playwright-testchimp-reporter).
+5. **Register URL scheme** **`testchimp-rum`** for the app (Xcode **Info → URL Types** / `CFBundleURLTypes`), then forward incoming URLs to **`TestChimpRum.handleAutomationURL(_:)`** from **every path your app receives URL opens on** — commonly **both**:
    - **`UIApplicationDelegate`** — `application(_:open:options:)`
    - **SwiftUI** — `.onOpenURL { … }`  
    Using **both** is a **reliability** pattern (some stacks drop opens in one path when the app is already foreground); the device-fixture runner change does **not** remove this requirement unless you have verified a single path handles **all** automation opens for your shell.
@@ -216,7 +232,8 @@ Full detail: [testchimp-rum-android README](https://github.com/testchimphq/testc
 ### Instrumentation steps
 
 1. **Add the library** (as above).
-2. **Initialize once** in `Application.onCreate`, then emit from UI code:
+2. **Resolve credentials** per **[Resolving `projectId` and `apiKey`](#resolving-projectid-and-apikey-all-platforms)** — e.g. `BuildConfig.TC_PROJECT_ID` / `TC_API_KEY` from `gradle.properties`, flavor config, or values copied from project MCP **`TESTCHIMP_PROJECT_ID`** / **`TESTCHIMP_API_KEY`** when not already defined.
+3. **Initialize once** in `Application.onCreate`, then emit from UI code:
 
    ```kotlin
    TestChimpRum.initialize(
@@ -235,9 +252,9 @@ Full detail: [testchimp-rum-android README](https://github.com/testchimphq/testc
    Use **`TestChimpRumConfig.Options`** for the same tuning knobs as JS (`captureEnabled`, `maxEventsPerSession`, etc.).
 
    **`environment`:** Must follow **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**. **`BuildConfig.BUILD_TYPE`** alone is usually **`debug` / `release`** and **does not** match typical **`QA` / `staging` / `production`** tags—define **`BuildConfig`** fields, **product flavors**, or **manifest placeholders** so the RUM tag matches team + MCP scope naming; use **runtime overrides** only if standardized (e.g. debug `System.getenv` behind a flag).
-3. **TrueCoverage + Mobilewright:** Same as iOS — **`mobile/fixtures/index.js`** with **`{ uiFixture: 'screen' }`**, **`use.platform: 'android'`** on the Android config project — see [playwright-testchimp-reporter README](https://github.com/testchimphq/playwright-testchimp-reporter).
-4. **Deep link:** Add an **`intent-filter`** on the activity that should receive automation (often the launcher activity) for **`VIEW`** + scheme **`testchimp-rum`**, host **`truecoverage`**, path prefix **`/v1`** (matches `…/v1/set`, `…/v1/clear`, `…/v1/flush`).
-5. **Deliver to the SDK:** On each relevant lifecycle hook (**`onCreate`**, **`onNewIntent`**, and if needed **`onResume`** so repeated VIEW deliveries are not missed), obtain a **`Uri`** and call **`TestChimpRum.handleAutomationUri(uri)`**.
+4. **TrueCoverage + Mobilewright:** Same as iOS — **`mobile/fixtures/index.js`** with **`{ uiFixture: 'screen' }`**, **`use.platform: 'android'`** on the Android config project — see [playwright-testchimp-reporter README](https://github.com/testchimphq/playwright-testchimp-reporter).
+5. **Deep link:** Add an **`intent-filter`** on the activity that should receive automation (often the launcher activity) for **`VIEW`** + scheme **`testchimp-rum`**, host **`truecoverage`**, path prefix **`/v1`** (matches `…/v1/set`, `…/v1/clear`, `…/v1/flush`).
+6. **Deliver to the SDK:** On each relevant lifecycle hook (**`onCreate`**, **`onNewIntent`**, and if needed **`onResume`** so repeated VIEW deliveries are not missed), obtain a **`Uri`** and call **`TestChimpRum.handleAutomationUri(uri)`**.
 
    **`Intent` vs `Uri`:** `TestChimpRum.handleAutomationIntent(intent)` delegates to **`intent?.data`**. Some **`VIEW`** deliveries leave **`getData()`** null while **`intent.dataString`** is still set—normalize first:
 

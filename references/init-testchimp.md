@@ -72,7 +72,7 @@ Init mixes **two independent scopes**. Agents must not collapse them into a sing
 
 | Scope | What it covers | How to tell if it is already done |
 |--------|----------------|-------------------------------------|
-| **Workstation** (per machine) | Host MCP registration: `npx` runs **`@testchimp/cli`** with the **`mcp`** subcommand (see [`../assets/sample-mcp.json`](../assets/sample-mcp.json)); the project MCP config file (e.g. **`.cursor/mcp.json`** in Cursor, or the host’s equivalent) contains a **`testchimp`** server entry with **`env.TESTCHIMP_API_KEY`** set to a **real** project key (not empty, not a placeholder). Optionally shell `TESTCHIMP_API_KEY` for Playwright / ai-wright. | **Check local config every time** — never infer from git. |
+| **Workstation** (per machine) | Host MCP registration: `npx` runs **`@testchimp/cli`** with the **`mcp`** subcommand (see [`../assets/sample-mcp.json`](../assets/sample-mcp.json)); the **project-scoped** MCP config file (e.g. **`.cursor/mcp.json`** in Cursor, **`.mcp.json`** at repo root for Claude Code — see [Workstation gate](#workstation-gate-always-first)) contains a **`testchimp`** server entry with **`env.TESTCHIMP_API_KEY`** and **`env.TESTCHIMP_PROJECT_ID`** set to **real** values (not empty, not placeholders). Optionally shell `TESTCHIMP_API_KEY` for Playwright / ai-wright. | **Check local config every time** — never infer from git. Agent **creates or patches** the project MCP file during init when missing or incomplete. |
 | **Project** (repo / team) | Shared decisions: environment strategy, TrueCoverage, mocking, import/CI plans, action items — persisted under **`plans/knowledge/ai-test-instructions.md`**. | If that file **exists and is substantively populated** (sections filled, not just a stub), treat **project-level** decisions as already captured unless the user wants to change them. |
 
 **Critical:** A teammate who clones the repo after project init may see a complete **`ai-test-instructions.md`** and still have **no** MCP client or key on **their** laptop. **`/testchimp init` must always run the workstation checks and fixes** in that situation, even when project-level markdown is already done.
@@ -98,11 +98,24 @@ When **`/testchimp init`** starts, the **first substantive message to the user**
 
 Run this **before** optional smoke (Phase 0) or project requirement gathering (Phase 1–3). On **every** `/testchimp init`, complete:
 
-1. **Resolve MCP config** — From the SmartTests root (folder with `.testchimp-tests`), walk **up** the directory tree for the **host’s project MCP config** (Cursor often **`.cursor/mcp.json`**; other hosts differ — same walk-up as **`SKILL.md`** Preamble check **#4**) until you find one whose **`mcpServers`** defines the TestChimp client (typically **`testchimp`**).
-2. **Verify client + key** — Apply **`SKILL.md`** Preamble checks **#4** (`TESTCHIMP_API_KEY` resolvable; export for shell/Playwright per that item) and **#5** (CLI/MCP client version / `args` for **`@testchimp/cli`** including **`mcp`**). If the server entry is missing or wrong: update the host MCP config using **`["-y", "@testchimp/cli@latest", "mcp"]`** from [`../assets/sample-mcp.json`](../assets/sample-mcp.json), then re-check (e.g. MCP tool **`get-eaas-config`** must not return **401**).
-3. **Never skip** this block because **`ai-test-instructions.md`** exists or looks complete.
+1. **Resolve project MCP config path** — MCP config is **per project**, not global. From the SmartTests root (folder with `.testchimp-tests`), walk **up** toward the git/repo root and pick the **first existing** host config file, or the path you will **create** at the repo root if none exist:
+   - **Cursor:** `<repo>/.cursor/mcp.json` (create **`.cursor/`** if needed)
+   - **Claude Code:** `<repo>/.mcp.json` at the repository root
+   - **Other hosts:** use that host’s documented **project-level** MCP JSON path; same walk-up rule as **`SKILL.md`** Preamble check **#4**
+   - Prefer the path for the **active IDE/agent host** when you know it; if unsure, create/update **both** common paths only when they are absent or lack TestChimp — do not duplicate conflicting entries in the same repo without user direction.
+2. **Create or patch MCP JSON (required when missing or incomplete)** — Read the blob in [`../assets/sample-mcp.json`](../assets/sample-mcp.json) as the canonical **`testchimp`** server template.
+   - **No config file yet:** write a new file at the resolved path with the full contents of **`sample-mcp.json`** (placeholders intact).
+   - **File exists but no `mcpServers.testchimp`:** parse existing JSON, **merge** the `testchimp` entry from **`sample-mcp.json`** into `mcpServers` without removing other servers, then write the file back.
+   - **`testchimp` exists but `args` / `command` wrong:** apply **`SKILL.md`** Preamble check **#5** (`npx`, `["-y", "@testchimp/cli@latest", "mcp"]`).
+   - **`env` missing keys:** ensure **`env`** includes **`TESTCHIMP_API_KEY`** and **`TESTCHIMP_PROJECT_ID`**. If a key already has a **non-placeholder** value, **preserve** it; only add missing keys or replace obvious placeholders.
+   - **Placeholders (do not commit real secrets):**
+     - `TESTCHIMP_API_KEY`: `PASTE_YOUR_PROJECT_API_KEY_HERE`
+     - `TESTCHIMP_PROJECT_ID`: `PASTE_YOUR_PROJECT_ID_HERE`
+   - After any write, **tell the user** they must paste the **project API key** and **project ID** from **TestChimp → Project Settings → Key management** into that file’s `env` block, then **reload MCP / restart the IDE**. **`TESTCHIMP_PROJECT_ID`** is not required for MCP tool calls (project is inferred from the API key) but **is required for TrueCoverage RUM instrumentation** — storing it here gives agents a single project-local source when wiring `testchimp.init()` / native RUM.
+3. **Verify client + credentials** — Apply **`SKILL.md`** Preamble checks **#4** (`TESTCHIMP_API_KEY` resolvable; export for shell/Playwright per that item) and **#5** (CLI/MCP client version). If the key is still a placeholder, **stop** after informing the user (step 2); do not claim MCP is ready. When the key is real, re-check (e.g. MCP tool **`get-eaas-config`** must not return **401**).
+4. **Never skip** this block because **`ai-test-instructions.md`** exists or looks complete.
 
-Only after the workstation gate passes should you use **`ai-test-instructions.md`** to decide how much **project-level** Phase 1–3 work remains.
+Only after the workstation gate passes (or is blocked only on user-supplied secrets) should you use **`ai-test-instructions.md`** to decide how much **project-level** Phase 1–3 work remains.
 
 ---
 
@@ -183,8 +196,8 @@ Do not start implementing mocking/env/truecoverage/CI until you have the user’
 - If either marker file is missing: ask the user to complete the minimum needed TestChimp Git integration + sync so marker files exist. **Also ask them to confirm:**
   - For **each** mapped folder (plans and tests, after mapping in TestChimp → Project Settings → Integrations), a **PR has been raised from the TestChimp platform** and **merged**, so the scaffold (including empty marker files) exists in the remote repo.
   - Their **local workspace has been updated** (e.g. `git pull` / sync) so they have pulled those PR changes. Markers only appear locally after the platform sync PRs are merged and the branch is up to date.
-- If the MCP server entry is missing or invalid after the Workstation gate: the agent should update the host MCP config automatically (using the `npx` + `@testchimp/cli@latest` pattern from `assets/sample-mcp.json`), then re-check that the server runs.
-- Only if `TESTCHIMP_API_KEY` value is not already available to write/use (e.g. not present in shell env or existing MCP `env`): ask the user to enter that in the mcp.json env block (or confirm where it is already provided) so the MCP validation call can succeed. Ensure the MCP can be called - by using get-eaas-config - expectation is for it to not return 401.
+- The **[Workstation gate](#workstation-gate-always-first)** owns MCP file **create/merge**; Key Area 1 only confirms markers and re-validates MCP after the gate.
+- If placeholders remain for **`TESTCHIMP_API_KEY`** or **`TESTCHIMP_PROJECT_ID`**: ask the user to paste both from **TestChimp → Project Settings → Key management** into the project MCP `env` block, reload MCP, then continue. Never commit real keys. Ensure **`get-eaas-config`** does not return **401** once the API key is set.
 
 ### Key Area 2 — Existing Playwright suite / import strategy
 
@@ -449,7 +462,7 @@ Use **`@latest`** for the dev dependency so installs track the current default n
 
 Local (agent runtime / MCP config):
 
-- set `TESTCHIMP_API_KEY` in MCP server `env`,
+- set `TESTCHIMP_API_KEY` and `TESTCHIMP_PROJECT_ID` in MCP server `env` (see [`../assets/sample-mcp.json`](../assets/sample-mcp.json)),
 - keep config project-scoped, not global.
 
 CI:
@@ -470,12 +483,12 @@ CI:
 - Use **`mobilewright.config.ts`** in the SmartTests root. Start from [`../assets/template_android_mobilewright.config.ts`](../assets/template_android_mobilewright.config.ts) or [`../assets/template_ios_mobilewright.config.ts`](../assets/template_ios_mobilewright.config.ts) matching **`project_type`**. Set **`bundleId`** and **`installApps`** to real artifact paths (APK / IPA / local simulator build — see Mobilewright docs).
 - For CI with **mobile-use**, set **`MOBILE_USE_API_KEY`**; document that in **`ai-test-instructions.md`** ([`environment-management.md`](./environment-management.md)).
 
-### Action item E - MCP install (Cursor)
+### Action item E - MCP install (project-scoped; all hosts)
 
-Register **`@testchimp/cli`** in MCP config with **`TESTCHIMP_API_KEY`**.
+Register **`@testchimp/cli`** in the **project** MCP config (not global user config). Follow the **[Workstation gate](#workstation-gate-always-first)** — create **`.cursor/mcp.json`**, **`.mcp.json`**, or the host equivalent from [`../assets/sample-mcp.json`](../assets/sample-mcp.json) when missing; merge the **`testchimp`** server when the file exists without it.
 
-- Use **`command`:** **`npx`** and **`args`:** **`["-y", "@testchimp/cli@latest", "mcp"]`** so each run resolves the latest npm release and starts the MCP server (see [`../assets/sample-mcp.json`](../assets/sample-mcp.json)).
-- Put **`TESTCHIMP_API_KEY`** in the server **`env`** block (project-scoped key). Export the **same** key in the **shell** when running **`npx playwright …`**. **Do not** put **`TESTCHIMP_API_KEY`** in **`.env-QA`** — that file is for **test execution** env (e.g. **`BASE_URL`**). On **401** from APIs or MCP, obtain a key at TestChimp → **Project Settings** → **Key management**.
+- Use **`command`:** **`npx`** and **`args`:** **`["-y", "@testchimp/cli@latest", "mcp"]`** so each run resolves the latest npm release and starts the MCP server.
+- Put **`TESTCHIMP_API_KEY`** and **`TESTCHIMP_PROJECT_ID`** in the server **`env`** block (placeholders until the user pastes real values from TestChimp → **Project Settings** → **Key management**). Export the **same API key** in the **shell** when running **`npx playwright …`**. **Do not** put these secrets in **`.env-QA`** — that file is for **test execution** env (e.g. **`BASE_URL`**).
 - After changing MCP config, the user should **reload MCP or restart the IDE** so the new **`npx`** arguments apply.
 - Success check (Basic TestChimp integration): invoke `get-eaas-config` via the MCP client and ensure it does **not** return `401 Unauthorized` (and returns a non-empty config payload).
 

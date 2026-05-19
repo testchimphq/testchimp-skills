@@ -25,7 +25,7 @@ If the key is **not** set in the shell:
 
 1. Resolve the **same project-scoped MCP config** used for TestChimp (the file where the user placed the key at init). The path is **host-specific** — e.g. Cursor often uses `<repo>/.cursor/mcp.json`; Claude Code, VS Code, and others use their own documented locations. **`.cursor` is an example, not universal.**
 2. From the **SmartTests root** (folder containing `.testchimp-tests`), walk **up** the directory tree and check each candidate MCP config file until you find `mcpServers` (or equivalent) with a **`testchimp`** server entry.
-3. Read **`env.TESTCHIMP_API_KEY`** (and optionally **`env.TESTCHIMP_BACKEND_URL`**) from that entry.
+3. Read **`env.TESTCHIMP_API_KEY`** (and optionally **`env.TESTCHIMP_PROJECT_ID`**, **`env.TESTCHIMP_BACKEND_URL`**) from that entry. **`TESTCHIMP_PROJECT_ID`** is for TrueCoverage RUM wiring, not required for CLI auth.
 4. **`export`** those variables in the **same shell** that will run `testchimp` (e.g. a single shell block: `export TESTCHIMP_API_KEY=...` then `testchimp ...`).
 5. **Never print the key** in chat, logs, or echoed commands.
 

@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve, explore), SmartTests, agent-driven test or plan authoring, ExploreChimp, or updating this skill from Git.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.3.1
+version: 0.3.2
 required_cli_version: "0.1.7"
 ---
 
@@ -54,8 +54,8 @@ Before executing a TestChimp flow:
    - **Playwright / Mobilewright / CI:** MCP `env` alone is **not** enough for the test **runner** — still apply **#4** before spawning the runner.
 
 4. **`TESTCHIMP_API_KEY` (P0 — single rule for MCP, CLI, and runners)** — Any process that runs **Playwright** or **Mobilewright** with **`@testchimp/playwright`**, or **`testchimp`** CLI against the project APIs, must have **`TESTCHIMP_API_KEY`** in **that process’s** environment. **IDE-only or MCP-only** config does **not** satisfy the **child** test runner. If you **cannot verify** the key is set on the process **before** spawn, **halt** — do not run tests “to see what happens.”
-   - **Resolve (never print the key):** SmartTests root ( **`.testchimp-tests`** ) → walk **up** to host MCP config (e.g. **`.cursor/mcp.json`** — example only) → read **`mcpServers.<testchimp-or-equivalent>.env.TESTCHIMP_API_KEY`** → **export** or **inject** into the agent shell, CI job `env`, or compose `env:` for the service that runs `npx playwright test` / `npx mobilewright …`.
-   - **Missing / blank / placeholder:** **STOP**; fix location + reload MCP if needed, then re-export for the **runner**.
+   - **Resolve (never print secrets):** SmartTests root ( **`.testchimp-tests`** ) → walk **up** to **project-level** host MCP config (e.g. **`.cursor/mcp.json`** for Cursor, **`.mcp.json`** at repo root for Claude Code) → read **`mcpServers.testchimp.env.TESTCHIMP_API_KEY`** → **export** or **inject** into the agent shell, CI job `env`, or compose `env:` for the service that runs `npx playwright test` / `npx mobilewright …`. For TrueCoverage RUM **`projectId`**, read **`env.TESTCHIMP_PROJECT_ID`** from the same entry when app build config does not already define it ([`references/truecoverage.md`](references/truecoverage.md)).
+   - **Missing / blank / placeholder:** **STOP**; during **`/testchimp init`**, create or merge the project MCP file from [`assets/sample-mcp.json`](assets/sample-mcp.json) (see [Workstation gate](references/init-testchimp.md#workstation-gate-always-first)), ask the user to paste API key + project ID, reload MCP, then re-export for the **runner**.
    - **Symptoms (same fix):** reporter **disabled**, **401**, missing-key logs → re-apply **#4** on the **runner** env, then re-run.
    - **Never print the key.** **No key-rotation noise** unless leaked or committed.
    - **Not in** **`.env-QA`** / **`.env-*`** (those are for `BASE_URL`, fixtures, etc.); canonical copy in MCP **`env`** per [`assets/sample-mcp.json`](assets/sample-mcp.json).
@@ -65,7 +65,7 @@ Before executing a TestChimp flow:
    - If **`args`** use an explicit **`@testchimp/cli@x.y.z`**, parse **x.y.z** as the configured version.
    - **Pass** if the effective configured version is **>=** **`required_cli_version`** (semver). **Pass** if registry latest is **>=** **`required_cli_version`** when using **`@latest`** or an unpinned package name.
    - **Corrective action** when the pinned semver or registry latest is **below** **`required_cli_version`:** Update **`args`** to **`["-y", "@testchimp/cli@latest", "mcp"]`** (see [`assets/sample-mcp.json`](assets/sample-mcp.json)), **or** pin to at least **`required_cli_version`**. Preserve **`env.TESTCHIMP_API_KEY`**. Tell the user to **reload MCP / restart the IDE** so the new command line applies.
-   - If no MCP config is present yet, **do not block** the flow; point to [`assets/sample-mcp.json`](assets/sample-mcp.json) during **`/testchimp init`**.
+   - If no project MCP config is present yet, **during `/testchimp init`** create or merge it from [`assets/sample-mcp.json`](assets/sample-mcp.json) (other flows: point the user to init or the Workstation gate).
 
 6. **Playwright / Mobilewright toolchain check** — **Web:** TestChimp requires Playwright 1.59.0+. **Before** authoring SmartTests, running **`npx playwright test`**, or doing browser-driven exploration for **`/testchimp init`** smoke, ensure the repo has a compliant install (**#4** before any such run):
    - Resolve the **install root**: from the **SmartTests root** (see **[Marker files](#marker-files)**), walk up until you find the **`package.json`** that declares **`@playwright/test`** (often a parent such as `ui/` in a monorepo). That directory is where **`npm install`** / **`npm ci`** must succeed for Playwright to be runnable.
@@ -143,11 +143,11 @@ Install **`@testchimp/cli@latest`** (see [`references/init-testchimp.md`](refere
 
 **CLI (shell / CI):** Same package exposes the **`testchimp`** binary for calling the same HTTP APIs with flags or **`--json-input`**. See [`references/cli.md`](references/cli.md) for env resolution, stdout/stderr, and when to prefer CLI vs MCP.
 
-**Reference config:** [`assets/sample-mcp.json`](assets/sample-mcp.json) — shows **`command`**, **`args`** (`-y` + **`@testchimp/cli@latest`** + **`mcp`**), and **`env`** with **`TESTCHIMP_API_KEY`**. Replace the placeholder with the **project-scoped** API key from TestChimp; **do not commit** real keys.
+**Reference config:** [`assets/sample-mcp.json`](assets/sample-mcp.json) — shows **`command`**, **`args`** (`-y` + **`@testchimp/cli@latest`** + **`mcp`**), and **`env`** with **`TESTCHIMP_API_KEY`** and **`TESTCHIMP_PROJECT_ID`** placeholders. **`/testchimp init`** must **write** this blob into the **project-level** MCP file (create or merge) when missing. Replace placeholders with values from **TestChimp → Project Settings → Key management**; **do not commit** real secrets.
 
 **Minimum versions:** This skill declares **`required_cli_version`** in frontmatter. Agents must run **Preamble checks #5** (CLI) and **#6** (Playwright/Mobilewright toolchain). When TrueCoverage or application RUM code is in scope, also run **#7** (latest **`@testchimp/rum-js`** / iOS tags / Android JitPack tag vs project install).
 
-**MCP `env`:** `TESTCHIMP_API_KEY` (required in config; **#4** for export to shell / runner / CI). **401** or missing-key symptoms → **#4**.
+**MCP `env`:** `TESTCHIMP_API_KEY` (required for MCP + runner export per **#4**); `TESTCHIMP_PROJECT_ID` (optional for MCP calls; **required** for TrueCoverage RUM `projectId` when not elsewhere in app config — agents read it during instrumentation per [`references/truecoverage.md`](references/truecoverage.md)). **401** or missing-key symptoms → **#4**.
 
 The MCP server exposes tools grouped by area:
 
@@ -288,5 +288,5 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`assets/template_mobile_mobilewright.config.ts`](assets/template_mobile_mobilewright.config.ts) | Mobile: setup + api + ios + android |
 | [`assets/template_multi_platform_playwright.config.js`](assets/template_multi_platform_playwright.config.js) | Multi-platform web + api |
 | [`assets/template_multi_platform_mobilewright.config.ts`](assets/template_multi_platform_mobilewright.config.ts) | Multi-platform native matrix |
-| [`assets/sample-mcp.json`](assets/sample-mcp.json) | Sample MCP config: `npx`, `@testchimp/cli@latest`, `mcp`, `TESTCHIMP_API_KEY` |
+| [`assets/sample-mcp.json`](assets/sample-mcp.json) | Sample project MCP config: `npx`, `@testchimp/cli@latest`, `mcp`, `TESTCHIMP_API_KEY` + `TESTCHIMP_PROJECT_ID` placeholders |
 
