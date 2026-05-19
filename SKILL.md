@@ -3,7 +3,7 @@ name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve, explore), SmartTests, agent-driven test or plan authoring, ExploreChimp, or updating this skill from Git.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps.
 version: 0.3.0
-required_cli_version: "0.1.6"
+required_cli_version: "0.1.7"
 ---
 
 # TestChimp
