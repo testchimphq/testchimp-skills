@@ -8,6 +8,8 @@ The objective of **`/testchimp test`** is to **produce and run automated coverag
 
 **Project type:** After locating the SmartTests root (**`.testchimp-tests`**), read that file. **Empty or missing `project_type`** → **`web`**. **`project_type=mobile`** or legacy **`ios`/`android`** → **mobile** (unified `mobilewright.config.ts`, `mobile/e2e/{common,ios,android}/`, `api/`). **`project_type=multi-platform`** → **both** configs + `web/` + `mobile/` + shared `api/`. **Authoring paths, fixture barrels, and `shared/` helpers:** [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) (required for Plan/Execute). **Mobile UI:** [`mobilewright-smarttests.md`](./mobilewright-smarttests.md) — **`screen`** / **`device`**, **no** ai-wright. **Fixtures:** [`fixture-usage.md`](./fixture-usage.md).
 
+**Platform scope (mobile & multi-platform, PR branch):** Before **Plan** approval, resolve which of **`web`**, **`ios`**, and **`android`** this run covers. **Inform** the user when deduction is confident; **ask** when ambiguous. Persist **`## Platform scope (this run)`** on the branch plan and require **User confirmed: yes** before **Execute**. See [`platform-scope.md`](./platform-scope.md).
+
 ## “Run tests” / CI green vs `/testchimp test`
 
 - **“Run tests” / CI green** (colloquial or CI-only checks) means at minimum **Phase 4: Validate** is **green** for the relevant automated specs: real runner, scenario links, and agreed validation bar met.
@@ -170,7 +172,7 @@ The branch plan MUST contain one block **per test** (SmartTest and/or API test),
 
 ### Tests to write (inventory)
 
-First, a short **numbered list of all tests** to be authored in this run (titles only; each numbered item maps to a full **Arrange / Act / Assert** block below).
+First, a short **numbered list of all tests** to be authored in this run (titles only; each numbered item maps to a full **Arrange / Act / Assert** block below). For **`mobile`** / **`multi-platform`**, tag each row with **`web`**, **`ios`**, or **`android`** per [`platform-scope.md`](./platform-scope.md).
 
 For **each** test, include **in this order**:
 
@@ -310,10 +312,11 @@ The Analyze phase must gather:
   - A preliminary list of **which tests** might be needed. For each, jot **rough Arrange / Act / Assert** so Phase 2 is not cold-starting—the full three-section template is still required in **Plan**.
 - **Smart regression (reconnaissance for Plan §6)** — From PR diff + existing **`plans/stories/`** and **`plans/scenarios/`** under `<MAPPED_PLANS_ROOT>`, note **likely affected** scenarios (same feature area, shared flows, touched APIs/screens). Record candidate **`#TS-…`** ids for the branch plan; linked specs are resolved in **Phase 5** via `// @Scenario:` grep under the SmartTests root.
 - **ExploreChimp (reconnaissance for Plan §7)** — For **UI** changes, note which SmartTests could serve **Phase 6** (**new**, **regression-touched**, and **materially changed** UI specs; new screen-states). The **`yes`** vs **`N/A`** decision and target list are finalized in the branch plan under **[Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)** (default **`yes`** for UI SmartTest deltas unless an allowed exception applies); this Analyze bullet is reconnaissance only.
+- **Platform scope (mobile & multi-platform only)** — Read **`.testchimp-tests`** `project_type`. If **`mobile`** or **`multi-platform`**, apply [`platform-scope.md`](./platform-scope.md): draft **`## Platform scope (this run)`** on the branch plan (decision, confidence, rationale). **Inform** the user of the chosen platform(s) or **ask** when the PR diff does not clearly imply a single platform. Do not proceed to **Plan** user approval with **User confirmed: pending**.
 - **Platform evidence (via TestChimp CLI/MCP when available)**
   - Use **TestChimp CLI** (`testchimp ...`) when MCP tools are not available.
   - Suggested queries:
-    - `testchimp get-requirement-coverage --folder-path <plans/... or tests/...>` (scoped to the affected area; **omit `--branch-name`** so coverage aggregates across branch copies). On **mobile** / **multi-platform** repos, interpret multiple **`platform`** rows per scenario; add `--platform ios` or `--platform android` when analyzing one stack.
+    - `testchimp get-requirement-coverage --folder-path <plans/... or tests/...>` (scoped to the affected area; **omit `--branch-name`** so coverage aggregates across branch copies). On **mobile** / **multi-platform** repos, interpret multiple **`platform`** rows per scenario; add `--platform ios` or `--platform android` when analyzing one stack **in scope** for this run ([`platform-scope.md`](./platform-scope.md)).
     - `testchimp get-execution-history --folder-path <tests/...>` (recent failures/flake; omit `--branch-name` unless you need one branch only). For a single scenario’s runs: `--scenario-id <platform-scenario-uuid>` with optional `--platform web|ios|android` (CLI **≥ 0.1.6**).
   - Record results (relevant summaries) in the branch plan file (high level; no giant dumps).
 
@@ -329,6 +332,7 @@ Before proceeding to **Plan**, the agent must record **done/blocked/`N/A`** for 
 - [ ] Coverage/execution history queried via CLI/MCP where applicable (or `N/A`).
 - [ ] **Smart regression:** candidate affected scenarios noted for **Plan §6** (reconnaissance; final list refined in **Phase 5**).
 - [ ] **ExploreChimp:** candidate UI specs noted for **Plan §7** (reconnaissance only; final **`yes`** / **`N/A`** belongs in **[Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)** during **Plan**).
+- [ ] **Platform scope:** for **`mobile`** / **`multi-platform`**, branch plan **`## Platform scope (this run)`** drafted; user **informed** or **asked** per [`platform-scope.md`](./platform-scope.md) (`N/A` for **web-only** `project_type`).
 
 ---
 
@@ -338,6 +342,7 @@ Goal: produce a written plan (persisted in the branch plan file) that the user e
 
 The Plan MUST be written under the branch plan file. It MUST include the following **top-level** sections (in order), **and** the [Required structure for each proposed test (Plan phase)](#required-structure-for-each-proposed-test-plan-phase) for every listed test.
 
+0. **Platform scope (this run)** — **Required** when **`project_type`** is **`mobile`** or **`multi-platform`**. Use the template in [`platform-scope.md`](./platform-scope.md). Filter **Tests to write**, **§6 Smart regression**, and **§7 ExploreChimp** to platforms in scope. **Web-only** projects: omit this section or mark **`N/A`**.
 1. **Test plan updates** (plans layer)
    - Stories/scenarios to create/update.
      - **Never invent IDs** means: never assume fake `#US-...` / `#TS-...` ids.
@@ -384,6 +389,7 @@ Before proceeding to **Execute**, the agent must record **done/blocked/`N/A`** f
 - [ ] System infra and test infra summaries align with the per-test subsections.
 - [ ] Environment strategy **matches** `plans/knowledge/ai-test-instructions.md` (no improvised alternate URLs); FAQ section **consulted** for known env pitfalls affecting this PR scope.
 - [ ] User explicitly approved the plan to proceed.
+- [ ] **Platform scope:** **`User confirmed: yes`** on branch plan (or **`N/A`** — web-only project); platform list matches inventory and §6/§7.
 - [ ] **Smart regression:** branch plan **§6** lists candidate affected scenarios (or **`N/A`** + rationale).
 - [ ] **ExploreChimp:** branch plan **§7** records **`yes`** vs **`N/A`** (+ target specs when **`yes`**, including new + changed + regression-touched UI specs); default-on policy for UI deltas applied; matches what the user approved.
 
