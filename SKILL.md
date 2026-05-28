@@ -2,8 +2,8 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve, explore), SmartTests, agent-driven test or plan authoring, ExploreChimp, or updating this skill from Git.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.3.2
-required_cli_version: "0.1.7"
+version: 0.3.3
+required_cli_version: "0.1.8"
 ---
 
 # TestChimp
@@ -221,6 +221,11 @@ When a `plans/...` folder is provided, coverage resolves SmartTests linked to sc
 `scope.folderPath` should be provided using **platform paths** (rooted at `tests` or `plans`), even when the mapped repo folders use different names (for example, if mapped repo folder for `tests` in the repo is `ui_tests` then to ask for coverage for `ui_tests/checkout`, the scope you request should be for `tests/checkout`).
 
 **Branch scope:** Omit **`branchName`** in Analyze (and most gap-finding) so coverage aggregates across branch copies. Responses expose **`scenarioOrdinalId`** / **`userStoryOrdinalId`** (ordinals only in MCP/CLI contracts—not platform UUIDs). Plan markdown does **not** store implementation **`status`**; after Validate, use **`mark-plan-items-implementation-done`** with ordinal ids to set lifecycle **`done`** in the DB.
+
+**Manual + automated coverage (unified):** `get-requirement-coverage` can return coverage computed from **automated SmartTests**, **manual sessions**, or **both**.
+- Default behavior (omit `recordTypes`): automated **SmartTests only**.
+- To include manual sessions too: pass `recordTypes: ["SMART_TEST","MANUAL"]` (MCP JSON), or CLI convenience `testchimp get-requirement-coverage --include-manual ...`.
+- Manual-only: `recordTypes: ["MANUAL"]` (MCP JSON), or CLI `--manual-only`.
 
 **Per-platform coverage (CLI/MCP ≥ `0.1.6`, reporter ≥ `0.2.0`):** Omit **`platform`** on **`get-requirement-coverage`** to get rollup shaped by project scaffold — **one** record for **web** projects; up to **two** (iOS + Android) for **mobile**; up to **three** for **multi-platform**, with explicit **`NOT_ATTEMPTED`** rows when a platform had no run in scope. Pass **`platform`**: `web` | `ios` | `android` to narrow to a single platform. Use **`get-execution-history`** with **`scenarioId`** (platform scenario UUID from plan entities, not `TS-<n>`) for scenario-linked runs; optional **`platform`** or **`dimensionFilters`** for device drill-down — see [`references/cli.md`](references/cli.md) § Platform execution reporting.
 

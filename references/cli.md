@@ -87,6 +87,9 @@ Start the TestChimp MCP server (stdio transport). **No flags.** Typically invoke
 | `--environment <s>` | No | `environment` | |
 | `--branch-name <s>` | No | `branchName` | Optional Git branch; omit for cross-branch coverage (recommended for `/testchimp test` Analyze). |
 | `--platform <web\|ios\|android>` | No | `platform` | Optional filter: latest coverage for that platform only (`web`, `ios`, or `android`). |
+| `--record-types <csv>` | No | `recordTypes` | Coverage sources to include: `smart_test` (automated) and/or `manual`. Default (omit): `smart_test` only. |
+| `--include-manual` | No | `recordTypes` | Convenience: include manual coverage in addition to automated (equivalent to `--record-types smart_test,manual`). |
+| `--manual-only` | No | `recordTypes` | Convenience: manual-only coverage (equivalent to `--record-types manual`). |
 | `--file-paths <csv>` | No | `scope.filePaths` | Comma-separated paths under **platform tests or plans** root. |
 | `--folder-path <path>` | No | `scope.folderPath` | Slash-separated folder under tests or plans root; sent as normalized path segments. |
 | `--json-input …` | No | (merge) | e.g. `includeNonCoveredUserStories`, `includeNonCoveredTestScenarios`, or `scope.folderPath` as **array** of segments. |
