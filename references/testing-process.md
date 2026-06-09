@@ -432,6 +432,8 @@ During Execute, the agent MUST maintain a checklist in the branch plan file and 
 ### 6) Tests (authoring + validations)
 
 - [ ] For **each** planned test: author SmartTest (and/or API test) using the named **fixtures**; add **`// @Scenario:`** with real ids; implement **Act**; implement **Assert** (UI + probe API calls as planned).
+- [ ] When the user pastes a platform **Copy test generate prompt** for **`TS-<n>`**: call **`get-test-scenarios`** with that ordinal, then **`get-user-stories`** for linked story ordinals returned (see [`test-planning.md`](./test-planning.md)).
+- [ ] When the user pastes a **Copy script generate prompt** from the manual session viewer (or **`/testchimp author test for manual session`**): call **`get-manual-session-details`**, then follow [`author-test-from-manual-session.md`](./author-test-from-manual-session.md) (authoring-only; use **`linkedScenarioOrdinalIds`** for a single **`get-test-scenarios`** batch when plans are not synced).
 - [ ] **Never** invent scenario ids; only use ids from the platform.
 - [ ] Re-run the real Playwright (or API) runner until pass or explicit failure with next steps.
 

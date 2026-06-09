@@ -53,6 +53,8 @@ Each story or scenario is a **`.md` file** with a **YAML frontmatter** block bet
 
 **Reading tips:** The **folder path** (e.g. `plans/stories/checkout/`) gives feature context. **Sibling files** show related coverage. **`story:`** on a scenario tells you which user story it validates.
 
+**Fetching from the platform:** Use **`get-test-scenarios`** with **`scenarioOrdinalIds`** (numeric parts of **`TS-<n>`**) and **`get-user-stories`** with **`userStoryOrdinalIds`** (numeric parts of **`US-<n>`**). Each returns full plan **markdown** (`content`), **title**, **platformFilePath**, and (for scenarios) **userStoryOrdinalIds** for linked stories. Use this when authoring tests from a platform **Create Test → Copy test generate prompt** flow.
+
 ---
 
 ## Linking SmartTests to scenarios

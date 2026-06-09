@@ -234,6 +234,67 @@ testchimp upsert-screen-states --json-input @./screen-states.json
 
 ## Plans (user stories and scenarios)
 
+### `get-user-stories`
+
+**API:** `POST /api/mcp/get_user_stories`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--user-story-ordinal-ids <csv>` | **Yes**\* | `userStoryOrdinalIds` | Numeric parts of **`US-<n>`** (e.g. `118` for `US-118`). |
+| `--json-input …` | No | (merge) | May supply **`userStoryOrdinalIds`** array instead of flag. |
+
+\*At least one ordinal id is required (via flag or JSON).
+
+**Response:** `userStories[]` with `ordinalId`, `title`, `platformFilePath`, `content` (full markdown). Missing ids appear in `errors[]`.
+
+**Example:**
+
+```bash
+testchimp get-user-stories --user-story-ordinal-ids 118,120
+```
+
+### `get-test-scenarios`
+
+**API:** `POST /api/mcp/get_test_scenarios`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--scenario-ordinal-ids <csv>` | **Yes**\* | `scenarioOrdinalIds` | Numeric parts of **`TS-<n>`** (e.g. `107` for `TS-107`). |
+| `--json-input …` | No | (merge) | May supply **`scenarioOrdinalIds`** array instead of flag. |
+
+\*At least one ordinal id is required (via flag or JSON).
+
+**Response:** `testScenarios[]` with `ordinalId`, `title`, `platformFilePath`, `content` (full markdown), `userStoryOrdinalIds[]`. Missing ids appear in `errors[]`.
+
+**Example:**
+
+```bash
+testchimp get-test-scenarios --scenario-ordinal-ids 107
+```
+
+Use **`get-test-scenarios`** first when a prompt references **`TS-<n>`**; call **`get-user-stories`** for each linked story ordinal returned.
+
+### `get-manual-session-details`
+
+**API:** `POST /api/mcp/get_manual_session_details`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--manual-session-id <id>` | **Yes**\* | `manualSessionId` | Manual session id (same as `job_id` in manual session viewer URL). |
+| `--json-input …` | No | (merge) | May supply **`manualSessionId`** instead of flag. |
+
+\*Session id is required (via flag or JSON).
+
+**Response:** `projectId`, `manualSessionId`, `title`, `status`, `environment`, `release`, `branchName`, `steps[]` (`stepId`, `description`, `code`, `screenshotUrl`, `notes[]`), `linkedScenarios[]` (`scenarioOrdinalId`, `scenarioTitle`), `linkedScenarioOrdinalIds[]` (deduplicated). `screenshotUrl` is a short-lived signed URL for GCS paths; omitted for inline `data:` URLs (use `code` / `notes` instead).
+
+**Example:**
+
+```bash
+testchimp get-manual-session-details --manual-session-id 01JABCDEF123456789
+```
+
+Use when the user pastes a **Copy script generate prompt** from the manual session viewer. Then load linked scenarios from the mapped **`plans/scenarios/`** tree or call **`get-test-scenarios --scenario-ordinal-ids`** once with all values from **`linkedScenarioOrdinalIds`**. See [`author-test-from-manual-session.md`](./author-test-from-manual-session.md).
+
 ### `create-user-story`
 
 **API:** `POST /api/mcp/create_user_story`
