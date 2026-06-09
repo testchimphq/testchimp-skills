@@ -81,6 +81,8 @@ Autonomously navigate the app (headed) the same way you would for scenario-only 
 
 Do **not** copy the recorded script line-for-line. Translate into maintainable SmartTest code with proper fixtures, seeds, and assertions aligned to the linked scenarios - following the rest of the test suite.
 
+**Naming (file, test title, and script):** Name the spec file and `test('…')` title from the **linked scenario(s)** — slug the scenario title or reuse an existing spec in the same feature area (see [`write-smarttests.md`](./write-smarttests.md)). The manual session id is an opaque platform identifier; **do not** embed it in the filename, test title, or comments. Use **`// @Scenario: #TS-<n> <Title>`** for traceability instead.
+
 Implement:
 
 - Reuse or author **seed endpoints** and **probes** as needed
