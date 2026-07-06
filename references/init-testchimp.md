@@ -89,6 +89,7 @@ When **`/testchimp init`** starts, the **first substantive message to the user**
 - **After init**, the user mainly runs **`/testchimp test`** when they finish a PR and want it tested.
 - **Ongoing**, the agent runs the full QA workflow — when speaking to the user, use first person: *I will run the complete QA workflow* to author tests for relevant scenarios, make the necessary QA infrastructure adjustments, identify coverage gaps, and address them.
 - **Periodically**, run **`/testchimp evolve`** to analyze test coverage gaps and TrueCoverage insights, address them, and improve the suite. Persist each evolve run as a dated plan markdown file under **`<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/`** (see [`evolve-coverage.md`](./evolve-coverage.md)) so later runs have traceability.
+- **Periodically** (or when duplicate noise appears), run **`/testchimp cleanup`** to audit semantically similar SmartTests, mark legitimately distinct pairs, and remove true duplicates with approval ([`cleanup.md`](./cleanup.md)). Cleanup is **separate from evolve**.
 
 **Always** include this overview link: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
 

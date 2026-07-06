@@ -604,6 +604,47 @@ Deeper product context: [truecoverage.md](./truecoverage.md).
 
 ---
 
+## Semantic similar tests (`/testchimp cleanup`)
+
+Discover semantically similar SmartTest pairs using **TestLocators** (no platform `test_id`). Used by [`cleanup.md`](./cleanup.md).
+
+### `list-semantic-similar-tests`
+
+| Flag | Description |
+|------|-------------|
+| `--folder-path <path>` | Scope to folder under tests root (slash-separated). |
+| `--json-input <json>` | Full request body; merges over flags. |
+
+Example:
+
+```bash
+testchimp list-semantic-similar-tests --json-input '{ "scope": { "folderPath": ["auth"] } }'
+```
+
+Response records use camelCase TestLocators and `similarTests` with `classification` (`POTENTIAL_DUPLICATE` or `SIMILAR`). Pairs are deduped (A→B only when A.testId < B.testId).
+
+### `mark-semantic-tests-distinct`
+
+Mark two tests as legitimately distinct (symmetric). Agent/API calls use `marked_by_user_id = "0"`.
+
+```bash
+testchimp mark-semantic-tests-distinct --json-input '{
+  "focusTest": {
+    "folderPath": ["auth"],
+    "fileName": "login.spec.ts",
+    "testSuite": [],
+    "testName": "user can log in"
+  },
+  "distinctTest": {
+    "folderPath": ["auth"],
+    "fileName": "signin.spec.ts",
+    "testName": "login flow"
+  }
+}'
+```
+
+---
+
 ## MCP parity (tool names)
 
 MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`mark-plan-items-implementation-done`**, **`create-user-story`**, **`list-rum-environments`**.

@@ -2,8 +2,8 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve, explore), SmartTests, agent-driven test or plan authoring, ExploreChimp, or updating this skill from Git.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.3.4
-required_cli_version: "0.1.9"
+version: 0.3.5
+required_cli_version: "0.1.10"
 ---
 
 # TestChimp
@@ -153,6 +153,7 @@ The MCP server exposes tools grouped by area:
 
 - **Coverage & execution** — `get-requirement-coverage`, `get-execution-history`, `mark-plan-items-implementation-done`
 - **Screen-state atlas (SmartTests / traces / ExploreChimp)** — `list-screen-states`, `upsert-screen-states` (same as **`testchimp list-screen-states`** / **`testchimp upsert-screen-states`** in [`references/cli.md`](references/cli.md))
+- **Semantic duplicate hygiene (`/testchimp cleanup`)** — `list-semantic-similar-tests`, `mark-semantic-tests-distinct` (TestLocator-based; see [`references/cleanup.md`](references/cleanup.md))
 - **Execution debugging** — `fetch-execution-report`, `get-manual-session-details`
 - **Planning (user stories & scenarios)** — `get-user-stories`, `get-test-scenarios`, `create-user-story`, `create-test-scenario`, `update-user-story`, `update-test-scenario`
 - **Environments & EaaS** — `get-eaas-config`, `get-branch-specific-endpoint-config`, `provision-ephemeral-environment-and-wait`, `provision-ephemeral-environment`, `get-ephemeral-environment-status`, `destroy-ephemeral-environment`
@@ -172,6 +173,7 @@ Use the repo, plans, and those tools to decide what to test and how to run them.
 | `/testchimp author test for manual session` (or pasted **Copy script generate prompt** from manual session viewer) | [`references/author-test-from-manual-session.md`](references/author-test-from-manual-session.md) — Fetch manual session + linked scenarios; authoring-only SmartTest workflow using session steps/screenshots as reference. |
 | `/testchimp plan` | [`references/test-planning.md`](references/test-planning.md) |
 | `/testchimp evolve` | [`references/evolve-coverage.md`](references/evolve-coverage.md) — Analyze → Plan → Execute; same **done / `N/A` + justify** gating. Includes optional **ExploreChimp** on **TrueCoverage-prioritized** UI journeys (drop-offs, duration/demand hotspots); load [`references/exploratory_runs.md`](references/exploratory_runs.md) when running those explorations. |
+| `/testchimp cleanup` | [`references/cleanup.md`](references/cleanup.md) — Analyze → Plan → Execute for semantically similar / duplicate SmartTests; mark distinct pairs; optional deletions (max 10/run, explicit approval). **Not** part of evolve. |
 | `/testchimp setup truecoverage` / setup-truecoverage | [`references/truecoverage.md`](references/truecoverage.md) |
 | `/testchimp instrument` | [`references/truecoverage.md`](references/truecoverage.md) |
 | `/testchimp update` | [Read below for updating the skill] |
@@ -191,7 +193,7 @@ When the user runs **`/testchimp init`**, the **first substantive message to the
 
 (Full step order is in [`references/init-testchimp.md`](references/init-testchimp.md#opening-message-required-first-user-facing-step).)
 
-If the user asks semantically similar requests ("Setup TestChimp", "Write Tests for the PR", "Analyze requirement coverage" etc.) — open the matching reference file above. Legacy **`/testchimp audit`** is the same flow as **`/testchimp evolve`** ([`references/evolve-coverage.md`](references/evolve-coverage.md)).
+If the user asks semantically similar requests ("Setup TestChimp", "Write Tests for the PR", "Analyze requirement coverage", "clean up duplicate tests", "dedupe test suite" etc.) — open the matching reference file above. Legacy **`/testchimp audit`** is the same flow as **`/testchimp evolve`** ([`references/evolve-coverage.md`](references/evolve-coverage.md)).
 
 TrueCoverage planning source of truth:
 
@@ -280,6 +282,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`references/api-testing.md`](references/api-testing.md) | API test authoring workflow from captured browser network flows |
 | [`references/test-planning.md`](references/test-planning.md) | Plan folder layout, frontmatter, `/testchimp plan`, MCP plan authoring |
 | [`references/evolve-coverage.md`](references/evolve-coverage.md) | `/testchimp evolve`: Analyze → Plan → Execute, phase gates, persisted `knowledge/evolve_plans/`, optional TrueCoverage-targeted **ExploreChimp** |
+| [`references/cleanup.md`](references/cleanup.md) | `/testchimp cleanup`: semantically similar / duplicate SmartTest audit; mark distinct; optional deletions (max 10/run) |
 | [`references/truecoverage.md`](references/truecoverage.md) | TrueCoverage RUM setup (web + iOS + Android), `plans/events/*.event.md`, MCP analytics |
 | [`references/ai-wright-usage.md`](references/ai-wright-usage.md) | `ai-wright` install, env, API depth |
 | [`references/environment-management.md`](references/environment-management.md) | Persistent vs ephemeral envs, Bunnyshell, Branch Management, MCP `get-branch-specific-endpoint-config` |
