@@ -77,6 +77,20 @@ Standalone **`/testchimp explore`:** if no branch plan exists, still inform or a
 - **PR / branch focus (standalone `/testchimp explore`):** Prefer **new or materially updated** SmartTests on the branch, plus any **linked regression** specs the user names.
 - **User gave an area / feature:** Read specs and existing **`markScreenState`** / **`list-screen-states`** vocabulary to see which **screens and states** each test visits; pick the **minimal** set that covers the requested flows.
 - **One screen:** Pick (or add) a short test that reaches that screen with a marker after the UI stabilizes.
+- **Release targeting** (prompt like `/testchimp run explorechimp targeting release '<name>'` or `/testchimp explore` with a release): see [Targeting a release](#targeting-a-release-release-checks).
+
+---
+
+## Targeting a release (Release Checks)
+
+When the user pastes a Release Checks prompt (or otherwise names a release):
+
+1. Parse the release label from `targeting release '…'` (or equivalent wording).
+2. Fetch release details: **`testchimp get-release --version '<name>'`** (cut SHA, prior release SHA, focus areas / metadata).
+3. Use **prior SHA → cut SHA** as the git range to choose which UI SmartTests to explore (diff + existing **`markScreenState`** rules).
+4. Set **`TESTCHIMP_RELEASE=<name>`** on the ExploreChimp runner process so local analyze stamps **`explorations.release_label`**.
+5. Set **`TESTCHIMP_BRANCH_NAME`**, **`TESTCHIMP_BATCH_INVOCATION_ID`**, **`EXPLORECHIMP_ENABLED`**, and run as usual.
+6. Point the user back to the release detail **Release Checks** pane / Atlas to review findings.
 
 ---
 
@@ -89,6 +103,7 @@ Standalone **`/testchimp explore`:** if no branch plan exists, still inform or a
 | **`TESTCHIMP_API_KEY`** | **Yes (P0 — on the runner process)** | Must be set in the **environment of the Playwright/Mobilewright process** (export from MCP config per **`SKILL.md`** walk-up, CI secret, or `env:` block). **MCP/IDE-only** is insufficient. Never commit; not in `.env-QA`. |
 | **`TESTCHIMP_BATCH_INVOCATION_ID`** | Yes for correlation | **Exploration id**; also read from **`.testchimp-batch-invocation-id`** if env unset. |
 | **`TESTCHIMP_BRANCH_NAME`** | **Strongly recommended on local / agent shells** | **Canonical env to teach:** human git branch name (e.g. `git rev-parse --abbrev-ref HEAD`). `@testchimp/playwright` sets JSON **`branchName`** on ExploreChimp analyze requests via `getBranchName()`, which reads **`TESTCHIMP_BRANCH_NAME`** first, then **`TESTCHIMP_BRANCH`**, then CI/git vars. The server resolves **`branchName`** to **`branch_id`** on explorations, journeys, and bugs. If both name vars are unset and no CI branch is available, **`branch_id`** may stay empty. |
+| **`TESTCHIMP_RELEASE`** | When targeting a release | Release catalog version/label. Local ExploreChimp analyze stamps **`explorations.release_label`** from this (also used for SmartTest batch release tagging). |
 | **`TESTCHIMP_BACKEND_URL`** | Optional | Featureservice base URL (package defaults if omitted). |
 | **`EXPLORECHIMP_SOURCES_TO_ANALYZE`** | Optional | Comma-separated: **`DOM`**, **`SCREENSHOT`**, **`CONSOLE`**, **`NETWORK`**, **`METRICS`**. **Default if unset:** all five enabled. |
 | **`EXPLORECHIMP_REQUEST_REGEX_TO_ANALYZE`** | **Required when `NETWORK` is included** | JavaScript **regex** string; URLs must **match** to be captured. If `NETWORK` is requested but this is missing/invalid, **network capture is disabled** (warning logged). |
@@ -128,9 +143,10 @@ Mirror **FAQ-worthy** runner issues in **`## Past learnings — authoring & vali
 4. **`markScreenState`** in place per **Phase 4** / [`write-smarttests.md`](./write-smarttests.md).
 5. Set **`TESTCHIMP_BATCH_INVOCATION_ID`** (or file) for this exploration batch.
 6. Set **`TESTCHIMP_BRANCH_NAME`** to the current git branch when running locally (so the server can resolve **`branch_id`** for analytics and bugs).
-7. Set **`EXPLORECHIMP_ENABLED=true`**; configure sources / **network regex** as needed.
-8. `cd` **SmartTests root**; run per scaffold ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)) — e.g. **`npx playwright test -c playwright.config.js --project web`**, **`npx mobilewright test -c mobilewright.config.ts --project ios`**.
-9. Review findings in TestChimp exploration/journey UI; update **`## ExploreChimp`** with new stable decisions.
+7. When targeting a release (Release Checks prompt), set **`TESTCHIMP_RELEASE=<release label>`** so the exploration is stamped with that release label.
+8. Set **`EXPLORECHIMP_ENABLED=true`**; configure sources / **network regex** as needed.
+9. `cd` **SmartTests root**; run per scaffold ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)) — e.g. **`npx playwright test -c playwright.config.js --project web`**, **`npx mobilewright test -c mobilewright.config.ts --project ios`**.
+10. Review findings in TestChimp exploration/journey UI; update **`## ExploreChimp`** with new stable decisions.
 
 ---
 

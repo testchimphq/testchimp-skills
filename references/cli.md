@@ -6,6 +6,8 @@ This page lists **every subcommand and flag** as implemented in the CLI (kebab-c
 
 **Screen-state atlas** (for **`markScreenState`** / ExploreChimp vocabulary): see § [**Screen-state atlas (SmartTests, traces, ExploreChimp)**](#screen-state-atlas-smarttests-traces-explorechimp) — **`list-screen-states`**, **`upsert-screen-states`**.
 
+**Release catalog** (Release Checks / ExploreChimp targeting a release): **`get-release`** — see § [**get-release**](#get-release).
+
 ## Install
 
 ```bash
@@ -205,6 +207,27 @@ testchimp list-screen-states
 ```
 
 With **`--environment <s>`** when your project uses env-scoped vocabulary (forward-compatible; optional on v1).
+
+### `get-release`
+
+**API:** `POST /api/mcp/get_release`
+
+**Requires `@testchimp/cli` ≥ `0.1.13`.**
+
+Fetch release catalog details for a version/label in the current project (cut git SHA, prior release + SHA, focus areas, payload). Used when running ExploreChimp **targeting a release**.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|-------|
+| `--version <version>` | **Yes** | `version` | Release catalog label / version string. |
+| `--json-input …` | No | (merge) | Optional extra body fields. |
+
+**Example:**
+
+```bash
+export TESTCHIMP_API_KEY=…   # from MCP config walk-up; never echo
+testchimp get-release --version '1.2.0'
+# stdout: JSON McpGetReleaseResponse with full ReleaseDetail
+```
 
 ### `upsert-screen-states`
 
