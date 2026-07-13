@@ -438,8 +438,23 @@ Same requirement as **`update-user-story`**: provide content via flag(s) or JSON
 MCP/CLI TrueCoverage endpoints deserialize the POST body with **Protobuf `JsonFormat`** (same as `/rum/analytics/*` in featureservice). Use **camelCase** JSON keys everywhere (proto sources use `snake_case`; **do not** send `snake_case` in JSON).
 
 - **Proto sources:** `rum_service.proto` (`ListEventsRequest`, `GetEventDetailsRequest`, …), `common.proto` (`TimeWindow`, `TypedValue`).
-- **Invocation:** almost every tool is **`--json-input '<json>'`** only (no other flags), except **`get-truecoverage-event-metadata-keys`** (required **`--event-title`** or `eventTitle` in JSON). Set **`platform`** inside each **`ExecutionScope`** object (same as **`environment`**, **`timeWindow`**, etc.).
+- **Invocation:** seed common fields with flags (`--environment`, `--relative-window`, `--platform`, `--event-title`, …) and/or pass full bodies with **`--json-input '<json>'`** (JSON wins on merge). **`get-truecoverage-event-metadata-keys`** needs **`--event-title`** or `eventTitle` in JSON. Set **`platform`** inside each **`ExecutionScope`** (same as **`environment`**, **`timeWindow`**, etc.).
+- **Time window (required):** nest under **`timeWindow`**. CLI **`--relative-window 604800s`** seeds `timeWindow: { relativeWindow: "604800s" }` on the base scope. In JSON/MCP, use **`"timeWindow":{"relativeWindow":"604800s"}`** (Duration string ending in **`s`**). **Do not** put flat **`relativeWindow`** (or `{ "seconds": … }`) as a sibling of **`environment`** on the scope — `@testchimp/cli` ≥ **0.1.11** rejects that shape.
 - **RUM ingest:** client SDKs stamp platform on every batch via HTTP header **`testchimp-rum-platform`** (`1` = web, `2` = iOS, `3` = Android). Analytics scopes filter on the stored enum, not on request-body platform fields on individual events.
+
+### Scope-seeding flags (TrueCoverage analytics tools)
+
+These seed **`baseExecutionScope`** / **`baseScope`** (JSON merges on top; JSON wins):
+
+| Flag | Seeds |
+|------|--------|
+| `--environment <s>` | `environment` |
+| `--relative-window <duration>` | `timeWindow.relativeWindow` (e.g. `604800s`) |
+| `--platform <web\|ios\|android>` | `platform` (aliases or `WEB_` / `IOS_` / `ANDROID_EXECUTION_PLATFORM`) |
+| `--release <s>` | `release` |
+| `--branch-name <s>` | `branchName` |
+
+Also: `--event-title`, `--next-event-title`, `--metric-type` on the tools that need them.
 
 ### TrueCoverage subcommand → API route
 
@@ -511,7 +526,7 @@ Exactly **one** of:
 | Field | Type | Notes |
 |-------|------|--------|
 | `environment` | string | **Required** for meaningful queries — RUM environment tag (e.g. `production`, `QA`). |
-| `timeWindow` | object (`TimeWindow`) | **Required** for meaningful queries. |
+| `timeWindow` | object (`TimeWindow`) | **Required** — nest `relativeWindow` / `fixedWindow` **here**. Flat `relativeWindow` on the scope is invalid. |
 | `release` | string | Optional filter. |
 | `branchName` | string | Optional filter. |
 | `metadataFilters` | array of `MetadataFilter` | Optional. |
@@ -576,7 +591,13 @@ Exactly **one** of:
 
 ### Examples
 
-Relative window (last 7 days as duration string):
+Relative window via flags (last 7 days):
+
+```bash
+testchimp get-truecoverage-events --environment QA --relative-window 604800s
+```
+
+Same via `--json-input`:
 
 ```bash
 testchimp get-truecoverage-events --json-input '{"baseExecutionScope":{"environment":"QA","timeWindow":{"relativeWindow":"604800s"}}}'

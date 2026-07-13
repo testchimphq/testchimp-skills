@@ -348,7 +348,9 @@ When the project has **not** explicitly opted out of TrueCoverage in `ai-test-in
 
 ### Execution scopes (mental model)
 
-Analytics messages embed **`ExecutionScope`**: environment, time window, optional release/branch/metadata filters, optional **`platform`**, and optionally **`automationEmitsOnly`**.
+Analytics messages embed **`ExecutionScope`**: environment, **nested** time window, optional release/branch/metadata filters, optional **`platform`**, and optionally **`automationEmitsOnly`**.
+
+Wire shape (CLI/MCP ≥ **0.1.11**): each scope must include **`environment`** and **`timeWindow`** (e.g. `{ "relativeWindow": "604800s" }` or `fixedWindow` with RFC 3339 bounds). Prefer flags `--environment` + `--relative-window` when seeding a single base scope; full comparison scopes still need **`--json-input`**. Flat `relativeWindow` on the scope (sibling of `environment`) is invalid — see [`cli.md`](./cli.md) § TrueCoverage.
 
 | Scope field | Typical use |
 |-------------|-------------|

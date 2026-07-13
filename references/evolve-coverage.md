@@ -64,16 +64,17 @@ flowchart LR
 
 ### TrueCoverage (when enabled)
 
-See **`ExecutionScope`** in [`truecoverage.md`](./truecoverage.md):
+See **`ExecutionScope`** in [`truecoverage.md`](./truecoverage.md) and wire shapes in [`cli.md`](./cli.md) § TrueCoverage:
 
 - **`baseExecutionScope`** — real-user / primary environment (frequency, funnels, impact).
 - **`comparisonExecutionScope`** — where automated tests run; set **`automationEmitsOnly: true`** on comparison (and on **`coverage_scope`** when drilling) so “covered” means **test-tagged emits only**. Before calling those, call list_rum_environments to get the list of environments - so that you know what env to set for base and comparison scopes.
-- **`platform`** on each scope (**`WEB_EXECUTION_PLATFORM`**, **`IOS_EXECUTION_PLATFORM`**, **`ANDROID_EXECUTION_PLATFORM`**) when the repo ingests multiple RUM platforms — e.g. compare prod **iOS** real users to **QA** **iOS** automation only. See [`cli.md`](./cli.md) § TrueCoverage and [`truecoverage.md`](./truecoverage.md) § Execution scopes.
+- **`platform`** on each scope (**`WEB_EXECUTION_PLATFORM`**, **`IOS_EXECUTION_PLATFORM`**, **`ANDROID_EXECUTION_PLATFORM`**) when the repo ingests multiple RUM platforms — e.g. compare prod **iOS** real users to **QA** **iOS** automation only.
+- Every scope needs **`environment`** + nested **`timeWindow`** (e.g. `"timeWindow":{"relativeWindow":"604800s"}`). Prefer CLI flags when possible: `testchimp get-truecoverage-events --environment QA --relative-window 604800s` (requires `@testchimp/cli` ≥ **0.1.11**). Do **not** send flat `relativeWindow` on the scope.
 
 **Suggested order:**
 
 1. **`list-rum-environments`** — pick environment tags for scopes.
-2. **`get-truecoverage-events`** — `baseExecutionScope` + optional `comparisonExecutionScope`.
+2. **`get-truecoverage-events`** — `baseExecutionScope` + optional `comparisonExecutionScope` (each with nested `timeWindow`).
 3. For high-impact or unclear events: **`get-truecoverage-event-details`**, **`get-truecoverage-child-event-tree`**, **`get-truecoverage-event-transition`**, **`get-truecoverage-event-time-series`**.
 4. **`get-truecoverage-event-metadata-keys`** / **`get-truecoverage-session-metadata-keys`** — validate slicing dimensions (including **dot-scoped** entity metadata per [`truecoverage.md`](./truecoverage.md) → *Dot-scoped metadata*).
 
