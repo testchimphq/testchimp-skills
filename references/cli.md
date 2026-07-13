@@ -229,6 +229,40 @@ testchimp get-release --version '1.2.0'
 # stdout: JSON McpGetReleaseResponse with full ReleaseDetail
 ```
 
+### `get-security-scan-config`
+
+**API:** `POST /api/mcp/get_security_scan_config`
+
+**Requires `@testchimp/cli` ≥ `0.1.14`.**
+
+| Flag | Required | Maps to JSON field |
+|------|----------|-------------------|
+| `--id <scanId>` | **Yes** | `scanId` |
+
+### `update-scan-progress`
+
+**API:** `POST /api/mcp/update_scan_progress`
+
+**Requires `@testchimp/cli` ≥ `0.1.14`.** Status: `QUEUED` \| `IN_PROGRESS` \| `COMPLETED` \| `EXCEPTION`.
+
+| Flag | Required | Maps to JSON field |
+|------|----------|-------------------|
+| `--id <scanId>` | **Yes** | `scanId` |
+| `--status <status>` | **Yes** | `status` |
+
+### `report-dast-findings`
+
+**API:** `POST /api/mcp/report_dast_findings`
+
+**Requires `@testchimp/cli` ≥ `0.1.14`.** Reads ZAP Traditional JSON from disk (not argv).
+
+| Flag | Required | Maps to JSON field |
+|------|----------|-------------------|
+| `--id <scanId>` | **Yes** | `scanId` |
+| `--report-file <path>` | **Yes** | (file → `reportJson`) |
+
+Stubs (not implemented): `run-sast-scan`, `run-deps-scan`, `run-secrets-scan`. See [`security_scans.md`](./security_scans.md).
+
 ### `upsert-screen-states`
 
 **API:** `POST /api/mcp/upsert_screen_states`
