@@ -239,6 +239,10 @@ testchimp get-release --version '1.2.0'
 |------|----------|-------------------|
 | `--id <scanId>` | **Yes** | `scanId` |
 
+**Response (camelCase):** `scanId`, `status`, `releaseLabel`, `environment`, **`allowActiveScan`** (bool from UI checkbox), `detail` (`securityScanDetail.categories` / `environment` / `releaseLabel` / `allowActiveScan`).
+
+Agents must **honour `allowActiveScan`**: `true` → ZAP active after passive; `false`/absent → passive-only (do not re-ask the user). See [`security_scans.md`](./security_scans.md).
+
 ### `update-scan-progress`
 
 **API:** `POST /api/mcp/update_scan_progress`
