@@ -260,7 +260,7 @@ After the user approves the Plan, during **Execute** implement work in this orde
    For each test, in spec code—**map 1:1 from the Plan’s Arrange / Act / Assert**:
 
    - **Arrange (code):** Use the **fixtures** from that test’s **Fixtures plan** so the browser (or client) starts from the documented posture.
-   - Add **`// @Scenario: #TS-…`** link comment(s) per existing workflow (stories/scenarios created in **Execute** after approval; use **real** ids from MCP/CLI).
+   - Add **`// @Scenario: #TS-…`** link comment(s) only after stories/scenarios were created in **Execute** (step before fixtures/tests, or earlier in this batch) with **real** ids from MCP/CLI — never invent, never leave plan markdown without `id:`.
    - **Act (code):** Implement the ordered steps from the Plan’s **Act** section (UI or API automation).
    - **Assert (code):** Implement the Plan’s **Assert** section: **UI validations** plus **probe-based API checks** from **Backend validations** where specified.
 
@@ -345,9 +345,9 @@ The Plan MUST be written under the branch plan file. It MUST include the followi
 0. **Platform scope (this run)** — **Required** when **`project_type`** is **`mobile`** or **`multi-platform`**. Use the template in [`platform-scope.md`](./platform-scope.md). Filter **Tests to write**, **§6 Smart regression**, and **§7 ExploreChimp** to platforms in scope. **Web-only** projects: omit this section or mark **`N/A`**.
 1. **Test plan updates** (plans layer)
    - Stories/scenarios to create/update.
-     - **Never invent IDs** means: never assume fake `#US-...` / `#TS-...` ids.
+     - **Never invent IDs** means: never assume fake `#US-...` / `#TS-...` ids, and **never** plan to write story/scenario `.md` files without a platform-issued `id:` (omitting `id` is forbidden).
      - If scenarios / stories are missing for the PR changes, the Plan must explicitly list the **new** stories/scenarios to be created so the platform generates **real IDs**.
-     - **Timing rule**: the actual `create-user-story` / `create-test-scenario` calls (and subsequent `update-user-story` and `update-test-scenario`) must be performed **only in Execute**, **after** the user approves the Plan generated.
+     - **Timing rule**: the actual `create-user-story` / `create-test-scenario` calls (and subsequent `update-user-story` and `update-test-scenario`) must be performed **only in Execute**, **after** the user approves the Plan generated. Sequence per artifact: **create (get ordinalId) → write markdown with `id:` already set → update**. See [`test-planning.md`](./test-planning.md).
 2. **Tests to write (inventory) + per-test Arrange → Act → Assert**
    - Use **[Tests to write (inventory)](#tests-to-write-inventory)** and, for **each** test, the full template under [Required structure for each proposed test (Plan phase)](#required-structure-for-each-proposed-test-plan-phase). The three sections are **mandatory** so **Arrange** drives the seed/fixture audit, **Act** defines executable steps, and **Assert** commits to UI vs probe proof—see [Arrange, Act, Assert: universal shape for every test](#arrange-act-assert-universal-shape-for-every-test).
    - **Cross-link:** The older **“Posture table”** (prerequisite entities, fixture deps, seed/probe, mocks, post-UI assertions) is **subsumed** by **Arrange** (world state + fixtures + seed updates) and **Assert** (UI + backend + probes). Mocks, if any, can be noted under **Arrange** (e.g. “HTTP mock for payment provider”) or in a short **Notes** line under that test.
@@ -422,8 +422,11 @@ During Execute, the agent MUST maintain a checklist in the branch plan file and 
 
 ### 4) Test plan updates (stories/scenarios on platform) — *after code is in place for seeds/probes or in parallel if independent*
 
-- [ ] Create/update stories as planned (via CLI/MCP), per timing rule.
-- [ ] Create/update scenarios as planned (via CLI/MCP); obtain **real** ids for `// @Scenario:` comments.
+- [ ] For **each** new story: **`create-user-story`** → **Write returned `content`** (already has **`id: US-<ordinalId>`**) → edit body if needed → **`update-user-story`**.
+- [ ] For **each** new scenario: **`create-test-scenario`** → **Write returned `content`** (already has **`id: TS-<ordinalId>`** + **`story:`**) → edit body if needed → **`update-test-scenario`**.
+- [ ] **Never** write story/scenario markdown that omits or blanks **`id:`** (that is not a valid “don’t invent ids” workaround). If **`update-*`** errors on missing id/story, fix by using create’s returned content — do not invent ids.
+- [ ] Obtain **real** ids for `// @Scenario:` comments from those create responses (or existing synced plan files).
+- [ ] Self-check: every new/changed story/scenario path under the plans root has a non-empty **`id:`** before leaving this step.
 
 ### 5) Fixtures (all tests)
 
@@ -468,8 +471,9 @@ Goal: ensure the resulting test suite is correctly linked to requirements and ca
      - Treat it as an anomaly.
      - Determine whether a relevant scenario already exists (from plans, or by querying TestChimp).
      - If it exists: add the comment.
-     - If it does not exist: create the scenario via **MCP tools first** (fallback to CLI) and then add the comment using the real returned ID.
+     - If it does not exist: create the scenario via **MCP tools first** (fallback to CLI) using **create → write with `id: TS-…` → update**, then add the comment using the real returned ID.
    - Never hallucinate `#TS-*` ids - only use ones returned by using create-test-scenario exposed by cli / mcp.
+   - Never “fix” a missing scenario by writing `plans/scenarios/**/*.md` without a platform **`id:`**.
 
 ### Phase 4 completion gate (Validate → Phase 5)
 

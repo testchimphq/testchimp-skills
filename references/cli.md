@@ -299,6 +299,8 @@ Use when the user pastes a **Copy script generate prompt** from the manual sessi
 
 **API:** `POST /api/mcp/create_user_story`
 
+**Agent rule:** Call **before** writing any new `plans/stories/**/*.md`. Response includes **`content`** (stub with **`id: US-<ordinalId>`** already set) — **Write that content** to disk, edit the body if needed, then **`update-user-story`**. Never omit `id:`. Updates reject missing `id` with a clear error.
+
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
 | `--platform-file-path <path>` | **Yes** | `platformFilePath` | Under **`plans/stories/`**, must end with **`.md`**. |
@@ -308,6 +310,8 @@ Use when the user pastes a **Copy script generate prompt** from the manual sessi
 ### `create-test-scenario`
 
 **API:** `POST /api/mcp/create_test_scenario`
+
+**Agent rule:** Call **before** writing any new `plans/scenarios/**/*.md`. Response includes **`content`** (stub with **`id: TS-<ordinalId>`** and **`story: US-<n>`** already set) — **Write that content** to disk, edit the body if needed, then **`update-test-scenario`**. Never omit `id:` (linking `story:` alone is not enough). Updates reject missing `id`/`story` with a clear error.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|

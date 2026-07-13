@@ -2,10 +2,22 @@
 
 This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and `@Scenario` links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
 
-**Ids (hard rules):**
+**Ids (hard rules — BLOCKING):**
 - **Never hallucinate** **`US-…`** or **`TS-…`** ids (the ordinals are TestChimp-generated, not freetext).
-- **Never create** (even temporarily) story/scenario markdown files with a **blank `id:`** in frontmatter.
-- **Always provision first via MCP / CLI** to get the real ordinal id, **then** write the markdown file with `id: US-…` / `id: TS-…` already populated.
+- **Never create** (even temporarily) story/scenario markdown files with a **blank `id:`**, and **never omit `id:`** from frontmatter. Omitting `id` is the same class of bug as inventing one.
+- **Always provision first via MCP / CLI** (`create-user-story` / `create-test-scenario`) to get the real **`ordinalId`**, **then** write the markdown file with **`id: US-…`** / **`id: TS-…` already populated** in the **first** on-disk version.
+- **Do not** treat “I linked `story: US-…`” as sufficient for a new scenario — scenarios still need a platform-issued **`id: TS-…`**.
+
+### Forbidden patterns (agents fail these often)
+
+| Forbidden | Required instead |
+|-----------|------------------|
+| `Write` a new `plans/scenarios/**/*.md` with only `type` / `title` / `story` (no `id`) | `create-test-scenario` → write with `id: TS-<ordinalId>` + `story: US-<n>` → `update-test-scenario` |
+| `Write` a new `plans/stories/**/*.md` without `id: US-…` | `create-user-story` → write with `id: US-<ordinalId>` → `update-user-story` |
+| Invent `TS-999` / copy an id from an unrelated file | Use only the **`ordinalId`** returned by create (or an id already present from platform sync) |
+| “I’ll add the id after the user reviews the draft file” | Draft titles/paths in the **Plan**; provision + write with id only in **Execute** after approval |
+
+**Why this matters:** Git → platform sync **rejects** story/scenario imports that lack canonical `id:` frontmatter, so id-less files reappear forever as “incoming” diffs and never apply.
 
 Further reading: [Test planning as code](https://docs.testchimp.io/test-planning/intro) (philosophy, Git export, default-branch scope for plans).
 
@@ -69,18 +81,27 @@ Use the **`#TS-<n>`** from the scenario markdown **`id`**.
 
 ## Authoring new stories and scenarios (MCP)
 
-Creating a file **only on disk** is **not** enough: the TestChimp project needs **entities** with real ordinals. Use **`@testchimp/cli`** to create the entities in this **order**:
+Creating a file **only on disk** is **not** enough — and is **wrong** if done before create: the TestChimp project needs **entities** with real ordinals, and the repo file must carry that ordinal from the first byte written. Use MCP tools first (CLI fallback) in this **order**:
 
-1. **`create-user-story`** — pass **`platformFilePath`** (e.g. `plans/stories/area/my-feature.md`) and **`title`**. Response includes **`ordinalId`** (number).
-2. **Write** the markdown file under the repo’s mapped plans root, and **the first on-disk version must already include** frontmatter **`id: US-<ordinalId>`** (do not write a stub with blank `id:`).
-3. **`update-user-story`** — pass the **full file contents** (frontmatter + body) so the platform stays in sync.
+### Stories
 
-For scenarios:
+1. **`create-user-story`** — pass **`platformFilePath`** (e.g. `plans/stories/area/my-feature.md`) and **`title`**. Response includes **`ordinalId`** and **`content`** (canonical stub markdown that already has **`id: US-<ordinalId>`**).
+2. **Write** that **`content`** to the repo’s mapped plans path (edit the body as needed; **keep `id:`**). Do not invent frontmatter from scratch.
+3. **`update-user-story`** — pass the **full file contents** so the platform stays in sync. **Rejects** markdown missing **`id: US-<n>`** with an actionable error.
 
-1. Ensure the **parent story** exists and you know its **`US-<n>`**.
-2. **`create-test-scenario`** — **`platformFilePath`** under `plans/scenarios/...`, **`title`**, **`userStoryOrdinalId`** = **`n`** from **`US-n`**. Response includes scenario **`ordinalId`**.
-3. **Write** the file locally, and **the first on-disk version must already include** **`id: TS-<ordinalId>`** and **`story: US-<n>`** (do not write a stub with blank `id:` or missing `story:`).
-4. **`update-test-scenario`** with **full markdown** after edits.
+### Scenarios
+
+1. Ensure the **parent story** exists and you know its **`US-<n>`** (create the story first if needed).
+2. **`create-test-scenario`** — **`platformFilePath`** under `plans/scenarios/...`, **`title`**, **`userStoryOrdinalId`** = **`n`**. Response includes **`ordinalId`** and **`content`** (stub already has **`id: TS-<ordinalId>`** and **`story: US-<n>`**). **Do not skip this call.**
+3. **Write** that **`content`** locally (edit body; **keep `id:` and `story:`**).
+4. **`update-test-scenario`** with **full markdown**. **Rejects** missing **`id: TS-<n>`** or **`story: US-<n>`** with an actionable error (tells you to call create first).
+
+### Pre-write checklist (run before every `Write` to stories/scenarios)
+
+- [ ] `create-user-story` / `create-test-scenario` already returned **`ordinalId`** in this session (or the file already exists with a valid `id:` from platform).
+- [ ] Frontmatter includes **`id: US-<ordinalId>`** or **`id: TS-<ordinalId>`** (non-empty).
+- [ ] Scenario frontmatter includes **`story: US-<n>`** for the parent.
+- [ ] Immediately after write: call **`update-*-*`** with full content (or schedule it in the same turn before finishing).
 
 **Filenames:** Prefer **kebab-case** and **`.md`**. **Titles** are short sentences; filenames are stable identifiers.
 
@@ -97,7 +118,7 @@ When the user asks for **`/testchimp plan`** (or equivalent: fill gaps in the te
 
 1. Call **`get-requirement-coverage`** with a **`scope.folderPath`** under **`plans`** (e.g. `["plans","stories","checkout"]` or `["plans","scenarios"]`) and set **`includeNonCoveredUserStories`** / **`includeNonCoveredTestScenarios`** as needed.
 2. From the response and the recent changes made in the current working branch, decide **missing or thin** stories and scenarios.
-3. **Create parent stories before scenarios.** For each new artifact: **MCP create → write file → MCP update**.
+3. **Create parent stories before scenarios.** For each new artifact: **MCP create → write file with `id:` already set → MCP update**. Never write story/scenario markdown that omits `id:`.
 4. Keep edits **reviewable**: minimal frontmatter, clear titles, consistent folder placement.
 5. Make sure that created stories and scenarios are created under sub-folders for better organization. Not directly under the `plans/stories` or `plans/scenarios` but in a sub-folder within those - based on the the relevant area the story / scenario affects.
 

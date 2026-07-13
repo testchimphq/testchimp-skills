@@ -24,7 +24,7 @@ Systematically improve **requirement coverage**, **execution health**, **TrueCov
 
 1. **Mapped plans root:** Resolve **`<MAPPED_PLANS_ROOT>`** as the directory containing the **`.testchimp-plans`** marker (same rule as **`/testchimp test`** plan persistence in **SKILL.md**). All evolve plan files live under that root.
 2. **TrueCoverage:** Skip TrueCoverage **Analyze** steps **only** when **`### TrueCoverage Plan`** **explicitly** records **opt-out / disabled**. If the section is missing, empty, or only says **deferred**, treat TrueCoverage as **in scope** and follow **`ExecutionScope`** and metadata rules in [`truecoverage.md`](./truecoverage.md).
-3. **Guardrails:** Story/scenario IDs and MCP ordering follow **SKILL.md** → Agent guardrails and [`test-planning.md`](./test-planning.md).
+3. **Guardrails:** Story/scenario IDs and MCP ordering follow **SKILL.md** → Agent guardrails and [`test-planning.md`](./test-planning.md) (**create → write with `id:` → update**; never omit `id:`).
 4. **Environment contract (strict, before planning):** Before starting **Analyze** or authoring the evolve plan, read `plans/knowledge/ai-test-instructions.md` and extract the project's pre-agreed environment decision points from **`## Environment Provision Strategy`** (for example local spin-up, Bunnyshell/EaaS, or staging/branch environment rules). Use that guidance to shape the plan and execution ordering. Re-read the same sections again immediately before any test authoring/execution work, and follow them exactly (no improvised target URLs or provisioning flow).
 
 ---
