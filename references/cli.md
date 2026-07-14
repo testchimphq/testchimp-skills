@@ -240,23 +240,27 @@ testchimp get-release --version '1.2.0'
 | `--id <scanId>` | **Yes** | `scanId` |
 
 **Response (camelCase):**
-- Top-level: `scanId`, `status` (enum name string), `releaseLabel`, `environment`, **`dastCheckConfig`** (preferred), deprecated mirrors `allowActiveScan` / `useEphemeralSandbox`
-- `detail` (`ScanDetailProto`): same **`dastCheckConfig`** (server also injects normalized dast here for legacy scans), optional legacy `securityScanDetail`, future `sastCheckConfig` / `depsCheckConfig` / `leaksCheckConfig`
+- Top-level: `scanId`, `status` (enum name string), `releaseLabel`, `environment`, **`dastCheckConfig`** when DAST (preferred), deprecated mirrors `allowActiveScan` / `useEphemeralSandbox`
+- `detail` (`ScanDetailProto`): exactly one of **`dastCheckConfig`**, **`sastCheckConfig`**, **`depsCheckConfig`**, **`leaksCheckConfig`** (optional legacy `securityScanDetail`)
 
 **`dastCheckConfig` fields:** `environment` (env tag), `allowActiveScan`, `useEphemeralSandbox` (only meaningful when `allowActiveScan` is true; server clears otherwise), `scope` (`RELEASE_SCOPE` \| `SMOKE` \| `FULL`; default `RELEASE_SCOPE`).
 
-Agents must **honour**:
-- **`allowActiveScan`**: `true` → ZAP active after passive; `false`/absent → passive-only (do not re-ask).
-- **`scope`**: which tests to run with ZAP proxy (default `RELEASE_SCOPE`).
-- **`useEphemeralSandbox`**: when `true` **and** `allowActiveScan` is true, provision via EaaS ([`environment-management.md`](./environment-management.md)) and scan that URL; do not use shared `.env*` BASE_URL for the attack target. Always destroy the ephemeral env in cleanup.
+**`sastCheckConfig` fields:** `scope` (`RELEASE_SCOPED` \| `FULL_REPOSITORY`), `rules` (`ESSENTIAL` \| `STANDARD` \| `COMPREHENSIVE`), `severities` (`BugSeverity` list), `baselineGitCommitSha` (required for release-scoped).
 
-See [`security_scans.md`](./security_scans.md) and [`security/dast.md`](./security/dast.md).
+**`depsCheckConfig` fields:** `scope` (`RELEASE_DEPENDENCIES` \| `FULL_DEPENDENCY_TREE`), `securityProfile` (`ESSENTIAL` \| `STANDARD` \| `COMPREHENSIVE`), `ignoreVulnerabilitiesWithoutFixes` (default true), `baselineGitCommitSha` (required for release dependencies).
+
+**`leaksCheckConfig` fields:** `scope` (`RELEASE_CHANGES` \| `ALL_REPOSITORY_SECRETS`), `baselineGitCommitSha` (required for release changes).
+
+Agents must **honour** the matching playbook under [`security/`](./security/). Scanners run locally — there are no `run-*-scan` tools; use `report-*-findings` only.
+
+See [`security_scans.md`](./security_scans.md).
 
 ### `update-scan-progress`
 
 **API:** `POST /api/mcp/update_scan_progress`
 
 **Requires `@testchimp/cli` ≥ `0.1.14`.** Status: `QUEUED` \| `IN_PROGRESS` \| `COMPLETED` \| `EXCEPTION`.
+Each scan is a **single** checker type; the category playbook sets `COMPLETED` after a successful `report-*-findings` (or `EXCEPTION` on hard failure).
 
 | Flag | Required | Maps to JSON field |
 |------|----------|-------------------|
@@ -267,14 +271,47 @@ See [`security_scans.md`](./security_scans.md) and [`security/dast.md`](./securi
 
 **API:** `POST /api/mcp/report_dast_findings`
 
-**Requires `@testchimp/cli` ≥ `0.1.14`.** Reads ZAP Traditional JSON from disk (not argv).
+**Requires `@testchimp/cli` ≥ `0.1.14`.** Reads ZAP Traditional JSON from disk (not argv). Does **not** set scan status — DAST playbook calls `update-scan-progress COMPLETED` after success.
 
 | Flag | Required | Maps to JSON field |
 |------|----------|-------------------|
 | `--id <scanId>` | **Yes** | `scanId` |
 | `--report-file <path>` | **Yes** | (file → `reportJson`) |
 
-Stubs (not implemented): `run-sast-scan`, `run-deps-scan`, `run-secrets-scan`. See [`security_scans.md`](./security_scans.md).
+### `report-sast-findings`
+
+**API:** `POST /api/mcp/report_sast_findings`
+
+**Requires `@testchimp/cli` ≥ `0.1.15`.** Reads full Semgrep CLI JSON from disk. Does **not** set scan status — SAST playbook calls `update-scan-progress COMPLETED` after success.
+
+| Flag | Required | Maps to JSON field |
+|------|----------|-------------------|
+| `--id <scanId>` | **Yes** | `scanId` |
+| `--report-file <path>` | **Yes** | (file → `reportJson`) |
+
+### `report-secrets-findings`
+
+**API:** `POST /api/mcp/report_secrets_findings`
+
+**Requires `@testchimp/cli` ≥ `0.1.15`.** Reads full Gitleaks JSON from disk. Server redacts secret payloads before storing. Does **not** set scan status — secrets playbook calls `update-scan-progress COMPLETED` after success.
+
+| Flag | Required | Maps to JSON field |
+|------|----------|-------------------|
+| `--id <scanId>` | **Yes** | `scanId` |
+| `--report-file <path>` | **Yes** | (file → `reportJson`) |
+
+### `report-deps-findings`
+
+**API:** `POST /api/mcp/report_deps_findings`
+
+**Requires `@testchimp/cli` ≥ `0.1.15`.** Reads full Trivy JSON from disk. Does **not** set scan status — deps playbook calls `update-scan-progress COMPLETED` after success.
+
+| Flag | Required | Maps to JSON field |
+|------|----------|-------------------|
+| `--id <scanId>` | **Yes** | `scanId` |
+| `--report-file <path>` | **Yes** | (file → `reportJson`) |
+
+See [`security_scans.md`](./security_scans.md).
 
 ### `upsert-screen-states`
 

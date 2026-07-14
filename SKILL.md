@@ -2,8 +2,8 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve, explore), SmartTests, agent-driven test or plan authoring, ExploreChimp, or updating this skill from Git.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.3.10
-required_cli_version: "0.1.14"
+version: 0.3.11
+required_cli_version: "0.1.15"
 ---
 
 # TestChimp
@@ -176,7 +176,7 @@ Use the repo, plans, and those tools to decide what to test and how to run them.
 | `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — opening message → phased workflow (requirement gather → plan → execute). **Between phases:** complete each **phase completion gate** in the reference; every line **done** or **`N/A`** + one-line justification (persist in `plans/knowledge/ai-test-instructions.md` where noted). |
 | `/testchimp test` | [`references/testing-process.md`](references/testing-process.md) — **Preamble #4**; read **[`project-types-and-scaffolds.md`](references/project-types-and-scaffolds.md)** during Plan/Execute; **`ai-test-instructions.md`** first; **Analyze → Plan → Execute → Validate → Phase 5 → Phase 6 → Phase 7** (full chain or documented **`N/A`**). **Mobile / multi-platform:** [`references/platform-scope.md`](references/platform-scope.md) — inform or ask for platform scope on PR branches. |
 | `/testchimp explore` | [`references/exploratory_runs.md`](references/exploratory_runs.md) — Run **ExploreChimp** on chosen UI SmartTests (`EXPLORECHIMP_ENABLED`, `markScreenState`, batch id, data sources / network regex). Use when exploration is the **primary** task or the user specifies scope; align with **`/testchimp test`** when part of full PR QA. Prompts like **`/testchimp run explorechimp targeting release '<name>'`** are the same playbook with [release targeting](references/exploratory_runs.md#targeting-a-release-release-checks) (`get-release` + `TESTCHIMP_RELEASE`). **Mobile / multi-platform:** same platform-scope inform/ask rules — [`references/platform-scope.md`](references/platform-scope.md). |
-| `/testchimp run security scan for <scan_id>` | [`references/security_scans.md`](references/security_scans.md) — Release Checks: load nested scan config (`dastCheckConfig` / stubs), branch to [`security/dast.md`](references/security/dast.md) (ZAP DAST; honour `allowActiveScan`, `scope`, optional EaaS via [`environment-management.md`](references/environment-management.md)), `report-dast-findings`, `update-scan-progress`. |
+| `/testchimp run security scan for <scan_id>` | [`references/security_scans.md`](references/security_scans.md) — Release Checks: load nested scan config (`dastCheckConfig` / `sastCheckConfig` / `depsCheckConfig` / `leaksCheckConfig`), branch to [`security/dast.md`](references/security/dast.md), [`security/sast.md`](references/security/sast.md), [`security/deps.md`](references/security/deps.md), or [`security/secrets.md`](references/security/secrets.md); `report-*-findings`; playbook sets `COMPLETED`. |
 | `/testchimp fix` | [`references/fix-failing-tests.md`](references/fix-failing-tests.md) — Fetch execution report by `batch_invocation_id` (for multiple tests run in a single batch job) or `job_id` (for an individual test run), troubleshoot, apply fixes, and re-run failing tests per `plans/knowledge/ai-test-instructions.md`. |
 | `/testchimp author test for manual session` (or pasted **Copy script generate prompt** from manual session viewer) | [`references/author-test-from-manual-session.md`](references/author-test-from-manual-session.md) — Fetch manual session + linked scenarios; authoring-only SmartTest workflow using session steps/screenshots as reference. |
 | `/testchimp plan` | [`references/test-planning.md`](references/test-planning.md) |
@@ -286,7 +286,11 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`references/importing-existing-tests.md`](references/importing-existing-tests.md) | Greenfield vs existing Playwright, migration strategies, mapped-folder layout, CI |
 | [`references/testing-process.md`](references/testing-process.md) | `/testchimp test` strict workflow: Analyze → Plan → Execute → Validate → Phase 5 (Smart regression) → Phase 6 (ExploreChimp; default-on for UI test deltas) → Phase 7 (Cleanup); checklist gates; “run tests” vs full-chain semantics |
 | [`references/exploratory_runs.md`](references/exploratory_runs.md) | `/testchimp explore` and ExploreChimp: env vars, concepts, test selection, `ai-test-instructions` **`## ExploreChimp`** |
-| [`references/security_scans.md`](references/security_scans.md) | `/testchimp run security scan for <scan_id>`: nested configs → DAST/SAST/deps/secrets; ZAP + optional EaaS |
+| [`references/security_scans.md`](references/security_scans.md) | `/testchimp run security scan for <scan_id>`: nested configs → DAST/SAST/deps/secrets |
+| [`references/security/dast.md`](references/security/dast.md) | DAST (ZAP) playbook |
+| [`references/security/sast.md`](references/security/sast.md) | SAST (Semgrep) playbook |
+| [`references/security/deps.md`](references/security/deps.md) | Deps (Trivy) playbook |
+| [`references/security/secrets.md`](references/security/secrets.md) | Secrets (Gitleaks) playbook |
 | [`references/security/dast.md`](references/security/dast.md) | DAST detail: scope, active scan, ephemeral sandbox |
 | [`references/write-smarttests.md`](references/write-smarttests.md) | SmartTest authoring (UI tests with smart steps) details used by the execution phase |
 | [`references/api-testing.md`](references/api-testing.md) | API test authoring workflow from captured browser network flows |

@@ -52,8 +52,10 @@ Also load **`releaseLabel`** from the top-level scan config response for `get-re
 
 8. **`testchimp report-dast-findings --id '<scan_id>' --report-file <path>`**
 
+9. On successful report → **`testchimp update-scan-progress --id '<scan_id>' --status COMPLETED`**. On hard failure of a required step → `EXCEPTION`.
+
 ## Notes
 
-- `report-dast-findings` does **not** complete the scan (orchestrator sets `COMPLETED`).
+- `report-dast-findings` does **not** set scan status; this playbook does immediately after a successful report.
 - Duplicate findings (same bug hash) are skipped project-wide; still store the raw report for audit.
 - Docs: [DAST ephemeral sandbox](https://docs.testchimp.io/integrations/bunnyshell#dast-ephemeral-sandbox).
