@@ -6,7 +6,7 @@ Use this playbook when the user (or Release Checks modal) asks to run:
 /testchimp run security scan for <scan_id>
 ```
 
-Requires **`@testchimp/cli` ≥ 0.1.14** (`get-security-scan-config`, `update-scan-progress`, `report-dast-findings`, stubs for SAST/deps/secrets).
+Requires **`@testchimp/cli` ≥ 0.1.14** (`get-security-scan-config`, `update-scan-progress`, `report-dast-findings`, EaaS tools when ephemeral sandbox is requested).
 
 **Statuses** (exact strings for `update-scan-progress --status`):
 
@@ -14,44 +14,33 @@ Requires **`@testchimp/cli` ≥ 0.1.14** (`get-security-scan-config`, `update-sc
 |--------|------|
 | `QUEUED` | Created in UI; do not set unless resetting |
 | `IN_PROGRESS` | Scan work started |
-| `COMPLETED` | **All** selected categories finished (agent sets this; report tools do not) |
+| `COMPLETED` | **All** selected check types finished (agent sets this; report tools do not) |
 | `EXCEPTION` | Hard failure that stops the scan |
 
 Allowed transitions: `QUEUED` → `IN_PROGRESS` \| `EXCEPTION`; `IN_PROGRESS` → `COMPLETED` \| `EXCEPTION`. Terminal: `COMPLETED`, `EXCEPTION`.
 
 ## Flow
 
+Treat steps 4–6 as a **try / finally**: always run cleanup (step 6) even when step 4 throws into `EXCEPTION`.
+
 1. **`testchimp update-scan-progress --id '<scan_id>' --status IN_PROGRESS`**
-2. **`testchimp get-security-scan-config --id '<scan_id>'`** — read `categories`, `environment`, `releaseLabel`, **`allowActiveScan`**, and `detail`.
-3. **`testchimp get-release --version '<release_label>'`** — cut SHA, prior SHA, focus areas.
-4. **Resolve DAST base URL** (only if `DYNAMIC_CHECKS` is enabled):
-   - Look for SmartTest suite env files (e.g. `.env-QA`, `.env-<ENV>`, `.env`) near the tests root.
-   - Prefer `BASE_URL` / `base_url` for the selected environment.
-   - If missing or ambiguous → **ask the user to confirm the target endpoint** before continuing.
-5. **Ensure OWASP ZAP** (daemon + API):
-   1. If ZAP API already responds on the configured local port → reuse.
-   2. Else locate install (`ZAP_HOME`, `/Applications/ZAP.app/.../zap.sh`, PATH).
-   3. Else install via OS package manager when available (`brew install --cask zap`, `winget install ZAP.ZAP`, Linux package/snap).
-   4. Else if Docker is available → `ghcr.io/zaproxy/zaproxy:stable` daemon on a fixed host port.
-   5. Else **STOP** with clear install instructions.
-   - Prefer **daemon mode** for Playwright HTTP(S) proxying. For HTTPS apps, configure ZAP CA trust or use Playwright `ignoreHTTPSErrors` as needed.
-6. **Select automation tests** for passive crawl:
-   - Prefer tests **authored/updated** in this release (from release delta / git range).
-   - Else map **code changes** in the release git range to covering UI tests.
-   - Else **guided walk** of areas affected by the release.
-   - Prefer **real-backend** tests; skip mocks-heavy tests.
-7. Run those tests (or walk) with the browser proxied through ZAP → **passive** listening.
-8. **Active scan — honour config, do not re-ask:**
-   - If `allowActiveScan` is **true** → run ZAP **active** scan scoped to URLs/context learned in passive phase.
-   - If `allowActiveScan` is **false** / absent → **skip** active mode; report passive findings only.
-9. Export **Traditional JSON** (`traditional-json`, not HTML; avoid `traditional-json-plus` unless needed).
-10. **`testchimp report-dast-findings --id '<scan_id>' --report-file <path>`**
-11. For other categories (if ever enabled): `run-sast-scan` / `run-deps-scan` / `run-secrets-scan` (stubs until implemented).
-12. **`testchimp update-scan-progress --id '<scan_id>' --status COMPLETED`** when done (or `EXCEPTION` on hard failure).
+2. **`testchimp get-security-scan-config --id '<scan_id>'`** — response shape (camelCase):
+   - Prefer top-level **`dastCheckConfig`** when present (also mirrored under `detail.dastCheckConfig`).
+   - Future / stub types live only under **`detail`**: `detail.sastCheckConfig`, `detail.depsCheckConfig`, `detail.leaksCheckConfig`.
+   - Legacy scans may still have `detail.securityScanDetail`; the server also materializes top-level `dastCheckConfig` from it when possible.
+   - Convenience mirrors (may be deprecated): top-level `environment`, `allowActiveScan`, `useEphemeralSandbox`, `releaseLabel`, `status`.
+3. **Branch on which configs are present** (a scan typically has one type today):
+   - If top-level / `detail` **`dastCheckConfig`** (or legacy dynamic `securityScanDetail`) → [`security/dast.md`](./security/dast.md)
+   - If **`detail.sastCheckConfig`** → [`security/sast.md`](./security/sast.md)
+   - If **`detail.depsCheckConfig`** → [`security/deps.md`](./security/deps.md)
+   - If **`detail.leaksCheckConfig`** → [`security/secrets.md`](./security/secrets.md)
+   - If **none** of the above → set `EXCEPTION` and tell the user the scan config is empty/unrecognized.
+4. Run the matching playbook(s). On hard failure of a required step → **`update-scan-progress --status EXCEPTION`** (still do cleanup).
+5. When all applicable check types succeed → **`update-scan-progress --status COMPLETED`**.
+6. **Cleanup (always):** if this run provisioned an ephemeral environment for DAST sandbox, call **`destroy-ephemeral-environment`**. Follow [`environment-management.md`](./environment-management.md).
 
 ## Notes
 
-- `report-dast-findings` does **not** complete the scan (multi-category future-proofing).
-- Duplicate findings (same bug hash) are skipped project-wide; still store the raw report for audit.
+- Do **not** invent separate slash commands per check type; one orchestrator reads nested config from the scan id.
 - Point the user at Release Checks on the release detail page; **View Bugs** opens `/bugs` scoped to the scan id.
 - Queued / in-progress rows expose **Copy prompt** so the user can re-run the agent without recreating the scan.

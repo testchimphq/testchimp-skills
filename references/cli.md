@@ -239,9 +239,18 @@ testchimp get-release --version '1.2.0'
 |------|----------|-------------------|
 | `--id <scanId>` | **Yes** | `scanId` |
 
-**Response (camelCase):** `scanId`, `status`, `releaseLabel`, `environment`, **`allowActiveScan`** (bool from UI checkbox), `detail` (`securityScanDetail.categories` / `environment` / `releaseLabel` / `allowActiveScan`).
+**Response (camelCase):**
+- Top-level: `scanId`, `status` (enum name string), `releaseLabel`, `environment`, **`dastCheckConfig`** (preferred), deprecated mirrors `allowActiveScan` / `useEphemeralSandbox`
+- `detail` (`ScanDetailProto`): same **`dastCheckConfig`** (server also injects normalized dast here for legacy scans), optional legacy `securityScanDetail`, future `sastCheckConfig` / `depsCheckConfig` / `leaksCheckConfig`
 
-Agents must **honour `allowActiveScan`**: `true` → ZAP active after passive; `false`/absent → passive-only (do not re-ask the user). See [`security_scans.md`](./security_scans.md).
+**`dastCheckConfig` fields:** `environment` (env tag), `allowActiveScan`, `useEphemeralSandbox` (only meaningful when `allowActiveScan` is true; server clears otherwise), `scope` (`RELEASE_SCOPE` \| `SMOKE` \| `FULL`; default `RELEASE_SCOPE`).
+
+Agents must **honour**:
+- **`allowActiveScan`**: `true` → ZAP active after passive; `false`/absent → passive-only (do not re-ask).
+- **`scope`**: which tests to run with ZAP proxy (default `RELEASE_SCOPE`).
+- **`useEphemeralSandbox`**: when `true` **and** `allowActiveScan` is true, provision via EaaS ([`environment-management.md`](./environment-management.md)) and scan that URL; do not use shared `.env*` BASE_URL for the attack target. Always destroy the ephemeral env in cleanup.
+
+See [`security_scans.md`](./security_scans.md) and [`security/dast.md`](./security/dast.md).
 
 ### `update-scan-progress`
 
