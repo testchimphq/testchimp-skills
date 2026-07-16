@@ -402,6 +402,52 @@ testchimp get-manual-session-details --manual-session-id 01JABCDEF123456789
 
 Use when the user pastes a **Copy script generate prompt** from the manual session viewer. Then load linked scenarios from the mapped **`plans/scenarios/`** tree or call **`get-test-scenarios --scenario-ordinal-ids`** once with all values from **`linkedScenarioOrdinalIds`**. See [`author-test-from-manual-session.md`](./author-test-from-manual-session.md).
 
+### `get-issue-details`
+
+Requires `@testchimp/cli` ≥ **0.1.16**.
+
+**API:** `POST /api/mcp/get_issue_details`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--issue-id <id>` | **Yes**\* | `issueId` | Accepts `#B-123`, `B-123`, `#B123`, `B123`, or plain `123`. |
+| `--json-input …` | No | (merge) | May supply **`issueId`**. |
+
+\*Issue id is required (via flag or JSON).
+
+**Response:** `issue` with `ordinalId`, `title`, `description`, `status`, `severity`, `issueType`, `bugHash`, `assignee`, `reportedReleaseId`, `linkedEntities[]` (`entityType`, `entityId`, `displayTitle`), `screenshotGcsPath` / `screenshotUrl`, `stepArtifactGcsPath` / `stepArtifactUrl`, `artifactReference`, `attachments[]` (`filename`, `url`, `gcsPath`). GCS paths are signed into short-lived public URLs when possible.
+
+**Example:**
+
+```bash
+testchimp get-issue-details --issue-id "#B-123"
+testchimp get-issue-details --issue-id 123
+```
+
+### `update-issue-status`
+
+Requires `@testchimp/cli` ≥ **0.1.16**.
+
+**API:** `POST /api/mcp/update_issue_status`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--issue-id <id>` | **Yes**\* | `issueId` | Same flexible formats as `get-issue-details`. |
+| `--status <status>` | **Yes**\* | `status` | `ACTIVE` \| `IGNORED` \| `FIXED` \| `DUPLICATE` \| `IN_PROGRESS_BUG` \| `ARCHIVED_BUG` \| `BLOCKED`. |
+| `--ignore-reason <reason>` | No | `ignoreReason` | When `status=IGNORED`: `INTENDED_BEHAVIOUR` \| `INACCURATE_ASSESSMENT` \| `NOT_IMPORTANT`. |
+| `--json-input …` | No | (merge) | May supply fields instead of flags. |
+
+\*Required via flags or JSON.
+
+**Status side effects:** updates the issue in the project DB (same activity logging path as the UI). For `/testchimp fix issue`, set `IN_PROGRESS_BUG` after applying a code fix; set `FIXED` only after user confirmation or after commits are pushed.
+
+**Example:**
+
+```bash
+testchimp update-issue-status --issue-id B-123 --status IN_PROGRESS_BUG
+testchimp update-issue-status --issue-id 123 --status FIXED
+```
+
 ### `create-user-story`
 
 **API:** `POST /api/mcp/create_user_story`

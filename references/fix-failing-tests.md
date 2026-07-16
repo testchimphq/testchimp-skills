@@ -1,8 +1,11 @@
-# `/testchimp fix` — fix failing SmartTests from an execution id
+# `/testchimp fix test failure` — fix failing SmartTests from an execution id
 
 ## Goal
 
 Given a failed SmartTest execution id (either a batch invocation id from the batch execution viewer, or an individual job id from the test execution viewer), fetch a structured failure report via TestChimp MCP/CLI, troubleshoot and apply fixes, then re-run the failing tests using the project’s environment provisioning instructions.
+
+This command is specifically for raw SmartTest execution failures identified by
+`batch_invocation_id` or `job_id`. 
 
 ## Inputs
 
