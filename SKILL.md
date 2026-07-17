@@ -2,8 +2,8 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve, explore), SmartTests, agent-driven test or plan authoring, ExploreChimp, or updating this skill from Git.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.3.14
-required_cli_version: "0.1.17"
+version: 0.3.15
+required_cli_version: "0.1.18"
 ---
 
 # TestChimp
@@ -171,6 +171,7 @@ The MCP server exposes tools grouped by area:
 - **Semantic duplicate hygiene (`/testchimp cleanup`)** — `list-semantic-similar-tests`, `mark-semantic-tests-distinct` (TestLocator-based; see [`references/cleanup.md`](references/cleanup.md))
 - **Execution debugging** — `fetch-execution-report`, `get-manual-session-details`
 - **Issues** — `create-issue`, `get-issue-details`, `update-issue-status` (see [`references/cli.md`](references/cli.md) § Issues; create requires CLI ≥ **0.1.17**)
+- **Release catalog & gating** — `get-release` (thin catalog metadata: cut SHA, prior release, focus areas), `get-release-details` (gate-oriented: per-environment priority×status test stats, open-issue stats, scan summaries, in-scope scenario/issue records — for CI/agent release gating; requires CLI ≥ **0.1.18**) (see [`references/cli.md`](references/cli.md) § `get-release` / `get-release-details`)
 - **Planning (user stories & scenarios)** — `get-user-stories`, `get-test-scenarios`, `create-user-story`, `create-test-scenario`, `update-user-story`, `update-test-scenario`
 - **Environments & EaaS** — `get-eaas-config`, `get-branch-specific-endpoint-config`, `provision-ephemeral-environment-and-wait`, `provision-ephemeral-environment`, `get-ephemeral-environment-status`, `destroy-ephemeral-environment`
 - **Ephemeral deploy diagnostics (BunnyShell)** — `list-bunnyshell-environment-events`, `list-bunnyshell-workflow-jobs`, `get-bunnyshell-workflow-job-logs`

@@ -6,7 +6,7 @@ This page lists **every subcommand and flag** as implemented in the CLI (kebab-c
 
 **Screen-state atlas** (for **`markScreenState`** / ExploreChimp vocabulary): see § [**Screen-state atlas (SmartTests, traces, ExploreChimp)**](#screen-state-atlas-smarttests-traces-explorechimp) — **`list-screen-states`**, **`upsert-screen-states`**.
 
-**Release catalog** (Release Checks / ExploreChimp targeting a release): **`get-release`** — see § [**get-release**](#get-release).
+**Release catalog** (Release Checks / ExploreChimp targeting a release): **`get-release`** (thin catalog metadata) — see § [**get-release**](#get-release). For **release gating** (per-environment priority×status test stats, open-issue stats, scan summaries, in-scope scenario/issue records) use **`get-release-details`** (CLI ≥ **0.1.18**) — see § [**get-release-details**](#get-release-details).
 
 ## Install
 
@@ -232,6 +232,25 @@ Fetch release catalog details for a version/label in the current project (cut gi
 export TESTCHIMP_API_KEY=…   # from MCP config walk-up; never echo
 testchimp get-release --version '1.2.0'
 # stdout: JSON McpGetReleaseResponse with full ReleaseDetail
+```
+
+### `get-release-details`
+
+**API:** `POST /api/mcp/get_release_details`
+
+Fetch **gate-oriented** release details for a version/label: focus-area scope, per-environment priority×status test aggregations, open-issue stats, release-scan summaries, and detailed in-scope scenario/issue records. Use for CI/agent **release gating** (pass/fail decisions). Thin catalog metadata remains on `get-release`.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|-------|
+| `--version <version>` | **Yes** | `version` | Release catalog label / version string. |
+| `--json-input …` | No | (merge) | Optional extra body fields. |
+
+**Example:**
+
+```bash
+export TESTCHIMP_API_KEY=…   # from MCP config walk-up; never echo
+testchimp get-release-details --version '1.2.0'
+# stdout: JSON McpGetReleaseDetailsResponse (summary + detailedResults)
 ```
 
 ### `get-security-scan-config`
