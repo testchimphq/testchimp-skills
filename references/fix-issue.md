@@ -6,6 +6,8 @@ Given a TestChimp issue ordinal id (from the Fix CTA **Copy fix prompt**, or pas
 
 This playbook is **not** the same as [`fix-failing-tests.md`](fix-failing-tests.md) (`/testchimp fix test failure` for raw SmartTest execution reports by `batch_invocation_id` / `job_id`). An ordinal-based issue can describe a test failure or any other product issue.
 
+To **file a new** issue (not fix an existing one), use MCP/CLI **`create-issue`** — see [`cli.md`](cli.md) § `create-issue` (requires `@testchimp/cli` ≥ **0.1.17**).
+
 ## Inputs
 
 - **Issue id** (flexible formats — the API accepts any of these):

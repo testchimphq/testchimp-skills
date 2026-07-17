@@ -448,6 +448,76 @@ testchimp update-issue-status --issue-id B-123 --status IN_PROGRESS_BUG
 testchimp update-issue-status --issue-id 123 --status FIXED
 ```
 
+### `create-issue`
+
+Requires `@testchimp/cli` ≥ **0.1.17**.
+
+**API:** `POST /api/mcp/create_issue`
+
+**When to use:** File a **new** TestChimp issue in the current project (MCP preferred; CLI fallback). Use when the user asks to create/file a bug, suggestion, observation, or task — or when an agent finds a product defect that is **not** already auto-filed (e.g. ExploreChimp pipeline bugs). Do **not** use this to update an existing issue (use `update-issue-status` / `get-issue-details`) or to fix one (`/testchimp fix issue`).
+
+**Agent rules:**
+- **`title` is required** (flag or JSON). Prefer a concrete, actionable title.
+- Defaults when omitted: **`status=ACTIVE`**; **`environment`** defaults server-side to QA when unset.
+- Prefer **`linkTargets`** (via `--json-input`) to attach stories, scenarios, tests, executions, or batch invocations so the issue is traceable.
+- Use simple flags for common creates; use **`--json-input`** for the full curated contract (`linkTargets`, `attachments`, `artifactReference`, enums below).
+- **`source`** is stored as a label `source:<name>` (e.g. agent ingest id). Extra **`labels`** are optional.
+- Project is resolved from the API key — do not invent project ids.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--title <title>` | **Yes**\* | `title` | Non-empty after trim. |
+| `--description <text>` | No | `description` | Markdown supported. |
+| `--issue-type <type>` | No | `issueType` | `BUG_ISSUE` \| `SUGGESTION_ISSUE` \| `OBSERVATION_ISSUE` \| `TASK_ISSUE`. |
+| `--category <category>` | No | `category` | `FUNCTIONAL` \| `SECURITY` \| `ACCESSIBILITY` \| `PERFORMANCE` \| `VISUAL` \| `NETWORK` \| `USABILITY` \| `COMPATIBILITY` \| `DATA_INTEGRITY` \| `INTERACTION` \| `LOCALIZATION` \| `RESPONSIVENESS` \| `LAYOUT` \| `VISUAL_REGRESSION` \| `MEMORY` \| `PERFORMANCE_REGRESSION` \| `MEMORY_REGRESSION` \| `FORM_VALIDATION_BUG` \| `OTHER`. |
+| `--severity <severity>` | No | `severity` | `LOW_SEVERITY` \| `MEDIUM_SEVERITY` \| `HIGH_SEVERITY` \| `CRITICAL_SEVERITY`. |
+| `--status <status>` | No | `status` | Same enum as `update-issue-status`. Default **`ACTIVE`**. |
+| `--reported-release-id <id>` | No | `reportedReleaseId` | Release label/id. |
+| `--due-date-millis <ms>` | No | `dueDateMillis` | UTC epoch millis. |
+| `--assignee <userId>` | No | `assignee` | Platform user id. |
+| `--labels <csv>` | No | `labels` | Comma-separated → string array. |
+| `--source <name>` | No | `source` | Becomes label `source:<name>`. |
+| `--environment <name>` | No | `environment` | Env tag (defaults to QA when omitted). |
+| `--json-input …` | No | (merge) | Full body including **`linkTargets`**: `[{ "toEntityType": "SCENARIO"\|"STORY"\|"TEST"\|"ISSUE"\|"EXTERNAL"\|"TEST_EXECUTION"\|"BATCH_INVOCATION", "toEntityId": "…" }]`, plus `attachments`, `artifactReference`. |
+
+\*Required via `--title` or `--json-input`.
+
+**Response:** `status` (`ok`), `ordinalId`, `issueId` (e.g. `B-42`), and `issue` (`McpIssueDetails` — same shape as `get-issue-details`).
+
+**Examples:**
+
+```bash
+# Minimal
+testchimp create-issue --title "Checkout button disabled on empty cart"
+
+# Typed bug with severity + category
+testchimp create-issue \
+  --title "XSS in profile bio" \
+  --description "Bio renders unsanitized HTML." \
+  --issue-type BUG_ISSUE \
+  --category SECURITY \
+  --severity HIGH_SEVERITY \
+  --source agent-qa
+
+# Full contract (links + optional fields) via JSON
+testchimp create-issue --json-input '{
+  "title": "Flaky login redirect",
+  "description": "Observed after seed user login.",
+  "issueType": "BUG_ISSUE",
+  "category": "FUNCTIONAL",
+  "severity": "MEDIUM_SEVERITY",
+  "linkTargets": [
+    { "toEntityType": "SCENARIO", "toEntityId": "101" },
+    { "toEntityType": "BATCH_INVOCATION", "toEntityId": "01JABCDEF" }
+  ],
+  "labels": ["login"],
+  "source": "testchimp-agent",
+  "environment": "QA"
+}'
+```
+
+MCP: `create-issue` with the same JSON fields (no CLI flag mapping).
+
 ### `create-user-story`
 
 **API:** `POST /api/mcp/create_user_story`
