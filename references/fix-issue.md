@@ -30,10 +30,12 @@ Do **not** set `FIXED` automatically after applying code without user confirmati
 - CLI fallback:
 
 ```bash
+# Export API key AND TESTCHIMP_BACKEND_URL from project mcp.json when configured
+# (staging/enterprise). Skipping the backend URL causes 401 against prod.
 testchimp get-issue-details --issue-id "<id>"
 ```
 
-Requires `@testchimp/cli` ≥ **0.1.16**.
+Requires `@testchimp/cli` ≥ **0.1.16**. On **401**, re-export **`TESTCHIMP_BACKEND_URL`** from MCP `env` before assuming a bad key — see **`SKILL.md`** Preamble **#4**.
 
 Response includes:
 

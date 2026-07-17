@@ -96,12 +96,19 @@ try{
   const env=j?.mcpServers?.testchimp?.env || {};
   const key=env.TESTCHIMP_API_KEY;
   const pid=env.TESTCHIMP_PROJECT_ID;
+  const backend=env.TESTCHIMP_BACKEND_URL;
   const hasServer=!!j?.mcpServers?.testchimp;
+  const backendConfigured=backend && String(backend).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(backend));
   process.stdout.write(`HAS_SERVER=${hasServer?'yes':'no'}\n`);
   process.stdout.write(`HAS_KEY=${ok(key)?'yes':'no'}\n`);
   process.stdout.write(`HAS_PROJECT_ID=${ok(pid)?'yes':'no'}\n`);
+  process.stdout.write(`HAS_BACKEND_URL=${backendConfigured?'yes':'no'}\n`);
+  if (backendConfigured) {
+    // Safe to print host (not a secret); helps agents avoid prod-default 401s.
+    process.stdout.write(`TESTCHIMP_BACKEND_URL=${String(backend).trim()}\n`);
+  }
 }catch{
-  process.stdout.write('HAS_SERVER=no\nHAS_KEY=no\nHAS_PROJECT_ID=no\n');
+  process.stdout.write('HAS_SERVER=no\nHAS_KEY=no\nHAS_PROJECT_ID=no\nHAS_BACKEND_URL=no\n');
 }
 NODE
   )"
@@ -117,6 +124,12 @@ NODE
     _say "TESTCHIMP_PROJECT_ID: present (not printed)"
   else
     _warn "WARN: TESTCHIMP_PROJECT_ID missing/placeholder (needed for TrueCoverage RUM instrumentation)"
+  fi
+  if [ "${HAS_BACKEND_URL:-no}" = "yes" ]; then
+    _say "TESTCHIMP_BACKEND_URL: configured — export into every CLI/runner shell (do not use prod default)"
+    [ -n "${TESTCHIMP_BACKEND_URL:-}" ] && _say "TESTCHIMP_BACKEND_URL: $TESTCHIMP_BACKEND_URL"
+  else
+    _say "TESTCHIMP_BACKEND_URL: not set in MCP (CLI will use package default / SaaS prod)"
   fi
 else
   _warn "WARN: project MCP config not found (.cursor/mcp.json or .mcp.json) — /testchimp init should create it from assets/sample-mcp.json"

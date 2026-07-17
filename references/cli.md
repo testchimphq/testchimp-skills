@@ -19,19 +19,24 @@ Invoke via `npx @testchimp/cli@latest <subcommand>` or the **`testchimp`** binar
 
 **Minimum for platform execution reporting:** **`@testchimp/cli` ≥ 0.1.6** (this doc) and **`@testchimp/playwright` ≥ 0.2.0** on the SmartTests package (reporter sends `executionContext` on each test end).
 
-## Authentication (`TESTCHIMP_API_KEY`)
+## Authentication and API host (`TESTCHIMP_API_KEY`, `TESTCHIMP_BACKEND_URL`)
 
-The CLI reads **`process.env.TESTCHIMP_API_KEY`**. Agent-run shells often **do not** inherit the IDE MCP process environment.
+The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.TESTCHIMP_BACKEND_URL`**. Agent-run shells often **do not** inherit the IDE MCP process environment.
 
-If the key is **not** set in the shell:
+**Before every CLI invoke** (and on any **401**), resolve env from the project MCP config:
 
 1. Resolve the **same project-scoped MCP config** used for TestChimp (the file where the user placed the key at init). The path is **host-specific** — e.g. Cursor often uses `<repo>/.cursor/mcp.json`; Claude Code, VS Code, and others use their own documented locations. **`.cursor` is an example, not universal.**
 2. From the **SmartTests root** (folder containing `.testchimp-tests`), walk **up** the directory tree and check each candidate MCP config file until you find `mcpServers` (or equivalent) with a **`testchimp`** server entry.
-3. Read **`env.TESTCHIMP_API_KEY`** (and optionally **`env.TESTCHIMP_PROJECT_ID`**, **`env.TESTCHIMP_BACKEND_URL`**) from that entry. **`TESTCHIMP_PROJECT_ID`** is for TrueCoverage RUM wiring, not required for CLI auth.
-4. **`export`** those variables in the **same shell** that will run `testchimp` (e.g. a single shell block: `export TESTCHIMP_API_KEY=...` then `testchimp ...`).
+3. Read from that entry’s **`env`**:
+   - **`TESTCHIMP_API_KEY`** (required for auth)
+   - **`TESTCHIMP_BACKEND_URL`** when present — **must** be exported; do **not** fall back to the package default prod host when this is set (staging / enterprise / self-hosted). Keys are environment-scoped; calling prod with a non-prod key yields **401**.
+   - **`TESTCHIMP_PROJECT_ID`** when present (TrueCoverage RUM wiring; not required for CLI auth)
+4. **`export`** those variables in the **same shell** that will run `testchimp` (e.g. one block: `export TESTCHIMP_API_KEY=... TESTCHIMP_BACKEND_URL=...` then `testchimp ...`).
 5. **Never print the key** in chat, logs, or echoed commands.
 
-Optional: **`TESTCHIMP_BACKEND_URL`** — overrides the default API host (see `testchimp --help` footer for current default).
+**`TESTCHIMP_BACKEND_URL`:** When set in MCP `env`, it overrides the default API host (see `testchimp --help` footer). When **absent**, the CLI default (SaaS prod) is correct. On **401**, re-check that a configured backend URL was exported before assuming a bad key.
+
+**401 remediation order:** (1) export `TESTCHIMP_BACKEND_URL` from MCP if configured → (2) export `TESTCHIMP_API_KEY` from the same entry → (3) retry.
 
 ## Quick invoke
 

@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, test, plan, evolve, explore), SmartTests, agent-driven test or plan authoring, ExploreChimp, or updating this skill from Git.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps.
-version: 0.3.13
+version: 0.3.14
 required_cli_version: "0.1.17"
 ---
 
@@ -53,10 +53,18 @@ Before executing a TestChimp flow:
    - **Never print secrets**: do not paste the key into chat, logs, or echoed commands.
    - **Playwright / Mobilewright / CI:** MCP `env` alone is **not** enough for the test **runner** — still apply **#4** before spawning the runner.
 
-4. **`TESTCHIMP_API_KEY` (P0 — single rule for MCP, CLI, and runners)** — Any process that runs **Playwright** or **Mobilewright** with **`@testchimp/playwright`**, or **`testchimp`** CLI against the project APIs, must have **`TESTCHIMP_API_KEY`** in **that process’s** environment. **IDE-only or MCP-only** config does **not** satisfy the **child** test runner. If you **cannot verify** the key is set on the process **before** spawn, **halt** — do not run tests “to see what happens.”
-   - **Resolve (never print secrets):** SmartTests root ( **`.testchimp-tests`** ) → walk **up** to **project-level** host MCP config (e.g. **`.cursor/mcp.json`** for Cursor, **`.mcp.json`** at repo root for Claude Code) → read **`mcpServers.testchimp.env.TESTCHIMP_API_KEY`** → **export** or **inject** into the agent shell, CI job `env`, or compose `env:` for the service that runs `npx playwright test` / `npx mobilewright …`. For TrueCoverage RUM **`projectId`**, read **`env.TESTCHIMP_PROJECT_ID`** from the same entry when app build config does not already define it ([`references/truecoverage.md`](references/truecoverage.md)).
-   - **Missing / blank / placeholder:** **STOP**; during **`/testchimp init`**, create or merge the project MCP file from [`assets/sample-mcp.json`](assets/sample-mcp.json) (see [Workstation gate](references/init-testchimp.md#workstation-gate-always-first)), ask the user to paste API key + project ID, reload MCP, then re-export for the **runner**.
-   - **Symptoms (same fix):** reporter **disabled**, **401**, missing-key logs → re-apply **#4** on the **runner** env, then re-run.
+4. **`TESTCHIMP_API_KEY` + `TESTCHIMP_BACKEND_URL` (P0 — single rule for MCP, CLI, and runners)** — Any process that runs **Playwright** or **Mobilewright** with **`@testchimp/playwright`**, or **`testchimp`** CLI against the project APIs, must have **`TESTCHIMP_API_KEY`** in **that process’s** environment. **IDE-only or MCP-only** config does **not** satisfy the **child** test runner or a **CLI fallback** shell. If you **cannot verify** the key is set on the process **before** spawn, **halt** — do not run tests “to see what happens.”
+   - **Resolve (never print secrets):** SmartTests root ( **`.testchimp-tests`** ) → walk **up** to **project-level** host MCP config (e.g. **`.cursor/mcp.json`** for Cursor, **`.mcp.json`** at repo root for Claude Code) → read **`mcpServers.testchimp.env`** and **export / inject all of**:
+     1. **`TESTCHIMP_API_KEY`** (required)
+     2. **`TESTCHIMP_BACKEND_URL`** **when present** in that `env` block (staging, enterprise, or self-hosted featureservice base URL)
+     3. **`TESTCHIMP_PROJECT_ID`** when present (TrueCoverage RUM `projectId` if not already in app config — [`references/truecoverage.md`](references/truecoverage.md))
+   - **`TESTCHIMP_BACKEND_URL` (enterprise / non-prod — BLOCKING when configured):** If MCP `env` defines **`TESTCHIMP_BACKEND_URL`**, the agent **MUST** export it into **every** CLI / runner shell **before** the first `testchimp …` or Playwright spawn. **Do not** call the SaaS/prod default host when a project-specific backend is configured — keys are environment-scoped and a prod call with a staging/enterprise key returns **401**. Only omit / leave unset when the MCP config has **no** `TESTCHIMP_BACKEND_URL` (then the CLI/MCP package default prod host is correct).
+   - **Missing / blank / placeholder API key:** **STOP**; during **`/testchimp init`**, create or merge the project MCP file from [`assets/sample-mcp.json`](assets/sample-mcp.json) (see [Workstation gate](references/init-testchimp.md#workstation-gate-always-first)), ask the user to paste API key + project ID (and backend URL when not using SaaS prod), reload MCP, then re-export for the **runner**.
+   - **On 401 / unauthorized (checklist — do in order):**
+     1. Re-read project MCP `env` and confirm **`TESTCHIMP_BACKEND_URL`** was exported into **this** shell when configured (wrong host is the most common agent failure mode).
+     2. Confirm **`TESTCHIMP_API_KEY`** from the **same** MCP entry is exported (not blank/placeholder; never print it).
+     3. Re-run the failing CLI/MCP call; if still 401, ask the user to verify the key for that backend (staging vs prod vs enterprise).
+   - **Symptoms (same fix):** reporter **disabled**, **401**, missing-key logs → re-apply **#4** (key **and** backend URL) on the **runner**/CLI env, then re-run.
    - **Never print the key.** **No key-rotation noise** unless leaked or committed.
    - **Not in** **`.env-QA`** / **`.env-*`** (those are for `BASE_URL`, fixtures, etc.); canonical copy in MCP **`env`** per [`assets/sample-mcp.json`](assets/sample-mcp.json).
 
@@ -123,7 +131,7 @@ TestChimp adds **marker files** after mapping: **`.testchimp-tests`** at the **S
 
 2. **Run Playwright only from the mapped SmartTests root** (see **[Marker files](#marker-files)**). **`cd` there**, then run Playwright via **`npx`** (e.g. `npx playwright test …`). Do not run tests from the repo root unless that root **is** the mapped folder.
 
-3. **API keys and 401s.** **`TESTCHIMP_API_KEY`:** canonical **`mcp.json`** / MCP **`env`** plus **runner export** — full rules in **Preamble checks #4** (includes **401**, reporter disabled, missing-key logs). Obtain keys: **TestChimp** → **Project Settings** → **Key management**. **Do not** document **PAT**s or alternate user-auth env pairs for agents.
+3. **API keys, backend URL, and 401s.** **`TESTCHIMP_API_KEY`** and (when configured) **`TESTCHIMP_BACKEND_URL`:** canonical **`mcp.json`** / MCP **`env`** plus **runner/CLI export** — full rules in **Preamble checks #4**. On **401**, first verify **`TESTCHIMP_BACKEND_URL`** from MCP was exported (wrong host vs staging/enterprise is the usual failure), then the key. Obtain keys: **TestChimp** → **Project Settings** → **Key management**. **Do not** document **PAT**s or alternate user-auth env pairs for agents.
 
 4. **Gitignore generated report folders.** Playwright / Mobilewright (and reporters) can create generated artifacts (HTML reports, traces, screenshots, videos, raw results). These must **not** be committed. Ensure the repo’s **`.gitignore`** includes common Playwright output folders such as:
    - `playwright-report/`
@@ -154,7 +162,7 @@ Install **`@testchimp/cli@latest`** (see [`references/init-testchimp.md`](refere
 
 **Minimum versions:** This skill declares **`required_cli_version`** in frontmatter. Agents must run **Preamble checks #5** (CLI) and **#6** (Playwright/Mobilewright toolchain). When TrueCoverage or application RUM code is in scope, also run **#7** (latest **`@testchimp/rum-js`** / iOS tags / Android JitPack tag vs project install).
 
-**MCP `env`:** `TESTCHIMP_API_KEY` (required for MCP + runner export per **#4**); `TESTCHIMP_PROJECT_ID` (optional for MCP calls; **required** for TrueCoverage RUM `projectId` when not elsewhere in app config — agents read it during instrumentation per [`references/truecoverage.md`](references/truecoverage.md)). **401** or missing-key symptoms → **#4**.
+**MCP `env`:** `TESTCHIMP_API_KEY` (required for MCP + runner/CLI export per **#4**); `TESTCHIMP_BACKEND_URL` (optional; **required to export whenever set** — staging/enterprise/self-hosted; omit only for default SaaS prod); `TESTCHIMP_PROJECT_ID` (optional for MCP calls; **required** for TrueCoverage RUM `projectId` when not elsewhere in app config — agents read it during instrumentation per [`references/truecoverage.md`](references/truecoverage.md)). **401** or missing-key symptoms → **#4** (check backend URL first).
 
 The MCP server exposes tools grouped by area:
 
