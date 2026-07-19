@@ -1,6 +1,6 @@
 # Deps (dependency issues)
 
-Follow this when `get-security-scan-config` returns **`detail.depsCheckConfig`**. Parent orchestrator: [`../security_scans.md`](../security_scans.md).
+Follow this when `get-security-scan-config` returns **`detail.depsCheckConfig`**. Parent orchestrator: [`../run-release-check.md`](../run-release-check.md).
 
 ## Config fields (camelCase)
 

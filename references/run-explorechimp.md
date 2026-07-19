@@ -1,16 +1,18 @@
-# ExploreChimp — exploratory UX analytics on SmartTests
+# /testchimp run explorechimp
+
+**Synonym:** `/testchimp explore` (same workflow **`run-explorechimp`**).
 
 This reference supports **local ExploreChimp** runs: Playwright UI tests drive the browser to **deterministic screen-states**, and `@testchimp/playwright` sends **DOM, screenshot, console, network, and performance metrics** to TestChimp for **UX-oriented bug finding** (layout, visual regressions, usability, accessibility via axe, performance signals, console recorded issues, suspicious network patterns, and similar). Client behavior is implemented in **`@testchimp/playwright`** (`EXPLORECHIMP_ENABLED`, `markScreenState` fixture; **≥ 0.1.8**); analysis is routed via TestChimp backend services.
 
-**P0 — same as all SmartTest runs:** The **process** that executes Playwright/Mobilewright with **`@testchimp/playwright`** must have **`TESTCHIMP_API_KEY`** in its **environment** (not only MCP/IDE). **Resolution order:** SmartTests-root walk-up → host MCP **`mcpServers.*.env.TESTCHIMP_API_KEY`** (never print) → export/inject into the shell, CI job, or wrapper **before** spawn — see **`SKILL.md`** Preamble **#4** and [`testing-process.md`](./testing-process.md) non-negotiables. **Reporter disabled**, **401**, missing-key logs → same remediation.
+**P0 — same as all SmartTest runs:** The **process** that executes Playwright/Mobilewright with **`@testchimp/playwright`** must have **`TESTCHIMP_API_KEY`** in its **environment** (not only MCP/IDE). **Resolution order:** SmartTests-root walk-up → host MCP **`mcpServers.*.env.TESTCHIMP_API_KEY`** (never print) → export/inject into the shell, CI job, or wrapper **before** spawn — see **`SKILL.md`** Preamble **#4** and [`run-qa.md`](./run-qa.md) non-negotiables. **Reporter disabled**, **401**, missing-key logs → same remediation.
 
 ## When to use this doc vs commands
 
 | User intent | Where to go |
 |-------------|-------------|
 | **ExploreChimp as the primary goal** (pick tests, scope, env, interpret results) | This file + user’s scope. Treat semantically like **`/testchimp explore`**: same playbook, with **extra user instructions** on area, depth, or test list when needed. |
-| **Explorations inside full PR QA** | [`testing-process.md`](./testing-process.md) — **Phase 5: Smart regression** after **Phase 4: Validate**; then branch plan **[Phase 2 §7 — ExploreChimp branch plan (yes or documented N/A)](./testing-process.md#7-explorechimp-branch-plan-yes-or-documented-na)** records **`yes`** (default for **new or materially changed UI SmartTests**) or **`N/A`** with one-line rationale. **Phase 6** runs after Phase 5 when **`yes`** on specs that are **new, materially changed, and regression-touched**; then **Phase 7: Cleanup**. |
-| **`/testchimp evolve`** (coverage improvement cycle) | [`evolve-coverage.md`](./evolve-coverage.md) — Use **TrueCoverage** signals (drop-offs, high-duration / high-demand events, automation gaps) to choose **which UI SmartTests** to run with ExploreChimp; **new tests** written in the same evolve cycle are valid targets once stable with **`markScreenState`**. |
+| **Explorations inside full PR QA** | [`run-qa.md`](./run-qa.md) — **Phase 5: Smart regression** after **Phase 4: Validate**; then branch plan **[Phase 2 §7 — ExploreChimp branch plan (yes or documented N/A)](./run-qa.md#7-explorechimp-branch-plan-yes-or-documented-na)** records **`yes`** (default for **new or materially changed UI SmartTests**) or **`N/A`** with one-line rationale. **Phase 6** runs after Phase 5 when **`yes`** on specs that are **new, materially changed, and regression-touched**; then **Phase 7: Cleanup**. |
+| **`/testchimp evolve`** (coverage improvement cycle) | [`upkeep.md`](./upkeep.md) — Use **TrueCoverage** signals (drop-offs, high-duration / high-demand events, automation gaps) to choose **which UI SmartTests** to run with ExploreChimp; **new tests** written in the same evolve cycle are valid targets once stable with **`markScreenState`**. |
 
 ---
 
@@ -30,7 +32,7 @@ ExploreChimp applies to **both** **web** SmartTests (Playwright + **`page`**) an
 
 ExploreChimp **requires** meaningful **`markScreenState`** calls on stable UI—otherwise there is nothing to attribute analytics to.
 
-In this skill’s **`/testchimp test`** flow, **`markScreenState`** placement and atlas vocabulary are defined in **Phase 4: Validate** (see [`testing-process.md`](./testing-process.md)) and in **[`write-smarttests.md`](./write-smarttests.md)**:
+In this skill’s **`/testchimp test`** flow, **`markScreenState`** placement and atlas vocabulary are defined in **Phase 4: Validate** (see [`run-qa.md`](./run-qa.md)) and in **[`write-smarttests.md`](./write-smarttests.md)**:
 
 - **[Screen / state markers (`markScreenState`)](./write-smarttests.md#screen--state-markers-markscreenstate)** — **`installTestChimp`** on the correct barrel (`fixtures/`, `web/fixtures/`, or `mobile/fixtures/`); never named-import `markScreenState` from the runtime package.
 - **Atlas workflow** — MCP **`list-screen-states`** / **`upsert-screen-states`** (shell: **`testchimp list-screen-states`**, **`testchimp upsert-screen-states`** — [`cli.md`](./cli.md) § **Screen-state atlas**) and the **post-authoring validation** sequence in [Test writing workflow §7](./write-smarttests.md#test-writing-workflow).
@@ -73,7 +75,7 @@ Standalone **`/testchimp explore`:** if no branch plan exists, still inform or a
 
 ## Choosing which tests to include
 
-- **`/testchimp test` (Phase 6):** Run ExploreChimp on the **union** of **new**, **materially changed**, and **regression-touched** UI SmartTests from the branch plan **§7** (after **Phase 5: Smart regression**)—not only net-new specs—**filtered by platform scope** when applicable. See [Phase 6: ExploreChimp](./testing-process.md#phase-6-explorechimp) in [`testing-process.md`](./testing-process.md).
+- **`/testchimp test` (Phase 6):** Run ExploreChimp on the **union** of **new**, **materially changed**, and **regression-touched** UI SmartTests from the branch plan **§7** (after **Phase 5: Smart regression**)—not only net-new specs—**filtered by platform scope** when applicable. See [Phase 6: ExploreChimp](./run-qa.md#phase-6-explorechimp) in [`run-qa.md`](./run-qa.md).
 - **PR / branch focus (standalone `/testchimp explore`):** Prefer **new or materially updated** SmartTests on the branch, plus any **linked regression** specs the user names.
 - **User gave an area / feature:** Read specs and existing **`markScreenState`** / **`list-screen-states`** vocabulary to see which **screens and states** each test visits; pick the **minimal** set that covers the requested flows.
 - **One screen:** Pick (or add) a short test that reaches that screen with a marker after the UI stabilizes.
@@ -157,7 +159,7 @@ Mirror **FAQ-worthy** runner issues in **`## Past learnings — authoring & vali
 - [`write-smarttests.md`](./write-smarttests.md) — **`markScreenState`**, atlas MCP tools, authoring order
 - [`cli.md`](./cli.md) — **`testchimp list-screen-states`**, **`testchimp upsert-screen-states`** (§ **Screen-state atlas**)
 - [`platform-scope.md`](./platform-scope.md) — PR-branch **web / ios / android** scope: deduce, inform, or ask (test + explore)
-- [`testing-process.md`](./testing-process.md) — **Phase 4** markers + **Phase 5** Smart regression + **Phase 6** ExploreChimp (**default-on** for UI SmartTest deltas; **[§7](./testing-process.md#7-explorechimp-branch-plan-yes-or-documented-na)** **`yes`** or **`N/A`**) on **new + changed + regression-touched** UI specs
-- [`evolve-coverage.md`](./evolve-coverage.md) — **TrueCoverage → test selection → ExploreChimp** in **`/testchimp evolve`**
+- [`run-qa.md`](./run-qa.md) — **Phase 4** markers + **Phase 5** Smart regression + **Phase 6** ExploreChimp (**default-on** for UI SmartTest deltas; **[§7](./run-qa.md#7-explorechimp-branch-plan-yes-or-documented-na)** **`yes`** or **`N/A`**) on **new + changed + regression-touched** UI specs
+- [`upkeep.md`](./upkeep.md) — **TrueCoverage → test selection → ExploreChimp** in **`/testchimp evolve`**
 - [`fixture-usage.md`](./fixture-usage.md) — `mergeTests` / **`fixtures/index.js`**
 - [`init-testchimp.md`](./init-testchimp.md) — `ai-test-instructions.md` template

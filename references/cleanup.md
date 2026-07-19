@@ -2,7 +2,9 @@
 
 Use this workflow when the user wants to **find semantically similar or likely duplicate SmartTests**, audit them, mark legitimately distinct pairs, and optionally remove true duplicates with strict guardrails.
 
-**Not part of `/testchimp evolve`.** Evolve stays focused on requirement coverage and TrueCoverage gaps ([`evolve-coverage.md`](./evolve-coverage.md)).
+**Standalone** (`/testchimp cleanup`) **or** as an **upkeep** subflow (default upkeep policy includes cleanup after ExploreChimp). Evolve/upkeep covers gaps + exploration + hygiene; this playbook is the cleanup step’s how-to.
+
+> **Composite nesting:** When invoked as a subflow under `/testchimp upkeep` / `evolve`, do **not** open a second Plan → approve cycle — execute cleanup work under the parent composite’s approved plan and reuse its `workflow_execution_id`. Standalone cleanup still uses Analyze → Plan → approve → Execute below.
 
 ## When to run
 

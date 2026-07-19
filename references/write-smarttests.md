@@ -1,6 +1,6 @@
 # /testchimp test
 
-This document explains **how to write SmartTests** for agents during the **Execution phase** of `/testchimp test` (phased flow in [`testing-process.md`](./testing-process.md)). SmartTests are **Playwright-class tests** with optional **intelligent steps** on **web** only. Optional **ExploreChimp** UX analytics reuse the same UI tests when **`markScreenState`** is in place—see **[`exploratory_runs.md`](./exploratory_runs.md)**. Here are the key points:
+This document explains **how to write SmartTests** for agents during the **Execution phase** of `/testchimp test` (phased flow in [`run-qa.md`](./run-qa.md)). SmartTests are **Playwright-class tests** with optional **intelligent steps** on **web** only. Optional **ExploreChimp** UX analytics reuse the same UI tests when **`markScreenState`** is in place—see **[`run-explorechimp.md`](./run-explorechimp.md)**. Here are the key points:
 - Playwright / Mobilewright tests in a **tests** folder mapped in TestChimp platform,
 - **Web:** natural language / intelligent steps via **ai-wright** where appropriate. **Mobile:** deterministic Mobilewright steps only (no ai-wright yet).
 - scenario linking via in-code structured comments in test (for built-in requirement traceability).
@@ -8,9 +8,9 @@ This document explains **how to write SmartTests** for agents during the **Execu
 
 For **full** `ai-wright` API details (options, env vars, troubleshooting), see **[`ai-wright-usage.md`](./ai-wright-usage.md)** — **web projects only**. **Mobile** projects use **Mobilewright** — see **[`mobilewright-smarttests.md`](./mobilewright-smarttests.md)**. **Do not** use **`ai.act` / `ai.verify` / `ai.extract`** on mobile.
 
-For **`plans/`** markdown, see **[`test-planning.md`](./test-planning.md)**.
+For **`plans/`** markdown, see **[`author-plans.md`](./author-plans.md)**.
 
-**Where files go:** Read **`.testchimp-tests`**, then **[`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)** — spec paths (`web/e2e`, `mobile/e2e/common|ios|android`, `api/`), **`shared/`** seed helpers, and which **`fixtures/index.js`** barrel each spec imports. Required during **Plan** and **Execute** ([`testing-process.md`](./testing-process.md)).
+**Where files go:** Read **`.testchimp-tests`**, then **[`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)** — spec paths (`web/e2e`, `mobile/e2e/common|ios|android`, `api/`), **`shared/`** seed helpers, and which **`fixtures/index.js`** barrel each spec imports. Required during **Plan** and **Execute** ([`run-qa.md`](./run-qa.md)).
 
 **Fixtures:** Decide **fixture dependencies** per test during planning; extend the correct barrel (`fixtures/`, `api/fixtures/`, `mobile/fixtures/`, `web/fixtures/`) and **`shared/`** helpers—see **[`fixture-usage.md`](./fixture-usage.md)**. Backend assertions: **[`seeding-endpoints.md`](./seeding-endpoints.md)**.
 
@@ -67,7 +67,7 @@ Recommended takeover loop:
    | `api/` | `./fixtures/index.js` or `../api/fixtures/index.js` |
    | `mobile/e2e/**` | `../../fixtures/index.js` → **`mobile/fixtures/index.js`** |
 
-   **Never** import **`test`** from **`@playwright/test`** or **`@mobilewright/test`** in **`*.spec.*`** — only from the barrel where **`installTestChimp`** was applied ([`fixture-usage.md`](./fixture-usage.md), [`truecoverage.md`](./truecoverage.md)).
+   **Never** import **`test`** from **`@playwright/test`** or **`@mobilewright/test`** in **`*.spec.*`** — only from the barrel where **`installTestChimp`** was applied ([`fixture-usage.md`](./fixture-usage.md), [`instrument-truecoverage.md`](./instrument-truecoverage.md)).
 
    - **Web UI:** `import { ai } from 'ai-wright'` when using intelligent steps.
    - **Mobile UI:** **`screen`** / **`device`** in the callback; no ai-wright ([`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
@@ -184,7 +184,7 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `TESTCHIMP_API_KEY` | Yes | Authenticates to TestChimp; project is inferred from the key. Set in project **`mcp.json`** **`env`** and in the **shell** for local runs — **not** in **`.env-QA`**. |
-| `TESTCHIMP_PROJECT_ID` | For RUM | Stored in the same MCP **`env`** block for TrueCoverage instrumentation (`projectId`); see [`truecoverage.md`](./truecoverage.md). |
+| `TESTCHIMP_PROJECT_ID` | For RUM | Stored in the same MCP **`env`** block for TrueCoverage instrumentation (`projectId`); see [`instrument-truecoverage.md`](./instrument-truecoverage.md). |
 
 **Environment (Playwright / ai-wright in the same session):** Export the **same** **`TESTCHIMP_API_KEY`** in the shell when running `npx playwright …` so reporters, **`ai.*`** steps, and MCP-backed flows share one project key. For **ai-wright**, agents should **only** instruct setting **`TESTCHIMP_API_KEY`** (not user PAT / mail-based auth). On **401** responses, configure the key via TestChimp → **Project Settings** → **Key management**.
 
@@ -337,7 +337,7 @@ Shell equivalent: `testchimp get-execution-history --scenario-id <uuid> --enviro
 }
 ```
 
-During **Validate** (see [`testing-process.md`](./testing-process.md) Phase 4): run **`testchimp list-screen-states`** (or MCP **`list-screen-states`**) **before** marker edits; run the spec **headed** to align names with the live UI; call **`testchimp upsert-screen-states`** (or MCP **`upsert-screen-states`**) **before** adding new **`(screen, state)`** pairs to the spec; then add **`markScreenState`** to the test callback and **`await markScreenState(...)`** on the correct lines ([Screen / state markers](#screen--state-markers-markscreenstate)).
+During **Validate** (see [`run-qa.md`](./run-qa.md) Phase 4): run **`testchimp list-screen-states`** (or MCP **`list-screen-states`**) **before** marker edits; run the spec **headed** to align names with the live UI; call **`testchimp upsert-screen-states`** (or MCP **`upsert-screen-states`**) **before** adding new **`(screen, state)`** pairs to the spec; then add **`markScreenState`** to the test callback and **`await markScreenState(...)`** on the correct lines ([Screen / state markers](#screen--state-markers-markscreenstate)).
 
 ---
 
@@ -358,7 +358,7 @@ test('settings notifications', async ({ page, markScreenState }) => {
 ```
 
 - **Second argument optional** — omit it to record a default state: `await markScreenState('Dashboard')` (treated as **`default`** downstream).
-- With **`EXPLORECHIMP_ENABLED`**, the same fixture drives **ExploreChimp** local analytics (env vars, sources, network regex, batch id—see **[`exploratory_runs.md`](./exploratory_runs.md)**); with it off, it still emits a **`test.step`** so traces show `ScreenState: …`.
+- With **`EXPLORECHIMP_ENABLED`**, the same fixture drives **ExploreChimp** local analytics (env vars, sources, network regex, batch id—see **[`run-explorechimp.md`](./run-explorechimp.md)**); with it off, it still emits a **`test.step`** so traces show `ScreenState: …`.
 - A **screen** is a logical view (for example login, dashboard, checkout), not strictly URL bound.
 - A **state** is a meaningful variant within a screen (for example empty cart vs cart with items).
 - Place `markScreenState` only after the UI has settled to a stable state; do not mark loading spinners/skeleton/transient overlays as durable states.

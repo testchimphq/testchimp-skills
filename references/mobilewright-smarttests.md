@@ -10,8 +10,8 @@ Use this reference when **`.testchimp-tests`** has **`project_type=mobile`**, **
 | Primary UI fixture | `page` | `screen`, `device` |
 | Config | `playwright.config.js` | `mobilewright.config.ts` (`setup`, `api`, `ios`, `android`) |
 | AI steps (ai-wright) | Supported | **Not supported** |
-| TrueCoverage | `@testchimp/rum-js` + `installTestChimp` on web barrel | TestChimpRum in app + **`installTestChimp(..., { uiFixture: 'screen' })`** on **`mobile/fixtures/index.js`**; **`projects[].use.platform`** (`ios`/`android`) — [`truecoverage.md`](./truecoverage.md) |
-| ExploreChimp | `markScreenState` + `page` | Same fixture on **`screen`** — [`exploratory_runs.md`](./exploratory_runs.md) |
+| TrueCoverage | `@testchimp/rum-js` + `installTestChimp` on web barrel | TestChimpRum in app + **`installTestChimp(..., { uiFixture: 'screen' })`** on **`mobile/fixtures/index.js`**; **`projects[].use.platform`** (`ios`/`android`) — [`instrument-truecoverage.md`](./instrument-truecoverage.md) |
+| ExploreChimp | `markScreenState` + `page` | Same fixture on **`screen`** — [`run-explorechimp.md`](./run-explorechimp.md) |
 | Traceability | `// @Scenario: #TS-…` | Same |
 
 ## Where to put tests
@@ -67,4 +67,4 @@ See [`environment-management.md`](./environment-management.md) for device/simula
 - [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)
 - [`fixture-usage.md`](./fixture-usage.md)
 - [`write-smarttests.md`](./write-smarttests.md)
-- [`exploratory_runs.md`](./exploratory_runs.md)
+- [`run-explorechimp.md`](./run-explorechimp.md)

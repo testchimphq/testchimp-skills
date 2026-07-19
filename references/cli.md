@@ -192,7 +192,7 @@ Project **screen / state vocabulary** for **`markScreenState`** checkpoints. Sam
 
 **When to run:** **before** adding or renaming **`markScreenState`** calls in specs (Validate / Phase 4), per [`write-smarttests.md`](./write-smarttests.md) §7 — fetch atlas first, run the spec **headed** to align names with the live UI, **`upsert-screen-states`** for any new **`(screen, state)`** pairs, then edit the test.
 
-Authoring workflow (headed UI inspection, order of operations): [`write-smarttests.md`](./write-smarttests.md) §7 and **Phase 4** in [`testing-process.md`](./testing-process.md).
+Authoring workflow (headed UI inspection, order of operations): [`write-smarttests.md`](./write-smarttests.md) §7 and **Phase 4** in [`run-qa.md`](./run-qa.md).
 
 ### `list-screen-states`
 
@@ -277,7 +277,7 @@ testchimp get-release-details --version '1.2.0'
 
 Agents must **honour** the matching playbook under [`security/`](./security/). Scanners run locally — there are no `run-*-scan` tools; use `report-*-findings` only.
 
-See [`security_scans.md`](./security_scans.md).
+See [`run-release-check.md`](./run-release-check.md).
 
 ### `update-scan-progress`
 
@@ -335,7 +335,7 @@ Each scan is a **single** checker type; the category playbook sets `COMPLETED` a
 | `--id <scanId>` | **Yes** | `scanId` |
 | `--report-file <path>` | **Yes** | (file → `reportJson`) |
 
-See [`security_scans.md`](./security_scans.md).
+See [`run-release-check.md`](./run-release-check.md).
 
 ### `upsert-screen-states`
 
@@ -455,7 +455,7 @@ testchimp report-requirement-quality-findings \
   --ordinal-id 42
 ```
 
-See [`analyze-requirement-quality.md`](./analyze-requirement-quality.md) for the **`/testchimp analyze requirement`** agent playbook.
+See [`run-requirement-quality-checks.md`](./run-requirement-quality-checks.md) for the **`/testchimp analyze requirement`** agent playbook.
 
 ### `get-manual-session-details`
 
@@ -924,7 +924,7 @@ Prod iOS real users vs QA iOS automation:
 testchimp get-truecoverage-events --json-input '{"baseExecutionScope":{"environment":"prod","platform":"IOS_EXECUTION_PLATFORM","timeWindow":{"relativeWindow":"2592000s"}},"comparisonExecutionScope":{"environment":"QA","platform":"IOS_EXECUTION_PLATFORM","timeWindow":{"relativeWindow":"2592000s"},"automationEmitsOnly":true}}'
 ```
 
-Deeper product context: [truecoverage.md](./truecoverage.md).
+Deeper product context: [instrument-truecoverage.md](./instrument-truecoverage.md).
 
 ---
 

@@ -1,6 +1,6 @@
 # testchimp-skills
 
-TestChimp skill for **`/testchimp`** flows: `/init`, `/test`, `/evolve`, plus **TrueCoverage** (`/testchimp setup truecoverage`, `/testchimp instrument` — see `references/truecoverage.md`). Use with **`@testchimp/cli`** and **`TESTCHIMP_API_KEY`**.
+TestChimp skill for **`/testchimp`** flows: `/init`, `/test`, `/evolve`, plus **TrueCoverage** (`/testchimp setup truecoverage`, `/testchimp instrument` — see `references/instrument-truecoverage.md`). Use with **`@testchimp/cli`** and **`TESTCHIMP_API_KEY`**.
 
 Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environments-skill](https://github.com/bunnyshell/bunnyshell-environments-skill)): **`SKILL.md` at the repository root**, with **`references/`** and **`assets/`** beside it. **`name` in `SKILL.md` is `testchimp`**, so the install directory must be named **`testchimp`** (see [Agent Skills spec — `name` matches directory](https://agentskills.io/specification)).
 
@@ -17,12 +17,19 @@ testchimp-skills/
 ├── LICENSE
 ├── references/
 │   ├── init-testchimp.md
+│   ├── run-qa.md
+│   ├── upkeep.md
+│   ├── author-plans.md
+│   ├── run-explorechimp.md
+│   ├── instrument-truecoverage.md
+│   ├── connect-to-test-env.md
+│   ├── create-policy.md
+│   ├── policies-and-traceability.md
 │   ├── write-smarttests.md
-│   ├── evolve-coverage.md
-│   ├── truecoverage.md
 │   ├── cli.md
-│   └── ai-wright-usage.md
+│   └── …
 └── assets/
+    ├── policies/
     ├── template_playwright.config.js
     └── sample-mcp.json
 ```

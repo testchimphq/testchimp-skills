@@ -1,6 +1,6 @@
 # DAST (dynamic application security)
 
-Follow this when `get-security-scan-config` returns top-level or `detail` **`dastCheckConfig`** (or legacy `detail.securityScanDetail` with dynamic checks). Parent orchestrator: [`../security_scans.md`](../security_scans.md).
+Follow this when `get-security-scan-config` returns top-level or `detail` **`dastCheckConfig`** (or legacy `detail.securityScanDetail` with dynamic checks). Parent orchestrator: [`../run-release-check.md`](../run-release-check.md).
 
 ## Config fields (camelCase)
 

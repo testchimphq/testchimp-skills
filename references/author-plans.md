@@ -1,4 +1,6 @@
-# /testchimp plan
+# /testchimp author plans
+
+**Synonym:** `/testchimp plan` (same workflow **`author-plans`**).
 
 This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and `@Scenario` links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
 
@@ -128,4 +130,4 @@ When the user asks for **`/testchimp plan`** (or equivalent: fill gaps in the te
 
 - **[`SKILL.md`](../SKILL.md)** — command routing and MCP tool list.
 - **[`write-smarttests.md`](./write-smarttests.md)** — SmartTests, coverage MCP, `@Scenario` comments, platform vs repo paths for **`tests/`**.
-- **[`evolve-coverage.md`](./evolve-coverage.md)** — `/testchimp evolve`: **Analyze → Plan → Execute** with phase gates; persisted plans under `<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/plan_<YYYY-MM-DD>_<nn>.md`.
+- **[`upkeep.md`](./upkeep.md)** — `/testchimp evolve`: **Analyze → Plan → Execute** with phase gates; persisted plans under `<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/plan_<YYYY-MM-DD>_<nn>.md`.

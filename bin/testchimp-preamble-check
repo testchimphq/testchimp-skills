@@ -53,7 +53,8 @@ _say "TESTCHIMP_SKILL_LOCAL_VERSION: ${LOCAL_VERSION:-unknown}"
 _say "TESTCHIMP_SKILL_REMOTE_VERSION: ${REMOTE_VERSION:-unknown}"
 
 if command -v node >/dev/null 2>&1 && [ -n "${LOCAL_VERSION:-}" ] && [ -n "${REMOTE_VERSION:-}" ]; then
-  node - "$LOCAL_VERSION" "$REMOTE_VERSION" <<'NODE' >/dev/null 2>&1 || true
+  _upgrade_rc=0
+  node - "$LOCAL_VERSION" "$REMOTE_VERSION" <<'NODE' >/dev/null 2>&1 || _upgrade_rc=$?
 const [a,b] = process.argv.slice(2);
 function cmp(x,y){
   const pa=x.split('.').map(n=>parseInt(n,10));
@@ -63,8 +64,25 @@ function cmp(x,y){
 }
 process.exit(cmp(a,b) < 0 ? 10 : 0);
 NODE
-  if [ "${PIPESTATUS[0]}" -eq 10 ]; then
-    _warn "UPGRADE_AVAILABLE: run: git -C \"$SKILL_DIR\" pull origin main"
+  if [ "${_upgrade_rc}" -eq 10 ]; then
+    _warn "UPGRADE_AVAILABLE: run: git -C \"$SKILL_DIR\" pull origin main  (or /testchimp skill upgrade)"
+    # Strongly advise major 1.0.0+ (policy workflows) — do not hard-stop
+    _advise_rc=0
+    node - "$LOCAL_VERSION" "$REMOTE_VERSION" <<'NODE' >/dev/null 2>&1 || _advise_rc=$?
+const [local, remote] = process.argv.slice(2);
+function maj(v){ return parseInt(String(v).split('.')[0],10)||0; }
+function cmp(x,y){
+  const pa=x.split('.').map(n=>parseInt(n,10));
+  const pb=y.split('.').map(n=>parseInt(n,10));
+  for(let i=0;i<3;i++){ if((pa[i]||0)!==(pb[i]||0)) return (pa[i]||0)-(pb[i]||0); }
+  return 0;
+}
+const needAdvise = maj(remote) >= 1 && cmp(local, '1.0.0') < 0;
+process.exit(needAdvise ? 11 : 0);
+NODE
+    if [ "${_advise_rc}" -eq 11 ]; then
+      _warn "STRONGLY_ADVISE_UPGRADE: remote skill is >= 1.0.0 (policy-backed workflows) and local is < 1.0.0 — run /testchimp skill upgrade (synonym /testchimp update). Continuing without upgrade is allowed but policy/traceability tools may be missing."
+    fi
   fi
 fi
 

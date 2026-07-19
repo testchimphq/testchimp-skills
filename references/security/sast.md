@@ -1,6 +1,6 @@
 # SAST (static code checks)
 
-Follow this when `get-security-scan-config` returns **`detail.sastCheckConfig`**. Parent orchestrator: [`../security_scans.md`](../security_scans.md).
+Follow this when `get-security-scan-config` returns **`detail.sastCheckConfig`**. Parent orchestrator: [`../run-release-check.md`](../run-release-check.md).
 
 ## Config fields (camelCase)
 

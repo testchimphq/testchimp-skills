@@ -1,4 +1,6 @@
-# Analyze requirement quality (DeFOSPAM — local agent)
+# `/testchimp analyze requirement quality` (DeFOSPAM — local agent)
+
+**Workflow id:** `run-requirement-quality-checks`.
 
 Use this playbook when the user asks:
 
@@ -91,6 +93,8 @@ Wire JSON uses **camelCase** (protobuf JsonFormat):
 ```json
 {
   "kind": "REWORD_EXCERPT",
+  "targetEntityType": "STORY",
+  "targetOrdinalId": 42,
   "summary": "…",
   "agentPrompt": "Imperative instructions for an apply agent…",
   "rationale": "…",
@@ -107,9 +111,9 @@ Wire JSON uses **camelCase** (protobuf JsonFormat):
 
 | `kind` | Notes |
 |--------|--------|
-| **`REWORD_EXCERPT`** | **Must** include **`replacements`** with **`originalExcerpt`** + **`suggestedText`**. |
-| **`REWRITE_SECTION`**, **`ADD_CONTENT`**, **`CREATE_SCENARIO`**, **`CREATE_STORY`**, **`LINK_OR_UNLINK`**, **`OTHER`** | Use **`agentPrompt`**; replacements optional unless excerpt-based. |
-| **`DELETE_SCENARIO`**, **`DELETE_STORY`** | **Destructive** — server sets **`isDestructive: true`**. Require explicit user approval before any apply/delete workflow; never auto-apply. |
+| **`REWORD_EXCERPT`** | **Must** include **`replacements`** with **`originalExcerpt`** + **`suggestedText`**. **Must** set **`targetEntityType`** (`STORY`\|`SCENARIO`) and **`targetOrdinalId`** for the entity being edited. |
+| **`REWRITE_SECTION`**, **`ADD_CONTENT`**, **`CREATE_SCENARIO`**, **`CREATE_STORY`**, **`LINK_OR_UNLINK`**, **`OTHER`** | Use **`agentPrompt`**; replacements optional unless excerpt-based. Still **must** set **`targetEntityType`** + **`targetOrdinalId`**. |
+| **`DELETE_SCENARIO`**, **`DELETE_STORY`** | **Destructive** — server sets **`isDestructive: true`**. Require explicit user approval before any apply/delete workflow; never auto-apply. Still **must** set target fields. |
 
 Always set **`agentPrompt`** with imperative instructions. Server derives **`isDestructive`** from kind for DELETE_* kinds.
 
@@ -139,6 +143,6 @@ testchimp report-requirement-quality-findings --json-input @report.json
 
 ## Related
 
-- Plan authoring: [`test-planning.md`](./test-planning.md)  
+- Plan authoring: [`author-plans.md`](./author-plans.md)  
 - CLI reference: [`cli.md`](./cli.md) § Requirement quality  
 - Preamble **#4**: export **`TESTCHIMP_API_KEY`** (+ **`TESTCHIMP_BACKEND_URL`** when configured) before CLI calls  

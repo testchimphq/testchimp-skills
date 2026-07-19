@@ -1,4 +1,8 @@
-# /testchimp evolve
+# /testchimp upkeep
+
+**Synonym:** `/testchimp evolve` (same workflow **`upkeep`** — use either prompt). Legacy **`/testchimp audit`** → same.
+
+> **Workflow overlay (skill ≥ 1.0.0)** — **Workflow id:** `upkeep` (canonical prompt `/testchimp upkeep`; synonym `/testchimp evolve`). **Policy:** `plans/knowledge/policies/upkeep.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default subflows: author-plans → connect-to-test-env → fix-coverage-gaps → run-explorechimp → cleanup → instrument-truecoverage. Persist a **ULID** `workflow_execution_id` on the upkeep/evolve plan **before Execute**; on mutating actions call **`report-agent-action`** (best-effort). Details: [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 Systematically improve **requirement coverage**, **execution health**, **TrueCoverage** (real usage vs automated tests), and—when in scope—**targeted ExploreChimp UX analytics** on critical UI slices informed by those signals. This is **not** a passive review: the agent is responsible for **running and maintaining the QA surface area** of the project—seed and probe endpoints, mocks, fixtures, SmartTests and API tests, TrueCoverage instrumentation, optional **ExploreChimp** runs on high-impact journeys, and test-plan artifacts (user stories / scenarios) where the product is under-specified.
 
@@ -14,7 +18,7 @@ Systematically improve **requirement coverage**, **execution health**, **TrueCov
 
 ## Tooling
 
-- **MCP:** Same tools as in **SKILL.md** (coverage & execution, TrueCoverage analytics, planning). JSON request bodies use **camelCase** field names. **ExploreChimp** runs use Playwright + env vars (not an MCP “run exploration” tool)—see [`exploratory_runs.md`](./exploratory_runs.md).
+- **MCP:** Same tools as in **SKILL.md** (coverage & execution, TrueCoverage analytics, planning). JSON request bodies use **camelCase** field names. **ExploreChimp** runs use Playwright + env vars (not an MCP “run exploration” tool)—see [`run-explorechimp.md`](./run-explorechimp.md).
 - **CLI:** [`cli.md`](./cli.md) — `testchimp get-requirement-coverage`, `get-execution-history`, TrueCoverage subcommands, etc. Prefer **`--json-input`** (or `@file.json`) for nested bodies such as **`baseExecutionScope`** / **`comparisonExecutionScope`**.
 - **Authentication:** Export **`TESTCHIMP_API_KEY`** in the shell that runs the CLI **and** any Playwright/Mobilewright child process using **`@testchimp/playwright`** (see **`SKILL.md`** Preamble **#4** / **cli.md** — agent shells often do not inherit IDE MCP env).
 
@@ -23,8 +27,8 @@ Systematically improve **requirement coverage**, **execution health**, **TrueCov
 ## Prerequisites
 
 1. **Mapped plans root:** Resolve **`<MAPPED_PLANS_ROOT>`** as the directory containing the **`.testchimp-plans`** marker (same rule as **`/testchimp test`** plan persistence in **SKILL.md**). All evolve plan files live under that root.
-2. **TrueCoverage:** Skip TrueCoverage **Analyze** steps **only** when **`### TrueCoverage Plan`** **explicitly** records **opt-out / disabled**. If the section is missing, empty, or only says **deferred**, treat TrueCoverage as **in scope** and follow **`ExecutionScope`** and metadata rules in [`truecoverage.md`](./truecoverage.md).
-3. **Guardrails:** Story/scenario IDs and MCP ordering follow **SKILL.md** → Agent guardrails and [`test-planning.md`](./test-planning.md) (**create → write with `id:` → update**; never omit `id:`).
+2. **TrueCoverage:** Skip TrueCoverage **Analyze** steps **only** when **`### TrueCoverage Plan`** **explicitly** records **opt-out / disabled**. If the section is missing, empty, or only says **deferred**, treat TrueCoverage as **in scope** and follow **`ExecutionScope`** and metadata rules in [`instrument-truecoverage.md`](./instrument-truecoverage.md).
+3. **Guardrails:** Story/scenario IDs and MCP ordering follow **SKILL.md** → Agent guardrails and [`author-plans.md`](./author-plans.md) (**create → write with `id:` → update**; never omit `id:`).
 4. **Environment contract (strict, before planning):** Before starting **Analyze** or authoring the evolve plan, read `plans/knowledge/ai-test-instructions.md` and extract the project's pre-agreed environment decision points from **`## Environment Provision Strategy`** (for example local spin-up, Bunnyshell/EaaS, or staging/branch environment rules). Use that guidance to shape the plan and execution ordering. Re-read the same sections again immediately before any test authoring/execution work, and follow them exactly (no improvised target URLs or provisioning flow).
 
 ---
@@ -64,7 +68,7 @@ flowchart LR
 
 ### TrueCoverage (when enabled)
 
-See **`ExecutionScope`** in [`truecoverage.md`](./truecoverage.md) and wire shapes in [`cli.md`](./cli.md) § TrueCoverage:
+See **`ExecutionScope`** in [`instrument-truecoverage.md`](./instrument-truecoverage.md) and wire shapes in [`cli.md`](./cli.md) § TrueCoverage:
 
 - **`baseExecutionScope`** — real-user / primary environment (frequency, funnels, impact).
 - **`comparisonExecutionScope`** — where automated tests run; set **`automationEmitsOnly: true`** on comparison (and on **`coverage_scope`** when drilling) so “covered” means **test-tagged emits only**. Before calling those, call list_rum_environments to get the list of environments - so that you know what env to set for base and comparison scopes.
@@ -76,7 +80,7 @@ See **`ExecutionScope`** in [`truecoverage.md`](./truecoverage.md) and wire shap
 1. **`list-rum-environments`** — pick environment tags for scopes.
 2. **`get-truecoverage-events`** — `baseExecutionScope` + optional `comparisonExecutionScope` (each with nested `timeWindow`).
 3. For high-impact or unclear events: **`get-truecoverage-event-details`**, **`get-truecoverage-child-event-tree`**, **`get-truecoverage-event-transition`**, **`get-truecoverage-event-time-series`**.
-4. **`get-truecoverage-event-metadata-keys`** / **`get-truecoverage-session-metadata-keys`** — validate slicing dimensions (including **dot-scoped** entity metadata per [`truecoverage.md`](./truecoverage.md) → *Dot-scoped metadata*).
+4. **`get-truecoverage-event-metadata-keys`** / **`get-truecoverage-session-metadata-keys`** — validate slicing dimensions (including **dot-scoped** entity metadata per [`instrument-truecoverage.md`](./instrument-truecoverage.md) → *Dot-scoped metadata*).
 
 ### Requirement coverage
 
@@ -94,16 +98,16 @@ See **`ExecutionScope`** in [`truecoverage.md`](./truecoverage.md) and wire shap
 
 **How to pick tests (read-only in Phase 1; commit choices in Phase 2):**
 
-1. From **TrueCoverage** outputs, identify **high-impact UI-related signals**: e.g. **funnel drop-offs**, **high-duration** events, **high-demand** / high-frequency steps, transitions with sparse automation coverage (**`comparisonExecutionScope`** with **`automationEmitsOnly: true`** vs base—see [`truecoverage.md`](./truecoverage.md)).
+1. From **TrueCoverage** outputs, identify **high-impact UI-related signals**: e.g. **funnel drop-offs**, **high-duration** events, **high-demand** / high-frequency steps, transitions with sparse automation coverage (**`comparisonExecutionScope`** with **`automationEmitsOnly: true`** vs base—see [`instrument-truecoverage.md`](./instrument-truecoverage.md)).
 2. **Map events to product areas** (routes, features, entity metadata slices) using event titles, metadata keys, transition trees, and time series—same mental model as fixture/test planning.
-3. **Find or plan SmartTests** that **drive the browser through those areas** with stable **`markScreenState`** checkpoints ([`write-smarttests.md`](./write-smarttests.md), Phase 4 / atlas rules in [`testing-process.md`](./testing-process.md)). Prefer **existing** specs that already reach the slice; if the evolve plan adds **new** tests for under-covered slices, those **new tests are valid exploration vehicles** once they pass and markers exist.
+3. **Find or plan SmartTests** that **drive the browser through those areas** with stable **`markScreenState`** checkpoints ([`write-smarttests.md`](./write-smarttests.md), Phase 4 / atlas rules in [`run-qa.md`](./run-qa.md)). Prefer **existing** specs that already reach the slice; if the evolve plan adds **new** tests for under-covered slices, those **new tests are valid exploration vehicles** once they pass and markers exist.
 4. **Defer or `N/A`:** Pure **API-only** gaps, **explicit TrueCoverage opt-out**, or no UI surface for the signal—document in the evolve plan.
 
-Full operator checklist, env vars, and **`ai-test-instructions.md` → `## ExploreChimp`**: [`exploratory_runs.md`](./exploratory_runs.md).
+Full operator checklist, env vars, and **`ai-test-instructions.md` → `## ExploreChimp`**: [`run-explorechimp.md`](./run-explorechimp.md).
 
 ### Phase 1 gate (before Phase 2)
 
-Do **not** open Phase 2 until **all** are satisfied. Same bar as [`init-testchimp.md`](./init-testchimp.md) and [`testing-process.md`](./testing-process.md): each line **done** or **`N/A`** + **one-line justification** (record in chat or draft notes for the plan file).
+Do **not** open Phase 2 until **all** are satisfied. Same bar as [`init-testchimp.md`](./init-testchimp.md) and [`run-qa.md`](./run-qa.md): each line **done** or **`N/A`** + **one-line justification** (record in chat or draft notes for the plan file).
 
 - [ ] TrueCoverage subsection **skipped intentionally** (**explicit** opt-out in `### TrueCoverage Plan` + user OK) **or** scopes chosen and at least one pass of **`get-truecoverage-events`** completed.
 - [ ] Requirement coverage pulled with gap-friendly flags **or** scoped intentionally narrow with user direction.
@@ -140,13 +144,13 @@ index: "01"
 Each section should include **rationale** (why it matters for this run) and a **markdown checklist** of concrete action items.
 
 1. **Analysis summary** — Bullets: key signals (TrueCoverage, requirements, execution), top risks, what surprised you.
-2. **TrueCoverage instrumentation** — Read the **existing** **`plans/knowledge/truecoverage-instrument-progress.md`** first: it holds **pre-identified** work, including items that are **planned but not yet implemented**. In this evolve cycle, **choose from that backlog** (and add any newly discovered gaps from Phase 1), ordered by **business priority** as you judge. Then list concrete work: new or updated event **titles** and **metadata** (web: **`testchimp.emit`**; iOS/Android: **`TestChimpRum.emit`** or equivalent) with **dot-scoped** entity keys where applicable ([`truecoverage.md`](./truecoverage.md)). Link/update **`plans/knowledge/truecoverage-instrument-progress.md`** and **`plans/events/*.event.md`** as items land or status changes. Every **`*.event.md`** must include a **`## Rationale`** body section (instrumentation intent, hypotheses, business criticality, scenario/story links) so later MCP analysis stays tied to planning context—see **Event documentation** in [`truecoverage.md`](./truecoverage.md).
+2. **TrueCoverage instrumentation** — Read the **existing** **`plans/knowledge/truecoverage-instrument-progress.md`** first: it holds **pre-identified** work, including items that are **planned but not yet implemented**. In this evolve cycle, **choose from that backlog** (and add any newly discovered gaps from Phase 1), ordered by **business priority** as you judge. Then list concrete work: new or updated event **titles** and **metadata** (web: **`testchimp.emit`**; iOS/Android: **`TestChimpRum.emit`** or equivalent) with **dot-scoped** entity keys where applicable ([`instrument-truecoverage.md`](./instrument-truecoverage.md)). Link/update **`plans/knowledge/truecoverage-instrument-progress.md`** and **`plans/events/*.event.md`** as items land or status changes. Every **`*.event.md`** must include a **`## Rationale`** body section (instrumentation intent, hypotheses, business criticality, scenario/story links) so later MCP analysis stays tied to planning context—see **Event documentation** in [`instrument-truecoverage.md`](./instrument-truecoverage.md).
 3. **Seed / probe endpoints and mocks** — Endpoints or **`page.route`** / AIMock changes needed to support new world-states of entities identified and untested.
 4. **Fixtures** — Playwright fixture work tied to **observed metadata slices** (e.g. users without FOP if production shows that slice on checkout).
 5. **New tests** — SmartTests / API tests; prioritize by **signals + requirement gaps + business criticality**.
 6. **Updates to existing tests** — Behavior drift, failing tests, reporter/scenario links.
 7. **Planning debt** — User stories / scenarios for under-specified areas (create via MCP per guardrails before writing traced tests).
-8. **ExploreChimp (targeted UX exploration)** — Whether to run **ExploreChimp** this cycle; **which UI specs** (existing and/or **new** SmartTests from section 5 once implemented); how each choice ties to **TrueCoverage** signals (drop-off, duration, demand, automation gap). Record **`N/A`** when opt-out, API-only cycle, or user declines extra runtime. Require **user agreement** for **yes** (same bar as infra cost). Execution detail: [`exploratory_runs.md`](./exploratory_runs.md); persist regex/source decisions under **`plans/knowledge/ai-test-instructions.md` → `## ExploreChimp`**.
+8. **ExploreChimp (targeted UX exploration)** — Whether to run **ExploreChimp** this cycle; **which UI specs** (existing and/or **new** SmartTests from section 5 once implemented); how each choice ties to **TrueCoverage** signals (drop-off, duration, demand, automation gap). Record **`N/A`** when opt-out, API-only cycle, or user declines extra runtime. Require **user agreement** for **yes** (same bar as infra cost). Execution detail: [`run-explorechimp.md`](./run-explorechimp.md); persist regex/source decisions under **`plans/knowledge/ai-test-instructions.md` → `## ExploreChimp`**.
 
 For section 2, apply this guardrail:
 
@@ -186,7 +190,7 @@ Follow this **order** when coding (dependencies first):
 2. **Test plan updates** — User stories / scenarios (new or revised).
 3. **Test infra** — Fixtures, mocks.
 4. **Test updates** — Updates to existing tests; then new tests.
-5. **ExploreChimp (optional, plan-gated)** — When section **8** is not **`N/A`**: after **new/changed UI tests pass** and **`markScreenState`** / atlas work for those specs is in good shape (same bar as [`testing-process.md`](./testing-process.md) **Validate** for touched flows), run **ExploreChimp** per [`exploratory_runs.md`](./exploratory_runs.md) on the **planned spec list**, using **`TESTCHIMP_BATCH_INVOCATION_ID`**, **`EXPLORECHIMP_ENABLED`**, and persisted **`## ExploreChimp`** settings. **New tests authored in this evolve cycle** should be included once they are stable exploration vehicles.
+5. **ExploreChimp (optional, plan-gated)** — When section **8** is not **`N/A`**: after **new/changed UI tests pass** and **`markScreenState`** / atlas work for those specs is in good shape (same bar as [`run-qa.md`](./run-qa.md) **Validate** for touched flows), run **ExploreChimp** per [`run-explorechimp.md`](./run-explorechimp.md) on the **planned spec list**, using **`TESTCHIMP_BATCH_INVOCATION_ID`**, **`EXPLORECHIMP_ENABLED`**, and persisted **`## ExploreChimp`** settings. **New tests authored in this evolve cycle** should be included once they are stable exploration vehicles.
 
 ### Post-implementation completion checklist (required)
 
@@ -204,9 +208,9 @@ Then complete **Verification** and **Closure** below.
 
 ### Verification
 
-- Run **new or changed** tests per **`plans/knowledge/ai-test-instructions.md`** (local vs CI, env bring-up, headed vs headless—follow what the project recorded; consult **`## Past learnings — authoring & validation (FAQ)`** when bring-up or URLs fail—[`testing-process.md`](./testing-process.md#binding-ai-test-instructions-environment-and-faq-playbook)).
+- Run **new or changed** tests per **`plans/knowledge/ai-test-instructions.md`** (local vs CI, env bring-up, headed vs headless—follow what the project recorded; consult **`## Past learnings — authoring & validation (FAQ)`** when bring-up or URLs fail—[`run-qa.md`](./run-qa.md#binding-ai-test-instructions-environment-and-faq-playbook)).
 - For SmartTest details, see [`write-smarttests.md`](./write-smarttests.md).
-- Before **ExploreChimp**, confirm **UI** specs used for exploration have appropriate **`markScreenState`** coverage for the flows you are analyzing (same bar as **Phase 4: Validate** in [`testing-process.md`](./testing-process.md)). In **`/testchimp test`**, **Phase 6** ExploreChimp is **default-on** for UI SmartTest deltas unless branch plan **[§7](./testing-process.md#7-explorechimp-branch-plan-yes-or-documented-na)** records **`N/A`** with rationale; run after **Phase 5: Smart regression** on **new + changed + regression-touched** specs (evolve remains plan-gated per evolve plan section **8**).
+- Before **ExploreChimp**, confirm **UI** specs used for exploration have appropriate **`markScreenState`** coverage for the flows you are analyzing (same bar as **Phase 4: Validate** in [`run-qa.md`](./run-qa.md)). In **`/testchimp test`**, **Phase 6** ExploreChimp is **default-on** for UI SmartTest deltas unless branch plan **[§7](./run-qa.md#7-explorechimp-branch-plan-yes-or-documented-na)** records **`N/A`** with rationale; run after **Phase 5: Smart regression** on **new + changed + regression-touched** specs (evolve remains plan-gated per evolve plan section **8**).
 
 ### Closure
 

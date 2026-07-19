@@ -1,4 +1,6 @@
-# Security scans (release checks)
+# `/testchimp run release check` / security scans
+
+**Workflow id:** `run-release-check` (also: `/testchimp run security scan for <scan_id>`).
 
 Use this playbook when the user (or Release Checks modal) asks to run:
 

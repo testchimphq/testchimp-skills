@@ -119,5 +119,5 @@ During **Phase 2 (plan)**, list adding **`fixtures/index.js`** (if missing) and 
 
 - [`init-testchimp.md`](./init-testchimp.md) — phased init, Key Areas 1–2 & 6.
 - [`write-smarttests.md`](./write-smarttests.md) — layout and authoring.
-- [`truecoverage.md`](./truecoverage.md) — RUM / TrueCoverage (app-side).
+- [`instrument-truecoverage.md`](./instrument-truecoverage.md) — RUM / TrueCoverage (app-side).
 - [`assets/template_playwright.config.js`](../assets/template_playwright.config.js) — canonical Playwright projects layout for SmartTests.

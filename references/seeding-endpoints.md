@@ -14,7 +14,7 @@ Before marking **Seed endpoint updates** as `N/A` in a branch plan, work top-dow
 2. **Search** existing seed/read/teardown routes and **`fixtures/`** for each line item. If nothing implements a line item, you need a **new or updated** endpoint or fixture—**not** `N/A`.
 3. **Prefer extending** an existing seed route with a new payload shape or idempotent branch over duplicating routes; document the delta in the plan’s consolidated **System infra updates**.
 4. **Teardown and idempotency:** if tests run in parallel or with retries, specify how seeds avoid collisions (`testInfo` labels, natural keys) and what teardown resets—see **Idempotency and safety** below.
-5. **After UI-heavy flows**, if **Assert** needs backend truth, pair seed work with **read/probe** endpoints; implement probes in the same batched **Execute** pass as seeds ([`testing-process.md`](./testing-process.md) → Batched order).
+5. **After UI-heavy flows**, if **Assert** needs backend truth, pair seed work with **read/probe** endpoints; implement probes in the same batched **Execute** pass as seeds ([`run-qa.md`](./run-qa.md) → Batched order).
 
 Skipping seed (or mocks) work “to save time” while Arrange assumes non-default data is a **hard failure mode** for `/testchimp test`; treat missing seeds as **Execute blockers** until implemented.
 

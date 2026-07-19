@@ -2,7 +2,7 @@
 
 Use this reference when deciding **where tests run** and **how environments are provisioned** for **per‑PR testing-before-merge**.
 
-**Project contract first:** The repo’s **`plans/knowledge/ai-test-instructions.md`** (especially **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`**) is **authoritative**. Follow that file **exactly** for commands, URLs, and health gates during `/testchimp test` and related flows. This document **supplements** it with general patterns; it does **not** override a persisted project decision. If you hit env blockers, read the FAQ there before improvising—see **[Binding: ai-test-instructions](testing-process.md#binding-ai-test-instructions-environment-and-faq-playbook)** in [`testing-process.md`](./testing-process.md).
+**Project contract first:** The repo’s **`plans/knowledge/ai-test-instructions.md`** (especially **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`**) is **authoritative**. Follow that file **exactly** for commands, URLs, and health gates during `/testchimp test` and related flows. This document **supplements** it with general patterns; it does **not** override a persisted project decision. If you hit env blockers, read the FAQ there before improvising—see **[Binding: ai-test-instructions](run-qa.md#binding-ai-test-instructions-environment-and-faq-playbook)** in [`run-qa.md`](./run-qa.md).
 
 This doc intentionally focuses on two workflows only:
 
@@ -143,11 +143,11 @@ When tests run against **cloud devices** via Mobilewright’s **mobile-use** dri
 
 ### ExploreChimp on mobile projects
 
-Mobile UI runs need **`projects[].use.platform`** in **`mobilewright.config.ts`** and specs importing from **`mobile/fixtures/index.js`** — see [`exploratory_runs.md`](./exploratory_runs.md).
+Mobile UI runs need **`projects[].use.platform`** in **`mobilewright.config.ts`** and specs importing from **`mobile/fixtures/index.js`** — see [`run-explorechimp.md`](./run-explorechimp.md).
 
 ## Related
 
 - **`/testchimp init`** — follow the phased flow (optional quick smoke -> collaborative plan -> execute), and capture environment strategy plus per-item progress into `plans/knowledge/ai-test-instructions.md` (see [`init-testchimp.md`](./init-testchimp.md)).
-- **`/testchimp test`** — [`testing-process.md`](./testing-process.md) for phased workflow and when to load this doc.
+- **`/testchimp test`** — [`run-qa.md`](./run-qa.md) for phased workflow and when to load this doc.
 - **Fixtures** — [`fixture-usage.md`](./fixture-usage.md) for deterministic data after the environment URL is known.
 - **DAST release checks** — when `dastCheckConfig.useEphemeralSandbox` is true, provision/teardown ephemeral envs using this EaaS workflow ([`security/dast.md`](./security/dast.md)).

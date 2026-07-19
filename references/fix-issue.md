@@ -4,7 +4,7 @@
 
 Given a TestChimp issue ordinal id (from the Fix CTA **Copy fix prompt**, or pasted as `/testchimp fix issue: <id>`), fetch full issue details via CLI/MCP, investigate using linked entities and signed artifact URLs, apply a code fix, then update issue status per the lifecycle below.
 
-This playbook is **not** the same as [`fix-failing-tests.md`](fix-failing-tests.md) (`/testchimp fix test failure` for raw SmartTest execution reports by `batch_invocation_id` / `job_id`). An ordinal-based issue can describe a test failure or any other product issue.
+This playbook is **not** the same as [`fix-test-execution.md`](fix-test-execution.md) (`/testchimp fix test failure` for raw SmartTest execution reports by `batch_invocation_id` / `job_id`). An ordinal-based issue can describe a test failure or any other product issue.
 
 To **file a new** issue (not fix an existing one), use MCP/CLI **`create-issue`** — see [`cli.md`](cli.md) § `create-issue` (requires `@testchimp/cli` ≥ **0.1.17**).
 
@@ -48,7 +48,7 @@ Response includes:
 
 - Read the description (often includes execution/batch id, failure time, error, release).
 - Follow linked **TEST_EXECUTION** / **BATCH_INVOCATION** context and any signed screenshot/attachment URLs.
-- If an execution/batch id is present and more failure detail is needed, also use `fetch-execution-report` (`--job-id` or `--batch-invocation-id`) per [`fix-failing-tests.md`](fix-failing-tests.md).
+- If an execution/batch id is present and more failure detail is needed, also use `fetch-execution-report` (`--job-id` or `--batch-invocation-id`) per [`fix-test-execution.md`](fix-test-execution.md).
 - Re-read `plans/knowledge/ai-test-instructions.md` before improvising environment or fixture changes.
 
 ### 3) Apply the code fix

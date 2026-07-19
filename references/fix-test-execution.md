@@ -1,4 +1,6 @@
-# `/testchimp fix test failure` — fix failing SmartTests from an execution id
+# `/testchimp fix test execution` — fix failing SmartTests from an execution id
+
+**Workflow id:** `fix-test-execution` (prompts: `/testchimp fix test failure`, fix test execution).
 
 ## Goal
 
@@ -59,7 +61,7 @@ Prefer deterministic selectors when the UI is stable and the failure is straight
 ### 3) Re-run the failing tests
 
 - Locate and follow the repo’s canonical environment strategy in:
-  - `plans/knowledge/ai-test-instructions.md` — read **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`** before changing bring-up or URLs; use the FAQ as the first playbook when triaging env-related failures ([`testing-process.md`](./testing-process.md#binding-ai-test-instructions-environment-and-faq-playbook)).
+  - `plans/knowledge/ai-test-instructions.md` — read **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`** before changing bring-up or URLs; use the FAQ as the first playbook when triaging env-related failures ([`run-qa.md`](./run-qa.md#binding-ai-test-instructions-environment-and-faq-playbook)).
 - Bring the environment up (or reprovision) **only** as specified there (no ad hoc alternate targets).
 - Re-run only the failing test(s) (or the smallest scope that proves the fix).
 

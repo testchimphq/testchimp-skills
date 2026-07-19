@@ -164,7 +164,7 @@ Merge domain fixtures in the barrel’s `index.js` with `mergeTests`, then wrap 
 | iOS-only UI (e.g. Apple Pay sheet) | `mobile/e2e/ios/` | `ios` only |
 | Android-only UI (e.g. back gesture) | `mobile/e2e/android/` | `android` only |
 
-Configs set `projects[].use.platform` to `ios` or `android`; `@testchimp/playwright` reads that for TrueCoverage / ExploreChimp ([`truecoverage.md`](./truecoverage.md)) and reports **`executionContext.platform`** on each test end (≥ **0.2.0**).
+Configs set `projects[].use.platform` to `ios` or `android`; `@testchimp/playwright` reads that for TrueCoverage / ExploreChimp ([`instrument-truecoverage.md`](./instrument-truecoverage.md)) and reports **`executionContext.platform`** on each test end (≥ **0.2.0**).
 
 ### Requirement coverage and execution history by platform
 
@@ -189,7 +189,7 @@ Legacy/simple **`web`** scaffold keeps a **single** `fixtures/index.js` and flat
 
 ### Plan-phase checklist (per proposed test)
 
-When listing tests in the branch plan ([`testing-process.md`](./testing-process.md)), record for each:
+When listing tests in the branch plan ([`run-qa.md`](./run-qa.md)), record for each:
 
 1. **Scaffold path** — exact folder + filename (from table above).
 2. **Fixture barrel** — which `fixtures/index.js` the spec will import.

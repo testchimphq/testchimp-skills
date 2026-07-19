@@ -69,7 +69,7 @@ For **`mobile`** / **`multi-platform`**, the branch plan MUST include a top-leve
 | Phase | Action |
 |-------|--------|
 | **Analyze** | Read **`.testchimp-tests`** `project_type`. If mobile/multi-platform, perform [Deduction](#deduction-signals); write **Platform scope** draft in branch plan. **Ask or inform** per [PR-branch rule](#pr-branch-rule-blocking-before-plan-approval). |
-| **Plan** | Every inventory test row notes **platform** (`web` / `ios` / `android`). Smart regression **§6** and ExploreChimp **§7** lists are **filtered** to scoped platforms. Coverage/history queries use `--platform` when analyzing one stack ([`testing-process.md`](./testing-process.md) Analyze inputs). |
+| **Plan** | Every inventory test row notes **platform** (`web` / `ios` / `android`). Smart regression **§6** and ExploreChimp **§7** lists are **filtered** to scoped platforms. Coverage/history queries use `--platform` when analyzing one stack ([`run-qa.md`](./run-qa.md) Analyze inputs). |
 | **Execute → Phase 6** | Do not run iOS/Android projects outside scope; do not skip a scoped platform without plan update + user ack. |
 
 **Phase 1 completion gate** (mobile/multi-platform): add checklist item — **Platform scope** drafted, user informed or asked, and **User confirmed** recorded (or `N/A` — **web-only** project only).

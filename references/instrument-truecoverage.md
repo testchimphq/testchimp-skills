@@ -1,4 +1,6 @@
-# TrueCoverage
+# /testchimp instrument (TrueCoverage)
+
+**Workflow id:** `instrument-truecoverage` (also **`/testchimp setup truecoverage`**).
 
 ## What it is (all platforms)
 
@@ -340,7 +342,7 @@ How `/testchimp evolve` uses it:
 - Treat `plans/knowledge/truecoverage-instrument-progress.md` as the plan baseline.
 - If MCP analytics show high-signal gaps that are already `planned`, prioritize instrumenting them.
 - If analytics suggests missing events that are not in the tracker, add them as `planned` (or explain why they are out of scope).
-- Full evolve workflow (Analyze → Plan → Execute), phase gates, and where to persist evolve plans: [`evolve-coverage.md`](./evolve-coverage.md).
+- Full evolve workflow (Analyze → Plan → Execute), phase gates, and where to persist evolve plans: [`upkeep.md`](./upkeep.md).
 
 ## Ongoing: `/testchimp evolve`
 

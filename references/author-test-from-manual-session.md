@@ -65,7 +65,7 @@ Before writing code, for the combined scope of all linked scenarios:
 
 Load these references as needed during authoring:
 
-- [`testing-process.md`](./testing-process.md) — Execute-phase batched order (seeds → probes → env → fixtures → tests); use the **Execute** sections only (not full Analyze/Plan/Validate chain)
+- [`run-qa.md`](./run-qa.md) — Execute-phase batched order (seeds → probes → env → fixtures → tests); use the **Execute** sections only (not full Analyze/Plan/Validate chain)
 - [`seeding-endpoints.md`](./seeding-endpoints.md), [`fixture-usage.md`](./fixture-usage.md), [`mocking_strategy.md`](./mocking_strategy.md)
 - [`write-smarttests.md`](./write-smarttests.md) for UI SmartTest patterns and **`// @Scenario:`** comment rules
 

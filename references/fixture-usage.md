@@ -27,7 +27,7 @@ Every **`*.spec.*`** imports **`{ test, expect }`** from the **correct barrel** 
 - **Never** add a SmartTest/API test that assumes Arrange data without an **existing** fixture or planned **fixture + seed** work.
 - Extend fixtures only with matching **HTTP contract** updates on seed/read routes.
 - Keep the branch plan **Arrange → Fixtures plan** in sync with code.
-- For gates, see [`testing-process.md`](./testing-process.md).
+- For gates, see [`run-qa.md`](./run-qa.md).
 
 ---
 
@@ -161,5 +161,5 @@ Production specs use the **same** barrel so posture matches authoring.
 - [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) — decision tables, run commands, plan checklist
 - [`write-smarttests.md`](./write-smarttests.md) — `markScreenState`, scenario links
 - [`mobilewright-smarttests.md`](./mobilewright-smarttests.md) — `screen` / `device`, config
-- [`truecoverage.md`](./truecoverage.md) — RUM + `use.platform`
-- [`exploratory_runs.md`](./exploratory_runs.md) — ExploreChimp env vars
+- [`instrument-truecoverage.md`](./instrument-truecoverage.md) — RUM + `use.platform`
+- [`run-explorechimp.md`](./run-explorechimp.md) — ExploreChimp env vars
