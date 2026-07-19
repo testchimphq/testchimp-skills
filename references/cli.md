@@ -405,6 +405,58 @@ testchimp get-test-scenarios --scenario-ordinal-ids 107
 
 Use **`get-test-scenarios`** first when a prompt references **`TS-<n>`**; call **`get-user-stories`** for each linked story ordinal returned.
 
+### `get-requirement-quality-report`
+
+Requires `@testchimp/cli` ≥ **0.1.19**.
+
+**API:** `POST /api/mcp/get_requirement_quality_report`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--subject-type <STORY\|SCENARIO>` | **Yes**\* | `subjectType` | `STORY` for US-&lt;n&gt;, `SCENARIO` for TS-&lt;n&gt;. |
+| `--subject-entity-id <id>` | No† | `subjectEntityId` | Platform entity id (story DB id string or scenario UUID). |
+| `--ordinal-id <n>` | No† | `ordinalId` | Numeric part of US-&lt;n&gt; / TS-&lt;n&gt;; server resolves entity when id omitted. |
+| `--json-input …` | No | (merge) | May supply full body. |
+
+\*Subject type required. †Provide **`subjectEntityId`** or **`ordinalId`** (at least one).
+
+**Response:** `report` (`metrics`, `findings` with `userState`, `subject`, `source`, timestamps) when stored. When never analyzed, still returns a minimal `report.subject` with resolved `subjectEntityId` so a first-run report can be uploaded. Use findings with **`userState`** **`IGNORED`** / **`APPLIED`** for re-run dedupe — do not re-report equivalents.
+
+**Example:**
+
+```bash
+testchimp get-requirement-quality-report --subject-type STORY --ordinal-id 42
+```
+
+### `report-requirement-quality-findings`
+
+Requires `@testchimp/cli` ≥ **0.1.19**.
+
+**API:** `POST /api/mcp/report_requirement_quality_findings`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--report-file <path>` | No‡ | (loads `report`) | Full **RequirementQualityReport** JSON (camelCase). |
+| `--subject-type <STORY\|SCENARIO>` | No | (merge into `report.subject`) | |
+| `--subject-entity-id <id>` | No | (merge into `report.subject`) | Required in report unless resolvable via ordinal + get-report. |
+| `--ordinal-id <n>` | No | (merge into `report.subject`) | |
+| `--json-input …` | No | (merge) | May supply `{"report":{...}}` instead of `--report-file`. |
+
+‡Report body required via **`--report-file`**, **`--json-input`**, or nested **`report`** in JSON.
+
+**Response:** `report` with server-assigned ids, merged findings (IGNORED/APPLIED carry-forward), fingerprints.
+
+**Example:**
+
+```bash
+testchimp report-requirement-quality-findings \
+  --report-file ./defospam-report.json \
+  --subject-type STORY \
+  --ordinal-id 42
+```
+
+See [`analyze-requirement-quality.md`](./analyze-requirement-quality.md) for the **`/testchimp analyze requirement`** agent playbook.
+
 ### `get-manual-session-details`
 
 **API:** `POST /api/mcp/get_manual_session_details`
