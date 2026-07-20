@@ -2,7 +2,7 @@
 
 **Synonym:** `/testchimp evolve` (same workflow **`upkeep`** — use either prompt). Legacy **`/testchimp audit`** → same.
 
-> **Workflow overlay (skill ≥ 1.0.0)** — **Workflow id:** `upkeep` (canonical prompt `/testchimp upkeep`; synonym `/testchimp evolve`). **Policy:** `plans/knowledge/policies/upkeep.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default subflows: author-plans → connect-to-test-env → fix-coverage-gaps → run-explorechimp → cleanup → instrument-truecoverage. Persist a **ULID** `workflow_execution_id` on the upkeep/evolve plan **before Execute**; on mutating actions call **`report-agent-action`** (best-effort). Details: [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Workflow overlay (skill ≥ 1.0.0)** — **Workflow id:** `upkeep` (canonical prompt `/testchimp upkeep`; synonym `/testchimp evolve`). **Policy:** `plans/knowledge/policies/upkeep.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default subflows: author-plans → connect-to-test-env → fix-coverage-gaps → run-explorechimp → cleanup → instrument-truecoverage. Persist a **ULID** `workflow_execution_id` on the upkeep/evolve plan **before Execute**; on mutating actions call **`report-agent-action`** (best-effort). **Before treating the run as done:** [Report workflow execution](./policies-and-traceability.md#report-workflow-execution) (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `upkeep`). Details: [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 Systematically improve **requirement coverage**, **execution health**, **TrueCoverage** (real usage vs automated tests), and—when in scope—**targeted ExploreChimp UX analytics** on critical UI slices informed by those signals. This is **not** a passive review: the agent is responsible for **running and maintaining the QA surface area** of the project—seed and probe endpoints, mocks, fixtures, SmartTests and API tests, TrueCoverage instrumentation, optional **ExploreChimp** runs on high-impact journeys, and test-plan artifacts (user stories / scenarios) where the product is under-specified.
 
@@ -217,6 +217,7 @@ Then complete **Verification** and **Closure** below.
 - Mark the **Phase 2 plan checklists** and the **Phase 3 completion checklist** (above) in the same **`plan_*.md`** file—every bucket **done** or **`N/A`** with justification.
 - Add **commit** and/or **PR** references when available.
 - If **ExploreChimp** ran, summarize **which TrueCoverage signals** drove test choice and whether **`## ExploreChimp`** in **`ai-test-instructions.md`** was updated (regex, sources, scope notes).
+- **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** before finishing (`ACTION_COMPLETED` / `ACTION_FAILED` for `WORKFLOW` + `upkeep`).
 
 ---
 

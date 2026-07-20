@@ -4,7 +4,7 @@
 
 This document defines the **strict workflow** for Run QA with TestChimp (typically on a PR / feature branch).
 
-> **Workflow overlay (skill ≥ 1.0.0)** — **Workflow id:** `run-qa` (canonical prompt **`/testchimp run QA`**; synonym **`/testchimp test`**). **Policy:** `plans/knowledge/policies/run-qa.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default subflow order includes **`run-smart-regression`** after create-tests (see [`assets/policies/run-qa.policy.md`](../assets/policies/run-qa.policy.md)). Persist a **ULID** `workflow_execution_id` on the branch plan **before Execute**; on mutating actions call **`report-agent-action`** (best-effort) with that same id. Details: [`policies-and-traceability.md`](./policies-and-traceability.md). Full Smart regression playbook: [`run-smart-regression.md`](./run-smart-regression.md) (Phase 5 below remains authoritative if an agent only reads this file).
+> **Workflow overlay (skill ≥ 1.0.0)** — **Workflow id:** `run-qa` (canonical prompt **`/testchimp run QA`**; synonym **`/testchimp test`**). **Policy:** `plans/knowledge/policies/run-qa.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default subflow order includes **`run-smart-regression`** after create-tests (see [`assets/policies/run-qa.policy.md`](../assets/policies/run-qa.policy.md)). Persist a **ULID** `workflow_execution_id` on the branch plan **before Execute**; on mutating actions call **`report-agent-action`** (best-effort) with that same id. **Before treating the run as done:** [Report workflow execution](./policies-and-traceability.md#report-workflow-execution) (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `run-qa`). Details: [`policies-and-traceability.md`](./policies-and-traceability.md). Full Smart regression playbook: [`run-smart-regression.md`](./run-smart-regression.md) (Phase 5 below remains authoritative if an agent only reads this file).
 
 > **create-tests / nested under run-qa:** When the user asked only **`/testchimp create tests`** or this playbook is reached as a **subflow of run-qa / upkeep**, do **not** start a second Plan → approve → Execute cycle. Use the parent plan’s scope and `workflow_execution_id`; run the **Execute** authorship steps for tests only (skip a nested Analyze/Plan gate and skip later run-qa-only phases unless the parent plan called for them). Standalone **`/testchimp run QA`** (or synonym **`/testchimp test`**) still follows the full phase chain below.
 
@@ -619,6 +619,7 @@ Record in branch plan file:
 
 - [ ] Local processes/environments stopped (or `N/A` + reason).
 - [ ] Ephemeral environments destroyed (or `N/A` + reason).
+- [ ] **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** done (`ACTION_COMPLETED` / `ACTION_FAILED` for `WORKFLOW` + `run-qa`).
 
 ---
 

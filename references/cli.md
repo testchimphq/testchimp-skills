@@ -184,6 +184,28 @@ testchimp get-execution-history \
 
 \*At least one of the ordinal id lists should be non-empty.
 
+### `update-plan-items-lifecycle-status`
+
+**API:** `POST /api/mcp/update_plan_items_lifecycle_status`
+
+Sets **`lifecycle_fields.status`** for **one** user story or test scenario (DB only; does not rewrite plan markdown). Used after **`/testchimp implement`** to move items to **`ready`** (unless policy overrides). Requires CLI ≥ **0.1.22**.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--entity-type <type>` | Yes | `entityType` | `story` \| `scenario` (also accepts `user_story` / `USER_STORY` / `SCENARIO`). |
+| `--ordinal-id <n>` | Yes | `ordinalId` | Numeric part of `US-<n>` / `TS-<n>`. |
+| `--status <status>` | Yes | `status` | `draft` \| `ready` \| `in progress` \| `blocked` \| `done` \| `archived`. |
+| `--json-input …` | No | (merge) | |
+
+**Examples:**
+
+```bash
+testchimp update-plan-items-lifecycle-status --entity-type story --ordinal-id 181 --status ready
+testchimp update-plan-items-lifecycle-status --entity-type scenario --ordinal-id 2205 --status ready
+```
+
+Call once per story/scenario when multiple entities were implemented in the same run.
+
 ---
 
 ## Screen-state atlas (SmartTests, traces, ExploreChimp)

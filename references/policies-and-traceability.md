@@ -42,7 +42,7 @@ version: <semver string, e.g. 1.0.0>
 
 Optional recommended sections: `### Summary`, `### Pre-Execute Workflows`, `### Post-Execute Workflows`, `### Subflows` (composites), `### Scoping Rules`, then workflow-specific body.
 
-Default composites shipped in the skill: [`assets/policies/run-qa.policy.md`](../assets/policies/run-qa.policy.md), [`assets/policies/upkeep.policy.md`](../assets/policies/upkeep.policy.md). Init seeds these into **`plans/knowledge/policies/`** when missing. Authoring aid (not auto-seeded): [`assets/policies/connect-to-test-env.policy.md`](../assets/policies/connect-to-test-env.policy.md). Author more via [`create-policy.md`](./create-policy.md).
+Default composites shipped in the skill: [`assets/policies/run-qa.policy.md`](../assets/policies/run-qa.policy.md), [`assets/policies/upkeep.policy.md`](../assets/policies/upkeep.policy.md). Init seeds these into **`plans/knowledge/policies/`** when missing. Authoring aids (not auto-seeded): [`assets/policies/connect-to-test-env.policy.md`](../assets/policies/connect-to-test-env.policy.md), [`assets/policies/implement.policy.md`](../assets/policies/implement.policy.md). Author more via [`create-policy.md`](./create-policy.md).
 
 ## Policy resolution order
 
@@ -57,35 +57,99 @@ After authoring a policy on disk, call **`upsert-policy`** so it is available on
 
 ## ULID before Execute
 
-For Plan → approve → Execute workflows (`run-qa`, `upkeep`, standalone mutating flows):
+For Plan → approve → Execute workflows (`run-qa`, `upkeep`, `implement`, standalone mutating flows):
 
 1. During **Plan**, generate one **ULID** as **`workflow_execution_id`**.
 2. Persist it in the plan file frontmatter or body (e.g. `workflow_execution_id: <ulid>`).
 3. Reuse the **same** ULID for every **`report-agent-action`** in that run — do **not** mint a new id per mutation.
 
-## `report-agent-action` (best-effort on mutating actions)
+## `report-agent-action` vocabulary
 
-Call after creating/updating/deleting/analyzing meaningful artifacts (tests, plans, issues, fixes, etc.). Fields (CLI/MCP; camelCase or flags per [`cli.md`](./cli.md)):
+Call after creating/updating/deleting/analyzing/implementing meaningful artifacts. Fields (CLI/MCP; camelCase or flags per [`cli.md`](./cli.md)):
 
 | Field | Notes |
 |-------|--------|
-| `workflow_id` | Catalog id (`run-qa`, `create-tests`, …) |
+| `workflow_id` | Catalog id (`run-qa`, `implement`, `create-tests`, …) |
 | `workflow_execution_id` | Stable ULID for the whole run |
 | `policy_file` / `policy_version` | From resolved policy frontmatter |
 | `git_sha` | Current HEAD |
 | `actor_type` | `local-agent` or `cloud-agent` |
 | `user_id` | Optional; from MCP env when present |
 | `branch_name` | Current git branch |
-| `entity_type` | e.g. `test`, `story`, `scenario`, `issue`, `test_execution`, `batch_invocation`, `workflow` |
-| `test` **or** `entityIdentity` | **Mutually exclusive** (camelCase on the wire). SmartTests → `test` TestLocator (`folderPath`, `fileName`, `testSuite`, `testName`). Other artifacts → `entityIdentity` as project-scoped **ordinal id** (readable int string). Do **not** use platform UUIDs. Exception: execution/batch ids only when the prompt explicitly provided them. |
-| `action_type` | `created` / `updated` / `deleted` / `analyzed` / **`completed`** (`ACTION_COMPLETED`) / **`failed`** (`ACTION_FAILED`). Completing/failing marks the workflow execution done (`completedAtMillis`). Prefer `entity_type: workflow` for those. |
-| `detail_json` | Optional short JSON context |
+| `entity_type` | **Closed set** below — use these exact names |
+| `test` **or** `entity_identity` | **Mutually exclusive**. See identity rules |
+| `action_type` | Closed set below |
 
-At end of Execute (or when aborting), best-effort report **`ACTION_COMPLETED`** or **`ACTION_FAILED`** so timelines leave `RUNNING`.
+**Do not send `detail_json`** — the field is removed from the API. Context lives in entity identity + action type + workflow metadata.
+
+**Where actions show up:** Reported actions appear on the **Activity** tab for the related plan item (story/scenario), **issue**, and **SmartTest** (file-level) in the TestChimp UI, and on the workflow execution timeline.
 
 **First successful report** for a new `workflow_execution_id` **creates** the DB workflow execution (`execution_created: true`); later reports append actions to the same execution.
 
 **Since last run:** **`get-last-run-workflow-detail`** (`workflow_id`, optional `branch_name`, optional `user_id`).
+
+### Closed entity types (`entity_type`)
+
+| `entity_type` | Identity field | Identity value |
+|---------------|----------------|----------------|
+| `USER_STORY` | `entity_identity` | Positive integer **ordinal only** (e.g. `42` — **no** `US-` / `#` prefix) |
+| `SCENARIO` | `entity_identity` | Positive integer **ordinal only** (e.g. `107` — **no** `TS-` / `#` prefix) |
+| `SMART_TEST` | `test` (TestLocator) | `folderPath` + `fileName` + `testSuite` + `testName` (`fileName` and `testName` required). **Do not** also send `entity_identity` |
+| `POLICY` | `entity_identity` | Policy **filename** matching `*.policy.md` (e.g. `run-qa.policy.md`) |
+| `ISSUE` | `entity_identity` | Positive integer **ordinal only** (no `B-` / `#` prefix) |
+| `TEST_EXECUTION` | `entity_identity` | Opaque execution / job id from the platform or prompt |
+| `TEST_INVOCATION_BATCH` | `entity_identity` | Opaque batch invocation id |
+| `EXPLORATION` | `entity_identity` | Opaque exploration id |
+| `EVENT` | `entity_identity` | TrueCoverage **event title** (as instrumented / documented) |
+| `WORKFLOW` | `entity_identity` | Catalog **`workflow_id`** — **only** with `ACTION_COMPLETED` / `ACTION_FAILED`; must **equal** `workflow_id` |
+
+### Closed action types (`action_type`)
+
+| `action_type` | When |
+|---------------|------|
+| `CREATED` | New story, scenario, SmartTest, policy, issue, etc. |
+| `UPDATED` | Meaningful edit to an existing entity |
+| `DELETED` | Removed / retired artifact |
+| `ANALYZED` | Read-only analysis that should appear on the Activity timeline (e.g. DeFOSPAM, coverage recon) |
+| `IMPLEMENTED` | Requirement implementation finished for a **`USER_STORY`** or **`SCENARIO`** only |
+| `ACTION_COMPLETED` | End of a successful workflow run — **requires** `entity_type: WORKFLOW` and `entity_identity` = `workflow_id` (sets execution `completedAt`) |
+| `ACTION_FAILED` | Abort / failed run — same `WORKFLOW` identity rules as completed |
+
+After **`IMPLEMENTED`** in the **`implement`** workflow, also call **`update-plan-items-lifecycle-status`** (CLI ≥ **0.1.22**) to set lifecycle status (default **`ready`**, unless policy overrides) — see [`implement-requirement.md`](./implement-requirement.md) and [`cli.md`](./cli.md). That is separate from `report-agent-action`.
+
+`WORKFLOW` is **invalid** for non-completion actions. `IMPLEMENTED` is **invalid** for anything other than `USER_STORY` / `SCENARIO`.
+
+### Cheat sheet — when to report
+
+| You just… | `action_type` | `entity_type` + identity |
+|-----------|---------------|--------------------------|
+| Created / updated a user story | `CREATED` / `UPDATED` | `USER_STORY` + ordinal |
+| Created / updated a scenario | `CREATED` / `UPDATED` | `SCENARIO` + ordinal |
+| Finished implementing a story or scenario | `IMPLEMENTED` | `USER_STORY` or `SCENARIO` + ordinal |
+| Authored / changed a SmartTest | `CREATED` / `UPDATED` | `SMART_TEST` + TestLocator `test` |
+| Wrote / upserted a policy file | `CREATED` / `UPDATED` | `POLICY` + `*.policy.md` filename |
+| Filed or updated an issue | `CREATED` / `UPDATED` | `ISSUE` + ordinal |
+| Ran DeFOSPAM / coverage analysis worth tracing | `ANALYZED` | story / scenario / other applicable type |
+| Fixed failures tied to an execution or batch | `UPDATED` (and/or related SmartTest) | `TEST_EXECUTION` / `TEST_INVOCATION_BATCH` + opaque id |
+| Instrument / document a TrueCoverage event | `CREATED` / `UPDATED` | `EVENT` + event title |
+| Finished the whole workflow (success) | `ACTION_COMPLETED` | `WORKFLOW` + catalog `workflow_id` |
+| Aborted the workflow | `ACTION_FAILED` | `WORKFLOW` + catalog `workflow_id` |
+
+Best-effort during Execute is fine for intermediate mutations; **completion reporting is required** before you treat the run as done — see below.
+
+### Report workflow execution
+
+**Required before completion** of any Plan → Execute workflow (`run-qa`, `upkeep`, `implement`, and other mutating catalog flows that mint a `workflow_execution_id`):
+
+1. **Reconcile the ledger** — Compare what you actually mutated this run (plan checklist, commits, MCP creates/updates) against actions already recorded for this `workflow_execution_id` (`get-workflow-execution` with `include_actions: true`, or the execution returned from earlier reports).
+2. **Emit missing `report-agent-action` calls** — For each material create/update/delete/analyze/implement that is not yet on the ledger, send the corresponding report (same ULID, correct entity vocabulary). Do not invent entities you did not touch.
+3. **Complete the execution** — Call **`report-agent-action`** with:
+   - `action_type`: `ACTION_COMPLETED` (or `ACTION_FAILED` if aborting)
+   - `entity_type`: `WORKFLOW`
+   - `entity_identity`: the same catalog **`workflow_id`** (e.g. `run-qa`, `implement`)
+   - the stable `workflow_execution_id`, plus policy / git / actor / branch fields as usual
+
+Skipping step 3 leaves the execution `RUNNING` in the Workflows UI. Completing without reconciling leaves Activity tabs incomplete for stories, issues, and SmartTests.
 
 ## Disabled / Missing Config (agent behavior)
 
