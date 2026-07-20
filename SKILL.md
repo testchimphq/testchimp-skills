@@ -1,9 +1,9 @@
 ---
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — policy-backed workflows (run-qa, upkeep, subflows), SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, run QA, test, upkeep, evolve, plan, explore, skill upgrade), SmartTests, agent-driven test or plan authoring, ExploreChimp, policies, or updating this skill from Git.
-compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.20** for workflow/policy tools.
-version: 1.0.0
-required_cli_version: "0.1.20"
+compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.21** for workflow/policy tools (including `upsert-policy`).
+version: 1.0.1
+required_cli_version: "0.1.21"
 ---
 
 # TestChimp
@@ -171,7 +171,7 @@ Install **`@testchimp/cli@latest`** (see [`references/init-testchimp.md`](refere
 The MCP server exposes tools grouped by area:
 
 - **Coverage & execution** — `get-requirement-coverage`, `get-execution-history`, `mark-plan-items-implementation-done`
-- **Workflows & policies (CLI ≥ 0.1.20)** — `report-agent-action`, `get-last-run-workflow-detail`, `get-policy`, `list-policies`, `list-workflow-catalog` (also `list-workflow-executions` / `get-workflow-execution` when available). Policies live under **`plans/knowledge/policies/*.policy.md`**. Optional env **`POLICY_FILE`** may point at the active policy path. Resolution: **`--policy`** → **`<workflow-id>.policy.md`** → any matching frontmatter **`workflow-id`** → **`ai-test-instructions.md`** fallback — [`references/policies-and-traceability.md`](references/policies-and-traceability.md).
+- **Workflows & policies (CLI ≥ 0.1.21)** — `report-agent-action`, `get-last-run-workflow-detail`, `get-policy`, `list-policies`, `upsert-policy`, `list-workflow-catalog` (also `list-workflow-executions` / `get-workflow-execution` when available). Policies live under **`plans/knowledge/policies/*.policy.md`**. Optional env **`POLICY_FILE`** may point at the active policy path. Resolution: **`--policy`** → **`<workflow-id>.policy.md`** → any matching frontmatter **`workflow-id`** → **`ai-test-instructions.md`** fallback — [`references/policies-and-traceability.md`](references/policies-and-traceability.md). After authoring a policy locally, call **`upsert-policy`** for immediate platform availability.
 - **Screen-state atlas (SmartTests / traces / ExploreChimp)** — `list-screen-states`, `upsert-screen-states` (same as **`testchimp list-screen-states`** / **`testchimp upsert-screen-states`** in [`references/cli.md`](references/cli.md))
 - **Semantic duplicate hygiene (`/testchimp cleanup`)** — `list-semantic-similar-tests`, `mark-semantic-tests-distinct` (TestLocator-based; see [`references/cleanup.md`](references/cleanup.md))
 - **Execution debugging** — `fetch-execution-report`, `get-manual-session-details`

@@ -42,7 +42,7 @@ version: <semver string, e.g. 1.0.0>
 
 Optional recommended sections: `### Summary`, `### Pre-Execute Workflows`, `### Post-Execute Workflows`, `### Subflows` (composites), `### Scoping Rules`, then workflow-specific body.
 
-Default composites shipped in the skill: [`assets/policies/run-qa.policy.md`](../assets/policies/run-qa.policy.md), [`assets/policies/upkeep.policy.md`](../assets/policies/upkeep.policy.md). Init seeds these into **`plans/knowledge/policies/`** when missing. Author more via [`create-policy.md`](./create-policy.md).
+Default composites shipped in the skill: [`assets/policies/run-qa.policy.md`](../assets/policies/run-qa.policy.md), [`assets/policies/upkeep.policy.md`](../assets/policies/upkeep.policy.md). Init seeds these into **`plans/knowledge/policies/`** when missing. Authoring aid (not auto-seeded): [`assets/policies/connect-to-test-env.policy.md`](../assets/policies/connect-to-test-env.policy.md). Author more via [`create-policy.md`](./create-policy.md).
 
 ## Policy resolution order
 
@@ -51,7 +51,9 @@ Default composites shipped in the skill: [`assets/policies/run-qa.policy.md`](..
 3. Any other `*.policy.md` whose frontmatter **`workflow-id`** matches (prefer oldest/default rules if multiple—platform marks `<workflow-id>.policy.md` as default when present).
 4. Fallback: decisions in **`plans/knowledge/ai-test-instructions.md`** (backward compatible when policies are absent).
 
-CLI/MCP: **`get-policy`**, **`list-policies`**, **`list-workflow-catalog`**. Env hint: **`POLICY_FILE`** when a host/runner injects the chosen policy path.
+CLI/MCP: **`get-policy`**, **`list-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**. Env hint: **`POLICY_FILE`** when a host/runner injects the chosen policy path.
+
+After authoring a policy on disk, call **`upsert-policy`** so it is available on the platform immediately (git push also syncs later). See [`create-policy.md`](./create-policy.md) and [`cli.md`](./cli.md).
 
 ## ULID before Execute
 

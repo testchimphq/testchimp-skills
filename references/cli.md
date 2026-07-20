@@ -928,6 +928,56 @@ Deeper product context: [instrument-truecoverage.md](./instrument-truecoverage.m
 
 ---
 
+## Workflows and policies (CLI ≥ 0.1.21)
+
+Policies live under **`plans/knowledge/policies/*.policy.md`**. See [`policies-and-traceability.md`](./policies-and-traceability.md) and [`create-policy.md`](./create-policy.md).
+
+### `get-policy`
+
+**API:** `POST /api/mcp/get_policy`
+
+| Flag | Required | Body field | Notes |
+|------|----------|------------|-------|
+| `--json-input` | Yes (today) | `policyFileName` | e.g. `connect-to-test-env.policy.md`. Server coerces to `*.policy.md` (same rules as `upsert-policy`). |
+
+### `list-policies`
+
+**API:** `POST /api/mcp/list_policies`
+
+| Flag | Required | Body field | Notes |
+|------|----------|------------|-------|
+| `--json-input` | Optional | `workflowId` | Filter by frontmatter `workflow-id` |
+
+### `upsert-policy`
+
+**API:** `POST /api/mcp/upsert_policy`
+
+Create or update a policy on the platform immediately after writing the file locally (git push also syncs later).
+
+| Flag | Required | Body field | Notes |
+|------|----------|------------|-------|
+| `--policy-file-name <name>` | Yes* | `policyFileName` | e.g. `connect-to-test-env.policy.md` (`.policy.md` coerced if missing) |
+| `--content <markdown>` | Yes* | `content` | Full markdown including frontmatter |
+| `--content-file <path>` | Yes* | `content` | Read markdown from disk (alternative to `--content`) |
+
+\*Or provide both fields via `--json-input`.
+
+```bash
+testchimp upsert-policy \
+  --policy-file-name connect-to-test-env.policy.md \
+  --content-file plans/knowledge/policies/connect-to-test-env.policy.md
+```
+
+### `list-workflow-catalog`
+
+**API:** `POST /api/mcp/list_workflow_catalog`
+
+Lists catalog workflows with Active / Disabled / Missing Config for the project. Use `--json-input '{}'` when no flags are needed.
+
+Also related (flags vary): **`report-agent-action`**, **`get-last-run-workflow-detail`**, **`list-workflow-executions`**, **`get-workflow-execution`** — see `testchimp <cmd> -h`.
+
+---
+
 ## Semantic similar tests (`/testchimp cleanup`)
 
 Discover semantically similar SmartTest pairs using **TestLocators** (no platform `test_id`). Used by [`cleanup.md`](./cleanup.md).
@@ -971,7 +1021,7 @@ testchimp mark-semantic-tests-distinct --json-input '{
 
 ## MCP parity (tool names)
 
-MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`mark-plan-items-implementation-done`**, **`create-user-story`**, **`list-rum-environments`**.
+MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`upsert-policy`**, **`create-user-story`**, **`list-rum-environments`**.
 
 ## Related
 

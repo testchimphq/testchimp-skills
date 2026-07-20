@@ -15,7 +15,7 @@ This is the **only** workflow that **blocks** when policy is missing (**Missing 
 3. Any `*.policy.md` with frontmatter `workflow-id: connect-to-test-env`
 4. Fallback: **`plans/knowledge/ai-test-instructions.md`** → **`## Environment Provision Strategy`** (and FAQ)
 
-If no policy and ai-test-instructions lack a usable provision strategy, **stop**, discuss with the user, and author a policy ([`create-policy.md`](./create-policy.md)) before continuing dependent workflows.
+If no policy and ai-test-instructions lack a usable provision strategy, **stop**, discuss with the user, and author a policy ([`create-policy.md`](./create-policy.md)) before continuing dependent workflows. For authoring, follow the **strict connect-to-test-env checklist** in create-policy (feature branch / default branch / CI) and prefer [`../assets/policies/connect-to-test-env.policy.md`](../assets/policies/connect-to-test-env.policy.md) as a skeleton. After writing the file, call **`upsert-policy`** so the platform clears Missing Config immediately.
 
 See [`policies-and-traceability.md`](./policies-and-traceability.md) and deeper env patterns in [`environment-management.md`](./environment-management.md).
 
