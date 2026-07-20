@@ -4,6 +4,8 @@
 
 Given a TestChimp issue ordinal id (from the Fix CTA **Copy fix prompt**, or pasted as `/testchimp fix issue: <id>`), fetch full issue details via CLI/MCP, investigate using linked entities and signed artifact URLs, apply a code fix, then update issue status per the lifecycle below.
 
+**Workflow id:** `fix-issue`. Not blocked on [`connect-to-test-env`](./connect-to-test-env.md) — run that only when fix validation in a live environment is needed (policy-controlled; often default off).
+
 This playbook is **not** the same as [`fix-test-execution.md`](fix-test-execution.md) (`/testchimp fix test failure` for raw SmartTest execution reports by `batch_invocation_id` / `job_id`). An ordinal-based issue can describe a test failure or any other product issue.
 
 To **file a new** issue (not fix an existing one), use MCP/CLI **`create-issue`** — see [`cli.md`](cli.md) § `create-issue` (requires `@testchimp/cli` ≥ **0.1.17**).
@@ -55,6 +57,7 @@ Response includes:
 
 - Prefer the minimal change that addresses the reported failure.
 - Validate in a headed browser / local runner when the issue involves UI behaviour (**Preamble #4** for `TESTCHIMP_API_KEY` on the runner).
+- If policy (or the user) requires **live-env validation**, follow [`connect-to-test-env.md`](./connect-to-test-env.md) first; otherwise do **not** treat a missing connect-to-test-env policy as blocking the fix.
 
 ### 4) Mark in progress
 
