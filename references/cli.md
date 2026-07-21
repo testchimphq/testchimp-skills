@@ -498,7 +498,7 @@ See [`run-requirement-quality-checks.md`](./run-requirement-quality-checks.md) f
 testchimp get-manual-session-details --manual-session-id 01JABCDEF123456789
 ```
 
-Use when the user pastes a **Copy script generate prompt** from the manual session viewer. Then load linked scenarios from the mapped **`plans/scenarios/`** tree or call **`get-test-scenarios --scenario-ordinal-ids`** once with all values from **`linkedScenarioOrdinalIds`**. See [`author-test-from-manual-session.md`](./author-test-from-manual-session.md).
+Use when the user pastes a **Copy test generate prompt** / **Copy prompt** (or legacy **Copy script generate prompt**) from the manual session viewer. Then load linked scenarios from the mapped **`plans/scenarios/`** tree or call **`get-test-scenarios --scenario-ordinal-ids`** once with all values from **`linkedScenarioOrdinalIds`**. See [`author-test-from-manual-session.md`](./author-test-from-manual-session.md).
 
 ### `get-issue-details`
 

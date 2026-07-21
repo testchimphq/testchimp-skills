@@ -27,6 +27,8 @@ For **`plans/`** markdown, see **[`author-plans.md`](./author-plans.md)**.
 
    - **Discover values in the repo before asking:** Read **`.env-*`** files under the mapped tests folder (e.g. `.env-QA`) for **test-run** variables: `BASE_URL`, auth-related vars, feature toggles, etc. **Do not** store **`TESTCHIMP_API_KEY`** there — it belongs in the **shell** and MCP **`env`** (see **`SKILL.md`** Preamble **#4**). Skim **`setup/`** scripts and global setup for how auth state or data is created. Open **existing specs** in the same area to see which env vars, fixtures, and URLs peers use.
    - **Ask early when something crucial is missing** — If authentication details, org/project identifiers, or other data the scenario depends on is not discoverable from the repo or plans, **ask the user before** driving the browser. If you only learn what is missing **while** interacting (e.g. login fails, wrong tenant), **stop and ask** rather than fabricating credentials or steps.
+   - **Infer from codebase before giving up** — When the scenario itself is thin (e.g. a one-line title/description with no steps), still try to recover enough Arrange/Act/Assert detail from the **codebase and PR/branch changes**: touched routes/screens, UI components, APIs, existing specs/POMs/fixtures/seeds in the same feature area, and sibling scenarios under the same story. Prefer that path over asking the user to re-document the journey.
+   - **Fallback only when still stuck — manual session capture** — If, after reading the scenario/story **and** probing the codebase/changes, you still **cannot** author a credible SmartTest without inventing the user journey, **stop**. Do **not** fabricate steps. Suggest the Chrome-extension **manual session** path below (not headed Playwright takeover — that is for mid-run UI blockers when you already know the journey). Full product guide: [Creating SmartTests — from manual session capture](https://docs.testchimp.io/smart-tests/creating#2-from-manual-session-capture-chrome-extension). When the user pastes the prompt, follow [`author-test-from-manual-session.md`](./author-test-from-manual-session.md).
   - **Run in headed mode by default** — Use a **headed** Playwright run during authoring so the user (and agent) can see the browser (unless the user explicitly requests headless). The objective is to **exercise the real journey** and only write steps that were actually proven to work against the live UI.
     - Prefer running with **`--headed`** during authoring, or setting Playwright config **`use.headless = false`** for the local authoring workflow.
     - Keep CI headless unless explicitly needed; headed is mainly for interactive authoring and debugging.
@@ -34,6 +36,25 @@ For **`plans/`** markdown, see **[`author-plans.md`](./author-plans.md)**.
      1. **First pass — record behavior:** **Web:** Write the flow as real **`await page…` / `expect(…)`** calls. **Mobile:** Write the flow using **Mobilewright** fixtures (**`screen`**, **`device`**, …) per [`mobilewright-smarttests.md`](./mobilewright-smarttests.md) and upstream docs — not **`page.goto`** for native UI. Where the UI is unclear, add a short **`// intent:`** comment above the line, then the concrete API call. Do not skip on-device verification.
      2. **Second pass — harden brittle steps:** **Web only:** Re-read the spec. Where a selector-based step is likely **brittle** or **non-semantic**, replace it with **`ai.act` / `ai.verify` / `ai.extract`**, using the intent comments as guidance. **Mobile:** Improve selectors and stability using Mobilewright patterns only — **no** ai-wright. Remove redundant intent comments; **keep only comments that demarcate major sections** of the test (long flows, distinct phases).
      3. **Third pass — fit the suite:** Wire in **hooks**, **fixtures**, **`process.env`**, **page objects** (web) or shared helpers (mobile), shared **timeouts**, and project **imports** (e.g. reporter runtime) so the test matches how neighboring files are structured.
+
+### Insufficient scenario context → suggest manual session capture (fallback)
+
+**When this applies (strict):** Only after you have tried to author from (1) scenario + story content and (2) codebase / PR or branch changes / existing harness, and you still lack enough informational context to write Arrange → Act → Assert without guessing the product journey. Thin scenarios alone are **not** enough to trigger this if the repo clearly shows the flow.
+
+**When this does not apply:** Prefer continuing with codebase inference, asking a narrow clarifying question (credentials, which org, feature flag), or [User takeover (headed)](#user-takeover-headed-when-the-agent-gets-stuck) when the journey is known but a live UI segment is hard.
+
+**What to tell the user** (adapt wording; keep the steps and the doc link):
+
+1. Install / open the **TestChimp Chrome extension** and sign in.
+2. In the browser, run the journey against the app with the **scenario selected** (recommended: Test Planning → open the scenario → **Create Test** → **Record manual test steps**, then start capture in the extension so project + scenario are pre-linked).
+3. Complete **Create Manual Test Record** (environment, release), **Start Capture**, exercise the flow (notes/bugs on steps optional), then **End capture** and mark pass/fail.
+4. Open the session (**Executions → Manual Sessions → View**, or **View execution** from the extension).
+5. Click **Copy test generate prompt** (also labeled **Copy prompt** / legacy **Copy script generate prompt**) and paste it back into this chat.
+6. Point them at: [From manual session capture (Chrome extension)](https://docs.testchimp.io/smart-tests/creating#2-from-manual-session-capture-chrome-extension).
+
+After they paste the prompt, load [`author-test-from-manual-session.md`](./author-test-from-manual-session.md), call **`get-manual-session-details`**, and author using recorded steps, screenshots, and linked scenarios — still reusing fixtures/seeds/POMs rather than blind record-replay.
+
+Mark the blocked scenario on the branch plan (if any) as waiting on a manual session; continue other planned tests that have enough context.
 
 ### User takeover (headed) when the agent gets stuck
 

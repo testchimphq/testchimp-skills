@@ -2,9 +2,22 @@
 
 ## Goal
 
-Given a manual test session id (from the TestChimp manual session viewer **Copy script generate prompt**), fetch the session details and linked scenario business context, then author **one SmartTest** that covers all linked scenarios. Use the manual session steps, screenshots, and notes as a **reference guide** while autonomously navigating the app — not as a script to paste verbatim.
+Given a manual test session id (from the TestChimp manual session viewer **Copy test generate prompt** / **Copy prompt** / legacy **Copy script generate prompt**), fetch the session details and linked scenario business context, then author **one SmartTest** that covers all linked scenarios. Use the manual session steps, screenshots, and notes as a **reference guide** while autonomously navigating the app — not as a script to paste verbatim.
 
 This flow is **authoring-only**. Do **not** run the full `/testchimp test` chain (Analyze, Plan, Validate, ExploreChimp) unless the user explicitly asks.
+
+Product guide (capture + prompt): [Creating SmartTests — from manual session capture](https://docs.testchimp.io/smart-tests/creating#2-from-manual-session-capture-chrome-extension).
+
+## When agents should suggest this flow (fallback)
+
+Use this as a **fallback**, not the default authoring path.
+
+1. Agent is asked to create a SmartTest for a scenario (e.g. `/testchimp test`, create-tests, or “author test for `TS-<n>`”).
+2. Scenario text alone is too thin (e.g. one-line description).
+3. Agent **first** tries to infer enough Arrange/Act/Assert from the **codebase**, PR/branch changes, and existing harness (POMs, fixtures, seeds, sibling specs).
+4. If that still fails — not enough to author without inventing the journey — **stop** and ask the user to capture a **manual test session** with the Chrome extension (scenario selected), then paste **Copy test generate prompt** from the manual session view page.
+
+Do **not** suggest capture when a clarifying question, headed takeover, or further repo reading would unblock you. Full user-facing steps: [`write-smarttests.md`](./write-smarttests.md) § **Insufficient scenario context → suggest manual session capture**.
 
 ## Inputs
 
