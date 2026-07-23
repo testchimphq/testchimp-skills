@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — policy-backed workflows (run-qa, upkeep, implement, subflows), SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, run QA, test, upkeep, evolve, implement, plan, explore, skill upgrade), SmartTests, agent-driven test or plan authoring, ExploreChimp, policies, or updating this skill from Git.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.22** for workflow/policy tools (including `upsert-policy`, `update-plan-items-lifecycle-status`).
-version: 1.0.3
+version: 1.0.4
 required_cli_version: "0.1.22"
 ---
 
@@ -191,7 +191,7 @@ Use the repo, plans, policies, and those tools to decide what to test and how to
 
 | User says | Read |
 |-----------|------|
-| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — opening message → phased workflow (requirement gather → plan → execute). Seed **`plans/knowledge/policies/`** composites when missing; gate **`connect-to-test-env`**. **Between phases:** complete each **phase completion gate**; every line **done** or **`N/A`** + justification. |
+| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — opening message → phased workflow (requirement gather → plan → execute). Seed **`plans/knowledge/policies/`** composites when missing; gate **`connect-to-test-env`**. After workstation-gate **`get-eaas-config`** succeeds, best-effort **`report-agent-action`** (`workflowId: init`). **Between phases:** complete each **phase completion gate**; every line **done** or **`N/A`** + justification. |
 | `/testchimp run QA` / `/testchimp test` | [`references/run-qa.md`](references/run-qa.md) — workflow **`run-qa`**; **Preamble #4**; scaffolds + **`ai-test-instructions.md`** / policies; **Analyze → Plan → Execute → Validate → Phase 5 (smart regression) → Phase 6 → Phase 7**. Platform scope: [`platform-scope.md`](references/platform-scope.md). |
 | `/testchimp upkeep` / `/testchimp evolve` | [`references/upkeep.md`](references/upkeep.md) — workflow **`upkeep`**; Analyze → Plan → Execute; optional ExploreChimp on TrueCoverage-prioritized UI journeys ([`run-explorechimp.md`](references/run-explorechimp.md)). Legacy **`audit`** → same. |
 | `/testchimp author plans` / `/testchimp plan` | [`references/author-plans.md`](references/author-plans.md) — workflow **`author-plans`**. |
@@ -309,7 +309,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 
 | Path | Purpose |
 |------|---------|
-| [`references/init-testchimp.md`](references/init-testchimp.md) | Phased init: requirement gather, collaborative plan, action-item execution; seed policies; connect-to-test-env gate |
+| [`references/init-testchimp.md`](references/init-testchimp.md) | Phased init: requirement gather, collaborative plan, action-item execution; seed policies; connect-to-test-env gate; best-effort `report-agent-action` for `init` after connectivity |
 | [`references/policies-and-traceability.md`](references/policies-and-traceability.md) | Policy frontmatter, resolution, ULID, closed `report-agent-action` vocabulary, Report workflow execution, Disabled/Missing Config |
 | [`references/implement-requirement.md`](references/implement-requirement.md) | `/testchimp implement` (`implement`): Analyze → Plan → Execute → Report |
 | [`assets/policies/implement.policy.md`](assets/policies/implement.policy.md) | Default policy for **`implement`** |

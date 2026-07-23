@@ -79,7 +79,7 @@ Still use for analyze/completion and non-CRUD entities (SmartTest locator action
 
 | Field | Notes |
 |-------|--------|
-| `workflow_id` | Catalog id (`run-qa`, `create-tests`, …) |
+| `workflow_id` | Catalog id (`run-qa`, `create-tests`, …) or bootstrap id **`init`** (not a catalog card; see below) |
 | `workflow_execution_id` | Stable ULID for the whole run |
 | `policy_file` / `policy_version` | From resolved policy frontmatter |
 | `git_sha` | Current HEAD |
@@ -92,6 +92,8 @@ Still use for analyze/completion and non-CRUD entities (SmartTest locator action
 | `action_type` | `created` / `updated` / `deleted` / `analyzed` / **`completed`** (`ACTION_COMPLETED`) / **`failed`** (`ACTION_FAILED`). Completing/failing marks the workflow execution done (`completedAtMillis`). Prefer `entity_type: workflow` for those. |
 
 At end of Execute (or when aborting), best-effort report **`ACTION_COMPLETED`** or **`ACTION_FAILED`** so timelines leave `RUNNING`.
+
+**`init` (bootstrap, not catalog):** During **`/testchimp init`**, after workstation-gate **`get-eaas-config`** succeeds, best-effort report **`ACTION_COMPLETED`** with `workflow_id` / `entityIdentity` **`init`** and a fresh ULID (no policy fields). Omit `user_id` — MCP injects **`TESTCHIMP_USER_ID`** from mcp.json when set. Report failure must not block init. See [`init-testchimp.md`](./init-testchimp.md)#workstation-gate-always-first.
 
 **First successful report** for a new `workflow_execution_id` **creates** the DB workflow execution (`execution_created: true`); later reports append actions to the same execution.
 

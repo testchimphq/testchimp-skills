@@ -114,6 +114,17 @@ Run this **before** optional smoke (Phase 0) or project requirement gathering (P
      - `TESTCHIMP_PROJECT_ID`: `PASTE_YOUR_PROJECT_ID_HERE`
    - After any write, **tell the user** they must paste the **project API key** and **project ID** from **TestChimp → Project Settings → Key management** into that file’s `env` block, then **reload MCP / restart the IDE**. **`TESTCHIMP_PROJECT_ID`** is not required for MCP tool calls (project is inferred from the API key) but **is required for TrueCoverage RUM instrumentation** — storing it here gives agents a single project-local source when wiring `testchimp.init()` / native RUM.
 3. **Verify client + credentials** — Apply **`SKILL.md`** Preamble checks **#4** (`TESTCHIMP_API_KEY` resolvable; export for shell/Playwright per that item) and **#5** (CLI/MCP client version). If the key is still a placeholder, **stop** after informing the user (step 2); do not claim MCP is ready. When the key is real, re-check (e.g. MCP tool **`get-eaas-config`** must not return **401**).
+   - **Inform platform (best-effort)** — Immediately after **`get-eaas-config`** succeeds (non-401), mint a fresh **ULID** and call MCP **`report-agent-action`** so the platform knows local-agent init ran:
+     - `workflowId`: **`init`**
+     - `workflowExecutionId`: the ULID
+     - `actorType`: **`LOCAL_AGENT`**
+     - `branchName`: current git branch
+     - `entityType`: **`WORKFLOW`**
+     - `entityIdentity`: **`init`** (must equal `workflowId`)
+     - `actionType`: **`ACTION_COMPLETED`**
+     - **Omit `userId`** — the MCP client injects it from **`TESTCHIMP_USER_ID`** in mcp.json `env` when present. Never print user ids or secrets.
+     - **Omit** `policyFile` / `policyVersion` (init has no policy).
+     - Failure of this report **must not** block the rest of init. Details: [`policies-and-traceability.md`](./policies-and-traceability.md).
 4. **Seed composite policies (if missing)** — Ensure **`plans/knowledge/policies/`** exists under the mapped plans root. If **`run-qa.policy.md`** or **`upkeep.policy.md`** are absent, copy them from this skill’s [`../assets/policies/`](../assets/policies/) (do not overwrite existing team policies). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 5. **Gate: `connect-to-test-env` policy** — Before treating the environment as configured, confirm a usable **`connect-to-test-env`** policy exists (`plans/knowledge/policies/connect-to-test-env.policy.md` or matching frontmatter), **or** that **`## Environment Provision Strategy`** in `ai-test-instructions.md` is substantive enough to fall back. If neither exists, mark **Missing Config**, discuss with the user, and author/seed the policy ([`create-policy.md`](./create-policy.md)) — this is **blocking** for env-dependent work. Do **not** invent provision steps silently.
 6. **Never skip** this block because **`ai-test-instructions.md`** exists or looks complete.
@@ -499,7 +510,7 @@ Register **`@testchimp/cli`** in the **project** MCP config (not global user con
 - Use **`command`:** **`npx`** and **`args`:** **`["-y", "@testchimp/cli@latest", "mcp"]`** so each run resolves the latest npm release and starts the MCP server.
 - Put **`TESTCHIMP_API_KEY`** and **`TESTCHIMP_PROJECT_ID`** in the server **`env`** block (placeholders until the user pastes real values from TestChimp → **Project Settings** → **Key management**). Export the **same API key** in the **shell** when running **`npx playwright …`**. **Do not** put these secrets in **`.env-QA`** — that file is for **test execution** env (e.g. **`BASE_URL`**).
 - After changing MCP config, the user should **reload MCP or restart the IDE** so the new **`npx`** arguments apply.
-- Success check (Basic TestChimp integration): invoke `get-eaas-config` via the MCP client and ensure it does **not** return `401 Unauthorized` (and returns a non-empty config payload).
+- Success check (Basic TestChimp integration): invoke `get-eaas-config` via the MCP client and ensure it does **not** return `401 Unauthorized` (and returns a non-empty config payload). Then best-effort **`report-agent-action`** for workflow **`init`** as in the [Workstation gate](#workstation-gate-always-first) (do not block on report failure).
 
 After install, MCP tools can be used for:
 
