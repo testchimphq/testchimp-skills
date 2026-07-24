@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — policy-backed workflows (run-qa, upkeep, implement, subflows), SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, run QA, test, upkeep, evolve, implement, plan, explore, skill upgrade), SmartTests, agent-driven test or plan authoring, ExploreChimp, policies, or updating this skill from Git.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.22** for workflow/policy tools (including `upsert-policy`, `update-plan-items-lifecycle-status`).
-version: 1.0.4
+version: 1.0.5
 required_cli_version: "0.1.22"
 ---
 
@@ -196,8 +196,10 @@ Use the repo, plans, policies, and those tools to decide what to test and how to
 | `/testchimp upkeep` / `/testchimp evolve` | [`references/upkeep.md`](references/upkeep.md) — workflow **`upkeep`**; Analyze → Plan → Execute; optional ExploreChimp on TrueCoverage-prioritized UI journeys ([`run-explorechimp.md`](references/run-explorechimp.md)). Legacy **`audit`** → same. |
 | `/testchimp author plans` / `/testchimp plan` | [`references/author-plans.md`](references/author-plans.md) — workflow **`author-plans`**. |
 | `/testchimp create tests` | [`references/run-qa.md`](references/run-qa.md) — workflow **`create-tests`**; use **Execute** authoring guidance (Arrange → Act → Assert, fixtures, seeds); depends on [`connect-to-test-env.md`](references/connect-to-test-env.md). |
+| `/testchimp execute tests` | [`references/execute-tests.md`](references/execute-tests.md) — workflow **`execute-tests`**; explicit folder/file scope + env; depends on [`connect-to-test-env.md`](references/connect-to-test-env.md). Distinct from **`/testchimp run QA`**. |
 | `/testchimp run smart regression` | [`references/run-smart-regression.md`](references/run-smart-regression.md) — workflow **`run-smart-regression`** (also Phase 5 of run-qa). |
 | `/testchimp connect to test environment` / provision test environment | [`references/connect-to-test-env.md`](references/connect-to-test-env.md) — workflow **`connect-to-test-env`**; policy required (or ai-test-instructions fallback); deeper patterns in [`environment-management.md`](references/environment-management.md). |
+| `/testchimp configure execution of tests in CI` | [`references/configure-ci-test-execution.md`](references/configure-ci-test-execution.md) — thin CI setup playbook (init Key Area 6 / Action H); not a catalog workflow. |
 | `/testchimp explore` / `/testchimp run explorechimp` | [`references/run-explorechimp.md`](references/run-explorechimp.md) — workflow **`run-explorechimp`**. Release targeting: [release checks](references/run-explorechimp.md#targeting-a-release-release-checks). Platform scope: [`platform-scope.md`](references/platform-scope.md). |
 | `/testchimp run security scan for <scan_id>` | [`references/run-release-check.md`](references/run-release-check.md) — nested scan configs → [`security/dast.md`](references/security/dast.md) / [`sast.md`](references/security/sast.md) / [`deps.md`](references/security/deps.md) / [`secrets.md`](references/security/secrets.md). |
 | `/testchimp fix test failure` / fix test execution | [`references/fix-test-execution.md`](references/fix-test-execution.md) — workflow **`fix-test-execution`**. |
@@ -315,6 +317,8 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`assets/policies/implement.policy.md`](assets/policies/implement.policy.md) | Default policy for **`implement`** |
 | [`references/create-policy.md`](references/create-policy.md) | `/testchimp create policy` — author `*.policy.md` for a workflow-id |
 | [`references/connect-to-test-env.md`](references/connect-to-test-env.md) | `/testchimp connect to test environment` thin playbook |
+| [`references/execute-tests.md`](references/execute-tests.md) | `/testchimp execute tests` — scoped execute against a named env |
+| [`references/configure-ci-test-execution.md`](references/configure-ci-test-execution.md) | `/testchimp configure execution of tests in CI` (init Key Area 6) |
 | [`references/run-smart-regression.md`](references/run-smart-regression.md) | `/testchimp run smart regression` (also run-qa Phase 5) |
 | [`assets/policies/run-qa.policy.md`](assets/policies/run-qa.policy.md) | Default composite policy for **`run-qa`** |
 | [`assets/policies/upkeep.policy.md`](assets/policies/upkeep.policy.md) | Default composite policy for **`upkeep`** |
