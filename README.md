@@ -9,7 +9,7 @@ TestChimp skill for **policy-backed QA workflows** (skill **≥ 1.0.0**). Agents
 | `/testchimp init` | `init` (bootstrap) | Set up QA infra, seed default policies, MCP / workstation gate |
 | `/testchimp run QA` | `run-qa` | Full PR QA composite (plans → env → tests → regression → ExploreChimp → TrueCoverage) |
 | `/testchimp upkeep` | `upkeep` | Coverage / TrueCoverage / cleanup composite (periodic maintenance) |
-| `/testchimp implement` | `implement` | Implement a story/scenario end-to-end |
+| `/testchimp implement` | `implement` | Implement a story/scenario or a finetuned plan file end-to-end |
 | `/testchimp explore` | `run-explorechimp` | ExploreChimp UX analytics on SmartTest pathways |
 | `/testchimp instrument` | `instrument-truecoverage` | TrueCoverage / RUM instrumentation |
 | `/testchimp create policy` | `create-policy` | Author a `*.policy.md` for a catalog workflow |

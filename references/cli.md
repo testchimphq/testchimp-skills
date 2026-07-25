@@ -552,14 +552,14 @@ Requires `@testchimp/cli` ≥ **0.1.17**.
 
 **API:** `POST /api/mcp/create_issue`
 
-**When to use:** File a **new** TestChimp issue in the current project (MCP preferred; CLI fallback). Use when the user asks to create/file a bug, suggestion, observation, or task — or when an agent finds a product defect that is **not** already auto-filed (e.g. ExploreChimp pipeline bugs). Do **not** use this to update an existing issue (use `update-issue-status` / `get-issue-details`) or to fix one (`/testchimp fix issue`).
+**When to use:** File a **new** TestChimp issue in the current project (MCP preferred; CLI fallback). Use when the user asks to create/file a bug, suggestion, observation, or task — or when an agent finds a product defect that is **not** already auto-filed (e.g. ExploreChimp pipeline bugs). **`/testchimp implement`** creates one **`TASK_ISSUE`** per planned task and links it to the parent story via **`linkTargets`** (see [`implement-requirement.md`](./implement-requirement.md)). Do **not** use this to update an existing issue (use `update-issue-status` / `get-issue-details`) or to fix one (`/testchimp fix issue`).
 
 **Agent rules:**
 - **`title` is required** (flag or JSON). Prefer a concrete, actionable title.
 - Defaults when omitted: **`status=ACTIVE`**; **`environment`** defaults server-side to QA when unset.
-- Prefer **`linkTargets`** (via `--json-input`) to attach stories, scenarios, tests, executions, or batch invocations so the issue is traceable.
+- Prefer **`linkTargets`** (via `--json-input`) to attach stories, scenarios, tests, executions, or batch invocations so the issue is traceable. For implement tasks, always include **`STORY`** with the numeric story ordinal as **`toEntityId`**.
 - Use simple flags for common creates; use **`--json-input`** for the full curated contract (`linkTargets`, `attachments`, `artifactReference`, enums below).
-- **`source`** is stored as a label `source:<name>` (e.g. agent ingest id). Extra **`labels`** are optional.
+- **`source`** is stored as a label `source:<name>` (e.g. agent ingest id). Extra **`labels`** are optional. Implement tasks use **`source: testchimp-implement`**.
 - Project is resolved from the API key — do not invent project ids.
 
 | Flag | Required | Maps to JSON field | Notes |
@@ -612,6 +612,19 @@ testchimp create-issue --json-input '{
   "source": "testchimp-agent",
   "environment": "QA"
 }'
+
+# Implement workflow: task linked to parent story (ordinal only)
+testchimp create-issue --json-input '{
+  "title": "Add policy upsert API",
+  "issueType": "TASK_ISSUE",
+  "status": "ACTIVE",
+  "linkTargets": [
+    { "toEntityType": "STORY", "toEntityId": "42" }
+  ],
+  "source": "testchimp-implement"
+}'
+# After that task's code work completes:
+testchimp update-issue-status --issue-id B-42 --status FIXED
 ```
 
 MCP: `create-issue` with the same JSON fields (no CLI flag mapping).
