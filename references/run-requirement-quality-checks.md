@@ -1,5 +1,7 @@
 # `/testchimp analyze requirement quality` (DeFOSPAM — local agent)
 
+
+> **Plan → approve → execute:** When this workflow runs **standalone**, write `knowledge/workflow_plans/run-requirement-quality-checks/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Nested under a composite: reuse the parent plan. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Workflow id:** `run-requirement-quality-checks`.
 
 Use this playbook when the user asks:

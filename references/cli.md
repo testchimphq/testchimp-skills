@@ -1003,6 +1003,40 @@ testchimp upsert-policy \
   --content-file plans/knowledge/policies/connect-to-test-env.policy.md
 ```
 
+### `upsert-plans-support-file`
+
+**API:** `POST /api/mcp/upsert_plans_support_file`  
+**Requires:** CLI ≥ **0.1.24**
+
+Create or update any file under the mapped **plans** root on the platform by relative path — **no git commit/push required**. Primary use: upload workflow execution plans after the Plan phase (especially cloud agents).
+
+| Flag | Required | Body field | Notes |
+|------|----------|------------|-------|
+| `--file-path <path>` | Yes* | `filePath` | Relative to mapped plans root (e.g. `knowledge/workflow_plans/run-qa/<ulid>.plan.md`). Leading `plans/` is stripped. |
+| `--content <markdown>` | Yes* | `content` | Full file content including frontmatter |
+| `--content-file <path>` | Yes* | `content` | Read from disk (alternative to `--content`) |
+
+\*Or provide both fields via `--json-input`.
+
+**Coercion (under `knowledge/workflow_plans/`):** `*_plan.md` or bare `*.md` filenames are normalized to **`*.plan.md`** and stored as support filetype **`WORKFLOW_EXECUTION_PLAN`**. Prefer writing the canonical name yourself.
+
+**Response (JSON camelCase):**
+
+| Field | Notes |
+|-------|-------|
+| `supportFileId` | Platform support file id |
+| `filePath` | Canonical relative path after coerce (no leading `plans/`) |
+| `filetype` | e.g. `WORKFLOW_EXECUTION_PLAN` |
+| `created` | `true` if new row, `false` if updated |
+
+```bash
+testchimp upsert-plans-support-file \
+  --file-path knowledge/workflow_plans/run-qa/01KXYW2NVMQPN4HQMJFC92KQ8P.plan.md \
+  --content-file plans/knowledge/workflow_plans/run-qa/01KXYW2NVMQPN4HQMJFC92KQ8P.plan.md
+```
+
+**Agent rule:** After writing a workflow plan file, calling this tool is a **blocking** step before Execute. Use the returned `filePath` if coerce changed the name. See [`policies-and-traceability.md`](./policies-and-traceability.md) and **SKILL.md** → Workflow execution plans.
+
 ### `list-workflow-catalog`
 
 **API:** `POST /api/mcp/list_workflow_catalog`
@@ -1056,7 +1090,7 @@ testchimp mark-semantic-tests-distinct --json-input '{
 
 ## MCP parity (tool names)
 
-MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`upsert-policy`**, **`create-user-story`**, **`list-rum-environments`**.
+MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`upsert-policy`**, **`upsert-plans-support-file`**, **`create-user-story`**, **`list-rum-environments`**.
 
 ## Related
 

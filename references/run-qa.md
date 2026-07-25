@@ -4,7 +4,7 @@
 
 This document defines the **strict workflow** for Run QA with TestChimp (typically on a PR / feature branch).
 
-> **Workflow overlay (skill ≥ 1.0.0)** — **Workflow id:** `run-qa` (canonical prompt **`/testchimp run QA`**; synonym **`/testchimp test`**). **Policy:** `plans/knowledge/policies/run-qa.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default subflow order includes **`run-smart-regression`** after create-tests (see [`assets/policies/run-qa.policy.md`](../assets/policies/run-qa.policy.md)). Persist a **ULID** `workflow_execution_id` on the branch plan **before Execute**; on mutating actions call **`report-agent-action`** (best-effort) with that same id. **Before treating the run as done:** [Report workflow execution](./policies-and-traceability.md#report-workflow-execution) (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `run-qa`). Details: [`policies-and-traceability.md`](./policies-and-traceability.md). Full Smart regression playbook: [`run-smart-regression.md`](./run-smart-regression.md) (Phase 5 below remains authoritative if an agent only reads this file).
+> **Workflow overlay (skill ≥ 1.0.0)** — **Workflow id:** `run-qa` (canonical prompt **`/testchimp run QA`**; synonym **`/testchimp test`**). **Policy:** `plans/knowledge/policies/run-qa.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default subflow order includes **`run-smart-regression`** after create-tests (see [`assets/policies/run-qa.policy.md`](../assets/policies/run-qa.policy.md)). **Plan path:** `knowledge/workflow_plans/run-qa/<workflow_execution_id>.plan.md`. After Plan: write file → **`upsert-plans-support-file`** (blocking) → explicit user approval (unless `--mode=non-interactive` or policy `allow-execute-without-approval`) → Execute. Persist **ULID** `workflow_execution_id` in frontmatter; on mutating actions call **`report-agent-action`** (best-effort) with that same id. **Before treating the run as done:** [Report workflow execution](./policies-and-traceability.md#report-workflow-execution) (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `run-qa`). Details: [`policies-and-traceability.md`](./policies-and-traceability.md). Full Smart regression playbook: [`run-smart-regression.md`](./run-smart-regression.md) (Phase 5 below remains authoritative if an agent only reads this file).
 
 > **create-tests / nested under run-qa:** When the user asked only **`/testchimp create tests`** or this playbook is reached as a **subflow of run-qa / upkeep**, do **not** start a second Plan → approve → Execute cycle. Use the parent plan’s scope and `workflow_execution_id`; run the **Execute** authorship steps for tests only (skip a nested Analyze/Plan gate and skip later run-qa-only phases unless the parent plan called for them). Standalone **`/testchimp run QA`** (or synonym **`/testchimp test`**) still follows the full phase chain below.
 
@@ -57,7 +57,7 @@ Use this as the primary reference for `/testchimp run QA` (synonym `/testchimp t
 Do **not** advance **Analyze → Plan → Execute → Validate → Phase 5 (Smart regression) → Phase 6 (ExploreChimp) → Phase 7 (Cleanup)** until the **prior phase’s completion gate** is satisfied. **Nothing implied; nothing skipped silently.**
 
 - For **every** gate line item: mark **done**, **blocked**, or **`N/A`** with a **one-line justification**.
-- Record gate outcomes in the **branch plan file** (`<MAPPED_PLANS_ROOT>/knowledge/branch_test_plans/branch_<branch_slug>.md`) under a short **“Phase N completion”** subsection (or tick inline next to the plan checklist) so reruns are deterministic.
+- Record gate outcomes in the **branch plan file** (`<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/run-qa/<workflow_execution_id>.plan.md`) under a short **“Phase N completion”** subsection (or tick inline next to the plan checklist) so reruns are deterministic.
 
 ---
 
@@ -84,16 +84,20 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
   - **Purpose check:** **Arrange** must be rich enough that [World-state → seed/fixture traceability](#world-state--seedfixture-traceability-required) can map every prerequisite to an existing fixture/seed or to **new** work. **Act** must list **concrete** steps (no “exercise the feature”). **Assert** must state **both** UI expectations and whether **backend/probe** checks are required (`N/A` only with rationale).
 - **Plan structure guard (REQUIRED)**:
   - Before asking for user approval, the agent MUST **self-check every proposed test**: **Arrange → Act → Assert** headings are present **in that order**, nested subsections (**Fixtures plan**, **Seed endpoint updates**, **UI validations**, **Backend validations**) are filled or honestly **`TBD`**, and **each section is either complete** (plain-English, actionable) **or explicitly marked** as requiring **user input** (with what is missing). When the user later supplies data, those sections MUST be **updated** in the branch plan (no silent gaps).
-- **Persist and reuse a per-branch Plan artifact (REQUIRED)**:
-  - **Always** create/update the **current branch** plan at:
-    - `<MAPPED_PLANS_ROOT>/knowledge/branch_test_plans/branch_<branch_slug>.md`
+- **Persist and reuse a per-execution Plan artifact (REQUIRED)**:
+  - **Always** create/update this run’s plan at:
+    - `<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/run-qa/<workflow_execution_id>.plan.md`
   - **Before planning**, **check for the existence** of that file:
     - If it exists, **read it first**, then update it based on (a) what’s already planned/done, (b) current PR diffs and plan materials, and (c) any additional user context for *this* run.
     - If it does not exist, create it and do the full Plan phase (see Phase 1).
   - The plan file must have YAML frontmatter containing:
-    - `LastRunOnCommit: <commit_sha>` (commit at which this branch plan was last updated by `/testchimp run QA`)
+    - `workflow_id: run-qa`
+    - `workflow_execution_id: <ulid>`
+    - `LastRunOnCommit: <commit_sha>` (HEAD when this plan was last updated)
+    - `PlanApproved: pending` (set to `yes` after user approval; `yes` + `ApprovedBy: auto` when `--mode=non-interactive`; or `policy-non-interactive` when policy allows)
   - The plan body must contain a **checklist** of action items, where each item is explicitly marked **done** (`- [x]`) or **not done** (`- [ ]`), so reruns are deterministic.
-- **Get explicit agreement on the Plan**: the agent MUST pause after writing/updating the branch plan and wait for user approval before running Setup/Execute work.
+  - **Upsert (BLOCKING):** After writing/updating the plan file (and again after recording approval), call **`upsert-plans-support-file`** with `filePath: knowledge/workflow_plans/run-qa/<ulid>.plan.md` and full content. Do **not** start Execute until upsert succeeds.
+- **Get explicit agreement on the Plan**: the agent MUST pause after writing/upserting the plan and wait for user approval before Execute — **unless** the prompt has **`--mode=non-interactive`** (auto-approve with `ApprovedBy: auto`, then Execute + open a PR) **or** the resolved policy sets `allow-execute-without-approval: true` ([`policies-and-traceability.md`](./policies-and-traceability.md)#execution-mode--mode-prompt-arg).
 - **Arrange drives infra (no assumptions; world-state first)**:
   - For each planned test, **Arrange** must define the **required world state** as if the environment is **empty** other than what the selected fixtures will establish—that definition is what the **fixture / seed audit** consumes to find gaps.
   - If posture requires data that cannot be created with existing fixtures, the Plan MUST prefer this chain and list the missing pieces as Execute blockers:
@@ -283,27 +287,18 @@ Goal: gather evidence and inputs needed to produce a high-signal Plan. This phas
 
 **Mandatory pre-step (first action):** Before any Analyze work, open `plans/knowledge/ai-test-instructions.md` and read **`## Environment Provision Strategy`** plus **`## Past learnings — authoring & validation (FAQ)`**. Use those pre-agreed decisions as constraints for planning and later execution; do not postpone this read to Execute.
 
-### Locate the branch plan file (always first)
+### Locate the workflow plan file (always first)
 
 1. **Resolve `<MAPPED_PLANS_ROOT>`**
    - Find the mapped plans root by locating the `.testchimp-plans` marker file (see `SKILL.md` → Marker files). The directory containing `.testchimp-plans` is `<MAPPED_PLANS_ROOT>`.
-2. **Resolve `<branch_slug>`**
-   - First resolve the **current git branch name** (preferred command):
-     - `git branch --show-current`
-   - **If empty** (detached HEAD), fall back to:
-     - `git rev-parse --abbrev-ref HEAD`
-     - If still not usable, use the short commit SHA: `git rev-parse --short HEAD`
-   - **Define `<branch_slug>` deterministically from the branch name** (filename-safe):
-     - Start with the resolved branch name string.
-     - Lowercase it.
-     - Replace any sequence of characters that is not `[a-z0-9]` with a single `_` (this includes `/` in branch names like `feature/foo`).
-     - Trim leading/trailing `_`.
-     - If the result is empty, use `detached_<short_sha>`.
+2. **Mint `<workflow_execution_id>`**
+   - Generate one **ULID** for this run (reuse if resuming the same incomplete execution).
 3. **Resolve the plan path**
-   - `<MAPPED_PLANS_ROOT>/knowledge/branch_test_plans/branch_<branch_slug>.md`
-4. **Branch-plan-first behavior**
-   - If the file exists: read it, then continue planning based on **existing checklist state** + new context.
-   - If missing: create it, then do the full planning steps below.
+   - `<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/run-qa/<workflow_execution_id>.plan.md`
+4. **Plan-file-first behavior**
+   - If the file exists for this execution id: read it, then continue planning based on **existing checklist state** + new context.
+   - If missing: create it (with required frontmatter), then do the full planning steps below.
+   - **Legacy:** older runs may live under `knowledge/branch_test_plans/branch_<slug>.md` — prefer **`workflow_plans/run-qa/`** for new executions.
 
 ### Analyze inputs
 
@@ -394,7 +389,8 @@ Before proceeding to **Execute**, the agent must record **done/blocked/`N/A`** f
 - [ ] Stories/scenarios to create (no fake ids) and timing rule clear.
 - [ ] System infra and test infra summaries align with the per-test subsections.
 - [ ] Environment strategy **matches** `plans/knowledge/ai-test-instructions.md` (no improvised alternate URLs); FAQ section **consulted** for known env pitfalls affecting this PR scope.
-- [ ] User explicitly approved the plan to proceed.
+- [ ] User explicitly approved the plan to proceed (or `--mode=non-interactive` with `PlanApproved: yes` + `ApprovedBy: auto`, or policy `allow-execute-without-approval` + `PlanApproved: policy-non-interactive`).
+- [ ] Plan file upserted via **`upsert-plans-support-file`** (`knowledge/workflow_plans/run-qa/<ulid>.plan.md`) — **blocking**.
 - [ ] **Platform scope:** **`User confirmed: yes`** on branch plan (or **`N/A`** — web-only project); platform list matches inventory and §6/§7.
 - [ ] **Smart regression:** branch plan **§6** lists candidate affected scenarios (or **`N/A`** + rationale).
 - [ ] **ExploreChimp:** branch plan **§7** records **`yes`** vs **`N/A`** (+ target specs when **`yes`**, including new + changed + regression-touched UI specs); default-on policy for UI deltas applied; matches what the user approved.
@@ -403,7 +399,7 @@ Before proceeding to **Execute**, the agent must record **done/blocked/`N/A`** f
 
 ## Phase 3: Execute (do the plan)
 
-Preamble before execution: Verify that the plan doc created above is present. Verify that it indicates the user has approved. If not—**PAUSE** and do **not** continue.
+Preamble before execution: Verify that the plan doc created above is present **and** was upserted to the platform. Verify that it indicates the user has approved (`PlanApproved: yes`), `--mode=non-interactive` auto-approval (`ApprovedBy: auto`), or policy-non-interactive. If not—**PAUSE** and do **not** continue.
 
 **Execute preamble — environment (mandatory):** Immediately after approval, re-open `plans/knowledge/ai-test-instructions.md` and confirm how this run will provision and target the app (**commands**, **URLs**, **MCP flows**, **health gates**). If anything is ambiguous, resolve it **before** seed/probe work—**do not** guess `BASE_URL`. If you hit a blocker, apply **[Binding: ai-test-instructions (environment and FAQ playbook)](#binding-ai-test-instructions-environment-and-faq-playbook)** step 3 (FAQ first); after a **novel** fix, apply step 4 (append FAQ entry).
 

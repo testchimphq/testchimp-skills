@@ -96,6 +96,27 @@ If the team wants test executions in **CI**, how are test environments procured 
 ## CI / Cloud
 ```
 
+
+
+### Execution Mode (optional)
+
+Two independent ways to skip the chat approval pause after Plan + upsert:
+
+1. **Prompt arg (per invocation):** `--mode=non-interactive` on the `/testchimp …` prompt — agents auto-approve with `PlanApproved: yes` + `ApprovedBy: auto`, Execute, then open a PR. See [`policies-and-traceability.md`](./policies-and-traceability.md)#execution-mode--mode-prompt-arg.
+2. **Policy (project default for that workflow):** set **explicitly**:
+
+```yaml
+---
+workflow-id: <id>
+version: 1.0.0
+allow-execute-without-approval: true
+---
+```
+
+Or under `### Execution Mode` in the body: `- allow-execute-without-approval: true`.
+
+**Default is interactive approval.** Absence of both the prompt mode and this flag means agents must pause for explicit user approval after Plan + `upsert-plans-support-file`. Prompt `--mode=non-interactive` does **not** require the policy flag.
+
 Do **not** invent complex playbook logic — record the team’s choices so agents can follow them non-interactively.
 
 ---

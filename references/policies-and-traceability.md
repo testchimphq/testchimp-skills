@@ -60,8 +60,85 @@ After authoring a policy on disk, call **`upsert-policy`** so it is available on
 For Plan → approve → Execute workflows (`run-qa`, `upkeep`, standalone mutating flows):
 
 1. During **Plan**, generate one **ULID** as **`workflow_execution_id`**.
-2. Persist it in the plan file frontmatter or body (e.g. `workflow_execution_id: <ulid>`).
-3. Reuse the **same** ULID for every mutating MCP call and **`report-agent-action`** in that run — do **not** mint a new id per mutation.
+2. Persist it in the plan file frontmatter (required) at:
+   **`<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/<workflow-id>/<workflow_execution_id>.plan.md`**
+3. Call **`upsert-plans-support-file`** with that relative path + full content (**BLOCKING** — do not Execute until it succeeds).
+4. Reuse the **same** ULID for every mutating MCP call and **`report-agent-action`** in that run — do **not** mint a new id per mutation.
+
+## Workflow execution plans (layout + approval)
+
+Canonical plan path (skill ≥ **1.0.7**):
+
+```text
+plans/knowledge/workflow_plans/<workflow-id>/<workflow_execution_id>.plan.md
+```
+
+Platform stores these as support filetype **`WORKFLOW_EXECUTION_PLAN`**. Knowledge-base embeddings are eventual (same pending queue as stories/scenarios), not immediate on upsert.
+
+**Required frontmatter:**
+
+```yaml
+---
+workflow_id: <catalog-id>
+workflow_execution_id: <ulid>
+LastRunOnCommit: <git-sha>
+PlanApproved: pending   # pending | yes | no | policy-non-interactive
+ApprovedBy:             # set on approval: "auto" | <user id/name> | omit while pending
+---
+```
+
+## Execution Mode (`--mode` prompt arg)
+
+Parse the **invoking prompt** for a mode flag (any of these forms):
+
+- `--mode=non-interactive`
+- `--mode non-interactive`
+- `mode=non-interactive`
+
+Default when absent: **interactive** (pause for explicit user approval after Plan + upsert).
+
+### Approval precedence (highest first)
+
+1. **Prompt `--mode=non-interactive`** — skip the chat approval pause (see below).
+2. **Policy** `allow-execute-without-approval: true` (frontmatter or `### Execution Mode` body) — skip pause; set `PlanApproved: policy-non-interactive`.
+3. **Interactive (default)** — stop and wait for explicit user approval; on consent set `PlanApproved: yes` (optionally `ApprovedBy: <user>`).
+
+### `--mode=non-interactive` agent behavior
+
+Still run **Plan first** — do **not** skip the plan file:
+
+1. Write `knowledge/workflow_plans/<workflow-id>/<workflow_execution_id>.plan.md` with a full checklist.
+2. **`upsert-plans-support-file`** (blocking) — same as interactive.
+3. **Auto-approve** without waiting for the user:
+   - `PlanApproved: yes`
+   - **`ApprovedBy: auto`** (required for this mode — the “approved by” frontmatter field)
+4. Re-**`upsert-plans-support-file`** with the updated frontmatter.
+5. **Execute** the plan immediately.
+6. **Raise a PR** when there are commits to review:
+   - If on the repo **default** branch, create a feature branch before coding (name it from the workflow + short scope, e.g. `testchimp/upkeep-<short-ulid>`).
+   - Commit changes on that branch, push, and open a PR (e.g. `gh pr create`) summarizing what the plan executed.
+   - If a PR already exists for the branch, push updates to it instead of opening a duplicate.
+   - If Execute produced **no** code/plan-repo changes, skip PR creation and note that in the completion report.
+
+`--mode=non-interactive` **wins over** an interactive policy default. It does **not** require `allow-execute-without-approval` on the policy. Nested subflows still inherit the parent plan — no second approval cycle.
+
+**Policy-only non-interactive** (no `--mode` flag): Skip the user pause **only** when the resolved policy **explicitly** permits it:
+
+- Frontmatter: `allow-execute-without-approval: true`
+- Or a body section such as:
+
+```markdown
+### Execution Mode
+- allow-execute-without-approval: true
+```
+
+When skipping via policy only, set `PlanApproved: policy-non-interactive` (and omit `ApprovedBy`, or set it only if the policy names an actor). Still upsert the plan file before Execute. PR creation follows the playbook / user request — not mandatory solely because of the policy flag.
+
+If neither prompt mode nor policy allows skipping, **always** require explicit user approval.
+
+**Platform upload:** `upsert-plans-support-file` (`filePath` relative to plans root, `content` = full markdown). Prefer MCP; CLI fallback after Preamble **#4**. Cloud agents rely on this — git commit/push is **not** a substitute for the blocking upsert.
+
+Legacy (read-only / migrate opportunistically): `knowledge/branch_test_plans/`, `knowledge/evolve_plans/`.
 
 ## Inline `agentTraceability` on mutating CRUDs (preferred)
 
@@ -69,7 +146,7 @@ For **`create-issue`**, **`create-user-story`**, **`create-test-scenario`**, **`
 
 The server records the same `workflow_executions` + `AGENT_WORKFLOW_ACTIVITY` rows that `report-agent-action` would — **no separate `report-agent-action` for that mutation**. Do **not** double-call (CRUD + RAA for the same CREATED/UPDATED).
 
-Still use **`report-agent-action`** for **`mark-plan-items-implementation-done`**, **`update-plan-items-lifecycle-status`**, **`upsert-policy`**, SmartTest locator actions, analyze, and **`ACTION_COMPLETED` / `ACTION_FAILED`**.
+Still use **`report-agent-action`** for **`mark-plan-items-implementation-done`**, **`update-plan-items-lifecycle-status`**, **`upsert-policy`**, **`upsert-plans-support-file`**, SmartTest locator actions, analyze, and **`ACTION_COMPLETED` / `ACTION_FAILED`**.
 
 Optional **`agentModel`**: free-form model id from the agent/CLI only (`--agent-model` or `TESTCHIMP_AGENT_MODEL`). Platform backend reporters leave it unset.
 

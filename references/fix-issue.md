@@ -6,6 +6,8 @@ Given a TestChimp issue ordinal id (from the Fix CTA **Copy fix prompt**, or pas
 
 **Workflow id:** `fix-issue`. Not blocked on [`connect-to-test-env`](./connect-to-test-env.md) — run that only when fix validation in a live environment is needed (policy-controlled; often default off).
 
+**Plan → approve → execute:** Mint `workflow_execution_id`, write **`knowledge/workflow_plans/fix-issue/<workflow_execution_id>.plan.md`** (scope, investigation notes, proposed fix), **`upsert-plans-support-file`** (blocking), then explicit user approval before applying code changes — unless `--mode=non-interactive` or policy `allow-execute-without-approval: true`. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+
 This playbook is **not** the same as [`fix-test-execution.md`](fix-test-execution.md) (`/testchimp fix test failure` for raw SmartTest execution reports by `batch_invocation_id` / `job_id`). An ordinal-based issue can describe a test failure or any other product issue.
 
 To **file a new** issue (not fix an existing one), use MCP/CLI **`create-issue`** — see [`cli.md`](cli.md) § `create-issue` (requires `@testchimp/cli` ≥ **0.1.17**).

@@ -1,5 +1,7 @@
 # /testchimp run explorechimp
 
+
+> **Plan → approve → execute:** When this workflow runs **standalone**, write `knowledge/workflow_plans/run-explorechimp/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Nested under a composite: reuse the parent plan. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Synonym:** `/testchimp explore` (same workflow **`run-explorechimp`**).
 
 This reference supports **local ExploreChimp** runs: Playwright UI tests drive the browser to **deterministic screen-states**, and `@testchimp/playwright` sends **DOM, screenshot, console, network, and performance metrics** to TestChimp for **UX-oriented bug finding** (layout, visual regressions, usability, accessibility via axe, performance signals, console recorded issues, suspicious network patterns, and similar). Client behavior is implemented in **`@testchimp/playwright`** (`EXPLORECHIMP_ENABLED`, `markScreenState` fixture; **≥ 0.1.8**); analysis is routed via TestChimp backend services.

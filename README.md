@@ -33,7 +33,7 @@ From **v1.0.0** onward the skill is organized as a **modular workflow catalog**,
 1. **Playbooks** — battle-tested how-to in **`references/<workflow>.md`** (renamed to match catalog ids: `run-qa`, `upkeep`, `run-explorechimp`, `instrument-truecoverage`, …).
 2. **Policies** — team overrides in the mapped repo under **`plans/knowledge/policies/<workflow-id>.policy.md`**. Init seeds defaults from **`assets/policies/`**. When a policy is missing, **`plans/knowledge/ai-test-instructions.md`** remains the fallback.
 3. **Composites** — **`run-qa`** and **`upkeep`** declare **subflows** in their policy (e.g. author-plans → connect-to-test-env → create-tests → …). Agents follow the composite order and can still run a subflow alone.
-4. **Traceability** — Plan phases mint a **`workflow_execution_id`** (ULID); mutating work reports via **`report-agent-action`** / inline **`agentTraceability`**. Details: [`references/policies-and-traceability.md`](references/policies-and-traceability.md).
+4. **Traceability** — Plan phases mint a **`workflow_execution_id`** (ULID); plans live under **`plans/knowledge/workflow_plans/<workflow-id>/`**; upload via **`upsert-plans-support-file`** before Execute; mutating work reports via **`report-agent-action`** / inline **`agentTraceability`**. Details: [`references/policies-and-traceability.md`](references/policies-and-traceability.md).
 5. **CLI/MCP** — workflow tools (`get-policy`, `list-policies`, `upsert-policy`, `list-workflow-catalog`, `get-last-run-workflow-detail`, …). Pin **`@testchimp/cli`** to at least **`required_cli_version`** in **`SKILL.md`**.
 
 **Upgrade note:** If your installed skill is older than **1.0.0**, upgrade now (`/testchimp skill upgrade` / `git pull`). Policy and traceability tooling assume 1.0+.

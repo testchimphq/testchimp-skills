@@ -1,5 +1,7 @@
 # /testchimp author plans
 
+
+> **Plan → approve → execute:** When this workflow runs **standalone**, write `knowledge/workflow_plans/author-plans/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Nested under a composite: reuse the parent plan. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Synonym:** `/testchimp plan` (same workflow **`author-plans`**).
 
 This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and `@Scenario` links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
@@ -130,4 +132,4 @@ When the user asks for **`/testchimp plan`** (or equivalent: fill gaps in the te
 
 - **[`SKILL.md`](../SKILL.md)** — command routing and MCP tool list.
 - **[`write-smarttests.md`](./write-smarttests.md)** — SmartTests, coverage MCP, `@Scenario` comments, platform vs repo paths for **`tests/`**.
-- **[`upkeep.md`](./upkeep.md)** — `/testchimp evolve`: **Analyze → Plan → Execute** with phase gates; persisted plans under `<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/plan_<YYYY-MM-DD>_<nn>.md`.
+- **[`upkeep.md`](./upkeep.md)** — `/testchimp evolve`: **Analyze → Plan → Execute** with phase gates; persisted plans under `<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/upkeep/<workflow_execution_id>.plan.md`.

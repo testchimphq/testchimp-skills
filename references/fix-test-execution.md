@@ -2,6 +2,8 @@
 
 **Workflow id:** `fix-test-execution` (prompts: `/testchimp fix test failure`, fix test execution).
 
+**Plan → approve → execute:** Mint `workflow_execution_id`, write **`knowledge/workflow_plans/fix-test-execution/<workflow_execution_id>.plan.md`** (failures, hypothesized causes, fix steps), **`upsert-plans-support-file`** (blocking), then explicit user approval before applying fixes — unless `--mode=non-interactive` or policy `allow-execute-without-approval: true`. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+
 ## Goal
 
 Given a failed SmartTest execution id (either a batch invocation id from the batch execution viewer, or an individual job id from the test execution viewer), fetch a structured failure report via TestChimp MCP/CLI, troubleshoot and apply fixes, then re-run the failing tests using the project’s environment provisioning instructions.

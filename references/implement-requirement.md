@@ -11,7 +11,7 @@ Implement product behaviour for a **user story** or **scenario** using the repo�
 
 Users often refine a story into a detailed plan first, then ask to implement that plan. Prefer the **plan file** as Execute scope when given; resolve the parent **story** from the plan for platform load + task linking.
 
-> **Traceability:** Persist a **ULID** `workflow_execution_id` before Execute; report mutating actions with **`report-agent-action`**. Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `implement`). Vocabulary: [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Traceability:** Persist a **ULID** `workflow_execution_id` before Execute; write the plan at **`knowledge/workflow_plans/implement/<workflow_execution_id>.plan.md`**, call **`upsert-plans-support-file`** (blocking), then seek **explicit user approval** (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Report mutating actions with **`report-agent-action`**. Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `implement`). Vocabulary: [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 ## Inputs
 
@@ -99,9 +99,11 @@ Include:
 4. **Risks / open questions** — blockers that need user input.
 5. **Task breakdown** — break the story (or the detailed implement plan) into concrete, actionable **tasks**. List each intended task **title** in the checklist (e.g. `- [ ] Add policy upsert API`). Prefer task titles already listed in a supplied plan file. Do **not** call **`create-issue`** yet — platform mutations wait until after Plan approval (same rule as stories/scenarios).
 6. **Checklist** — actionable `- [ ]` items for Execute (include every task from the breakdown; may add non-platform checklist items such as self-review).
-7. **`workflow_execution_id: <ulid>`** in plan frontmatter or body.
+7. **`workflow_execution_id: <ulid>`** in plan frontmatter (required), plus `workflow_id: implement`, `LastRunOnCommit`, `PlanApproved`.
+8. **Write** the plan to **`<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/implement/<workflow_execution_id>.plan.md`** (or adopt/update a user-supplied plan file and also copy/sync into that canonical path when executing as workflow `implement`).
+9. **`upsert-plans-support-file`** with that relative path + content (**BLOCKING** before Execute).
 
-**Pause for explicit user approval** before Execute — **except** when the user already asked to implement a specific plan file (that counts as approval of the file’s content; still confirm if you changed scope or task titles).
+**Pause for explicit user approval** before Execute — **except** when (a) the prompt has **`--mode=non-interactive`** (set `PlanApproved: yes` + `ApprovedBy: auto`, Execute, open a PR), (b) the user already asked to implement a specific plan file (that counts as approval of the file’s content; still confirm if you changed scope or task titles), or (c) policy sets `allow-execute-without-approval: true`.
 
 ### Phase 2 completion gate
 

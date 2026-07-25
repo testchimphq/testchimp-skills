@@ -2,7 +2,7 @@
 
 **Synonym:** `/testchimp evolve` (same workflow **`upkeep`** — use either prompt). Legacy **`/testchimp audit`** → same.
 
-> **Workflow overlay (skill ≥ 1.0.0)** — **Workflow id:** `upkeep` (canonical prompt `/testchimp upkeep`; synonym `/testchimp evolve`). **Policy:** `plans/knowledge/policies/upkeep.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default subflows: author-plans → connect-to-test-env → fix-coverage-gaps → run-explorechimp → cleanup → instrument-truecoverage. Persist a **ULID** `workflow_execution_id` on the upkeep/evolve plan **before Execute**; on mutating actions call **`report-agent-action`** (best-effort). **Before treating the run as done:** [Report workflow execution](./policies-and-traceability.md#report-workflow-execution) (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `upkeep`). Details: [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Workflow overlay (skill ≥ 1.0.0)** — **Workflow id:** `upkeep` (canonical prompt `/testchimp upkeep`; synonym `/testchimp evolve`). **Policy:** `plans/knowledge/policies/upkeep.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default subflows: author-plans → connect-to-test-env → fix-coverage-gaps → run-explorechimp → cleanup → instrument-truecoverage. **Plan path:** `knowledge/workflow_plans/upkeep/<workflow_execution_id>.plan.md`. After Plan: write → **`upsert-plans-support-file`** (blocking) → user approval (unless `--mode=non-interactive` or policy allows non-interactive) → Execute. Persist **ULID** `workflow_execution_id`; on mutating actions call **`report-agent-action`** (best-effort). **Before treating the run as done:** [Report workflow execution](./policies-and-traceability.md#report-workflow-execution) (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `upkeep`). Details: [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 Systematically improve **requirement coverage**, **execution health**, **TrueCoverage** (real usage vs automated tests), and—when in scope—**targeted ExploreChimp UX analytics** on critical UI slices informed by those signals. This is **not** a passive review: the agent is responsible for **running and maintaining the QA surface area** of the project—seed and probe endpoints, mocks, fixtures, SmartTests and API tests, TrueCoverage instrumentation, optional **ExploreChimp** runs on high-impact journeys, and test-plan artifacts (user stories / scenarios) where the product is under-specified.
 
@@ -125,19 +125,26 @@ Do **not** open Phase 2 until **all** are satisfied. Same bar as [`init-testchim
 
 Create:
 
-**`<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/plan_<YYYY-MM-DD>_<nn>.md`**
+**`<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/upkeep/<workflow_execution_id>.plan.md`**
 
 - **`<YYYY-MM-DD>`** — ISO calendar date for the evolve run.
 - **`<nn>`** — two-digit dedupe index: `01` for the first plan that day, `02`, `03`, … if multiple evolves run the same day.
 
-Suggested **YAML frontmatter** (optional but useful):
+**Required YAML frontmatter:**
 
 ```yaml
 ---
-evolve_date: YYYY-MM-DD
-index: "01"
+workflow_id: upkeep
+workflow_execution_id: <ulid>
+LastRunOnCommit: <git-sha>
+PlanApproved: pending
+ApprovedBy:             # "auto" when --mode=non-interactive
 ---
 ```
+
+After writing the plan file, call **`upsert-plans-support-file`** with `filePath: knowledge/workflow_plans/upkeep/<ulid>.plan.md` and full content (**blocking** before Execute). See [`policies-and-traceability.md`](./policies-and-traceability.md).
+
+When the prompt includes **`--mode=non-interactive`**: set `PlanApproved: yes` + `ApprovedBy: auto`, re-upsert, **do not** wait for chat approval, Execute, then **open a PR**.
 
 ### Plan template (required sections)
 
@@ -162,7 +169,9 @@ For section 2, apply this guardrail:
 
 Do **not** ask for user approval to implement until **all** are satisfied (each **done** or **`N/A`** + one-line justification where a gate line does not apply):
 
-- [ ] Plan file exists at **`knowledge/evolve_plans/plan_<date>_<nn>.md`** under **`<MAPPED_PLANS_ROOT>`**.
+- [ ] Plan file exists at **`knowledge/workflow_plans/upkeep/<workflow_execution_id>.plan.md`** under **`<MAPPED_PLANS_ROOT>`**.
+- [ ] **`upsert-plans-support-file`** succeeded for that relative path (blocking before Execute).
+- [ ] Frontmatter includes `workflow_id`, `workflow_execution_id`, `LastRunOnCommit`, `PlanApproved` (and `ApprovedBy: auto` when `--mode=non-interactive`).
 - [ ] All **eight** sections above are present (use “N/A” with one-line rationale if a section is empty).
 - [ ] Each section has a **checklist** the agent will tick during execution.
 - [ ] Links to **`plans/knowledge/truecoverage-instrument-progress.md`** / **`plans/events/`** included when TrueCoverage work exists (including when pulling from the planned-not-yet-implemented backlog).
@@ -175,12 +184,12 @@ Do **not** ask for user approval to implement until **all** are satisfied (each 
 
 ### Hard gate: explicit user agreement
 
-- **Do not** start implementation until the user **explicitly agrees** to the written plan (e.g. confirms in chat or asks to proceed). Paste a **short summary** + path to **`plan_*.md`** when asking.
+- **Do not** start implementation until the user **explicitly agrees** to the written plan (e.g. confirms in chat or asks to proceed) — **unless** the prompt has **`--mode=non-interactive`** (auto-approve with `ApprovedBy: auto`, then Execute + open a PR) **or** policy `allow-execute-without-approval`. Paste a **short summary** + path to **`knowledge/workflow_plans/upkeep/<workflow_execution_id>.plan.md`** when asking (interactive only).
 
 ### Git workflow
 
-- If the current branch is the repo **default** branch (**`main`**, **`master`**, or team convention), **ask** whether to create a **feature branch** before coding.
-- Implement on the agreed branch; push and open PR when the user wants review.
+- If the current branch is the repo **default** branch (**`main`**, **`master`**, or team convention): in **interactive** mode **ask** whether to create a **feature branch** before coding; in **`--mode=non-interactive`**, **create** a feature branch without asking (e.g. `testchimp/upkeep-<short-ulid>`).
+- Implement on the agreed/created branch; push and open PR when the user wants review — **or always open a PR** when `--mode=non-interactive` produced commits.
 
 ### Implementation order (typical)
 
@@ -194,7 +203,7 @@ Follow this **order** when coding (dependencies first):
 
 ### Post-implementation completion checklist (required)
 
-After implementation is **done**, walk the **same buckets** as above and record the outcome in **`plan_*.md`** before you treat Phase 3 as finished—same style as the Phase 1 / Phase 2 gates (nothing implied; nothing skipped silently). Append a short **“Phase 3 completion”** block or tick items inline next to the plan checklists.
+After implementation is **done**, walk the **same buckets** as above and record the outcome in the **workflow plan file** (`knowledge/workflow_plans/upkeep/<workflow_execution_id>.plan.md`) before you treat Phase 3 as finished—same style as the Phase 1 / Phase 2 gates (nothing implied; nothing skipped silently). Append a short **“Phase 3 completion”** block or tick items inline next to the plan checklists. Re-**`upsert-plans-support-file`** after updating the plan.
 
 For **each** bucket below: either mark **done** with a **one-line** summary of what shipped, or write **`N/A`** with a **one-line justification** (why this evolve cycle did not need it).
 
@@ -214,7 +223,7 @@ Then complete **Verification** and **Closure** below.
 
 ### Closure
 
-- Mark the **Phase 2 plan checklists** and the **Phase 3 completion checklist** (above) in the same **`plan_*.md`** file—every bucket **done** or **`N/A`** with justification.
+- Mark the **Phase 2 plan checklists** and the **Phase 3 completion checklist** (above) in the same **workflow plan file** (`knowledge/workflow_plans/upkeep/<workflow_execution_id>.plan.md`)—every bucket **done** or **`N/A`** with justification. Re-upsert via **`upsert-plans-support-file`**.
 - Add **commit** and/or **PR** references when available.
 - If **ExploreChimp** ran, summarize **which TrueCoverage signals** drove test choice and whether **`## ExploreChimp`** in **`ai-test-instructions.md`** was updated (regex, sources, scope notes).
 - **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** before finishing (`ACTION_COMPLETED` / `ACTION_FAILED` for `WORKFLOW` + `upkeep`).

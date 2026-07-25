@@ -2,6 +2,8 @@
 
 Initialize the repo for TestChimp using a phased workflow. This document is for **AI agents** and must be run as **Phase 0 (optional smoke) -> Phase 1 (Requirement gather) -> Phase 2 (Plan) -> Phase 3 (Execution)**. Do not jump directly into implementing every setup task.
 
+> **Plan → approve → execute:** Mint a **ULID** `workflow_execution_id`, write **`knowledge/workflow_plans/init/<workflow_execution_id>.plan.md`** (checklist of init action items), call **`upsert-plans-support-file`** (blocking), then seek **explicit user approval** before Phase 3 Execute — unless `--mode=non-interactive` or policy `allow-execute-without-approval`. See [`policies-and-traceability.md`](./policies-and-traceability.md). Persist durable project decisions in **`plans/knowledge/ai-test-instructions.md`** as today; the `.plan.md` file is the per-run execution checklist + approval record.
+
 ### Phase gating (required — same style as `/testchimp evolve`)
 
 Between phases, **stop and complete the phase’s completion gate** before continuing. Treat gates like [`upkeep.md`](./upkeep.md): **nothing implied**, **nothing skipped silently**.
@@ -88,7 +90,7 @@ When **`/testchimp init`** starts, the **first substantive message to the user**
 - **During init**, TestChimp sets up **complete QA infrastructure** for the project: seeding endpoints, test environment management, CI setup, fixtures, **TrueCoverage instrumentation** (web: `@testchimp/rum-js`; native: **TestChimpRum** on iOS/Android per [`instrument-truecoverage.md`](./instrument-truecoverage.md)), and test scaffolds with proper TestChimp integration (Playwright on web; Mobilewright on **`mobile`** / **`multi-platform`** — see **`.testchimp-tests`**, [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md), [`mobilewright-smarttests.md`](./mobilewright-smarttests.md)).
 - **After init**, the user mainly runs **`/testchimp test`** when they finish a PR and want it tested.
 - **Ongoing**, the agent runs the full QA workflow — when speaking to the user, use first person: *I will run the complete QA workflow* to author tests for relevant scenarios, make the necessary QA infrastructure adjustments, identify coverage gaps, and address them.
-- **Periodically**, run **`/testchimp evolve`** to analyze test coverage gaps and TrueCoverage insights, address them, and improve the suite. Persist each evolve run as a dated plan markdown file under **`<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/`** (see [`upkeep.md`](./upkeep.md)) so later runs have traceability.
+- **Periodically**, run **`/testchimp evolve`** to analyze test coverage gaps and TrueCoverage insights, address them, and improve the suite. Persist each evolve run as a dated plan markdown file under **`<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/upkeep/`** (see [`upkeep.md`](./upkeep.md)) so later runs have traceability.
 - **Periodically** (or when duplicate noise appears), run **`/testchimp cleanup`** to audit semantically similar SmartTests, mark legitimately distinct pairs, and remove true duplicates with approval ([`cleanup.md`](./cleanup.md)). Cleanup is **separate from evolve**.
 
 **Always** include this overview link: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
@@ -716,4 +718,4 @@ Persist final state in `plans/knowledge/ai-test-instructions.md` including an **
 ## Post-init guidance for the user
 
 - On demand: run `/testchimp test` when a PR is ready for test authoring and execution.
-- Ongoing: run `/testchimp evolve` periodically or on CI triggers to close requirement and TrueCoverage gaps; keep a record under `<MAPPED_PLANS_ROOT>/knowledge/evolve_plans/` per [`upkeep.md`](./upkeep.md).
+- Ongoing: run `/testchimp evolve` periodically or on CI triggers to close requirement and TrueCoverage gaps; keep a record under `<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/upkeep/` per [`upkeep.md`](./upkeep.md).

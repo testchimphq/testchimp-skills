@@ -24,7 +24,9 @@ flowchart LR
   approval --> execute
 ```
 
-Same **Analyze → Plan → Execute** gating style as evolve and test: complete each phase before continuing; get explicit user approval before Phase 3.
+Same **Analyze → Plan → Execute** gating style as upkeep and run-qa: complete each phase before continuing; get explicit user approval before Phase 3 (unless `--mode=non-interactive` or policy `allow-execute-without-approval`).
+
+**Plan path (standalone):** `<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/cleanup/<workflow_execution_id>.plan.md` — write frontmatter (`workflow_id`, `workflow_execution_id`, `LastRunOnCommit`, `PlanApproved`), then **`upsert-plans-support-file`** (blocking) before Execute. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 ---
 
@@ -63,7 +65,9 @@ Pairs are **deduped**: focus `A` lists similar `B` only when `A.testId < B.testI
 
 Persist plan under:
 
-`<MAPPED_PLANS_ROOT>/knowledge/cleanup_plans/plan_<YYYY-MM-DD>_<nn>.md`
+`<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/cleanup/<workflow_execution_id>.plan.md`
+
+Write required frontmatter (`workflow_id: cleanup`, `workflow_execution_id`, `LastRunOnCommit`, `PlanApproved`), then call **`upsert-plans-support-file`** with that relative path + full content (**blocking** before Execute).
 
 ### Required sections
 
@@ -73,7 +77,7 @@ Persist plan under:
 
 ### Gate
 
-Stop and request **explicit user approval** before Phase 3. Paste a short summary + plan file path.
+Stop and request **explicit user approval** before Phase 3. Paste a short summary + plan file path. Do **not** Execute until upsert succeeds and approval is recorded (`PlanApproved: yes`), unless **`--mode=non-interactive`** (`PlanApproved: yes` + `ApprovedBy: auto`, then Execute + open a PR) or policy `allow-execute-without-approval`.
 
 ---
 

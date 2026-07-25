@@ -6,7 +6,7 @@
 
 **Policy:** Resolve via `--policy` → `run-smart-regression.policy.md` → any matching frontmatter `workflow-id` → fallback guidance in `plans/knowledge/ai-test-instructions.md`. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
-**Plan → approve → execute:** When this workflow runs **standalone**, follow Plan → user approval → Execute. When nested under **`run-qa`** (`/testchimp run QA` / `/testchimp test`), Smart regression is **Phase 5 guidance during Execute** of the composite (after Validate); do not invent a separate approval gate beyond the branch plan’s existing Plan approval.
+**Plan → approve → execute:** When this workflow runs **standalone**, write `knowledge/workflow_plans/run-smart-regression/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). When nested under **`run-qa`**, Smart regression is **Phase 5 guidance during Execute** of the composite (after Validate); reuse the parent plan — do not invent a separate approval gate.
 
 **Traceability:** On mutating fixes (update existing specs, fix product code because of a regression), call **`report-agent-action`** best-effort with the stable workflow-execution ULID (from the plan file when nested under run-qa).
 
