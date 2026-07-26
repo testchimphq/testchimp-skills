@@ -6,10 +6,10 @@
 
 ## Goal
 
-Given a failed SmartTest execution id (either a batch invocation id from the batch execution viewer, or an individual job id from the test execution viewer), fetch a structured failure report via TestChimp MCP/CLI, troubleshoot and apply fixes, then re-run the failing tests using the project’s environment provisioning instructions.
+Given a failed SmartTest execution id (either a batch invocation id from the batch execution viewer, or an individual job id from the test execution viewer), fetch a structured failure report via TestChimp MCP/CLI, analyze common causes and historical flake patterns, triage test-incorrect vs product-broken, then either apply root-cause fixes (and re-run) or file issues on approval.
 
 This command is specifically for raw SmartTest execution failures identified by
-`batch_invocation_id` or `job_id`. 
+`batch_invocation_id` or `job_id`.
 
 ## Inputs
 
@@ -33,18 +33,71 @@ If MCP is unavailable, use CLI:
 
 The response includes only failing tests and will include:
 
+- **testId** (SmartTest id — use for history lookup)
 - **test file path** (best-effort, typically from Playwright error location)
 - **errors** (job-level + failing steps)
 - **trace viewer URL** (when a trace exists)
 
-### 2) Troubleshoot and fix
+### 2) Analyze before fixing
 
-For each failing test:
+Do **not** jump straight into per-test patches. Persist analysis in the workflow plan markdown before approval.
 
-- Open the failing test file path and apply the minimal fix.
+#### 2a) Batch common-cause first
+
+When multiple tests failed (especially batch runs), group failures by shared signals:
+
+- same / similar error signature or stack
+- same failing step or assertion
+- same fixture / seed / env / auth symptom
+- same product area or shared helper
+
+Prefer **one shared root-cause fix** (infra, fixture, seed, shared locator helper, product contract) over N independent one-off patches.
+
+#### 2b) Per-test recent history (required)
+
+For each failing `testId` (or one representative per cluster), fetch recent execution history:
+
+```bash
+testchimp get-execution-history --test-id "<test-uuid>"
+```
+
+MCP: `get-execution-history` with `{ "testId": "<test-uuid>" }`.
+
+**Agent rules:**
+
+- **Typically omit `--environment` / `environment`** so history is not env-scoped (all envs). Only pass environment when the user explicitly wants a single env.
+- Returns up to **top 5 recent runs** (any status) for that test — enough to spot flake (intermittent pass/fail) vs chronic failure with a repeating error signature.
+- Use that context so fixes address root cause (timing/race, shared setup, product contract), not surface-level selector tweaks.
+- **Fallback** if CLI/backend lacks `testId` yet: `get-execution-history --file-paths "<testFilePath>"` then keep records matching the report’s `testId`. If `testFilePath` is missing, note weaker context and continue.
+
+#### 2c) Triage: test incorrect vs product broken
+
+For each failure / cluster, decide one of:
+
+| Classification | Meaning | Action |
+|----------------|---------|--------|
+| **Test incorrect** | Product updates, authoring bugs, flake, brittle selectors/timing | Plan and apply test / infra fixes (below) |
+| **Product broken** | The test correctly reveals a product defect | **Do not** “fix” the test to green |
+
+**Product broken:**
+
+1. Tell the user clearly (what broke, evidence from errors + history, linked test/job/batch ids).
+2. Ask whether to create TestChimp issue(s) for tracking.
+3. **Only after explicit approval**, create issues via MCP/CLI **`create-issue`** (see [`cli.md`](./cli.md) § `create-issue`):
+   - `issueType: BUG_ISSUE`
+   - Concrete title + description (errors, history pattern, repro)
+   - `linkTargets`: `TEST` (`testId`), `TEST_EXECUTION` (`jobId`), and/or `BATCH_INVOCATION` when applicable
+   - `source: testchimp-fix-test-execution` (+ workflow traceability fields)
+4. Non-interactive / no approval: report product findings in the plan / finish summary; **do not** auto-create issues unless policy explicitly allows it.
+
+### 3) Troubleshoot and fix (test-incorrect cases only)
+
+For each failing test classified as test-incorrect:
+
+- Open the failing test file path and apply the **minimal root-cause** fix (prefer shared fixes from 2a).
 - If the trace URL is present, use it to identify the failing step and UI state.
 - Validate the intended flow in a real browser (headed) so the fix is grounded in actual UI behaviour, not just static code inspection.
-- If errors indicate flaky selectors or timing issues, prefer:
+- If errors / history indicate flaky selectors or timing issues, prefer:
   - stable locators (role/text where appropriate)
   - explicit waits tied to UI readiness
   - resilient assertions (avoid over-specific snapshots unless required)
@@ -60,19 +113,19 @@ Make an informed choice:
 
 Prefer deterministic selectors when the UI is stable and the failure is straightforward; prefer intent steps when stability would otherwise require fragile selector maintenance or make the test hard to understand.
 
-### 3) Re-run the failing tests
+### 4) Re-run the failing tests
 
 - Locate and follow the repo’s canonical environment strategy in:
   - `plans/knowledge/ai-test-instructions.md` — read **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`** before changing bring-up or URLs; use the FAQ as the first playbook when triaging env-related failures ([`run-qa.md`](./run-qa.md#binding-ai-test-instructions-environment-and-faq-playbook)).
 - Bring the environment up (or reprovision) **only** as specified there (no ad hoc alternate targets).
-- Re-run only the failing test(s) (or the smallest scope that proves the fix).
+- Re-run only the tests that were supposed to be fixed (or the smallest scope that proves the fix). **Skip** product-broken cases that were filed as issues instead of patched.
 
-### 4) Finish
+### 5) Finish
 
-- Ensure the previously failing tests pass.
+- Ensure the previously failing **test-incorrect** cases pass.
+- Summarize any **product-broken** findings and created issue ids (if any).
 - If fixes required seed/fixture/backend changes, ensure the environment was restarted/reprovisioned per the environment strategy before re-running.
 - Cleanup:
   - If you started **local servers** (dev stack, test env, proxies), shut them down.
   - If you provisioned an **ephemeral environment**, destroy it when no longer needed (to avoid cost and dangling resources).
   - Remove any **ephemeral local artifacts** created during debugging (temporary files, one-off traces/downloads) unless they are intentionally kept as committed fixtures/goldens.
-

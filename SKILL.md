@@ -1,9 +1,9 @@
 ---
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — policy-backed workflows (run-qa, upkeep, implement, subflows), SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, run QA, test, upkeep, evolve, implement, plan, explore, skill upgrade), SmartTests, agent-driven test or plan authoring, ExploreChimp, policies, or updating this skill from Git.
-compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.24** for workflow/policy tools (including `upsert-policy`, `upsert-plans-support-file`, `update-plan-items-lifecycle-status`).
-version: 1.0.7
-required_cli_version: "0.1.24"
+compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.25** for workflow/policy tools (including `upsert-policy`, `upsert-plans-support-file`, `update-plan-items-lifecycle-status`) and `get-execution-history --test-id`.
+version: 1.0.8
+required_cli_version: "0.1.25"
 ---
 
 # TestChimp
@@ -14,7 +14,7 @@ TestChimp runs **pre-defined QA workflows**. **`references/`** details how each 
 
 **Prompt args — `--mode`:** If the user/trigger prompt includes **`--mode=non-interactive`** (also accept `--mode non-interactive` / `mode=non-interactive`), treat approval as automatic: still write + upsert the plan first, set `PlanApproved: yes` and **`ApprovedBy: auto`**, **do not** wait for chat approval, Execute immediately, then **open a PR** with the changes. Details: [`references/policies-and-traceability.md`](references/policies-and-traceability.md)#execution-mode--mode-prompt-arg.
 
-**Scoping (all workflows):** explicit scope if given → else **feature/PR branch** = changes on the branch → else **default branch** = changes since last run of the same workflow (`get-last-run-workflow-detail`), or ask the user how far back to look. Workflow playbooks and policy `### Scoping Rules` may refine this; they do not replace it. Full rule: [`references/policies-and-traceability.md`](references/policies-and-traceability.md)#scoping-overarching--all-workflows.
+**Scoping (all workflows):** If the prompt has **`Working branch: <name>`** (cloud/automation), check out that branch first. Then: explicit scope if given → else **feature/PR branch** = changes on the branch → else **default branch** = changes since last run of the same workflow (`get-last-run-workflow-detail`), or ask the user how far back to look (non-interactive: use last-run / recent commits without asking). For **`implement`** on the default branch, create a new feature branch before coding. Full rule: [`references/policies-and-traceability.md`](references/policies-and-traceability.md)#scoping-overarching--all-workflows.
 
 TestChimp is a **QA workflow orchestration layer for AI agents**. It provides:
 
@@ -176,7 +176,7 @@ Install **`@testchimp/cli@latest`** (see [`references/init-testchimp.md`](refere
 
 The MCP server exposes tools grouped by area:
 
-- **Coverage & execution** — `get-requirement-coverage`, `get-execution-history`, `mark-plan-items-implementation-done`, `update-plan-items-lifecycle-status` (CLI ≥ **0.1.22**)
+- **Coverage & execution** — `get-requirement-coverage`, `get-execution-history` (optional `testId` / `--test-id`, CLI ≥ **0.1.25**), `mark-plan-items-implementation-done`, `update-plan-items-lifecycle-status` (CLI ≥ **0.1.22**)
 - **Workflows & policies (CLI ≥ 0.1.21; plans upsert ≥ 0.1.24)** — `report-agent-action`, `get-last-run-workflow-detail`, `get-policy`, `list-policies`, `upsert-policy`, `upsert-plans-support-file`, `list-workflow-catalog` (also `list-workflow-executions` / `get-workflow-execution` when available). Policies live under **`plans/knowledge/policies/*.policy.md`**. Workflow execution plans live under **`plans/knowledge/workflow_plans/<workflow-id>/`**. Optional env **`POLICY_FILE`** may point at the active policy path. Resolution: **`--policy`** → **`<workflow-id>.policy.md`** → any matching frontmatter **`workflow-id`** → **`ai-test-instructions.md`** fallback — [`references/policies-and-traceability.md`](references/policies-and-traceability.md). After authoring a policy locally, call **`upsert-policy`**. After writing a workflow plan file, call **`upsert-plans-support-file`** (blocking before Execute).
 - **Screen-state atlas (SmartTests / traces / ExploreChimp)** — `list-screen-states`, `upsert-screen-states` (same as **`testchimp list-screen-states`** / **`testchimp upsert-screen-states`** in [`references/cli.md`](references/cli.md))
 - **Semantic duplicate hygiene (`/testchimp cleanup`)** — `list-semantic-similar-tests`, `mark-semantic-tests-distinct` (TestLocator-based; see [`references/cleanup.md`](references/cleanup.md))
@@ -270,7 +270,7 @@ When a `plans/...` folder is provided, coverage resolves SmartTests linked to sc
 - To include manual sessions too: pass `recordTypes: ["SMART_TEST","MANUAL"]` (MCP JSON), or CLI convenience `testchimp get-requirement-coverage --include-manual ...`.
 - Manual-only: `recordTypes: ["MANUAL"]` (MCP JSON), or CLI `--manual-only`.
 
-**Per-platform coverage (CLI/MCP ≥ `0.1.6`, reporter ≥ `0.2.0`):** Omit **`platform`** on **`get-requirement-coverage`** to get rollup shaped by project scaffold — **one** record for **web** projects; up to **two** (iOS + Android) for **mobile**; up to **three** for **multi-platform**, with explicit **`NOT_ATTEMPTED`** rows when a platform had no run in scope. Pass **`platform`**: `web` | `ios` | `android` to narrow to a single platform. Use **`get-execution-history`** with **`scenarioId`** (platform scenario UUID from plan entities, not `TS-<n>`) for scenario-linked runs; optional **`platform`** or **`dimensionFilters`** for device drill-down — see [`references/cli.md`](references/cli.md) § Platform execution reporting.
+**Per-platform coverage (CLI/MCP ≥ `0.1.6`, reporter ≥ `0.2.0`):** Omit **`platform`** on **`get-requirement-coverage`** to get rollup shaped by project scaffold — **one** record for **web** projects; up to **two** (iOS + Android) for **mobile**; up to **three** for **multi-platform**, with explicit **`NOT_ATTEMPTED`** rows when a platform had no run in scope. Pass **`platform`**: `web` | `ios` | `android` to narrow to a single platform. Use **`get-execution-history`** with **`testId`** (SmartTest UUID from `fetch-execution-report`; typically omit `environment`) or **`scenarioId`** (platform scenario UUID from plan entities, not `TS-<n>`) for history; optional **`platform`** or **`dimensionFilters`** for device drill-down — see [`references/cli.md`](references/cli.md) § Platform execution reporting.
 
 ## Progressive disclosure
 

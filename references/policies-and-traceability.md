@@ -20,12 +20,13 @@ When **authoring** or updating one: capture those decisions in plain markdown un
 
 Resolve **what to work on** in this order. This rule is **not** workflow-specific; individual playbooks and policy `### Scoping Rules` may **narrow or specialize** it (e.g. Smart regression’s identification steps) but must not contradict it.
 
+0. **Working branch (cloud / automation prompts)** — If the prompt includes a line `Working branch: <name>` (injected by the platform outside the editable Tasks block), **check out that branch before scoping or planning** (`git fetch && git checkout <name>`). Do **not** ask the user which branch to use in `--mode=non-interactive` or other non-interactive cloud runs. If you are already on that branch (typical for local agents), treat the line as confirmatory and continue. After checkout of the **default** branch for an **`implement`** workflow, create a **new feature branch** before coding (same rule as Raise a PR below).
 1. **Explicit scope** — user (or trigger) named plans paths, scenario/story ordinals, files, plain-English focus, or similar → use that as the scope.
 2. **Feature / PR branch** (no explicit scope) — scope = **changes on this branch** (diff vs the merge base / default branch): touched plans, code, and linked tests.
 3. **Default branch** (no explicit scope) — scope = **changes since the last run of the same workflow**:
    - Call **`get-last-run-workflow-detail`** (`workflowId`, optional `branchName`, optional `userId`).
    - If a last run exists and is a useful bound, use commits/changes since that run’s git SHA / start.
-   - If missing, stale, or ambiguous: **ask the user** whether to focus on the last few commits (and since when) vs a broader window — get consent before proceeding.
+   - If missing, stale, or ambiguous: **ask the user** whether to focus on the last few commits (and since when) vs a broader window — get consent before proceeding. In **non-interactive** mode, prefer the last-run bound when available; otherwise use a short recent window (e.g. last few commits) rather than blocking.
 
 Record the chosen scope on the plan (or say it clearly before Execute) so nested subflows reuse it. Composites share **one** scope for the whole run-qa / upkeep execution.
 

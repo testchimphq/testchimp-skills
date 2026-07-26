@@ -108,13 +108,32 @@ Start the TestChimp MCP server (stdio transport). **No flags.** Typically invoke
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
 | `--release <s>` | No | `release` | |
-| `--environment <s>` | No | `environment` | |
+| `--environment <s>` | No | `environment` | When **omitted**, history is **not** env-scoped (all envs). Prefer omitting for flake analysis / `fix-test-execution`. When set, filters to that env. |
 | `--branch-name <s>` | No | `branchName` | |
 | `--scenario-id <id>` | No | `scenarioId` | When set, returns runs for tests linked to this scenario (Insights execution history). |
+| `--test-id <id>` | No | `testId` | SmartTest id (e.g. from `fetch-execution-report`). Returns top 5 recent runs for that test. No folder/scenario scope required. Requires CLI ≥ **0.1.25**. |
 | `--platform <web\|ios\|android>` | No | `platform` | Optional platform filter (`web`, `ios`, `android`). Prefer `dimensionFilters` for device/OS/resolution/orientation. |
 | `--file-paths <csv>` | No | `scope.filePaths` | Comma-separated under platform tests or plans root. |
 | `--folder-path <path>` | No | `scope.folderPath` | Slash-separated; same normalization as coverage. |
 | `--json-input …` | No | (merge) | e.g. `dimensionFilters` (`[{ "dimension": "PLATFORM_EXECUTION_JOB_FILTER_DIMENSION", "values": ["WEB"] }]`), `limit`, `offset`. |
+
+### `fetch-execution-report`
+
+**API:** `POST /api/mcp/fetch_execution_report`
+
+Used by [`fix-test-execution.md`](./fix-test-execution.md). Provide **exactly one** of:
+
+| Flag | Maps to JSON field | Notes |
+|------|-------------------|--------|
+| `--batch-invocation-id <id>` | `batchInvocationId` | Batch run from the webapp URL. |
+| `--job-id <id>` | `jobId` | Single test execution job. |
+
+Returns only **failing** tests: `jobId`, `testId`, `testName`, `testFilePath`, `errors[]`, `traceViewerUrl` (when available).
+
+```bash
+testchimp fetch-execution-report --batch-invocation-id "<id>"
+testchimp fetch-execution-report --job-id "<id>"
+```
 
 ### Platform execution reporting
 
@@ -133,10 +152,17 @@ Coverage records include a **`platform`** field when multiple platforms are retu
 
 | Mode | How |
 |------|-----|
-| Folder scope | `scope.folderPath` / `scope.filePaths` (same as coverage). |
+| Test id | `testId` / `--test-id` = SmartTest UUID (from `fetch-execution-report`). Top 5 recent runs. Prefer omitting `environment`. |
+| Folder scope | `scope.folderPath` / `scope.filePaths` (same as coverage). Top 5 recent runs per test. |
 | Scenario scope | `scenarioId` = platform scenario UUID (Insights execution history). Omit folder scope or combine per server rules. |
 | Platform filter | `--platform web\|ios\|android` **or** `dimensionFilters` with `PLATFORM_EXECUTION_JOB_FILTER_DIMENSION` and values `WEB`, `IOS`, `ANDROID`. |
 | Device drill-down | `dimensionFilters` in JSON: `DEVICE_FAMILY`, `OS_VERSION`, `SCREEN_RESOLUTION`, `SCREEN_ORIENTATION` (enum dimension names + string values). OR within a dimension, AND across dimensions. |
+
+**Example — recent history for one failing test (fix-test-execution):**
+
+```bash
+testchimp get-execution-history --test-id "<test-uuid>"
+```
 
 **Example — iOS-only coverage for a plan folder:**
 
