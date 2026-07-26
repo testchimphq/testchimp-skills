@@ -92,37 +92,122 @@ if command -v git >/dev/null 2>&1; then
 fi
 
 # --- MCP config / TESTCHIMP_* discoverability (no printing) ---
+# Prefer a file that actually contains TestChimp MCP; search common paths then shallow find.
 MCP_JSON=""
-for candidate in \
-  "${TOP:+$TOP/ui/.cursor/mcp.json}" \
-  "${TOP:+$TOP/.cursor/mcp.json}" \
-  "${TOP:+$TOP/.mcp.json}" \
-  ".cursor/mcp.json" \
-  ".mcp.json"
-do
-  [ -n "$candidate" ] && [ -f "$candidate" ] && MCP_JSON="$candidate" && break
+_is_testchimp_mcp() {
+  local f="$1"
+  [ -f "$f" ] || return 1
+  command -v node >/dev/null 2>&1 || return 1
+  MCP_CANDIDATE="$f" node - <<'NODE' 2>/dev/null
+const fs=require('fs');
+try{
+  const j=JSON.parse(fs.readFileSync(process.env.MCP_CANDIDATE,'utf8'));
+  const servers=j?.mcpServers||{};
+  if (servers.testchimp) process.exit(0);
+  for (const s of Object.values(servers)) {
+    const args=s?.args;
+    if (Array.isArray(args) && args.some(a=>String(a).includes('@testchimp/cli'))) process.exit(0);
+  }
+}catch{}
+process.exit(1);
+NODE
+}
+
+_search_dirs=""
+if [ -n "${TOP:-}" ]; then
+  _search_dirs="$TOP"
+  # Prefer SmartTests root if present
+  if [ -f "$TOP/.testchimp-tests" ]; then
+    _search_dirs="$TOP $_search_dirs"
+  else
+    _tc_root="$(find "$TOP" -maxdepth 4 -name '.testchimp-tests' -type f 2>/dev/null | head -n 1 || true)"
+    if [ -n "$_tc_root" ]; then
+      _search_dirs="$(dirname "$_tc_root") $_search_dirs"
+    fi
+  fi
+fi
+_search_dirs="$_search_dirs . $PWD"
+
+for base in $_search_dirs; do
+  [ -n "$base" ] || continue
+  for candidate in \
+    "$base/.cursor/mcp.json" \
+    "$base/.mcp.json" \
+    "$base/mcp.json" \
+    "$base/.vscode/mcp.json" \
+    "$base/.github/mcp.json" \
+    "$base/ui/.cursor/mcp.json"
+  do
+    if _is_testchimp_mcp "$candidate"; then
+      MCP_JSON="$candidate"
+      break 2
+    fi
+  done
 done
+
+if [ -z "${MCP_JSON:-}" ] && [ -n "${TOP:-}" ] && command -v find >/dev/null 2>&1; then
+  while IFS= read -r candidate; do
+    if _is_testchimp_mcp "$candidate"; then
+      MCP_JSON="$candidate"
+      break
+    fi
+  done < <(find "$TOP" \( -path '*/node_modules/*' -o -path '*/.git/*' \) -prune -o \( -name 'mcp.json' -o -name '.mcp.json' \) -type f -print 2>/dev/null | head -n 40)
+fi
+
+# Fallback: first existing common path (even without TestChimp yet)
+if [ -z "${MCP_JSON:-}" ]; then
+  for candidate in \
+    "${TOP:+$TOP/ui/.cursor/mcp.json}" \
+    "${TOP:+$TOP/.cursor/mcp.json}" \
+    "${TOP:+$TOP/.mcp.json}" \
+    "${TOP:+$TOP/mcp.json}" \
+    ".cursor/mcp.json" \
+    ".mcp.json" \
+    "mcp.json"
+  do
+    [ -n "$candidate" ] && [ -f "$candidate" ] && MCP_JSON="$candidate" && break
+  done
+fi
 
 if [ -n "${MCP_JSON:-}" ] && command -v node >/dev/null 2>&1; then
   _say "MCP_CONFIG: $MCP_JSON"
   eval "$(MCP_JSON="$MCP_JSON" node - <<'NODE' 2>/dev/null || true
 const fs=require('fs');
 const p=process.env.MCP_JSON;
-function ok(v){ return v && String(v).trim() && !/paste_your|placeholder|your_project|changeme/i.test(String(v)); }
+function looksLikeEnvRef(v){
+  return /^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?$/.test(String(v||'').trim());
+}
+function ok(v){
+  if (!v || !String(v).trim()) return false;
+  if (/paste_your|placeholder|your_project|changeme/i.test(String(v))) return false;
+  if (looksLikeEnvRef(v)) {
+    const name=String(v).replace(/^\$\{?/,'').replace(/\}?$/,'');
+    const fromEnv=process.env[name];
+    return !!(fromEnv && String(fromEnv).trim() && !/paste_your|placeholder|changeme/i.test(String(fromEnv)));
+  }
+  return true;
+}
 try{
   const j=JSON.parse(fs.readFileSync(p,'utf8'));
-  const env=j?.mcpServers?.testchimp?.env || {};
+  const servers=j?.mcpServers||{};
+  let entry=servers.testchimp;
+  if (!entry) {
+    for (const s of Object.values(servers)) {
+      const args=s?.args;
+      if (Array.isArray(args) && args.some(a=>String(a).includes('@testchimp/cli'))) { entry=s; break; }
+    }
+  }
+  const env=entry?.env || {};
   const key=env.TESTCHIMP_API_KEY;
   const pid=env.TESTCHIMP_PROJECT_ID;
   const backend=env.TESTCHIMP_BACKEND_URL;
-  const hasServer=!!j?.mcpServers?.testchimp;
-  const backendConfigured=backend && String(backend).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(backend));
+  const hasServer=!!entry;
+  const backendConfigured=backend && String(backend).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(backend)) && !looksLikeEnvRef(backend);
   process.stdout.write(`HAS_SERVER=${hasServer?'yes':'no'}\n`);
   process.stdout.write(`HAS_KEY=${ok(key)?'yes':'no'}\n`);
   process.stdout.write(`HAS_PROJECT_ID=${ok(pid)?'yes':'no'}\n`);
   process.stdout.write(`HAS_BACKEND_URL=${backendConfigured?'yes':'no'}\n`);
   if (backendConfigured) {
-    // Safe to print host (not a secret); helps agents avoid prod-default 401s.
     process.stdout.write(`TESTCHIMP_BACKEND_URL=${String(backend).trim()}\n`);
   }
 }catch{
@@ -136,7 +221,7 @@ NODE
   if [ "${HAS_KEY:-no}" = "yes" ]; then
     _say "TESTCHIMP_API_KEY: present (not printed)"
   else
-    _warn "BLOCKER: TESTCHIMP_API_KEY missing/blank/placeholder in MCP config (reload MCP after setting)"
+    _warn "BLOCKER: TESTCHIMP_API_KEY missing/blank/placeholder in MCP config (or unresolved \${TESTCHIMP_API_KEY} — set secret in process env / host; reload MCP after setting)"
   fi
   if [ "${HAS_PROJECT_ID:-no}" = "yes" ]; then
     _say "TESTCHIMP_PROJECT_ID: present (not printed)"
@@ -150,7 +235,7 @@ NODE
     _say "TESTCHIMP_BACKEND_URL: not set in MCP (CLI will use package default / SaaS prod)"
   fi
 else
-  _warn "WARN: project MCP config not found (.cursor/mcp.json or .mcp.json) — /testchimp init should create it from assets/sample-mcp.json"
+  _warn "WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp) — /testchimp init should create it from assets/sample-mcp.json"
 fi
 
 exit 0

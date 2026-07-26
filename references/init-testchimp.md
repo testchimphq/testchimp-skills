@@ -104,7 +104,8 @@ Run this **before** optional smoke (Phase 0) or project requirement gathering (P
 1. **Resolve project MCP config path** — MCP config is **per project**, not global. From the SmartTests root (folder with `.testchimp-tests`), walk **up** toward the git/repo root and pick the **first existing** host config file, or the path you will **create** at the repo root if none exist:
    - **Cursor:** `<repo>/.cursor/mcp.json` (create **`.cursor/`** if needed)
    - **Claude Code:** `<repo>/.mcp.json` at the repository root
-   - **Other hosts:** use that host’s documented **project-level** MCP JSON path; same walk-up rule as **`SKILL.md`** Preamble check **#4**
+   - **Cloud / multi-host:** `<repo>/mcp.json` (see [`../assets/sample-mcp.cloud.json`](../assets/sample-mcp.cloud.json) for `${TESTCHIMP_API_KEY}` refs)
+   - **Other hosts:** use that host’s documented **project-level** MCP JSON path; same discovery rule as **`SKILL.md`** → **Finding project MCP config** / Preamble check **#4**
    - Prefer the path for the **active IDE/agent host** when you know it; if unsure, create/update **both** common paths only when they are absent or lack TestChimp — do not duplicate conflicting entries in the same repo without user direction.
 2. **Create or patch MCP JSON (required when missing or incomplete)** — Read the blob in [`../assets/sample-mcp.json`](../assets/sample-mcp.json) as the canonical **`testchimp`** server template.
    - **No config file yet:** write a new file at the resolved path with the full contents of **`sample-mcp.json`** (placeholders intact).

@@ -25,8 +25,8 @@ The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.
 
 **Before every CLI invoke** (and on any **401**), resolve env from the project MCP config:
 
-1. Resolve the **same project-scoped MCP config** used for TestChimp (the file where the user placed the key at init). The path is **host-specific** — e.g. Cursor often uses `<repo>/.cursor/mcp.json`; Claude Code, VS Code, and others use their own documented locations. **`.cursor` is an example, not universal.**
-2. From the **SmartTests root** (folder containing `.testchimp-tests`), walk **up** the directory tree and check each candidate MCP config file until you find `mcpServers` (or equivalent) with a **`testchimp`** server entry.
+1. Resolve the **same project-scoped MCP config** used for TestChimp (the file where the user placed the key at init, or the cloud `mcp.json` that references `${TESTCHIMP_API_KEY}`). Paths are **host-specific** — see **Finding project MCP config** in **`SKILL.md`** (`.cursor/mcp.json`, `.mcp.json`, root `mcp.json`, etc.). **`.cursor` is an example, not universal.**
+2. From the **SmartTests root** (folder containing `.testchimp-tests`), walk **up** the directory tree and check each candidate MCP config file until you find `mcpServers` with a **`testchimp`** server entry (or any server whose `args` include `@testchimp/cli`). If walk-up fails, search the repo for `mcp.json` / `.mcp.json` as described in **`SKILL.md`**.
 3. Read from that entry’s **`env`**:
    - **`TESTCHIMP_API_KEY`** (required for auth)
    - **`TESTCHIMP_BACKEND_URL`** when present — **must** be exported; do **not** fall back to the package default prod host when this is set (staging / enterprise / self-hosted). Keys are environment-scoped; calling prod with a non-prod key yields **401**.
