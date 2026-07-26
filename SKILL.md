@@ -294,7 +294,7 @@ Platform filetype: **`WORKFLOW_EXECUTION_PLAN`** (extension **`.plan.md`**). Emb
 
 **Hard sequence (blocking):**
 
-1. **Plan** — Mint one **ULID** `workflow_execution_id`. Write the plan markdown at the path above.
+1. **Plan** — Resolve **`workflow_execution_id`**: if the invoking prompt already includes **`--workflow-execution-id <ulid>`** (also accept `--workflow-execution-id=<ulid>` / `workflow-execution-id: <ulid>`), **reuse that id — do not mint a second ULID**. Otherwise mint one **ULID**. Write the plan markdown at the path above.
 2. **Upsert to platform (BLOCKING)** — Call MCP/CLI **`upsert-plans-support-file`** with:
    - `filePath`: path **relative to the mapped plans root** (e.g. `knowledge/workflow_plans/run-qa/<ulid>.plan.md`)
    - `content`: full markdown (including frontmatter; non-empty)
@@ -302,8 +302,10 @@ Platform filetype: **`WORKFLOW_EXECUTION_PLAN`** (extension **`.plan.md`**). Emb
    - Do **not** start Execute until this succeeds (needed for cloud agents that cannot rely on git commit/push).
 3. **Seek approval** — Resolve in this **order**:
    - **`--mode=non-interactive`** in the prompt → **do not pause**. Set `PlanApproved: yes`, **`ApprovedBy: auto`**, re-upsert the plan, then continue to Execute. After Execute, **open a PR** (see Execution Mode).
+   - Else if the prompt says the plan was **user-approved after a prior planning run** (platform Automation plan-Approve re-invoke) and includes the full approved plan body → treat as already approved: set `PlanApproved: yes`, **`ApprovedBy: platform-user`**, Execute that plan (still with `--mode=non-interactive` on that second invoke).
    - Else if policy **`allow-execute-without-approval: true`** → **do not pause**. Set `PlanApproved: policy-non-interactive`, re-upsert, Execute (PR only if the playbook/user asked for one).
    - Else → **pause** for **explicit user approval**. On consent: set `PlanApproved: yes` (optionally `ApprovedBy: <user>` if known), re-upsert, then Execute.
+     - **Cloud / Workflow Automation plan-only invoke:** when the prompt omits `--mode` **and** instructs **stop after plan upsert — do not Execute**, write + upsert the plan, then **stop** (do not wait for chat approval and do not Execute). The platform will re-invoke with `--mode=non-interactive` after a human Approves.
 4. **Execute** — Only the approved plan. Reuse the same `workflow_execution_id` for `report-agent-action` / `agentTraceability`.
 
 **Required YAML frontmatter** (preserve agent keys; do not strip):

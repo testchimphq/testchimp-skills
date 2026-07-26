@@ -59,11 +59,25 @@ After authoring a policy on disk, call **`upsert-policy`** so it is available on
 
 For Plan → approve → Execute workflows (`run-qa`, `upkeep`, standalone mutating flows):
 
-1. During **Plan**, generate one **ULID** as **`workflow_execution_id`**.
+1. During **Plan**, resolve **`workflow_execution_id`**:
+   - If the invoking prompt already includes **`--workflow-execution-id <ulid>`** (also `--workflow-execution-id=<ulid>` / embedded `workflow-execution-id: <ulid>`), **reuse it** — **never mint a second ULID** for the same run (Workflow Automations mint the id on the platform before the cloud invoke).
+   - Otherwise generate one **ULID**.
 2. Persist it in the plan file frontmatter (required) at:
    **`<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/<workflow-id>/<workflow_execution_id>.plan.md`**
 3. Call **`upsert-plans-support-file`** with that relative path + full content (**BLOCKING** — do not Execute until it succeeds).
 4. Reuse the **same** ULID for every mutating MCP call and **`report-agent-action`** in that run — do **not** mint a new id per mutation.
+
+## Workflow Automations (platform cloud invoke)
+
+When TestChimp **Workflow Automations** trigger a cloud agent, the prompt always includes **`--workflow-execution-id`** (platform-minted). Mode mapping:
+
+| Situation | Prompt `--mode` | Agent duty |
+| --- | --- | --- |
+| Autonomous (no plan-approval gate) | `--mode=non-interactive` | Plan → upsert → auto-approve → Execute |
+| Plan-approval gate — **first** invoke | omit `--mode`; say **stop after plan upsert** | Plan → upsert → **stop** (no Execute) |
+| Plan-approval gate — **Approve** (second invoke) | `--mode=non-interactive` + note plan was **user-approved** + **full plan body** | Execute that approved plan; reuse the same `--workflow-execution-id` |
+
+Do **not** invent a second execution id on either invoke.
 
 ## Workflow execution plans (layout + approval)
 
@@ -135,6 +149,8 @@ Still run **Plan first** — do **not** skip the plan file:
 When skipping via policy only, set `PlanApproved: policy-non-interactive` (and omit `ApprovedBy`, or set it only if the policy names an actor). Still upsert the plan file before Execute. PR creation follows the playbook / user request — not mandatory solely because of the policy flag.
 
 If neither prompt mode nor policy allows skipping, **always** require explicit user approval.
+
+**Workflow Automation plan-only (cloud):** If the prompt **omits** `--mode` **and** explicitly says **stop after plan upsert — do not Execute**, write + upsert the plan and **halt** (do not wait for chat approval). A later platform Approve invoke will re-run with `--mode=non-interactive`, the same `--workflow-execution-id`, and the full approved plan body.
 
 **Platform upload:** `upsert-plans-support-file` (`filePath` relative to plans root, `content` = full markdown). Prefer MCP; CLI fallback after Preamble **#4**. Cloud agents rely on this — git commit/push is **not** a substitute for the blocking upsert.
 
