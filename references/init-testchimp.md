@@ -15,7 +15,7 @@ Between phases, **stop and complete the phase’s completion gate** before conti
 
 ## Purpose
 
-`/testchimp init` often includes long-running and branching work: EaaS decisions, seeding strategy, harness setup, mocking (Playwright `page.route` + optional AIMock), existing Playwright import strategy, CI wiring, and TrueCoverage setup. To keep this reliable, agents must:
+`/testchimp init` often includes long-running and branching work: EaaS decisions, seeding strategy, harness setup, mocking (Playwright `page.route` + optional AIMock), optional nested **import** of existing E2E, CI wiring, and TrueCoverage setup. To keep this reliable, agents must:
 
 1. collaborate with the user on a concrete action plan first,
 2. persist decisions and item status in `plans/knowledge/ai-test-instructions.md`,
@@ -209,34 +209,45 @@ Do not start implementing mocking/env/truecoverage/CI until you have the user’
   - Locate marker files on disk:
     - `.testchimp-plans` => plans root mapped
     - `.testchimp-tests` => SmartTests root mapped
-  - Confirm the **SmartTests root** path (folder containing `.testchimp-tests`) for downstream key areas. **Existing Playwright classification and import strategy** are handled in [Key Area 2](#key-area-2--existing-playwright-suite--import-strategy).
+  - Confirm the **SmartTests root** path (folder containing `.testchimp-tests`) for downstream key areas. **Import of existing E2E** (when the mapped folder looks unmigrated) is handled in [Key Area 2](#key-area-2--import-existing-tests-optional-nested-subflow).
 - If either marker file is missing: ask the user to complete the minimum needed TestChimp Git integration + sync so marker files exist. **Also ask them to confirm:**
   - For **each** mapped folder (plans and tests, after mapping in TestChimp → Project Settings → Integrations), a **PR has been raised from the TestChimp platform** and **merged**, so the scaffold (including empty marker files) exists in the remote repo.
   - Their **local workspace has been updated** (e.g. `git pull` / sync) so they have pulled those PR changes. Markers only appear locally after the platform sync PRs are merged and the branch is up to date.
 - The **[Workstation gate](#workstation-gate-always-first)** owns MCP file **create/merge**; Key Area 1 only confirms markers and re-validates MCP after the gate.
 - If placeholders remain for **`TESTCHIMP_API_KEY`** or **`TESTCHIMP_PROJECT_ID`**: ask the user to paste both from **TestChimp → Project Settings → Key management** into the project MCP `env` block, reload MCP, then continue. Never commit real keys. Ensure **`get-eaas-config`** does not return **401** once the API key is set.
 
-### Key Area 2 — Existing Playwright suite / import strategy
+### Key Area 2 — Import existing tests (optional nested subflow)
 
 Why this area (quick education):
 
-- Many repos are **not** greenfield: they already have Playwright specs, or specs live **outside** the mapped SmartTests folder. TestChimp needs an explicit **migration strategy** so Phase 2 plans the right moves and Phase 3 executes them **after approval**—see [`importing-existing-tests.md`](./importing-existing-tests.md).
+- Many teams map a **new** SmartTests folder while legacy E2E suites (Playwright, Cypress, Selenium, etc.) still live elsewhere. Importing those into the mapped scaffold is a **one-off** job — workflow **`import`** — not something every teammate should re-negotiate on every local `/testchimp init`.
+- **Init is run by multiple team members** (each needs local MCP / workstation setup). Only ask about import when the repo still looks **unmigrated**.
 
 Agent discovery (report findings first):
 
 - Treat the folder containing `.testchimp-tests` as the **SmartTests root**.
-- Scan for **`*.spec.{js,ts}`** only (not `*.test.*` — TestChimp uses **`*.spec.*`**), excluding **`setup/**`** and treating scaffold-only setup files as non-“suite” (e.g. `global.setup.spec.*` under `setup/` does not count as an existing e2e suite).
-- Under that root, check **`playwright.config.*`** for **`@testchimp/playwright/reporter`** in `reporter` — if present, call out **prior SmartTests/TestChimp wiring** in findings.
-- Classify: **greenfield** (no specs outside `setup/` beyond scaffold) vs **has existing Playwright** vs **dual-folder** (mapped SmartTests folder is empty/new but **`*.spec.{js,ts}`** exist elsewhere in the repo).
+- Count real specs under that root: **`*.spec.{js,ts}`** only (not `*.test.*`), **excluding `setup/**`** (scaffold `global.setup.spec.*` does not count).
+- Scan the **rest of the repo** for other E2E suites (Playwright / Cypress / Selenium / WebdriverIO / Puppeteer / similar folder patterns and deps).
+- Under the SmartTests root, note whether **`playwright.config.*`** already lists **`@testchimp/playwright/reporter`**.
 
-User choices (required when not greenfield, or when dual-folder / misaligned config):
+**When to ask about import (all must hold):**
 
-- **Parallel SmartTests folder (gradual migration):** keep the mapped SmartTests root and **move specs and helpers over time** from a legacy Playwright folder; both may coexist until migration completes.
-- **Retrofit in place:** adopt **`.testchimp-tests`**, `playwright.config.*`, **`@testchimp/playwright` reporter**, and **`import '@testchimp/playwright/runtime'`** inside the **existing** tree that already holds specs (see **Migration strategies** in [`importing-existing-tests.md`](./importing-existing-tests.md)).
-- If legacy specs live **outside** the mapped folder: the plan must include **moving** them into the mapped folder on an agreed schedule **or** changing Git mapping—**plan in Phase 2**, **execute in Phase 3** after approval. Do **not** move files silently in Phase 1.
-- **Runtime import (mandatory for imported specs):** Any **`*.spec.{js,ts}`** that is part of the SmartTests suite after import must include **`import '@testchimp/playwright/runtime'`** at the top of the file—required for TrueCoverage (test-side), **`ai-wright`** steps, and reporter integration. See [Required: runtime import in every spec file](./importing-existing-tests.md#required-runtime-import-in-every-spec-file) in [`importing-existing-tests.md`](./importing-existing-tests.md).
+1. Mapped SmartTests root has **≤ 3** real specs outside `setup/` (scaffold-only or nearly empty), **and**
+2. There are **other E2E tests elsewhere** in the codebase (indicating an existing suite not yet migrated into the mapped folder).
 
-**Greenfield:** state N/A briefly; no import tasks beyond normal harness scaffold in Phase 2/3.
+If either condition fails (suite already migrated / greenfield with no external E2E / mapped folder already has a real suite): record **Key Area 2 = N/A** with a one-line justification — **do not** ask every teammate to import again.
+
+**Already-mapped large suite (alignment, not full import ask):** If the mapped root already has **> 3** specs but is **not** TestChimp-wired (missing `@testchimp/playwright/reporter` and/or fixtures-first imports), do **not** re-ask the full import migration question. Instead: under Key Area 1 / Action F (harness), note the gap and either (a) include lightweight **align-in-place** tasks in this init plan (config/reporter/fixtures-first only—no logic rewrites), or (b) tell the user they can run `/testchimp import existing tests <mapped-folder>` for a dedicated alignment pass. Prefer (a) when the gap is small.
+
+**When the ask applies:** Offer to run the **`import`** workflow **now** as a **nested subflow** of this init (same plan + `workflow_execution_id` — **one approval**), **or skip for now**. If they skip, tell them they can run later:
+
+```text
+/testchimp import existing tests <existing tests folder>
+```
+
+Full playbook: [`import-existing-tests.md`](./import-existing-tests.md) (workflow-id: `import`). Nesting rules match run-qa subflows: do **not** start a second Plan → approve → Execute cycle.
+
+**If they choose import now:** Follow that playbook for discovery, translate/align, CI, scenario links — include those tasks in **this** init plan’s Phase 2. **Defer optional `markScreenState`** until **after** Key Area 5 / Action G (environment) in Phase 3—import Phase 6 needs connect-to-test-env. Execute import structural work in Action K after the single approval; run markScreenState (if planned) only once env is ready.
 
 ### Key Area 3 — Mocking (Playwright `page.route` + optional AIMock)
 
@@ -330,10 +341,12 @@ Why this area (quick education):
 ### Key Area 6 — CI setup
 - Agent discovery (report findings first):
   - Check whether `.github/workflows/` (or equivalent) already has Playwright/TestChimp-related CI.
-  - Relate findings to **greenfield vs existing Playwright vs dual-folder** (see [`importing-existing-tests.md`](./importing-existing-tests.md)): e.g. existing workflows may `cd` to the wrong folder or omit `TESTCHIMP_API_KEY`.
+  - Relate findings to whether SmartTests are under the mapped root vs legacy E2E elsewhere (see [`import-existing-tests.md`](./import-existing-tests.md)): e.g. existing workflows may `cd` to the wrong folder or omit `TESTCHIMP_API_KEY`.
 - If discovery finds existing Playwright/TestChimp CI: report what it looks like (including whether it **`cd`**s into the **mapped SmartTests folder** and sets **`TESTCHIMP_API_KEY`**) and ask whether to reuse/adjust it.
 - Otherwise: ask what CI system to use (GitHub Actions / others), whether it runs on PRs vs main, and whether it should start with shared/persistent envs or provision ephemeral envs per run.
-- **Detail reference:** [`importing-existing-tests.md`](./importing-existing-tests.md) (cwd, env, alignment with mapped folder).
+- When import is nested (**import now**), CI replace-vs-separate is owned by the import playbook (Phase 4); Key Area 6 / Action H then **verify only** (or mark done if import already authored CI)—do **not** re-author a second workflow.
+- When import was skipped / N/A, Key Area 6 owns greenfield CI as usual.
+- **Detail reference:** [`import-existing-tests.md`](./import-existing-tests.md), [`configure-ci-test-execution.md`](./configure-ci-test-execution.md).
 
 ### Phase 1 completion gate (before Phase 2 — plan drafting)
 
@@ -341,7 +354,7 @@ Do **not** open Phase 2 until **all** are satisfied (each **done** or **`N/A`** 
 
 - [ ] **Workstation gate** — completed on this run (not inferred from git).
 - [ ] **Key Area 1** — markers / SmartTests root **discovered and reported** (or **blocker** + owner recorded).
-- [ ] **Key Area 2** — suite classification + user’s import/migration stance (or **greenfield `N/A`** + justification).
+- [ ] **Key Area 2** — import nested / skipped / **N/A** (only ask when mapped folder has **≤ 3** specs **and** other E2E exists elsewhere; otherwise N/A). Note harness align-in-place if mapped suite is large but unwired.
 - [ ] **Key Area 3** — Mocking stance recorded (defaults OK: `page.route` + AIMock when needed; deep questioning optional) + **`### Mocking Plan`** ready for Phase 2 (or explicit deferral + reason).
 - [ ] **Key Area 4** — TrueCoverage **enablement** locked (**Yes now** / **Later** / explicit opt-out); if **Yes now**, next-step **`/testchimp instrument`** noted (empty section counts as “not decided,” not opt-out).
 - [ ] **Key Area 5** — environment strategy **decided enough** + **`connect-to-test-env`** policy gate satisfied (or Missing Config + authoring plan) for Phase 2.
@@ -363,7 +376,7 @@ Each action item must include:
 Your plan MUST include exactly these **6** key areas in this order (each starting with `pending`), and for each include the acceptance criteria:
 
 1. Basic TestChimp integration
-2. Existing Playwright suite / import strategy (use **skipped** or minimal notes when **greenfield**)
+2. Import existing tests (nested `/testchimp import`, skipped with later command, or **N/A** when already migrated / no external E2E)
 3. Mocking (Playwright `page.route` + optional AIMock)
 4. TrueCoverage Infra
 5. Environment provision strategy
@@ -377,9 +390,10 @@ Acceptance criteria (success checks):
   - there are 2 folders with the `.testchimp-plans` and `.testchimp-tests` marker files
   - Playwright/Mobilewright harness layout per template (`setup` / `e2e` / `api` projects as applicable); fixture barrels may be stubbed—**fixture authoring** lands during create-tests / test flow
   - composite policies seeded under `plans/knowledge/policies/` when missing; **`connect-to-test-env`** policy or ai-test-instructions env strategy present (gate)
-- Existing Playwright suite / import strategy
-  - when **not** greenfield: explicit tasks for moves/config/reporter/**`import '@testchimp/playwright/runtime'` on every `*.spec.{js,ts}`** in the mapped SmartTests tree per [`importing-existing-tests.md`](./importing-existing-tests.md) and the user’s **parallel-folder vs retrofit** choice from Phase 1
-  - when **greenfield**: marked **skipped** or **N/A** with a one-line note
+- Import existing tests
+  - **import now:** Nest [`import-existing-tests.md`](./import-existing-tests.md) tasks into this plan (moves/translate, config/reporter, fixtures-first imports, CI choice, scenario links; **markScreenState deferred until after env**) — **same approval** as the rest of init
+  - **skipped:** one-line note + tell user `/testchimp import existing tests <folder>` later
+  - **N/A:** one-line justification (already migrated / no external E2E / mapped folder already has a real suite)
 - Mocking (Playwright `page.route` + optional AIMock)
   - `### Mocking Plan` in `plans/knowledge/ai-test-instructions.md` records **`http_mocking`** and **`aimock`** per [`mocking_strategy.md`](./mocking_strategy.md)
   - **`page.route`** stance documented (or deferred/N/A); **AIMock** only if user opted in—then dependencies and wiring per [`mocking_strategy.md`](./mocking_strategy.md); `<SmartTests root>/assets/goldens` when AIMock is in scope; LLM traffic can be aimed at AIMock via agreed env/config; brief local vs CI notes
@@ -392,9 +406,9 @@ Acceptance criteria (success checks):
   - depends on the decision, and `ai-test-instructions` contains the user agreed-upon decision AFTER it has been discussed
   - for **Local - Test Authoring**, `ai-test-instructions` includes a single runnable “local up” command/script **and** explicit “wait until healthy” criteria (so agents can reliably provision and wait before testing)
 - CI setup
-  - CI action authored
+  - CI action authored **or** verified as completed by nested import Phase 4 **or** **N/A** with justification
 
-After the plan is written, ask the user to explicitly approve or request edits. Only after approval proceed to Phase 3. Phase 3 executes **Key Area 2** import/alignment tasks (moves, config fixes, reporter/runtime wiring) **only** after approval, when the plan included them.
+After the plan is written, ask the user to explicitly approve or request edits. Only after approval proceed to Phase 3. Phase 3 executes nested **import** tasks **only** when the approved plan included them (one approval covers init + import).
 
 ### Phase 2 completion gate (before Phase 3 — execution)
 
@@ -413,7 +427,7 @@ Why this phase (quick education):
 
 Work item-by-item from the agreed checklist and update `plans/knowledge/ai-test-instructions.md` after each completion, skip, or deferral.
 
-If the approved plan included **moving** specs into the mapped SmartTests folder or **upgrading** an existing Playwright tree to TestChimp structure, perform those steps here (action **K**) in line with [`importing-existing-tests.md`](./importing-existing-tests.md).
+If the approved plan nested **import**, execute that playbook here (action **K**) per [`import-existing-tests.md`](./import-existing-tests.md) — reuse this init’s plan / `workflow_execution_id`.
 
 Use the following action-item playbooks as implementation references.
 
@@ -425,7 +439,7 @@ Init touches a lot of surface area. **By default**, prefer **separate PRs** for 
 
 Execute the **6** key areas in this order and treat them as grouped action-item blocks:
 - **Basic TestChimp integration + test harness:** actions A–F (markers, deps, config, MCP, scaffold layout per [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) — `setup`, `e2e` or `web/e2e` + `mobile/e2e`, `api/`, fixture barrels — see [`fixture-usage.md`](./fixture-usage.md))
-- **Existing suite import / alignment (when planned):** action K—skip when greenfield / N/A
+- **Existing suite import (when planned):** action K — nest [`import-existing-tests.md`](./import-existing-tests.md); skip when N/A / skipped
 - **Mocking:** action J ([`mocking_strategy.md`](./mocking_strategy.md))
 - **TrueCoverage Infra:** action I
 - **Environment provision strategy:** action G
@@ -539,18 +553,16 @@ During init, **discover** whether test-only seed/teardown/read routes already ex
 
 Success check (Test harness): SmartTests root matches the chosen scaffold ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)); required fixture barrel(s) exist after platform sync / backfill; no `world-states` path required.
 
-### Action item K - Import / align existing Playwright suite (when planned)
+### Action item K - Nested import (when planned)
 
-Read `plans/knowledge/ai-test-instructions.md` for Key Area 2 decisions and follow [`references/importing-existing-tests.md`](./importing-existing-tests.md).
+Follow [`import-existing-tests.md`](./import-existing-tests.md) using **this** init plan / `workflow_execution_id` (no second approval).
 
-- If Phase 2 marked this area **skipped** / **N/A** (greenfield), mark action K **skipped** and do not move files.
-- Otherwise: perform the **approved** moves, config path fixes, `@testchimp/playwright` reporter + deps, and scaffold folders / fixture barrels as listed in the init plan—**only** after user approval.
-- **Every** executable **`*.spec.{js,ts}`** / SmartTest under the mapped tree must import **`test` and `expect` only** from **`fixtures/index.js`** (relative path from the spec file)—never the root **`test`** from **`@playwright/test`** or **`@mobilewright/test`** in spec files. TestChimp runtime hooks (**`markScreenState`**, ExploreChimp when enabled; TrueCoverage test identity on **web** and automation URLs on **mobile** when wired) live on the merged `test` via **`installTestChimp`** in that master file; see [`importing-existing-tests.md`](./importing-existing-tests.md#required-fixtures-first-imports-in-spec-files).
+- If Phase 2 marked Key Area 2 **skipped** / **N/A**, mark action K **skipped**.
+- Otherwise: execute approved import tasks for Phases 1–5 of that playbook (moves/translate, config, fixtures-first imports, CI choice, scenario links).
+- **Do not** run import Phase 6 (`markScreenState`) here if Key Area 5 / Action G has not completed yet—schedule it after Action G (or mark deferred if env was skipped).
+- When import Phase 4 authored CI, Action H should **verify** that work rather than duplicate it.
 
-Success check (Import strategy):
-
-- SmartTests root matches the agreed strategy (**parallel-folder** migration state or **retrofit** complete to the extent planned); `npx playwright test` from the mapped folder is the canonical command; platform path expectations in [`importing-existing-tests.md`](./importing-existing-tests.md) are satisfied.
-- **Every** in-scope **`*.spec.{js,ts}`** imports **`{ test, expect }`** from the correct relative **`fixtures/index.js`** (verify with a repo search before marking **done**). Legacy per-spec **`import '@testchimp/playwright/runtime'`** is optional once **`installTestChimp(mergeTests(...))`** is applied in **`fixtures/index.js`**.
+Success check: import playbook completion checklist satisfied for the agreed scope (markScreenState may still be pending until after env).
 
 ### Action item J - Mocking (Playwright `page.route` + optional AIMock)
 
@@ -608,13 +620,11 @@ Success check (Environment provision strategy):
 
 ### Action item H - CI behavior
 
-- Run from tests root with required env vars.
-- Pass PR/stage URL via `BASE_URL`.
-- If **AIMock** was enabled in action J, align CI with the documented AIMock approach (e.g. GitHub Action or `npx` per [`mocking_strategy.md`](./mocking_strategy.md) / vendor docs).
-- If using PR-triggered runs, exclude TestChimp plan sync PRs with title `TestChimp Platform Sync [Plans]`.
+- If nested **import** already authored CI (import Phase 4): **verify** mapped-folder cwd, `TESTCHIMP_API_KEY` secrets guidance, and plan-sync exclusions—do **not** create a duplicate workflow. Mark done when verified.
+- Otherwise: run from tests root with required env vars; pass PR/stage URL via `BASE_URL`; if **AIMock** was enabled in action J, align CI with the documented AIMock approach; exclude TestChimp plan sync PRs titled `TestChimp Platform Sync [Plans]`.
 
 Success check (CI setup):
-- CI action authored (and wired to the selected environment strategy for `BASE_URL` / provisioning).
+- CI action authored **or** verified from nested import **or** **N/A** with justification (and wired to the selected environment strategy for `BASE_URL` / provisioning when present).
 
 ---
 
@@ -688,7 +698,7 @@ When enabling PR-triggered execution:
 After implementation, **before** treating init as finished, walk the **six key areas** and record outcomes in **`plans/knowledge/ai-test-instructions.md`** (append **“Init Phase 3 completion”** or tick inline next to each area). Same rule as other gates: **done** + one-line summary **or** **`N/A`** + one-line justification — **no silent skips**.
 
 - [ ] **Key Area 1** — Basic integration / markers / harness layout / MCP not 401.
-- [ ] **Key Area 2** — Import strategy executed or **skipped**/`N/A` per plan (with justification).
+- [ ] **Key Area 2** — Import nested-and-executed, **skipped** (user told `/testchimp import …` later), or **N/A** (already migrated / no external E2E).
 - [ ] **Key Area 3** — Mocking stance applied (`page.route` / AIMock per plan).
 - [ ] **Key Area 4** — TrueCoverage per plan (progress tracker + `plans/events/` when instrumenting).
 - [ ] **Key Area 5** — Environment local-up + health contract documented as agreed.
@@ -707,7 +717,7 @@ Init is complete when the action checklist is fully resolved (done, skipped, or 
 - CI run strategy chosen and documented,
 - seed/teardown/**read** and harness strategy established (per [`seeding-endpoints.md`](./seeding-endpoints.md) when authoring endpoints),
 - mocking approach recorded under `### Mocking Plan` (`http_mocking` + `aimock`, or explicitly deferred / N/A),
-- existing-suite import strategy recorded (or greenfield / N/A),
+- import nested / skipped / N/A recorded,
 - environment strategy recorded,
 - TrueCoverage decision recorded,
 - deferred items explicitly listed.

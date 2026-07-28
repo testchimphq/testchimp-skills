@@ -438,20 +438,22 @@ testchimp get-user-stories --user-story-ordinal-ids 118,120
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
-| `--scenario-ordinal-ids <csv>` | **Yes**\* | `scenarioOrdinalIds` | Numeric parts of **`TS-<n>`** (e.g. `107` for `TS-107`). |
-| `--json-input …` | No | (merge) | May supply **`scenarioOrdinalIds`** array instead of flag. |
+| `--scenario-ordinal-ids <csv>` | No\* | `scenarioOrdinalIds` | Numeric parts of **`TS-<n>`** (e.g. `107` for `TS-107`). |
+| `--external-ids <csv>` | No\* | `externalIds` | Full TMS ids including prefixes (e.g. `C12345`, `PROJ-101`). Server matches exact `external_id` first, then strips prefixes and matches the **numerical** part. |
+| `--json-input …` | No | (merge) | May supply **`scenarioOrdinalIds`** and/or **`externalIds`** arrays. |
 
-\*At least one ordinal id is required (via flag or JSON).
+\*Provide **at least one** of `--scenario-ordinal-ids` or `--external-ids` (via flag or JSON). Requires `@testchimp/cli` ≥ **0.1.26** for `--external-ids`.
 
-**Response:** `testScenarios[]` with `ordinalId`, `title`, `platformFilePath`, `content` (full markdown), `userStoryOrdinalIds[]`. Missing ids appear in `errors[]`.
+**Response:** `testScenarios[]` with `ordinalId`, `title`, `platformFilePath`, `content` (full markdown), `userStoryOrdinalIds[]`, and when present `externalSource` / `externalSystemId`. Missing ids appear in `errors[]`. Multiple scenarios may match one external id (agent should disambiguate).
 
-**Example:**
+**Examples:**
 
 ```bash
 testchimp get-test-scenarios --scenario-ordinal-ids 107
+testchimp get-test-scenarios --external-ids C12345,PROJ-101
 ```
 
-Use **`get-test-scenarios`** first when a prompt references **`TS-<n>`**; call **`get-user-stories`** for each linked story ordinal returned.
+Use **`get-test-scenarios`** first when a prompt references **`TS-<n>`**; call **`get-user-stories`** for each linked story ordinal returned. During **`/testchimp import`**, use `--external-ids` to resolve TMS tags to TestChimp scenarios.
 
 ### `get-requirement-quality-report`
 

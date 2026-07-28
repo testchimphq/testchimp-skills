@@ -15,7 +15,7 @@ Reuse init guidance — do **not** invent a parallel CI story.
    - Author or adjust a workflow that **`cd`**s into the **mapped SmartTests folder** (directory with **`.testchimp-tests`**).
    - Pass **`BASE_URL`** (and env strategy) per [`environment-management.md`](./environment-management.md) / project policy.
    - Require **`TESTCHIMP_API_KEY`** (and related reporter env) on the job so `@testchimp/playwright` reports executions.
-   - Align with [`importing-existing-tests.md`](./importing-existing-tests.md) when an existing suite already has CI.
+   - Align with [`import-existing-tests.md`](./import-existing-tests.md) when an existing suite already has CI (replace vs separate Action).
 3. If CI **already exists** and is correctly wired, say so — do not rewrite unnecessarily.
 4. **Inform the user how to trigger** runs on CI (e.g. push/PR, `workflow_dispatch`, branch protection checks) based on what you authored or found.
 5. Optionally point at product docs: SmartTests in CI with Playwright runner.
