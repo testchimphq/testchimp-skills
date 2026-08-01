@@ -1,9 +1,9 @@
 ---
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — policy-backed workflows (run-qa, upkeep, implement, init, import, subflows), SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, import, run QA, test, upkeep, evolve, implement, plan, explore, skill upgrade), SmartTests, agent-driven test or plan authoring, ExploreChimp, policies, or updating this skill from Git.
-compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.26** for workflow/policy tools (including `upsert-policy`, `upsert-plans-support-file`, `update-plan-items-lifecycle-status`), `get-execution-history --test-id`, and `get-test-scenarios --external-ids`.
-version: 1.0.11
-required_cli_version: "0.1.26"
+compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.27** for semantic nearby tools (`list-semantic-nearby`, `mark-entity-distinct`, `unmark-entity-distinct`), workflow/policy tools, `get-execution-history --test-id`, and `get-test-scenarios --external-ids`.
+version: 1.0.12
+required_cli_version: "0.1.27"
 ---
 
 # TestChimp

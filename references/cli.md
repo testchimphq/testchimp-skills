@@ -1122,6 +1122,8 @@ testchimp mark-semantic-tests-distinct --json-input '{
 
 ## Semantic nearby across entity types (QA Brain)
 
+Requires `@testchimp/cli` ≥ **0.1.27**.
+
 Find embedding-neighbors across Story / Scenario / Test / Issue / Event. Agents never use platform `test_id` — SmartTests use **TestLocator**; stories/scenarios/issues use **ordinal**; events use **title**.
 
 ### `list-semantic-nearby`
