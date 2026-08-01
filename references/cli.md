@@ -580,14 +580,15 @@ Requires `@testchimp/cli` ≥ **0.1.17**.
 
 **API:** `POST /api/mcp/create_issue`
 
-**When to use:** File a **new** TestChimp issue in the current project (MCP preferred; CLI fallback). Use when the user asks to create/file a bug, suggestion, observation, or task — or when an agent finds a product defect that is **not** already auto-filed (e.g. ExploreChimp pipeline bugs). **`/testchimp implement`** creates one **`TASK_ISSUE`** per planned task and links it to the parent story via **`linkTargets`** (see [`implement-requirement.md`](./implement-requirement.md)). Do **not** use this to update an existing issue (use `update-issue-status` / `get-issue-details`) or to fix one (`/testchimp fix issue`).
+**When to use:** File a **new** TestChimp issue in the current project (MCP preferred; CLI fallback). Use when the user asks to create/file a bug, suggestion, observation, or task — or when an agent finds a product defect that is **not** already auto-filed (e.g. ExploreChimp pipeline bugs). **`/testchimp implement`** creates one **`TASK_ISSUE`** per planned task with **`severity`**, **`category`**, label **`TestChimp Implement`**, and **`linkTargets`** to the parent **story** and in-scope **scenario(s)** (see [`implement-requirement.md`](./implement-requirement.md)). Do **not** use this to update an existing issue (use `update-issue-status` / `get-issue-details`) or to fix one (`/testchimp fix issue`).
 
 **Agent rules:**
 - **`title` is required** (flag or JSON). Prefer a concrete, actionable title.
 - Defaults when omitted: **`status=ACTIVE`**; **`environment`** defaults server-side to QA when unset.
-- Prefer **`linkTargets`** (via `--json-input`) to attach stories, scenarios, tests, executions, or batch invocations so the issue is traceable. For implement tasks, always include **`STORY`** with the numeric story ordinal as **`toEntityId`**.
+- Prefer **`linkTargets`** (via `--json-input`) to attach stories, scenarios, tests, executions, or batch invocations so the issue is traceable. For implement tasks, include **`STORY`** and/or **`SCENARIO`** with **numeric plan ordinals** as **`toEntityId`** whenever those ids are known (server resolves ordinals to internal entity ids).
 - Use simple flags for common creates; use **`--json-input`** for the full curated contract (`linkTargets`, `attachments`, `artifactReference`, enums below).
-- **`source`** is stored as a label `source:<name>` (e.g. agent ingest id). Extra **`labels`** are optional. Implement tasks use **`source: testchimp-implement`**.
+- **`labels`** are free-form (server lowercases/canonicalizes). **`source`** is optional and stored as label `source:<name>` — use for generic agent ingest ids, **not** for implement tasks.
+- **Implement tasks (`/testchimp implement`):** set **`issueType: TASK_ISSUE`**, **`labels: ["TestChimp Implement"]`** (do **not** use `source: testchimp-implement`), **`severity`** from agent priority, **`category`** from agent judgment, and **`linkTargets`** for story + scenario(s) using ordinals.
 - Project is resolved from the API key — do not invent project ids.
 
 | Flag | Required | Maps to JSON field | Notes |
@@ -604,7 +605,7 @@ Requires `@testchimp/cli` ≥ **0.1.17**.
 | `--labels <csv>` | No | `labels` | Comma-separated → string array. |
 | `--source <name>` | No | `source` | Becomes label `source:<name>`. |
 | `--environment <name>` | No | `environment` | Env tag (defaults to QA when omitted). |
-| `--json-input …` | No | (merge) | Full body including **`linkTargets`**: `[{ "toEntityType": "SCENARIO"\|"STORY"\|"TEST"\|"ISSUE"\|"EXTERNAL"\|"TEST_EXECUTION"\|"BATCH_INVOCATION", "toEntityId": "…" }]`, plus `attachments`, `artifactReference`. |
+| `--json-input …` | No | (merge) | Full body including **`linkTargets`**: `[{ "toEntityType": "SCENARIO"\|"STORY"\|"TEST"\|"ISSUE"\|"EXTERNAL"\|"TEST_EXECUTION"\|"BATCH_INVOCATION", "toEntityId": "…" }]`. For **`STORY`** / **`SCENARIO`**, pass the **numeric plan ordinal** (server resolves to internal id). Also `attachments`, `artifactReference`. |
 
 \*Required via `--title` or `--json-input`.
 
@@ -641,15 +642,18 @@ testchimp create-issue --json-input '{
   "environment": "QA"
 }'
 
-# Implement workflow: task linked to parent story (ordinal only)
+# Implement workflow: task linked to story + scenario, with severity/category/label
 testchimp create-issue --json-input '{
   "title": "Add policy upsert API",
   "issueType": "TASK_ISSUE",
   "status": "ACTIVE",
+  "severity": "HIGH_SEVERITY",
+  "category": "FUNCTIONAL",
+  "labels": ["TestChimp Implement"],
   "linkTargets": [
-    { "toEntityType": "STORY", "toEntityId": "42" }
-  ],
-  "source": "testchimp-implement"
+    { "toEntityType": "STORY", "toEntityId": "42" },
+    { "toEntityType": "SCENARIO", "toEntityId": "107" }
+  ]
 }'
 # After that task's code work completes:
 testchimp update-issue-status --issue-id B-42 --status FIXED
