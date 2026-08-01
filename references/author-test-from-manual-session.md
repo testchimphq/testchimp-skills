@@ -108,6 +108,7 @@ Implement:
 - Confirm the SmartTest passes in a headed run against the environment in `ai-test-instructions.md`.
 - If backend seed/probe code changed, restart or reprovision the environment before the final run.
 - Do **not** run Validate-phase atlas work or ExploreChimp unless the user asks for the full `/testchimp test` chain.
+- Best-effort **`report-agent-action`** for the new/updated SmartTest (`CREATED` / `UPDATED` + TestLocator). When this flow ran **standalone** (not nested under run-qa), mint a ULID if none exists and run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `create-tests` (or the parent workflow id when nested).
 
 ## Difference from scenario-only authoring
 

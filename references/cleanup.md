@@ -24,7 +24,9 @@ flowchart LR
   approval --> execute
 ```
 
-Same **Analyze → Plan → Execute** gating style as upkeep and run-qa: complete each phase before continuing; get explicit user approval before Phase 3 (unless `--mode=non-interactive` or policy `allow-execute-without-approval`).
+Same **Analyze → Plan → Execute → Report** gating style as upkeep and run-qa: complete each phase before continuing; get explicit user approval before Phase 3 (unless `--mode=non-interactive` or policy `allow-execute-without-approval`).
+
+> **Traceability:** On mutating actions (mark distinct, delete SmartTests), call **`report-agent-action`** with the plan ULID. Before finishing standalone cleanup, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `cleanup`). Nested under upkeep: parent closes.
 
 **Plan path (standalone):** `<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/cleanup/<workflow_execution_id>.plan.md` — write frontmatter (`workflow_id`, `workflow_execution_id`, `LastRunOnCommit`, `PlanApproved`), then **`upsert-plans-support-file`** (blocking) before Execute. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
@@ -106,6 +108,10 @@ Inform the user of each decision.
 ### Verification
 
 If deletions occurred, run affected specs.
+
+### Report (standalone)
+
+**[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — reconcile ledger → emit missing SmartTest DELETED / mark-distinct reports → **`ACTION_COMPLETED`** with `WORKFLOW` + `cleanup` (nested under upkeep: skip; parent closes).
 
 ---
 

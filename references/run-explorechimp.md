@@ -1,7 +1,7 @@
 # /testchimp run explorechimp
 
 
-> **Plan → approve → execute:** When this workflow runs **standalone**, write `knowledge/workflow_plans/run-explorechimp/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Nested under a composite: reuse the parent plan. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Plan → approve → execute → report:** When this workflow runs **standalone**, write `knowledge/workflow_plans/run-explorechimp/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Before finishing standalone, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `run-explorechimp`). Nested under a composite: reuse the parent plan (parent closes). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Synonym:** `/testchimp explore` (same workflow **`run-explorechimp`**).
 
 This reference supports **local ExploreChimp** runs: Playwright UI tests drive the browser to **deterministic screen-states**, and `@testchimp/playwright` sends **DOM, screenshot, console, network, and performance metrics** to TestChimp for **UX-oriented bug finding** (layout, visual regressions, usability, accessibility via axe, performance signals, console recorded issues, suspicious network patterns, and similar). Client behavior is implemented in **`@testchimp/playwright`** (`EXPLORECHIMP_ENABLED`, `markScreenState` fixture; **≥ 0.1.8**); analysis is routed via TestChimp backend services.
@@ -151,6 +151,7 @@ Mirror **FAQ-worthy** runner issues in **`## Past learnings — authoring & vali
 8. Set **`EXPLORECHIMP_ENABLED=true`**; configure sources / **network regex** as needed.
 9. `cd` **SmartTests root**; run per scaffold ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)) — e.g. **`npx playwright test -c playwright.config.js --project web`**, **`npx mobilewright test -c mobilewright.config.ts --project ios`**.
 10. Review findings in TestChimp exploration/journey UI; update **`## ExploreChimp`** with new stable decisions.
+11. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `run-explorechimp` (nested under run-qa / upkeep: parent closes).
 
 ---
 

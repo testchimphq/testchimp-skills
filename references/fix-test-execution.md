@@ -2,7 +2,9 @@
 
 **Workflow id:** `fix-test-execution` (prompts: `/testchimp fix test failure`, fix test execution).
 
-**Plan → approve → execute:** Mint `workflow_execution_id`, write **`knowledge/workflow_plans/fix-test-execution/<workflow_execution_id>.plan.md`** (failures, hypothesized causes, fix steps), **`upsert-plans-support-file`** (blocking), then explicit user approval before applying fixes — unless `--mode=non-interactive` or policy `allow-execute-without-approval: true`. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Traceability:** Persist a **ULID** `workflow_execution_id` before Execute; write the plan at **`knowledge/workflow_plans/fix-test-execution/<workflow_execution_id>.plan.md`**, call **`upsert-plans-support-file`** (blocking), then seek **explicit user approval** (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). On **`create-issue`** / **`update-issue-status`**, pass **inline `agentTraceability`**. Report SmartTest mutations via **`report-agent-action`**. Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `fix-test-execution`). Vocabulary: [`policies-and-traceability.md`](./policies-and-traceability.md).
+
+**Plan → approve → execute → report:** Mint `workflow_execution_id`, write **`knowledge/workflow_plans/fix-test-execution/<workflow_execution_id>.plan.md`** (failures, hypothesized causes, fix steps), **`upsert-plans-support-file`** (blocking), then explicit user approval before applying fixes — unless `--mode=non-interactive` or policy `allow-execute-without-approval: true`. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 ## Goal
 
@@ -120,7 +122,7 @@ Prefer deterministic selectors when the UI is stable and the failure is straight
 - Bring the environment up (or reprovision) **only** as specified there (no ad hoc alternate targets).
 - Re-run only the tests that were supposed to be fixed (or the smallest scope that proves the fix). **Skip** product-broken cases that were filed as issues instead of patched.
 
-### 5) Finish
+### 5) Finish + Report
 
 - Ensure the previously failing **test-incorrect** cases pass.
 - Summarize any **product-broken** findings and created issue ids (if any).
@@ -129,3 +131,4 @@ Prefer deterministic selectors when the UI is stable and the failure is straight
   - If you started **local servers** (dev stack, test env, proxies), shut them down.
   - If you provisioned an **ephemeral environment**, destroy it when no longer needed (to avoid cost and dangling resources).
   - Remove any **ephemeral local artifacts** created during debugging (temporary files, one-off traces/downloads) unless they are intentionally kept as committed fixtures/goldens.
+- **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (required when standalone): reconcile ledger → emit missing SmartTest / issue reports → **`ACTION_COMPLETED`** with `WORKFLOW` + `fix-test-execution` (nested under a composite: parent closes).

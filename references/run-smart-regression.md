@@ -8,7 +8,7 @@
 
 **Plan → approve → execute:** When this workflow runs **standalone**, write `knowledge/workflow_plans/run-smart-regression/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). When nested under **`run-qa`**, Smart regression is **Phase 5 guidance during Execute** of the composite (after Validate); reuse the parent plan — do not invent a separate approval gate.
 
-**Traceability:** On mutating fixes (update existing specs, fix product code because of a regression), call **`report-agent-action`** best-effort with the stable workflow-execution ULID (from the plan file when nested under run-qa).
+**Traceability:** On mutating fixes (update existing specs, fix product code because of a regression), call **`report-agent-action`** best-effort with the stable workflow-execution ULID (from the plan file when nested under run-qa). **Standalone:** before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `run-smart-regression`). Nested under run-qa: parent closes.
 
 This playbook is the full Smart regression guidance. The same proven logic lives inline under **Phase 5** in [`run-qa.md`](./run-qa.md) so behavior is unchanged if an agent only reads that file.
 
@@ -86,6 +86,8 @@ If a failure reveals a **missing** scenario for new behavior, add it to the plan
 
 **Best-effort:** `report-agent-action` for each material fix (`action_type` created/updated; SmartTests via `test` TestLocator; scenarios/stories via ordinal `entityIdentity`).
 
+**Standalone only:** after the checklist, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `run-smart-regression` (nested under run-qa: parent closes).
+
 ---
 
 ## Checklist
@@ -96,9 +98,11 @@ If a failure reveals a **missing** scenario for new behavior, add it to the plan
 - [ ] Regression suite executed with real runner (**`TESTCHIMP_API_KEY`** on process).
 - [ ] Failures triaged; tests and/or product updated; suite re-run to green or explicit blockers recorded.
 - [ ] When nested under run-qa with ExploreChimp **`yes`**: plan ExploreChimp targets updated to include **regression-touched** UI specs.
+- [ ] Standalone: **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** done (`ACTION_COMPLETED` / `ACTION_FAILED` for `WORKFLOW` + `run-smart-regression`).
 
 ### Completion gate
 
 - [ ] Affected scenarios + linked spec paths documented (or **`N/A`** + rationale).
 - [ ] Regression run results recorded (pass / fail / blocked).
 - [ ] Any **materially changed** existing specs noted for ExploreChimp scope when applicable.
+- [ ] Standalone: workflow execution closed on the platform.

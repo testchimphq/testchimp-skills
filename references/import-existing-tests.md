@@ -172,7 +172,7 @@ Ask whether the agent should **heuristically** match against scenarios under the
 - [ ] CI updated per user choice; secrets guidance given
 - [ ] Scenario links added where matched; existing TMS tags preserved
 - [ ] `markScreenState` done, skipped, deferred, or blocked with connect-to-test-env guidance
-- [ ] Best-effort **`report-agent-action`** with `workflowId: import` when standalone (nested: parent init/report owns the ULID)
+- [ ] Standalone: **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — emit missing mutation reports then **`ACTION_COMPLETED`** with `WORKFLOW` + `import` (nested under init: parent / init report owns completion)
 
 ---
 

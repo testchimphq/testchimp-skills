@@ -1,7 +1,7 @@
 # /testchimp execute tests
 
 
-> **Plan → approve → execute:** When this workflow runs **standalone**, write `knowledge/workflow_plans/execute-tests/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Nested under a composite: reuse the parent plan. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Plan → approve → execute → report:** When this workflow runs **standalone**, write `knowledge/workflow_plans/execute-tests/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `execute-tests`). Nested under a composite: reuse the parent plan (parent closes). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Workflow id:** `execute-tests`
 
 **Depends on:** [`connect-to-test-env`](./connect-to-test-env.md) (bring up / connect per policy before executing tests).
@@ -57,7 +57,8 @@ Parse from the user prompt:
 
 1. Summarize pass/fail for the user (counts, notable failures).
 2. For clear test bugs or flakes, fix or hand off to [`fix-test-execution.md`](./fix-test-execution.md) when the user wants deeper repair.
-3. Best-effort **`report-agent-action`** with workflow-id **`execute-tests`** and a stable ULID when you mutate specs or product code; close with **`ACTION_COMPLETED`** when done.
+3. Best-effort **`report-agent-action`** with workflow-id **`execute-tests`** and the plan ULID when you mutate specs or product code.
+4. **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (required when standalone): **`ACTION_COMPLETED`** with `WORKFLOW` + `execute-tests` even when no mutations occurred (so the platform records the run). Nested: parent closes.
 
 ---
 
@@ -66,3 +67,4 @@ Parse from the user prompt:
 - [ ] `connect-to-test-env` followed for the named env (reuse-if-healthy respected)
 - [ ] Scoped tests executed from SmartTests root with runner API key present
 - [ ] Results reported to the user; blockers called out with next steps
+- [ ] Standalone: workflow execution reported (`ACTION_COMPLETED` / `ACTION_FAILED`)

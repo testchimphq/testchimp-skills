@@ -1,7 +1,7 @@
 # /testchimp author plans
 
 
-> **Plan → approve → execute:** When this workflow runs **standalone**, write `knowledge/workflow_plans/author-plans/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Nested under a composite: reuse the parent plan. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Plan → approve → execute → report:** When this workflow runs **standalone**, write `knowledge/workflow_plans/author-plans/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Story/scenario create/update carry **inline `agentTraceability`**. Before finishing standalone, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `author-plans`). Nested under a composite: reuse the parent plan (parent closes). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Synonym:** `/testchimp plan` (same workflow **`author-plans`**).
 
 This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and `@Scenario` links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
@@ -125,6 +125,7 @@ When the user asks for **`/testchimp plan`** (or equivalent: fill gaps in the te
 3. **Create parent stories before scenarios.** For each new artifact: **MCP create → write file with `id:` already set → MCP update**. Never write story/scenario markdown that omits `id:`.
 4. Keep edits **reviewable**: minimal frontmatter, clear titles, consistent folder placement.
 5. Make sure that created stories and scenarios are created under sub-folders for better organization. Not directly under the `plans/stories` or `plans/scenarios` but in a sub-folder within those - based on the the relevant area the story / scenario affects.
+6. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `author-plans` (nested under run-qa / upkeep: parent closes).
 
 ---
 

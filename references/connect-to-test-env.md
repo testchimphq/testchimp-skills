@@ -1,7 +1,7 @@
 # /testchimp connect to test environment
 
 
-> **Plan → approve → execute:** When this workflow runs **standalone**, write `knowledge/workflow_plans/connect-to-test-env/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Nested under a composite: reuse the parent plan. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Plan → approve → execute → report:** When this workflow runs **standalone**, write `knowledge/workflow_plans/connect-to-test-env/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Before finishing standalone, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `connect-to-test-env`). Nested under a composite: reuse the parent plan (parent closes). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Workflow id:** `connect-to-test-env`
 
 **Synonyms:** `/testchimp provision test environment`
@@ -33,3 +33,4 @@ See [`policies-and-traceability.md`](./policies-and-traceability.md) and deeper 
 2. Run documented provision / local-up / connect steps; wait for **healthy**.
 3. Export or document **`BASE_URL`** / backend URLs for the runner (Preamble **#4** still required for Playwright/Mobilewright).
 4. Best-effort **`report-agent-action`** when provisioning creates/updates env artifacts worth tracing.
+5. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `connect-to-test-env` (nested: parent closes).

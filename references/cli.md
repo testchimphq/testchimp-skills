@@ -1120,6 +1120,49 @@ testchimp mark-semantic-tests-distinct --json-input '{
 
 ---
 
+## Semantic nearby across entity types (QA Brain)
+
+Find embedding-neighbors across Story / Scenario / Test / Issue / Event. Agents never use platform `test_id` — SmartTests use **TestLocator**; stories/scenarios/issues use **ordinal**; events use **title**.
+
+### `list-semantic-nearby`
+
+```bash
+# Nearby tests for scenario ordinal 12
+testchimp list-semantic-nearby --json-input '{
+  "sourceEntityType": "SCENARIO",
+  "sourceOrdinalId": 12,
+  "targetEntityTypes": ["TEST"],
+  "limit": 20
+}'
+
+# Nearby scenarios for a SmartTest
+testchimp list-semantic-nearby --json-input '{
+  "sourceEntityType": "TEST",
+  "sourceTest": {
+    "folderPath": ["auth"],
+    "fileName": "login.spec.ts",
+    "testName": "logs in"
+  },
+  "targetEntityTypes": ["SCENARIO"]
+}'
+```
+
+Response buckets include `similarity`, `potentialDuplicate` (same-type), and identity fields (`test` / `ordinalId` / `eventTitle`).
+
+### `mark-entity-distinct` / `unmark-entity-distinct`
+
+Same identity rules as nearby. Prefer these for cross-type cleanup; `mark-semantic-tests-distinct` remains the TestLocator-only TEST wrapper.
+
+```bash
+testchimp mark-entity-distinct --json-input '{
+  "entityType": "TEST",
+  "focusTest": { "folderPath": ["auth"], "fileName": "a.spec.ts", "testName": "a" },
+  "otherTest": { "folderPath": ["auth"], "fileName": "b.spec.ts", "testName": "b" }
+}'
+```
+
+---
+
 ## MCP parity (tool names)
 
 MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`upsert-policy`**, **`upsert-plans-support-file`**, **`create-user-story`**, **`list-rum-environments`**.

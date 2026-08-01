@@ -185,13 +185,49 @@ Still use for analyze/completion and non-CRUD entities (SmartTest locator action
 | `test` **or** `entityIdentity` | **Mutually exclusive** (camelCase on the wire). SmartTests → `test` TestLocator (`folderPath`, `fileName`, `testSuite`, `testName`). Other artifacts → `entityIdentity` as project-scoped **ordinal id** (readable int string). Do **not** use platform UUIDs. Exception: execution/batch ids only when the prompt explicitly provided them. |
 | `action_type` | `created` / `updated` / `deleted` / `analyzed` / **`completed`** (`ACTION_COMPLETED`) / **`failed`** (`ACTION_FAILED`). Completing/failing marks the workflow execution done (`completedAtMillis`). Prefer `entity_type: workflow` for those. |
 
-At end of Execute (or when aborting), best-effort report **`ACTION_COMPLETED`** or **`ACTION_FAILED`** so timelines leave `RUNNING`.
+At end of every **standalone** Execute (or when aborting), report **`ACTION_COMPLETED`** or **`ACTION_FAILED`** so timelines leave `RUNNING` — see **[Report workflow execution](#report-workflow-execution)** (required gate, not optional).
 
 **`init` (bootstrap, not catalog):** During **`/testchimp init`**, after workstation-gate **`get-eaas-config`** succeeds, best-effort report **`ACTION_COMPLETED`** with `workflow_id` / `entityIdentity` **`init`** and a fresh ULID (no policy fields). Omit `user_id` — MCP injects **`TESTCHIMP_USER_ID`** from mcp.json when set. Report failure must not block init. See [`init-testchimp.md`](./init-testchimp.md)#workstation-gate-always-first.
 
-**First successful report** for a new `workflow_execution_id` **creates** the DB workflow execution (`execution_created: true`); later reports append actions to the same execution.
+**First successful report** for a new `workflow_execution_id` **creates** the DB workflow execution (`execution_created: true`); later reports append actions to the same execution. **`upsert-plans-support-file` alone does not create a workflow execution** — without RAA / inline `agentTraceability`, the platform shows no run.
 
 **Since last run:** **`get-last-run-workflow-detail`** (`workflow_id`, optional `branch_name`, optional `user_id`).
+
+## Report workflow execution
+
+**Required** before treating any **standalone** catalog workflow as done (and for composite parents like `run-qa` / `upkeep` / `implement`). Nested subflows **do not** emit their own `ACTION_COMPLETED` — the parent reuses the same ULID and closes once.
+
+**Applies to every catalog workflow** that mints a `workflow_execution_id` (including thin playbooks: `fix-issue`, `fix-test-execution`, `cleanup`, `execute-tests`, `author-plans`, `run-explorechimp`, `connect-to-test-env`, `run-smart-regression`, `run-requirement-quality-checks`, `instrument-truecoverage`, `create-policy`, `run-release-check`, `import`, …). Omitting this step leaves the platform with a plan support file but **no** `workflow_executions` row (or a stuck `RUNNING` timeline).
+
+### Steps (blocking before “done”)
+
+1. **Reconcile ledger** — List material mutations from this run (issue status changes, story/scenario CRUD, SmartTest create/update/delete, policy upsert, analyze, implement, …). Call **`get-workflow-execution`** with `includeActions: true` for this `workflow_execution_id` when available.
+2. **Emit missing reports** — For each material mutation not already on the timeline:
+   - Prefer **inline `agentTraceability`** on mutating CRUDs (`update-issue-status`, `create-issue`, story/scenario create/update) — do **not** also RAA the same CREATED/UPDATED.
+   - Otherwise call **`report-agent-action`** (`CREATED` / `UPDATED` / `DELETED` / `ANALYZED` / `IMPLEMENTED` as appropriate). SmartTests use `test` TestLocator; issues/stories/scenarios use ordinal `entityIdentity` (no `US-`/`TS-`/`#B-` prefix).
+3. **Close the run** — **`report-agent-action`** with:
+   - `action_type`: **`ACTION_COMPLETED`** (success) or **`ACTION_FAILED`** (abort / hard failure)
+   - `entity_type`: **`WORKFLOW`**
+   - `entity_identity`: the catalog **`workflow_id`** (e.g. `fix-issue`, `run-qa`)
+   - same `workflow_execution_id`, `workflow_id`, policy file/version (when resolved), `git_sha`, `actor_type`, `branch_name`
+
+CLI sketch:
+
+```bash
+testchimp report-agent-action \
+  --workflow-id fix-issue \
+  --workflow-execution-id "<ulid>" \
+  --action-type ACTION_COMPLETED \
+  --entity-type WORKFLOW \
+  --entity-identity fix-issue \
+  --git-sha "$(git rev-parse HEAD)" \
+  --actor-type LOCAL_AGENT \
+  --branch-name "$(git branch --show-current)"
+```
+
+**Plan-only / stop-after-upsert** (Workflow Automation first invoke): do **not** send `ACTION_COMPLETED` — no Execute yet. The Approve re-invoke owns Execute + Report.
+
+**Failure to report:** Treat as a **workflow defect** — retry once; if still failing, tell the user the run finished locally but the platform timeline may be missing (include ULID). Do not silently skip.
 
 ## Disabled / Missing Config (agent behavior)
 

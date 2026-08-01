@@ -1,7 +1,7 @@
 # `/testchimp analyze requirement quality` (DeFOSPAM — local agent)
 
 
-> **Plan → approve → execute:** When this workflow runs **standalone**, write `knowledge/workflow_plans/run-requirement-quality-checks/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Nested under a composite: reuse the parent plan. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Plan → approve → execute → report:** When this workflow runs **standalone**, write `knowledge/workflow_plans/run-requirement-quality-checks/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Best-effort **`report-agent-action`** `ANALYZED` on the story/scenario ordinal. Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `run-requirement-quality-checks`). Nested under a composite: reuse the parent plan (parent closes). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Workflow id:** `run-requirement-quality-checks`.
 
 Use this playbook when the user asks:
@@ -52,6 +52,8 @@ Requires **`@testchimp/cli` ≥ 0.1.19** (`get-requirement-quality-report`, `rep
    - Persist **`report.subject.subjectEntityId`** from the response for future re-runs.
 
 5. **Summarize for the user** — counts by severity, top findings, metrics; link to TestChimp plan UI when helpful. Do **not** dump raw JSON unless asked.
+
+6. **Report workflow execution** — best-effort **`report-agent-action`** `ANALYZED` on the story/scenario (`entity_type` USER_STORY / SCENARIO, ordinal `entityIdentity`). Then **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `run-requirement-quality-checks` (standalone; nested: parent closes).
 
 ## DeFOSPAM methodology (local agent)
 

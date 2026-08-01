@@ -1,7 +1,7 @@
 # `/testchimp run release check` / security scans
 
 
-> **Plan → approve → execute:** When this workflow runs **standalone**, write `knowledge/workflow_plans/run-release-check/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Nested under a composite: reuse the parent plan. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Plan → approve → execute → report:** When this workflow runs **standalone**, write `knowledge/workflow_plans/run-release-check/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `run-release-check`, or `ACTION_FAILED` on EXCEPTION). Nested under a composite: reuse the parent plan (parent closes). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Workflow id:** `run-release-check` (also: `/testchimp run security scan for <scan_id>`).
 
 Use this playbook when the user (or Release Checks modal) asks to run:
@@ -43,6 +43,7 @@ Treat steps 4–5 as a **try / finally**: always run cleanup (step 5) even when 
    - If **none** of the above → set `EXCEPTION` and tell the user the scan config is empty/unrecognized.
 4. Run the matching playbook. On hard failure of a required step → **`update-scan-progress --status EXCEPTION`** (still do cleanup). The playbook sets **`COMPLETED`** after a successful report — do not set it again here.
 5. **Cleanup (always):** if this run provisioned an ephemeral environment for DAST sandbox, call **`destroy-ephemeral-environment`**. Follow [`environment-management.md`](./environment-management.md). Run teardown even if the playbook already marked `COMPLETED`.
+6. **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `run-release-check` after successful playbook completion, or **`ACTION_FAILED`** when the orchestrator sets `EXCEPTION` (standalone; nested: parent closes).
 
 ## Notes
 
