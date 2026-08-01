@@ -1,16 +1,17 @@
 ---
 workflow-id: implement
-version: 1.0.4
+version: 1.0.5
 ---
 
 ### Summary
 
 Default Implement Requirement policy. Guides agents implementing a user story,
 scenario, or **finetuned plan file** (`/testchimp implement <id|path>`): analyze
-related scenarios, break work into `TASK_ISSUE`s (story/scenario-linked when
-ids are known; severity + category + `TestChimp Implement` label), implement,
-mark tasks `FIXED` as they complete, self-review, report `IMPLEMENTED`, set
-lifecycle status, then complete the workflow execution.
+related scenarios, author a **Product plan** at unconstrained depth, wrap with
+workflow envelope + derived `TASK_ISSUE`s (story/scenario-linked when ids are
+known; severity + category + `TestChimp Implement` label), implement, mark tasks
+`FIXED` as they complete, self-review, report `IMPLEMENTED`, set lifecycle
+status, then complete the workflow execution.
 Override with project coding standards, out-of-scope rules, and any required
 review checks.
 
@@ -36,16 +37,24 @@ ready
 
 ### Implementation notes
 
-- Prefer minimal diffs; match existing module style and patterns.
+- **Planning depth is unconstrained; workflow is additive.** This skill must not
+  reduce Product plan quality vs unconstrained implementation planning. Design
+  first (architecture, files, schema/DDL, API contracts, UI); then wrap with
+  ULID / upsert / approval / derived task issues. Do not ship ceremony- or
+  task-table-only plans.
+- **Execute only:** Prefer minimal diffs; match existing module style and patterns.
+  Do not use “minimal diffs” to thin the Product plan in Plan phase.
 - Do not invent story/scenario ordinals; use platform ids only.
-- **Plan file input:** When the user points at a plan `.md`, adopt it as the Plan
-  baseline (do not rewrite from scratch). Prefer its task titles and scope.
-  Asking to implement that plan counts as Plan approval of its content.
-- **Task issues (required):** In Plan, break work into concrete task titles with
-  **priority** (`critical`/`high`/`medium`/`low`) and **category** (BugCategory
-  enum). Do not call `create-issue` before Plan approval, unless the user already
-  asked to implement a supplied plan. After approval, for each task call
-  `create-issue` with `issueType: TASK_ISSUE`, `labels: ["TestChimp Implement"]`
+- **Plan file input:** When the user points at a detailed plan `.md`, adopt it
+  **wholesale** as the Product plan (do not rewrite into a thinner outline).
+  Prefer its task titles and scope when deriving issues. Asking to implement that
+  plan counts as Plan approval of its content.
+- **Task issues (required):** After the Product plan exists, **derive** concrete
+  task titles with **priority** (`critical`/`high`/`medium`/`low`) and
+  **category** (BugCategory enum). Tasks are a projection of the Product plan,
+  not a substitute. Do not call `create-issue` before Plan approval, unless the
+  user already asked to implement a supplied plan. After approval, for each task
+  call `create-issue` with `issueType: TASK_ISSUE`, `labels: ["TestChimp Implement"]`
   (do **not** use `source: testchimp-implement`), `severity` mapped from priority
   (`critical`→`CRITICAL_SEVERITY`, `high`→`HIGH_SEVERITY`, `medium`→`MEDIUM_SEVERITY`,
   `low`→`LOW_SEVERITY`; default `MEDIUM_SEVERITY`), `category` from the Plan

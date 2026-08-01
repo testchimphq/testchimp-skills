@@ -234,7 +234,7 @@ Use the repo, plans, policies, and those tools to decide what to test and how to
 | `/testchimp setup truecoverage` / setup-truecoverage | [`references/instrument-truecoverage.md`](references/instrument-truecoverage.md) |
 | `/testchimp instrument` | [`references/instrument-truecoverage.md`](references/instrument-truecoverage.md) — workflow **`instrument-truecoverage`**. |
 | `/testchimp create policy` | [`references/create-policy.md`](references/create-policy.md) — workflow **`create-policy`**. |
-| `/testchimp implement` / `/testchimp implement <story/scenario id or plan.md>` | [`references/implement-requirement.md`](references/implement-requirement.md) — workflow **`implement`**; accepts story/scenario **or plan file** (resolve `story:` / scenario from plan); Analyze → Plan (adopt plan file / task titles with priority + category) → Execute (`create-issue` **`TASK_ISSUE`** + label **`TestChimp Implement`** + severity/category + story/scenario **`linkTargets`** → implement → **`update-issue-status` `FIXED`** per task) → Report (`IMPLEMENTED` + [Report workflow execution](references/policies-and-traceability.md#report-workflow-execution)). |
+| `/testchimp implement` / `/testchimp implement <story/scenario id or plan.md>` | [`references/implement-requirement.md`](references/implement-requirement.md) — workflow **`implement`**; accepts story/scenario **or plan file** (resolve `story:` / scenario from plan). **Planning depth is unconstrained; workflow is additive** (Product plan first, then ULID / derived `TASK_ISSUE`s / upsert / approval). Analyze → Plan → Execute (`create-issue` **`TASK_ISSUE`** + label **`TestChimp Implement`** + severity/category + story/scenario **`linkTargets`** → implement → **`update-issue-status` `FIXED`** per task) → Report (`IMPLEMENTED` + [Report workflow execution](references/policies-and-traceability.md#report-workflow-execution)). |
 | `/testchimp skill upgrade` / `/testchimp update` | [Updating this skill from Git](#updating-this-skill-from-git) |
 
 ### `/testchimp init` — opening message (deliver first)
@@ -369,7 +369,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 |------|---------|
 | [`references/init-testchimp.md`](references/init-testchimp.md) | Phased init: requirement gather, collaborative plan, action-item execution; seed policies; connect-to-test-env gate; best-effort `report-agent-action` for `init` after connectivity |
 | [`references/policies-and-traceability.md`](references/policies-and-traceability.md) | Policy frontmatter, resolution, ULID, closed `report-agent-action` vocabulary, Report workflow execution, Disabled/Missing Config |
-| [`references/implement-requirement.md`](references/implement-requirement.md) | `/testchimp implement` (`implement`): story/scenario/plan file → Analyze → Plan → Execute (task issues) → Report |
+| [`references/implement-requirement.md`](references/implement-requirement.md) | `/testchimp implement` (`implement`): story/scenario/plan file → Analyze → design-first Plan (Product plan + workflow envelope) → Execute (task issues) → Report |
 | [`assets/policies/implement.policy.md`](assets/policies/implement.policy.md) | Default policy for **`implement`** |
 | [`references/create-policy.md`](references/create-policy.md) | `/testchimp create policy` — author `*.policy.md` for a workflow-id |
 | [`references/connect-to-test-env.md`](references/connect-to-test-env.md) | `/testchimp connect to test environment` thin playbook |
