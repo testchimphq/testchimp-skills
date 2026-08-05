@@ -1079,6 +1079,66 @@ Also related (flags vary): **`report-agent-action`**, **`get-last-run-workflow-d
 
 ---
 
+## API operations coverage (CLI ≥ **0.1.28**)
+
+OpenAPI-backed API operation coverage (same payloads as the Operations UI). Prefer **`rootFilePath`** (repo-relative OpenAPI root) as the service resource id. **TestChimp operation id** = platform ULID (`id`), distinct from OAS `operationId`.
+
+Playbooks: [`api-testing.md`](./api-testing.md), [`create-tests.md`](./create-tests.md), [`upkeep.md`](./upkeep.md).
+
+### `list-api-operation-services`
+
+**API:** `POST /api/mcp/list_api_operation_services`
+
+```bash
+testchimp list-api-operation-services
+```
+
+Returns `services[]` with `rootFilePath`, `serviceKey`, `infoTitle`, `operationCount`.
+
+### `list-api-operations`
+
+**API:** `POST /api/mcp/list_api_operations`
+
+| Flag | Description |
+|------|-------------|
+| `--root-file-path <path>` | Preferred service resource id (repo-relative OpenAPI root). |
+| `--service-key <key>` | Internal service key alias. |
+| `--include-manual` | Include MANUAL test_mode coverage in previews. |
+| `--include-removed` | Include soft-deleted operations. |
+
+```bash
+testchimp list-api-operations --root-file-path services/featureservice/openapi/featureservice.json
+```
+
+Each operation includes `id` (TestChimp ULID), method/path, `coveringTestsPreview`, `coverageSummary` (scores).
+
+Omit `--root-file-path` / `--service-key` only when intentionally listing **all** services; prefer a root when more than one service is configured.
+
+### `get-api-operation-detail`
+
+**API:** `POST /api/mcp/get_api_operation_detail`
+
+| Flag | Description |
+|------|-------------|
+| `--id <ulid>` | **Preferred** — TestChimp operation id. |
+| `--root-file-path <path>` | Required with `--http-method` + `--path-template`; preferred with `--oas-operation-id`. |
+| `--service-key <key>` | Alias for root resolution. |
+| `--oas-operation-id <id>` | OpenAPI operationId (prefer scoped by root/service; project-wide fallback if service omitted). |
+| `--http-method <METHOD>` | With `--path-template` **and** root/service. |
+| `--path-template <path>` | OpenAPI path template. |
+| `--include-manual` / `--include-removed` | Same semantics as list. |
+
+```bash
+testchimp get-api-operation-detail --id 01HXYZ...
+testchimp get-api-operation-detail \
+  --root-file-path services/featureservice/openapi/featureservice.json \
+  --http-method POST --path-template /api/mcp/list_api_operations
+```
+
+Returns request/query/response field trees and response codes with covering-test tags. The CLI rejects calls with no lookup identity.
+
+---
+
 ## Semantic similar tests (`/testchimp cleanup`)
 
 Discover semantically similar SmartTest pairs using **TestLocators** (no platform `test_id`). Used by [`cleanup.md`](./cleanup.md).

@@ -319,6 +319,7 @@ The Analyze phase must gather:
   - Suggested queries:
     - `testchimp get-requirement-coverage --folder-path <plans/... or tests/...>` (scoped to the affected area; **omit `--branch-name`** so coverage aggregates across branch copies). On **mobile** / **multi-platform** repos, interpret multiple **`platform`** rows per scenario; add `--platform ios` or `--platform android` when analyzing one stack **in scope** for this run ([`platform-scope.md`](./platform-scope.md)).
     - `testchimp get-execution-history --folder-path <tests/...>` (recent failures/flake; omit `--branch-name` unless you need one branch only). For a single scenario’s runs: `--scenario-id <platform-scenario-uuid>` with optional `--platform web|ios|android` (CLI **≥ 0.1.6**).
+    - **Related API operation gaps:** When the PR/scope touches backend or client API surface and OpenAPI roots are configured, load [`api-testing.md`](./api-testing.md) and use `list-api-operation-services` / `list-api-operations` / `get-api-operation-detail` to note related coverage gaps for Plan (do not duplicate the full create-tests API-scope playbook — that lives in [`create-tests.md`](./create-tests.md) + [`api-testing.md`](./api-testing.md)).
   - Record results (relevant summaries) in the branch plan file (high level; no giant dumps).
 
 ### Phase 1 completion gate (Analyze → Plan)

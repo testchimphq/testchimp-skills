@@ -92,6 +92,16 @@ See **`ExecutionScope`** in [`instrument-truecoverage.md`](./instrument-truecove
 - **`get-execution-history`** with the same scope shape — flakiness, failures, error patterns.
 - For a specific scenario, use **`scenarioId`** (platform UUID) plus optional **`platform`** or **`dimensionFilters`** to inspect device-level runs ([`write-smarttests.md`](./write-smarttests.md)).
 
+### API operation coverage (`fix-coverage-gaps` / New tests)
+
+When OpenAPI roots are configured for the project (Operations / API coverage):
+
+1. **`list-api-operation-services`** — if empty, record **`N/A`** (OAS not configured).
+2. **`list-api-operations --root-file-path <path>`** — prioritize low `coverageSummary.coverageScore`, zero covering tests, business-critical paths.
+3. **`get-api-operation-detail`** on top gaps — pick high-ROI uncovered request/query/response fields and response codes.
+4. Prioritize: **missing coverage** + **business criticality** + **likely distinct backend branch complexity** (auth/role gates, pagination, status enums, error paths, nested secondary loads — not only filters). See [`api-testing.md`](./api-testing.md).
+5. Close gaps by **updating existing tests** and/or **authoring new ones** (UI SmartTests that hit the API count). Prefer extending an existing journey; a dedicated `api/` test is one option, not the default. Invoke create-tests patterns via [`create-tests.md`](./create-tests.md) / [`api-testing.md`](./api-testing.md).
+
 ### ExploreChimp in evolve: Targeted UX bug checks
 
 **Goal:** Turn **TrueCoverage insights** into a **short list of UI SmartTests** to run with **`EXPLORECHIMP_ENABLED`**, so **UX issues** (performance, layout, visual, usability, accessibility, console/network noise) are surfaced on **critical product slices**—not random pages.
@@ -112,6 +122,7 @@ Do **not** open Phase 2 until **all** are satisfied. Same bar as [`init-testchim
 - [ ] TrueCoverage subsection **skipped intentionally** (**explicit** opt-out in `### TrueCoverage Plan` + user OK) **or** scopes chosen and at least one pass of **`get-truecoverage-events`** completed.
 - [ ] Requirement coverage pulled with gap-friendly flags **or** scoped intentionally narrow with user direction.
 - [ ] Execution history reviewed for the same scope/time mental model.
+- [ ] API operation coverage reviewed via `list-api-operation-services` / `list-api-operations` (or **`N/A`** — OAS not configured) and top gaps noted for New tests / `fix-coverage-gaps`.
 - [ ] Short list of **top gaps** and **signals** (what data justified priority) , and an executive summary of the targets, is ready to paste into the plan file.
 - [ ] **ExploreChimp targeting:** candidate UI specs (or **`N/A`**) mapped from TrueCoverage / execution signals per [ExploreChimp in evolve](#explorechimp-in-evolve-truecoverage-to-targeted-ux-runs)—final yes/no and scope still belong in **Phase 2** with user approval.
 
@@ -154,8 +165,8 @@ Each section should include **rationale** (why it matters for this run) and a **
 2. **TrueCoverage instrumentation** — Read the **existing** **`plans/knowledge/truecoverage-instrument-progress.md`** first: it holds **pre-identified** work, including items that are **planned but not yet implemented**. In this evolve cycle, **choose from that backlog** (and add any newly discovered gaps from Phase 1), ordered by **business priority** as you judge. Then list concrete work: new or updated event **titles** and **metadata** (web: **`testchimp.emit`**; iOS/Android: **`TestChimpRum.emit`** or equivalent) with **dot-scoped** entity keys where applicable ([`instrument-truecoverage.md`](./instrument-truecoverage.md)). Link/update **`plans/knowledge/truecoverage-instrument-progress.md`** and **`plans/events/*.event.md`** as items land or status changes. Every **`*.event.md`** must include a **`## Rationale`** body section (instrumentation intent, hypotheses, business criticality, scenario/story links) so later MCP analysis stays tied to planning context—see **Event documentation** in [`instrument-truecoverage.md`](./instrument-truecoverage.md).
 3. **Seed / probe endpoints and mocks** — Endpoints or **`page.route`** / AIMock changes needed to support new world-states of entities identified and untested.
 4. **Fixtures** — Playwright fixture work tied to **observed metadata slices** (e.g. users without FOP if production shows that slice on checkout).
-5. **New tests** — SmartTests / API tests; prioritize by **signals + requirement gaps + business criticality**.
-6. **Updates to existing tests** — Behavior drift, failing tests, reporter/scenario links.
+5. **New tests** — SmartTests / API tests; prioritize by **signals + requirement gaps + API operation coverage gaps + business criticality**. Prefer updating existing tests that already touch an under-covered operation when possible ([`api-testing.md`](./api-testing.md)).
+6. **Updates to existing tests** — Behavior drift, failing tests, reporter/scenario links; also extend journeys to close high-ROI API field/code gaps.
 7. **Planning debt** — User stories / scenarios for under-specified areas (create via MCP per guardrails before writing traced tests).
 8. **ExploreChimp (targeted UX exploration)** — Whether to run **ExploreChimp** this cycle; **which UI specs** (existing and/or **new** SmartTests from section 5 once implemented); how each choice ties to **TrueCoverage** signals (drop-off, duration, demand, automation gap). Record **`N/A`** when opt-out, API-only cycle, or user declines extra runtime. Require **user agreement** for **yes** (same bar as infra cost). Execution detail: [`run-explorechimp.md`](./run-explorechimp.md); persist regex/source decisions under **`plans/knowledge/ai-test-instructions.md` → `## ExploreChimp`**.
 
