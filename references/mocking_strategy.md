@@ -7,7 +7,7 @@ Opinionated defaults for **HTTP/API** vs **LLM** mocking for E2E testing. Use du
 ### Playwright `page.route` (HTTP / API)
 
 - **Default choice** for selective HTTP/API stubbing in SmartTests: use Playwright’s native **[`page.route`](https://playwright.dev/docs/network#handle-requests)** (or `context.route`) to intercept requests and fulfill or abort with a controlled response.
-- When TestChimp API operation capture is enabled, native `route.fulfill(...)` responses are automatically classified as **mocked**. Use ordinary Playwright APIs; no TestChimp-specific helper or response header is required. Service-worker-based and non-Playwright mocking layers may not be identifiable.
+- When TestChimp API operation capture is enabled, native `route.fulfill(...)` responses registered after the TestChimp page fixture attaches are automatically classified as **mocked**. Use ordinary Playwright APIs. For handlers registered earlier, use `fulfillMocked` from `@testchimp/playwright` (or stamp `x-testchimp-mocked: 1`). Service-worker-based and non-Playwright mocking layers may not be identifiable.
 - Use **when needed** for targeted outcomes (e.g. assert error UI when upstream returns **500**, empty list, validation error payload)—not as a way to avoid exercising the real stack unless the scenario is explicitly about that outcome.
 - Prefer **shared helpers or fixtures** (see [`fixture-usage.md`](./fixture-usage.md)) so routes stay readable and reusable across specs.
 - **Do not** add **MSW** as part of TestChimp’s default stack; teams that already use MSW may keep it, but new work should follow **`page.route`** unless there is a strong reason not to.
