@@ -201,17 +201,23 @@ try{
   const key=env.TESTCHIMP_API_KEY;
   const pid=env.TESTCHIMP_PROJECT_ID;
   const backend=env.TESTCHIMP_BACKEND_URL;
+  const ingress=env.TESTCHIMP_INGRESS_URL;
   const hasServer=!!entry;
   const backendConfigured=backend && String(backend).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(backend)) && !looksLikeEnvRef(backend);
+  const ingressConfigured=ingress && String(ingress).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(ingress)) && !looksLikeEnvRef(ingress);
   process.stdout.write(`HAS_SERVER=${hasServer?'yes':'no'}\n`);
   process.stdout.write(`HAS_KEY=${ok(key)?'yes':'no'}\n`);
   process.stdout.write(`HAS_PROJECT_ID=${ok(pid)?'yes':'no'}\n`);
   process.stdout.write(`HAS_BACKEND_URL=${backendConfigured?'yes':'no'}\n`);
+  process.stdout.write(`HAS_INGRESS_URL=${ingressConfigured?'yes':'no'}\n`);
   if (backendConfigured) {
     process.stdout.write(`TESTCHIMP_BACKEND_URL=${String(backend).trim()}\n`);
   }
+  if (ingressConfigured) {
+    process.stdout.write(`TESTCHIMP_INGRESS_URL=${String(ingress).trim()}\n`);
+  }
 }catch{
-  process.stdout.write('HAS_SERVER=no\nHAS_KEY=no\nHAS_PROJECT_ID=no\nHAS_BACKEND_URL=no\n');
+  process.stdout.write('HAS_SERVER=no\nHAS_KEY=no\nHAS_PROJECT_ID=no\nHAS_BACKEND_URL=no\nHAS_INGRESS_URL=no\n');
 }
 NODE
   )"
@@ -233,6 +239,12 @@ NODE
     [ -n "${TESTCHIMP_BACKEND_URL:-}" ] && _say "TESTCHIMP_BACKEND_URL: $TESTCHIMP_BACKEND_URL"
   else
     _say "TESTCHIMP_BACKEND_URL: not set in MCP (CLI will use package default / SaaS prod)"
+  fi
+  if [ "${HAS_INGRESS_URL:-no}" = "yes" ]; then
+    _say "TESTCHIMP_INGRESS_URL: configured — export into every Playwright/Mobilewright runner shell"
+    [ -n "${TESTCHIMP_INGRESS_URL:-}" ] && _say "TESTCHIMP_INGRESS_URL: $TESTCHIMP_INGRESS_URL"
+  else
+    _say "TESTCHIMP_INGRESS_URL: not set in MCP (reporter uses ingress default or SaaS featureservice→ingress rewrite)"
   fi
 else
   _warn "WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp) — /testchimp init should create it from assets/sample-mcp.json"

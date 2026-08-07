@@ -6,7 +6,8 @@ version: 1.0.0
 ### Summary
 
 Default Run QA composite policy. Runs the standard QA subflows for the given scope:
-author plans, connect to test environment, create tests, run smart regression,
+author plans, connect to test environment, create tests (including autonomous
+`@testchimp/playwright` upgrade when behind), run smart regression,
 run ExploreChimp, and instrument TrueCoverage.
 
 ### Scoping Rules

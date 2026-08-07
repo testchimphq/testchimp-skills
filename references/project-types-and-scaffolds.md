@@ -71,6 +71,8 @@ npx mobilewright test -c mobilewright.config.ts --project android
 npx mobilewright test -c mobilewright.config.ts --project api
 ```
 
+**P0 — never CLI `--reporter`:** These commands must **not** add `--reporter` / `-r`. Playwright replaces config reporters when that flag is set, which drops **`@testchimp/playwright/reporter`** (execution ingest + ExploreChimp completion). See [`run-explorechimp.md`](./run-explorechimp.md)#honor-playwright-config-reporters-p0 and [`run-qa.md`](./run-qa.md) non-negotiables.
+
 ## Legacy markers
 
 `project_type=ios` or `project_type=android` → treat as **`mobile`**; do not create ios/android-only flat trees.

@@ -60,6 +60,16 @@ flowchart LR
 
 **Mandatory pre-step:** Re-open `plans/knowledge/ai-test-instructions.md` first and confirm the environment provisioning strategy for this run (how to provision, which URL source of truth to use, and what "healthy" means). Do this before any analytics-driven planning so later test authoring runs against the agreed environment strategy.
 
+### Org capabilities (soft gate — call before TrueCoverage / API operation analyze)
+
+Call **`get-org-capabilities`** (CLI ≥ **0.1.29**; see [`cli.md`](./cli.md) § `get-org-capabilities`) once at the start of Phase 1 and read **`capabilities[]`** + **`freeTrialActive`**:
+
+- **`TRUE_COVERAGE`** missing **and** `freeTrialActive: false` → **skip** the [TrueCoverage](#truecoverage-when-enabled) analyze subsection this cycle: mark it **`N/A`** with reason "TrueCoverage capability not enabled for this org" in the Phase 1 gate and the plan file. Do **not** call the TrueCoverage MCP tools.
+- **`API_CONTRACT_COVERAGE`** missing **and** `freeTrialActive: false` → **skip** the [API operation coverage](#api-operation-coverage-fix-coverage-gaps--new-tests) analyze subsection this cycle: mark it **`N/A`** with reason "API contract coverage capability not enabled for this org". Do **not** call `list-api-operation-services` / `list-api-operations` / `get-api-operation-detail`.
+- **Either capability present, or `freeTrialActive: true`** → run that subsection as documented below.
+- **Continue regardless:** a gated capability only skips its **own** subsection — requirement coverage, execution history, and all other Phase 1 work proceed normally. Never abort the `upkeep` run because a capability is off.
+- **If `get-org-capabilities` fails** (network/auth) — proceed with both subsections as normal (fail open); note in the plan that the capability check could not be confirmed.
+
 ### Default branch / scope
 
 - Unless the user specifies a Git branch for analytics, **omit `branchName`** from coverage and execution requests so results aggregate across branch copies (unscoped coverage). Pass **`branchName`** only when analytics must be limited to one Git branch.
@@ -67,6 +77,8 @@ flowchart LR
 - Reuse the same optional **`scope.folderPath`**, **`scope.filePaths`**, **`environment`**, **`release`** filters when comparing apples to apples across tools.
 
 ### TrueCoverage (when enabled)
+
+Skip this subsection (mark **`N/A`**) when the project has an **explicit** opt-out per [Prerequisites](#prerequisites) **or** the org **`TRUE_COVERAGE`** capability is off per [Org capabilities](#org-capabilities-soft-gate--call-before-truecoverage--api-operation-analyze) above.
 
 See **`ExecutionScope`** in [`instrument-truecoverage.md`](./instrument-truecoverage.md) and wire shapes in [`cli.md`](./cli.md) § TrueCoverage:
 
@@ -94,6 +106,8 @@ See **`ExecutionScope`** in [`instrument-truecoverage.md`](./instrument-truecove
 
 ### API operation coverage (`fix-coverage-gaps` / New tests)
 
+Skip this subsection (mark **`N/A`**) when the org **`API_CONTRACT_COVERAGE`** capability is off per [Org capabilities](#org-capabilities-soft-gate--call-before-truecoverage--api-operation-analyze) above.
+
 When OpenAPI roots are configured for the project (Operations / API coverage):
 
 1. **`list-api-operation-services`** — if empty, record **`N/A`** (OAS not configured).
@@ -119,10 +133,11 @@ Full operator checklist, env vars, and **`ai-test-instructions.md` → `## Explo
 
 Do **not** open Phase 2 until **all** are satisfied. Same bar as [`init-testchimp.md`](./init-testchimp.md) and [`run-qa.md`](./run-qa.md): each line **done** or **`N/A`** + **one-line justification** (record in chat or draft notes for the plan file).
 
-- [ ] TrueCoverage subsection **skipped intentionally** (**explicit** opt-out in `### TrueCoverage Plan` + user OK) **or** scopes chosen and at least one pass of **`get-truecoverage-events`** completed.
+- [ ] `get-org-capabilities` checked (or noted as failed/skipped) so TrueCoverage / API operation subsections below reflect **`TRUE_COVERAGE`** / **`API_CONTRACT_COVERAGE`** gating.
+- [ ] TrueCoverage subsection **skipped intentionally** (**explicit** opt-out in `### TrueCoverage Plan` + user OK, **or** `TRUE_COVERAGE` capability off — see [Org capabilities](#org-capabilities-soft-gate--call-before-truecoverage--api-operation-analyze)) **or** scopes chosen and at least one pass of **`get-truecoverage-events`** completed.
 - [ ] Requirement coverage pulled with gap-friendly flags **or** scoped intentionally narrow with user direction.
 - [ ] Execution history reviewed for the same scope/time mental model.
-- [ ] API operation coverage reviewed via `list-api-operation-services` / `list-api-operations` (or **`N/A`** — OAS not configured) and top gaps noted for New tests / `fix-coverage-gaps`.
+- [ ] API operation coverage reviewed via `list-api-operation-services` / `list-api-operations` (or **`N/A`** — OAS not configured, **or** `API_CONTRACT_COVERAGE` capability off) and top gaps noted for New tests / `fix-coverage-gaps`.
 - [ ] Short list of **top gaps** and **signals** (what data justified priority) , and an executive summary of the targets, is ready to paste into the plan file.
 - [ ] **ExploreChimp targeting:** candidate UI specs (or **`N/A`**) mapped from TrueCoverage / execution signals per [ExploreChimp in evolve](#explorechimp-in-evolve-truecoverage-to-targeted-ux-runs)—final yes/no and scope still belong in **Phase 2** with user approval.
 
@@ -206,11 +221,12 @@ Do **not** ask for user approval to implement until **all** are satisfied (each 
 
 Follow this **order** when coding (dependencies first):
 
+0. **`@testchimp/playwright` upgrade (autonomous)** — Before fixtures, tests, or runner use: bring **`@testchimp/playwright`** to **npm latest** at the Playwright install root; commit **`package.json` + lockfile** when bumped. Procedure: [`create-tests.md`](./create-tests.md) → *`@testchimp/playwright` upgrade*; **SKILL.md** Preamble **#8**. Nested **create-tests** / gap-fix authorship skips if this step already completed for the same `workflow_execution_id`.
 1. **System infra** — Instrumentation, **`plans/events/`**, **`plans/knowledge/truecoverage-instrument-progress.md`** (and related trackers); backend seed/probe endpoints as needed.
 2. **Test plan updates** — User stories / scenarios (new or revised).
 3. **Test infra** — Fixtures, mocks.
 4. **Test updates** — Updates to existing tests; then new tests.
-5. **ExploreChimp (optional, plan-gated)** — When section **8** is not **`N/A`**: after **new/changed UI tests pass** and **`markScreenState`** / atlas work for those specs is in good shape (same bar as [`run-qa.md`](./run-qa.md) **Validate** for touched flows), run **ExploreChimp** per [`run-explorechimp.md`](./run-explorechimp.md) on the **planned spec list**, using **`TESTCHIMP_BATCH_INVOCATION_ID`**, **`EXPLORECHIMP_ENABLED`**, and persisted **`## ExploreChimp`** settings. **New tests authored in this evolve cycle** should be included once they are stable exploration vehicles.
+5. **ExploreChimp (optional, plan-gated)** — When section **8** is not **`N/A`**: after **new/changed UI tests pass** and **`markScreenState`** / atlas work for those specs is in good shape (same bar as [`run-qa.md`](./run-qa.md) **Validate** for touched flows), run **ExploreChimp** per [`run-explorechimp.md`](./run-explorechimp.md) on the **planned spec list**, using **`TESTCHIMP_BATCH_INVOCATION_ID`**, **`EXPLORECHIMP_ENABLED`**, and persisted **`## ExploreChimp`** settings. **Honor config reporters** (no CLI **`--reporter`**) and **confirm exploration completed** before ticking this item done ([`run-explorechimp.md`](./run-explorechimp.md)#exploration-completion-required). **New tests authored in this evolve cycle** should be included once they are stable exploration vehicles.
 
 ### Post-implementation completion checklist (required)
 
@@ -218,11 +234,12 @@ After implementation is **done**, walk the **same buckets** as above and record 
 
 For **each** bucket below: either mark **done** with a **one-line** summary of what shipped, or write **`N/A`** with a **one-line justification** (why this evolve cycle did not need it).
 
+- [ ] **`@testchimp/playwright` upgrade** — On latest (version noted) or bumped + lockfile committed; **`N/A`** only if npm unreachable (noted) or no SmartTests package in repo.
 - [ ] **System infra** — Instrumentation, **`plans/events/`**, progress tracker, seed/probe endpoints.
 - [ ] **Test plan updates** — Stories / scenarios touched or explicitly deferred.
 - [ ] **Test infra** — Fixtures / mocks.
 - [ ] **Test updates** — Existing tests revised **and** new tests added (or explicit **N/A** if the plan truly had no test-code delta—justify).
-- [ ] **ExploreChimp** — Targeted run completed per plan section **8**, or **`N/A`** with justification (e.g. TrueCoverage opt-out, API-only, user declined).
+- [ ] **ExploreChimp** — Targeted run completed per plan section **8** with platform exploration **COMPLETED** (not left In progress), or **`N/A`** with justification (e.g. TrueCoverage opt-out, API-only, user declined).
 
 Then complete **Verification** and **Closure** below.
 

@@ -4,6 +4,16 @@
 > **Plan → approve → execute → report:** When this workflow runs **standalone**, write `knowledge/workflow_plans/instrument-truecoverage/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Before finishing standalone, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `instrument-truecoverage`). Nested under a composite: reuse the parent plan (parent closes). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Workflow id:** `instrument-truecoverage` (also **`/testchimp setup truecoverage`**).
 
+## Capability check (before instrumenting — soft gate)
+
+Before starting instrumentation work, call **`get-org-capabilities`** (CLI ≥ **0.1.29**; see [`cli.md`](./cli.md) § `get-org-capabilities`). Check the returned **`capabilities[]`** for **`TRUE_COVERAGE`** and read **`freeTrialActive`**:
+
+- **`TRUE_COVERAGE` present, or `freeTrialActive: true`** — proceed as documented below; no change to this playbook.
+- **`TRUE_COVERAGE` missing and `freeTrialActive: false`** — **do not abort.** Instrumentation (SDK install, `init`/`initialize` wiring, event helper, fixture/reporter plumbing) may still **continue** — it is useful groundwork regardless of plan. Tell the user, in the Plan and again after Execute, that: coverage **tracking and RUM ingress** for TrueCoverage are **gated** on the org's plan, so emitted events will not be ingested / analyzed until the capability is enabled; the `plans/events/*.event.md` docs and `truecoverage-instrument-progress.md` tracker are still worth maintaining since they take effect once the org upgrades. Record this in `plans/knowledge/ai-test-instructions.md` under `### TrueCoverage Plan` as a **capability note** (distinct from a project **opt-out** — see [Default: opted in](#default-opted-in) below).
+- **If `get-org-capabilities` itself fails** (network/auth) — do not block instrumentation on it; proceed as if capability status is unknown, and mention the check could not be confirmed.
+
+This capability gate is **independent** of the project-level opt-in/opt-out decision in `ai-test-instructions.md`: a project can be opted **in** to TrueCoverage while the org capability is **off** (groundwork continues, ingress is gated), or opted **out** regardless of capability (skip instrumentation per that decision).
+
 ## What it is (all platforms)
 
 TrueCoverage connects **real user behavior** (from production) with **test execution** so you can see which important journeys are under-tested. Instrument the **client app** with the platform RUM SDK; [`@testchimp/playwright`](https://github.com/testchimphq/playwright-testchimp-reporter) attaches **test identity** during SmartTest runs so emits from automation can be compared to real-user traffic in TestChimp.

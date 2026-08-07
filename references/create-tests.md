@@ -47,6 +47,37 @@ For Arrange → Act → Assert planning and Execute batching when running as par
 
 ---
 
+## `@testchimp/playwright` upgrade (autonomous)
+
+**Why:** Config loads `@testchimp/playwright/reporter` **by package name**. Client CI installs whatever the **lockfile** pins. New npm releases do **not** roll out until something bumps the dependency. **create-tests**, **run-qa**, and **upkeep** own that bump so upgrades stay autonomous.
+
+**When:** First concrete Execute step (before authoring or running SmartTests), once per `workflow_execution_id`. Nested under run-qa / upkeep: skip if the parent already completed this step for the same execution id.
+
+**Steps (blocking before authoring):**
+
+1. Resolve the **install root** (walk up from SmartTests root to the `package.json` that declares `@playwright/test` / `@testchimp/playwright`) — same as **SKILL.md** Preamble **#6** / **#8**.
+2. `npm view @testchimp/playwright version` → registry **latest**.
+3. `npm ls @testchimp/playwright --prefix <install-root>` (or lockfile) → **installed**.
+4. If installed **&lt;** latest: at the install root run **`npm install @testchimp/playwright@latest`** (prefer this over bare `npm update`, which only moves within an existing semver range). Include **`package.json` + lockfile** in the workflow’s commits / PR.
+5. If already on latest, or parent already bumped: mark **done** with the version string; do not reinstall.
+6. If npm is unreachable: note on the plan, continue on the lockfile version, tell the user to confirm when online.
+7. Do **not** edit reporter config solely for a version bump unless a release note requires it.
+
+Also listed as **SKILL.md** Preamble check **#8**.
+
+---
+
+## Execute (standalone or nested)
+
+After Plan approval (standalone) or when the parent hands off (nested):
+
+1. **[`@testchimp/playwright` upgrade](#testchimpplaywright-upgrade-autonomous)** — complete before any new/changed specs or runner invocations.
+2. **[`connect-to-test-env.md`](./connect-to-test-env.md)** when the parent has not already brought the env up.
+3. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan.
+4. Run and triage with the real runner; report workflow completion when standalone.
+
+---
+
 ## API operation scopes (summary)
 
 When the prompt is `/testchimp create tests for …` with an **API operation** identity (TestChimp operation id, OpenAPI root, method+path, and optional field/response-code cover):
@@ -61,5 +92,5 @@ When the prompt is `/testchimp create tests for …` with an **API operation** i
 
 ## Standalone vs nested
 
-- **Standalone:** Plan → `upsert-plans-support-file` → user approval (unless non-interactive) → connect-to-test-env → Execute authoring → report workflow completion.
-- **Nested under run-qa / upkeep:** Execute authorship only for the parent-approved items; same `workflow_execution_id`.
+- **Standalone:** Plan → `upsert-plans-support-file` → user approval (unless non-interactive) → **`@testchimp/playwright` upgrade** → connect-to-test-env → Execute authoring → report workflow completion.
+- **Nested under run-qa / upkeep:** Execute authorship only for the parent-approved items; same `workflow_execution_id`. Still honor the upgrade step unless the parent already completed it for this execution.

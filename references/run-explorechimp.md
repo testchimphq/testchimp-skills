@@ -8,6 +8,8 @@ This reference supports **local ExploreChimp** runs: Playwright UI tests drive t
 
 **P0 — same as all SmartTest runs:** The **process** that executes Playwright/Mobilewright with **`@testchimp/playwright`** must have **`TESTCHIMP_API_KEY`** in its **environment** (not only MCP/IDE). **Resolution order:** SmartTests-root walk-up → host MCP **`mcpServers.*.env.TESTCHIMP_API_KEY`** (never print) → export/inject into the shell, CI job, or wrapper **before** spawn — see **`SKILL.md`** Preamble **#4** and [`run-qa.md`](./run-qa.md) non-negotiables. **Reporter disabled**, **401**, missing-key logs → same remediation.
 
+**P0 — honor config reporters + complete explorations:** Spawn Playwright/Mobilewright **exactly** via the SmartTests config (no CLI **`--reporter`**). After every ExploreChimp batch, the platform exploration for **`TESTCHIMP_BATCH_INVOCATION_ID`** must be **`COMPLETED_EXPLORATION`** before the workflow treats Explore as done — see [Honor Playwright config reporters (P0)](#honor-playwright-config-reporters-p0) and [Exploration completion (required)](#exploration-completion-required).
+
 ## When to use this doc vs commands
 
 | User intent | Where to go |
@@ -108,7 +110,8 @@ When the user pastes a Release Checks prompt (or otherwise names a release):
 | **`TESTCHIMP_BATCH_INVOCATION_ID`** | Yes for correlation | **Exploration id**; also read from **`.testchimp-batch-invocation-id`** if env unset. |
 | **`TESTCHIMP_BRANCH_NAME`** | **Strongly recommended on local / agent shells** | **Canonical env to teach:** human git branch name (e.g. `git rev-parse --abbrev-ref HEAD`). `@testchimp/playwright` sets JSON **`branchName`** on ExploreChimp analyze requests via `getBranchName()`, which reads **`TESTCHIMP_BRANCH_NAME`** first, then **`TESTCHIMP_BRANCH`**, then CI/git vars. The server resolves **`branchName`** to **`branch_id`** on explorations, journeys, and bugs. If both name vars are unset and no CI branch is available, **`branch_id`** may stay empty. |
 | **`TESTCHIMP_RELEASE`** | When targeting a release | Release catalog version/label. Local ExploreChimp analyze stamps **`explorations.release_label`** from this (also used for SmartTest batch release tagging). |
-| **`TESTCHIMP_BACKEND_URL`** | Optional | Featureservice base URL (package defaults if omitted). |
+| **`TESTCHIMP_INGRESS_URL`** | Optional | Ingress host for ExploreChimp uploads / analyze (preferred). Default `https://ingress.testchimp.io`. |
+| **`TESTCHIMP_BACKEND_URL`** | Optional | Control-plane / CLI host. SaaS featureservice* is rewritten to matching ingress* for ExploreChimp when `TESTCHIMP_INGRESS_URL` is unset. |
 | **`EXPLORECHIMP_SOURCES_TO_ANALYZE`** | Optional | Comma-separated: **`DOM`**, **`SCREENSHOT`**, **`CONSOLE`**, **`NETWORK`**, **`METRICS`**. **Default if unset:** all five enabled. |
 | **`EXPLORECHIMP_REQUEST_REGEX_TO_ANALYZE`** | **Required when `NETWORK` is included** | JavaScript **regex** string; URLs must **match** to be captured. If `NETWORK` is requested but this is missing/invalid, **network capture is disabled** (warning logged). |
 | **`EXPLORECHIMP_LONG_TASK_THRESHOLD_MS`** | Optional | Long-task threshold for metrics (default **50** ms). |
@@ -117,6 +120,42 @@ When the user pastes a Release Checks prompt (or otherwise names a release):
 
 1. **Infer from repo context:** `BASE_URL` / API host from **`ai-test-instructions.md`** → **`## ExploreChimp`** and **`## Environment Provision Strategy`**, **`.env-*`**, OpenAPI bases, or existing `page.route` patterns—derive a **tight** regex for **your** backend (hostname + path prefix), not third-party noise.
 2. If unsafe or ambiguous, **ask the user**, then **persist** under **`plans/knowledge/ai-test-instructions.md`** → **`## ExploreChimp`** so future runs reuse it.
+
+---
+
+## Honor Playwright config reporters (P0)
+
+SmartTest + ExploreChimp platform reporting depends on **`@testchimp/playwright/reporter`** listed in the project’s **`playwright.config.*` / `mobilewright.config.ts`**.
+
+| Rule | Detail |
+|------|--------|
+| **Do** | `npx playwright test -c <config> …` / `npx mobilewright test -c <config> …` with **`--project`**, file/grep filters, env vars only. |
+| **Do not** | Pass CLI **`--reporter`**, **`-r`**, or **`--reporter=list`** (or any other reporter list). |
+| **Why** | Playwright **replaces** the entire config `reporter` array when `--reporter` is set. That drops `@testchimp/playwright/reporter`. Runtime **`markScreenState` / analyze** can still create an exploration as **In progress**, but **`journey_execution_end`** and **`exploration_end`** never run → platform UI stuck **In progress** after a green suite. SmartTest execution ingest is also lost. |
+| **List output** | Prefer the **`list`** (and optional **`html`**) reporters already declared **in config** alongside TestChimp. Do not add CLI `--reporter=list` “for readability.” |
+
+Before spawning an ExploreChimp (or any SmartTest) command, **self-check** the argv: if it contains `--reporter` / `-r`, **rewrite and re-run** without that flag.
+
+---
+
+## Exploration completion (required)
+
+**Contract:** Any batch that sets **`EXPLORECHIMP_ENABLED`** and a **`TESTCHIMP_BATCH_INVOCATION_ID`** (or `.testchimp-batch-invocation-id`) **opens** an exploration on first analyze. Closing it is **mandatory** before Phase 6 / standalone explore is “done.”
+
+| Step | Who | API |
+|------|-----|-----|
+| Start / analyze | Runtime (`markScreenState`) | `POST /smart-test/analyze_explorechimp_data_sources` → exploration **IN_PROGRESS** |
+| Journey end | **Reporter** `onTestEnd` | `POST /smart-test/explorechimp/journey_execution_end` |
+| Exploration end | **Reporter** `onEnd` | `POST /smart-test/explorechimp/exploration_end` with `{ explorationId: <batch id> }` |
+
+**After the runner exits (blocking for ExploreChimp):**
+
+1. Read the batch id from env or **`.testchimp-batch-invocation-id`**.
+2. Confirm platform status via **`POST /uitest/get_exploration_result`** with `{ "id": "<batch id>" }` (same **`TESTCHIMP_API_KEY`** / **`TESTCHIMP_BACKEND_URL`** as the run). Expect **`status`: `COMPLETED_EXPLORATION`**.
+3. If still **`IN_PROGRESS_EXPLORATION`** (or journeys still in progress):
+   - **Safety net:** `POST /smart-test/explorechimp/exploration_end` with `{ "explorationId": "<batch id>" }` (and journey ends when journeys remain open — same payloads the reporter would send).
+   - **Treat as a process failure:** the primary cause is almost always **CLI `--reporter` replaced config reporters** or a missing TestChimp reporter in config. Fix the spawn command / config before the next batch; do **not** rely on the safety net as normal flow.
+4. Do **not** call workflow **`ACTION_COMPLETED`** for standalone **`run-explorechimp`**, and do **not** advance run-qa **Phase 6 → Phase 7**, until the exploration is **completed** (or the batch never started analyze — document **`N/A`**).
 
 ---
 
@@ -143,15 +182,16 @@ Mirror **FAQ-worthy** runner issues in **`## Past learnings — authoring & vali
 0. **Platform scope (mobile / multi-platform):** Inform user or ask per [`platform-scope.md`](./platform-scope.md); align runs with branch plan **Platform scope** when present.
 1. **`SKILL.md`** preamble: resolve **`TESTCHIMP_API_KEY`** and **export/inject** it into the **runner** process env (verify before spawn; do not rely on MCP-only).
 2. Confirm **`mobilewright.config.ts`** UI projects set **`use.platform`** when exploring native mobile specs ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)).
-3. **`@testchimp/playwright` ≥ 0.1.8**; each spec imports from the barrel where **`installTestChimp`** was applied ([`fixture-usage.md`](./fixture-usage.md)).
+3. **`@testchimp/playwright` ≥ 0.1.8**; each spec imports from the barrel where **`installTestChimp`** was applied ([`fixture-usage.md`](./fixture-usage.md)). Confirm config lists **`@testchimp/playwright/reporter`**.
 4. **`markScreenState`** in place per **Phase 4** / [`write-smarttests.md`](./write-smarttests.md).
 5. Set **`TESTCHIMP_BATCH_INVOCATION_ID`** (or file) for this exploration batch.
 6. Set **`TESTCHIMP_BRANCH_NAME`** to the current git branch when running locally (so the server can resolve **`branch_id`** for analytics and bugs).
 7. When targeting a release (Release Checks prompt), set **`TESTCHIMP_RELEASE=<release label>`** so the exploration is stamped with that release label.
 8. Set **`EXPLORECHIMP_ENABLED=true`**; configure sources / **network regex** as needed.
-9. `cd` **SmartTests root**; run per scaffold ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)) — e.g. **`npx playwright test -c playwright.config.js --project web`**, **`npx mobilewright test -c mobilewright.config.ts --project ios`**.
-10. Review findings in TestChimp exploration/journey UI; update **`## ExploreChimp`** with new stable decisions.
-11. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `run-explorechimp` (nested under run-qa / upkeep: parent closes).
+9. `cd` **SmartTests root**; run per scaffold ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)) — e.g. **`npx playwright test -c playwright.config.js --project web`**, **`npx mobilewright test -c mobilewright.config.ts --project ios`**. **Never** add **`--reporter=…`** ([Honor Playwright config reporters (P0)](#honor-playwright-config-reporters-p0)).
+10. **Confirm exploration completed** for the batch id ([Exploration completion (required)](#exploration-completion-required)); safety-net `exploration_end` only if still In progress, then fix the spawn/config root cause.
+11. Review findings in TestChimp exploration/journey UI; update **`## ExploreChimp`** with new stable decisions.
+12. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `run-explorechimp` (nested under run-qa / upkeep: parent closes) — **only after** step 10.
 
 ---
 

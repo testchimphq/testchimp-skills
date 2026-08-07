@@ -19,9 +19,9 @@ Invoke via `npx @testchimp/cli@latest <subcommand>` or the **`testchimp`** binar
 
 **Minimum for platform execution reporting:** **`@testchimp/cli` ≥ 0.1.6** (this doc) and **`@testchimp/playwright` ≥ 0.2.0** on the SmartTests package (reporter sends `executionContext` on each test end).
 
-## Authentication and API host (`TESTCHIMP_API_KEY`, `TESTCHIMP_BACKEND_URL`)
+## Authentication and API host (`TESTCHIMP_API_KEY`, `TESTCHIMP_BACKEND_URL`, `TESTCHIMP_INGRESS_URL`)
 
-The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.TESTCHIMP_BACKEND_URL`**. Agent-run shells often **do not** inherit the IDE MCP process environment.
+The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.TESTCHIMP_BACKEND_URL`**. Agent-run shells often **do not** inherit the IDE MCP process environment. Playwright runners additionally use **`TESTCHIMP_INGRESS_URL`** (when set) for CI ingest — export it from the same MCP `env` into runner shells (see **`SKILL.md`** Preamble **#4**).
 
 **Before every CLI invoke** (and on any **401**), resolve env from the project MCP config:
 
@@ -29,14 +29,17 @@ The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.
 2. From the **SmartTests root** (folder containing `.testchimp-tests`), walk **up** the directory tree and check each candidate MCP config file until you find `mcpServers` with a **`testchimp`** server entry (or any server whose `args` include `@testchimp/cli`). If walk-up fails, search the repo for `mcp.json` / `.mcp.json` as described in **`SKILL.md`**.
 3. Read from that entry’s **`env`**:
    - **`TESTCHIMP_API_KEY`** (required for auth)
-   - **`TESTCHIMP_BACKEND_URL`** when present — **must** be exported; do **not** fall back to the package default prod host when this is set (staging / enterprise / self-hosted). Keys are environment-scoped; calling prod with a non-prod key yields **401**.
+   - **`TESTCHIMP_BACKEND_URL`** when present — **must** be exported for CLI/MCP; do **not** fall back to the package default prod host when this is set (staging / enterprise / self-hosted). Keys are environment-scoped; calling prod with a non-prod key yields **401**.
+   - **`TESTCHIMP_INGRESS_URL`** when present — **must** be exported into Playwright/Mobilewright runner shells (CI ingest host; parallel to backend URL in mcp.json)
    - **`TESTCHIMP_PROJECT_ID`** when present (TrueCoverage RUM wiring; not required for CLI auth)
-4. **`export`** those variables in the **same shell** that will run `testchimp` (e.g. one block: `export TESTCHIMP_API_KEY=... TESTCHIMP_BACKEND_URL=...` then `testchimp ...`).
+4. **`export`** those variables in the **same shell** that will run `testchimp` or Playwright (e.g. one block: `export TESTCHIMP_API_KEY=... TESTCHIMP_BACKEND_URL=... TESTCHIMP_INGRESS_URL=...` then the command).
 5. **Never print the key** in chat, logs, or echoed commands.
 
 **`TESTCHIMP_BACKEND_URL`:** When set in MCP `env`, it overrides the default API host (see `testchimp --help` footer). When **absent**, the CLI default (SaaS prod) is correct. On **401**, re-check that a configured backend URL was exported before assuming a bad key.
 
-**401 remediation order:** (1) export `TESTCHIMP_BACKEND_URL` from MCP if configured → (2) export `TESTCHIMP_API_KEY` from the same entry → (3) retry.
+**`TESTCHIMP_INGRESS_URL`:** When set, `@testchimp/playwright` uses it for CI ingest. When absent, the reporter defaults to `https://ingress.testchimp.io` or rewrites SaaS `featureservice*` → `ingress*`.
+
+**401 remediation order:** (1) export `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` from MCP if configured → (2) export `TESTCHIMP_API_KEY` from the same entry → (3) retry.
 
 ## Quick invoke
 
@@ -79,6 +82,37 @@ Use when nested fields are not exposed as flags (e.g. coverage **`includeNonCove
 ## `mcp`
 
 Start the TestChimp MCP server (stdio transport). **No flags.** Typically invoked as `npx -y @testchimp/cli@latest mcp` from MCP config.
+
+---
+
+## `get-org-capabilities`
+
+Requires `@testchimp/cli` ≥ **0.1.29**.
+
+**API:** `POST /api/mcp/get_org_capabilities`
+
+Fetch the organization's enabled **capabilities** (not tier/plan name) plus **`freeTrialActive`**. Call this **before** relying on TrueCoverage or API contract coverage insights so playbooks can **soft-skip** gated work instead of failing — see [`instrument-truecoverage.md`](./instrument-truecoverage.md), [`upkeep.md`](./upkeep.md), and [`run-qa.md`](./run-qa.md).
+
+| Flag | Required | Notes |
+|------|----------|-------|
+| `--json-input …` | No | Body is empty; JSON merge rarely needed. |
+
+**Response (camelCase):**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `organizationId` | string | |
+| `capabilities` | string[] | Enabled capability names, e.g. `TRUE_COVERAGE`, `API_CONTRACT_COVERAGE`. Treat unlisted capabilities as **off**. |
+| `freeTrialActive` | boolean | When `true`, gated capabilities may still be usable under trial even if not listed — do not hard-fail solely on capability absence without also checking this flag. |
+
+**Example:**
+
+```bash
+testchimp get-org-capabilities
+# stdout: {"organizationId":"...","capabilities":["TRUE_COVERAGE","API_CONTRACT_COVERAGE"],"freeTrialActive":false}
+```
+
+**Agent rule:** Always check **`capabilities`**, never infer from a separate "tier" field — this API is the single source of truth for what a workflow may rely on. When a capability is missing **and** `freeTrialActive` is `false`, soft-skip only the gated insight/analysis (mark **N/A** + reason); never abort the surrounding workflow.
 
 ---
 

@@ -67,6 +67,8 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
 
 - **`TESTCHIMP_API_KEY` (P0 — required on the runner process):** Any command that runs Playwright/Mobilewright with **`@testchimp/playwright`** must execute with **`TESTCHIMP_API_KEY`** set in **that process’s environment** (Execute, Validate, Phase 5, Phase 6, CI). **IDE/MCP-only** config does **not** satisfy the runner. **Resolution order:** SmartTests-root walk-up → host MCP config → read **`mcpServers.*.env.TESTCHIMP_API_KEY`** (never print) → **export** or **inject** into the shell / CI **`env:`** / wrapper used to spawn tests. If missing, blank, or placeholder, **STOP** with a blocker + fix steps (including: if only MCP was updated, reload MCP **and** ensure the **next** runner spawn inherits the key). **Reporter disabled**, **401**, and “missing key” logs → **same** remediation. If the agent **cannot verify** the key is on the test process env **before** spawning the runner, **halt** — do **not** run tests speculatively. See **`SKILL.md`** Preamble **#4** and [`run-explorechimp.md`](./run-explorechimp.md).
 
+- **Honor config reporters (P0 — never CLI `--reporter`):** Every Playwright / Mobilewright spawn **MUST** use the project’s SmartTests config as written (`playwright.config.*` / `mobilewright.config.ts`), including **`@testchimp/playwright/reporter`**. **Never** pass CLI **`--reporter`** / **`-r`** (e.g. `--reporter=list`). Playwright **replaces** config `reporter` when that flag is set, which drops TestChimp ingest, SmartTest execution history, and ExploreChimp **`exploration_end` / `journey_execution_end`** — platform explorations stay **In progress** even when specs are green. Use config + `--project` / file filters only; list/html output already comes from the config when configured. See [`run-explorechimp.md`](./run-explorechimp.md)#honor-playwright-config-reporters-p0.
+
 - **Runner / config:** Use the config and `--project` from [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) (`playwright.config.js` vs `mobilewright.config.ts`, `web` / `api` / `ios` / `android`). Mobile UI projects need **`projects[].use.platform`** (`ios` | `android`) for `@testchimp/playwright` TrueCoverage ([`instrument-truecoverage.md`](./instrument-truecoverage.md)).
 
 - **Hard prerequisite before Analyze/Plan (decision memory):**
@@ -108,7 +110,7 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
 - **Environment and provisioning:** non‑negotiable rules live under **[Binding: ai-test-instructions (environment and FAQ playbook)](#binding-ai-test-instructions-environment-and-faq-playbook)**—read that subsection before **Execute** and whenever provisioning or validation misbehaves.
 - **Environment before test authoring (strict):**
   - In both first-pass execution and reruns, confirm environment provisioning and target URL decisions from `ai-test-instructions.md` **before authoring or executing tests** (including fixture-driven test setup). Tests are authored by executing real steps, so environment provisioning must be settled first.
-- **TrueCoverage belongs in the Plan** (default **opted-in** per [`instrument-truecoverage.md`](./instrument-truecoverage.md)) **for web and native mobile** when the PR touches user-facing journeys:
+- **TrueCoverage belongs in the Plan** (default **opted-in** per [`instrument-truecoverage.md`](./instrument-truecoverage.md)) **for web and native mobile** when the PR touches user-facing journeys — this instrumentation work is **independent** of the org **`TRUE_COVERAGE`** capability check above (that gate only soft-skips **analytics queries**, not instrumentation groundwork; see [`instrument-truecoverage.md`](./instrument-truecoverage.md#capability-check-before-instrumenting--soft-gate)):
   - **Web:** `@testchimp/rum-js` in the app bundle, `installTestChimp` on **`fixtures/`** or **`web/fixtures/`**, `plans/events/`, etc.
   - **Mobile native** (**`project_type=mobile`** or legacy **`ios`/`android`**): native RUM SDK ([`instrument-truecoverage.md`](./instrument-truecoverage.md)), URL scheme / intent filter + SDK handlers, `installTestChimp` on **`mobile/fixtures/index.js`** with `{ uiFixture: 'screen' }`, Mobilewright **`device`** for automation URLs—same opt-in / opt-out policy via **`### TrueCoverage Plan`**.
   - If the PR adds or changes **user journeys / user-facing behaviors**, the Plan must include TrueCoverage work unless `plans/knowledge/ai-test-instructions.md` **explicitly** opts out.
@@ -124,7 +126,7 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
   - If reuse is impossible, the Plan MUST specify: new/extended **fixtures**, **seed/probe** needs, and how the fixture proves posture (see **Assert → Backend validations** when probes are required).
   - If new fixtures/endpoints are needed, treat them as **Execute blockers** (not “nice-to-haves”).
 - **Batched Execute order (REQUIRED)**:
-  - During **Execute**, follow [Batched order (Execute phase)](#batched-order-execute-phase): implement **all** seed endpoint updates for **all** planned tests, then **all** probe endpoint updates, then **(re)start the backend** if any endpoints changed, then **all** fixtures, **then** author tests, UI actions, and assertions per the Plan.
+  - During **Execute**, follow [Batched order (Execute phase)](#batched-order-execute-phase): **first** bump **`@testchimp/playwright`** to latest when behind ([`create-tests.md`](./create-tests.md) upgrade section / Preamble **#8**), then implement **all** seed endpoint updates for **all** planned tests, then **all** probe endpoint updates, then **(re)start the backend** if any endpoints changed, then **all** fixtures, **then** author tests, UI actions, and assertions per the Plan.
 - **Re-run is mandatory**:
   - Any new/changed automated test MUST be executed with the real runner (UI: Playwright + browser; API: real HTTP execution) and re-run after fixes until it passes, or is explicitly recorded as failing with next steps. No “assumed pass”.
 - **Scenario-link comments (required; keep existing platform workflow)**:
@@ -254,6 +256,9 @@ For **each** test in the inventory:
 
 After the user approves the Plan, during **Execute** implement work in this order **across all tests** in the plan (so the backend is not cycled for every test). This order mirrors **Arrange → Act → Assert** in code: **support Arrange** (seeds, then fixtures), **support Assert** (probes), **then implement Act and Assert** in the spec (with **Assert** already specified so you do not author blind).
 
+0. **`@testchimp/playwright` upgrade (autonomous)**  
+   Before seeds, fixtures, or any runner invocation: bring **`@testchimp/playwright`** to **npm latest** at the Playwright install root and commit **`package.json` + lockfile** when bumped. Full steps: [`create-tests.md`](./create-tests.md) → *`@testchimp/playwright` upgrade*; also **SKILL.md** Preamble **#8**. Nested **create-tests** skips if this step already completed for the same `workflow_execution_id`.
+
 1. **Seed endpoint updates (implementation)**  
    Add or change **all** seed-related routes/handlers required by **any** test’s **Arrange → Seed endpoint updates**.
 
@@ -316,10 +321,11 @@ The Analyze phase must gather:
 - **Platform scope (mobile & multi-platform only)** — Read **`.testchimp-tests`** `project_type`. If **`mobile`** or **`multi-platform`**, apply [`platform-scope.md`](./platform-scope.md): draft **`## Platform scope (this run)`** on the branch plan (decision, confidence, rationale). **Inform** the user of the chosen platform(s) or **ask** when the PR diff does not clearly imply a single platform. Do not proceed to **Plan** user approval with **User confirmed: pending**.
 - **Platform evidence (via TestChimp CLI/MCP when available)**
   - Use **TestChimp CLI** (`testchimp ...`) when MCP tools are not available.
+  - **Org capabilities (soft gate):** Before using **TrueCoverage** analytics or **API operation coverage** insight below, call **`get-org-capabilities`** (CLI ≥ **0.1.29**; see [`cli.md`](./cli.md) § `get-org-capabilities`). If **`TRUE_COVERAGE`** is missing and `freeTrialActive` is `false`, skip TrueCoverage MCP/CLI analytics calls this run (note **`N/A`** + reason on the branch plan) — TrueCoverage **instrumentation** Plan work is unaffected (still soft-gated separately per [`instrument-truecoverage.md`](./instrument-truecoverage.md#capability-check-before-instrumenting--soft-gate)). If **`API_CONTRACT_COVERAGE`** is missing and `freeTrialActive` is `false`, skip the **Related API operation gaps** bullet below (note **`N/A`** + reason). Either gate only skips that one insight source — requirement coverage, execution history, and the rest of Analyze/Plan/Execute continue normally. If the capability call itself fails, proceed as normal (fail open) and note the check could not be confirmed.
   - Suggested queries:
     - `testchimp get-requirement-coverage --folder-path <plans/... or tests/...>` (scoped to the affected area; **omit `--branch-name`** so coverage aggregates across branch copies). On **mobile** / **multi-platform** repos, interpret multiple **`platform`** rows per scenario; add `--platform ios` or `--platform android` when analyzing one stack **in scope** for this run ([`platform-scope.md`](./platform-scope.md)).
     - `testchimp get-execution-history --folder-path <tests/...>` (recent failures/flake; omit `--branch-name` unless you need one branch only). For a single scenario’s runs: `--scenario-id <platform-scenario-uuid>` with optional `--platform web|ios|android` (CLI **≥ 0.1.6**).
-    - **Related API operation gaps:** When the PR/scope touches backend or client API surface and OpenAPI roots are configured, load [`api-testing.md`](./api-testing.md) and use `list-api-operation-services` / `list-api-operations` / `get-api-operation-detail` to note related coverage gaps for Plan (do not duplicate the full create-tests API-scope playbook — that lives in [`create-tests.md`](./create-tests.md) + [`api-testing.md`](./api-testing.md)).
+    - **Related API operation gaps** (skip if **`API_CONTRACT_COVERAGE`** is gated per above): When the PR/scope touches backend or client API surface and OpenAPI roots are configured, load [`api-testing.md`](./api-testing.md) and use `list-api-operation-services` / `list-api-operations` / `get-api-operation-detail` to note related coverage gaps for Plan (do not duplicate the full create-tests API-scope playbook — that lives in [`create-tests.md`](./create-tests.md) + [`api-testing.md`](./api-testing.md)).
   - Record results (relevant summaries) in the branch plan file (high level; no giant dumps).
 
 ### Phase 1 completion gate (Analyze → Plan)
@@ -332,6 +338,7 @@ Before proceeding to **Plan**, the agent must record **done/blocked/`N/A`** for 
 - [ ] **Fixture/seed discovery:** scanned the correct **`fixtures/`** barrel(s) and **`shared/`** per scaffold type ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)); noted existing seed/read routes (or `N/A` + reason).
 - [ ] **`ai-test-instructions.md`:** re-read (or created stub via user direction) **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`** (or `N/A` + reason if plans root missing—then stop and recommend `/testchimp init`).
 - [ ] Coverage/execution history queried via CLI/MCP where applicable (or `N/A`).
+- [ ] **Org capabilities** checked via `get-org-capabilities` (or noted as failed/skipped); TrueCoverage analytics and API operation gap queries above reflect **`TRUE_COVERAGE`** / **`API_CONTRACT_COVERAGE`** gating when off (soft-skip that insight only, not the rest of Analyze).
 - [ ] **Smart regression:** candidate affected scenarios noted for **Plan §6** (reconnaissance; final list refined in **Phase 5**).
 - [ ] **ExploreChimp:** candidate UI specs noted for **Plan §7** (reconnaissance only; final **`yes`** / **`N/A`** belongs in **[Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)** during **Plan**).
 - [ ] **Platform scope:** for **`mobile`** / **`multi-platform`**, branch plan **`## Platform scope (this run)`** drafted; user **informed** or **asked** per [`platform-scope.md`](./platform-scope.md) (`N/A` for **web-only** `project_type`).
@@ -371,7 +378,7 @@ The Plan MUST be written under the branch plan file. It MUST include the followi
    - **ExploreChimp target list (when `yes`):** Include **all** of: (a) **new** UI specs from this PR, (b) **materially changed** UI specs from this PR, and (c) **regression suite** UI specs that were **run or updated** in **Phase 5** (not only net-new tests). Refresh the list on the branch plan after Phase 5 completes.
    - If **`yes`**: confirm the user accepts **extra runtime / API cost** as part of the same plan approval. Execution: **[Phase 6: ExploreChimp](#phase-6-explorechimp)** and [`run-explorechimp.md`](./run-explorechimp.md).
 8. **Workflow checklists (phase hygiene)**
-   - An **Execute checklist** (Phase 3) that mirrors [Batched order (Execute phase)](#batched-order-execute-phase) plus environment bring-up, test runs, and triage.
+   - An **Execute checklist** (Phase 3) that mirrors [Batched order (Execute phase)](#batched-order-execute-phase) (including **step 0** `@testchimp/playwright` upgrade) plus environment bring-up, test runs, and triage.
    - A **Validate checklist** (Phase 4): scenario-link comment audit + **`markScreenState`** / atlas remediation.
    - A **Smart regression checklist** (Phase 5): affected scenarios, linked specs, run results, fixes.
    - A **Cleanup checklist** (Phase 7): local env/process teardown and/or ephemeral environment destroy, aligned to the environment strategy used.
@@ -406,9 +413,15 @@ Preamble before execution: Verify that the plan doc created above is present **a
 
 **Execute preamble — `TESTCHIMP_API_KEY` (P0):** Before the first **`npx playwright test`** / Mobilewright invocation, confirm the **runner** process will have **`TESTCHIMP_API_KEY`** set (non-blank); resolve via **`SKILL.md`** walk-up + export if needed. If you cannot verify, **halt**—do not run tests to “see what happens.”
 
+**Execute preamble — `@testchimp/playwright` upgrade (REQUIRED):** Before seed/probe work or any runner invocation, complete [Batched order](#batched-order-execute-phase) step **0** / [`create-tests.md`](./create-tests.md) → *`@testchimp/playwright` upgrade* (Preamble **#8**). Record the resulting version (or “already latest”) on the branch plan.
+
 Goal: execute the approved plan in **[Batched order (Execute phase)](#batched-order-execute-phase)**, and keep the branch plan checklists updated so reruns are deterministic.
 
 During Execute, the agent MUST maintain a checklist in the branch plan file and mark each line as **done / blocked / N/A**.
+
+### 0) `@testchimp/playwright` upgrade
+
+- [ ] Registry latest compared to install root; bumped with **`npm install @testchimp/playwright@latest`** when behind; **`package.json` + lockfile** included in this run’s commits when changed (or **done** — already latest / parent already bumped).
 
 ### 1) Seed endpoint updates (all tests)
 
@@ -590,7 +603,9 @@ Run ExploreChimp on the **union** of:
 
 - [ ] **`TESTCHIMP_API_KEY`** verified on the **same process** that will run Playwright/Mobilewright with **`EXPLORECHIMP_ENABLED`** (P0 — non-negotiables); do not rely on MCP-only config for the child runner.
 - [ ] Re-read **`plans/knowledge/ai-test-instructions.md`** (**`## ExploreChimp`** + **Environment Strategy**).
+- [ ] **Spawn command honors config reporters (P0):** no CLI **`--reporter`** / **`-r`**; config includes **`@testchimp/playwright/reporter`** — see [`run-explorechimp.md`](./run-explorechimp.md)#honor-playwright-config-reporters-p0.
 - [ ] Run ExploreChimp per **[`run-explorechimp.md`](./run-explorechimp.md)** on the **UI specs in the updated §7 target list**: mobile UI projects with **`use.platform`**, **`EXPLORECHIMP_ENABLED`**, **`TESTCHIMP_BATCH_INVOCATION_ID`**, **`TESTCHIMP_API_KEY`**, optional source/regex vars when **`NETWORK`** is included.
+- [ ] **Exploration completion gate:** after the runner exits, confirm the exploration for **`TESTCHIMP_BATCH_INVOCATION_ID`** is **`COMPLETED_EXPLORATION`** (or apply the safety-net `exploration_end` per [`run-explorechimp.md`](./run-explorechimp.md)#exploration-completion-required); do **not** treat Phase 6 as done while status is **In progress**.
 - [ ] If the plan was **`N/A`**: ensure **`N/A`** + one-line justification is already in the branch plan, then skip execution.
 
 ### Phase 6 completion gate (Phase 6 → Phase 7)
@@ -598,6 +613,7 @@ Run ExploreChimp on the **union** of:
 Record in branch plan file:
 
 - [ ] ExploreChimp batch **completed** per plan, or **`N/A`** with justification (per **§7**).
+- [ ] Platform exploration status is **completed** (not left **In progress**) for the batch id used.
 - [ ] Target spec list matches **new + changed + regression-touched** UI coverage (not new-only).
 
 ---
