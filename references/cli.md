@@ -489,6 +489,31 @@ testchimp get-test-scenarios --external-ids C12345,PROJ-101
 
 Use **`get-test-scenarios`** first when a prompt references **`TS-<n>`**; call **`get-user-stories`** for each linked story ordinal returned. During **`/testchimp import`**, use `--external-ids` to resolve TMS tags to TestChimp scenarios.
 
+### `get-spec-lifecycle-details`
+
+Requires `@testchimp/cli` ≥ **0.1.30**.
+
+**API:** `POST /api/mcp/get_spec_lifecycle_details`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--scenario-ids <csv>` | No\* | `scenarioIds` | Bare ordinals (canonical) or `TS-107` / `#TS-107`. |
+| `--story-ids <csv>` | No\* | `storyIds` | Bare ordinals (canonical) or `US-12` / `#US-12`. |
+| `--json-input …` | No | (merge) | May supply **`scenarioIds`** and/or **`storyIds`** string arrays. |
+
+\*Provide **at least one** of `--scenario-ids` or `--story-ids`.
+
+**Response:** `scenarios[]` / `stories[]` each with `ordinalId` and `lifecycleFields` (map). Invalid or missing ids appear in `errors[]`.
+
+**Example:**
+
+```bash
+testchimp get-spec-lifecycle-details --scenario-ids 107,108
+testchimp get-spec-lifecycle-details --scenario-ids TS-107 --story-ids 12,US-15
+```
+
+Use after identifying scenarios for **`/testchimp create tests`**: skip any scenario where `lifecycleFields.verification_strategy` is **`manual`** (missing → treat as **`auto`**).
+
 ### `get-requirement-quality-report`
 
 Requires `@testchimp/cli` ≥ **0.1.19**.

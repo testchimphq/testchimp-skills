@@ -73,8 +73,9 @@ After Plan approval (standalone) or when the parent hands off (nested):
 
 1. **[`@testchimp/playwright` upgrade](#testchimpplaywright-upgrade-autonomous)** — complete before any new/changed specs or runner invocations.
 2. **[`connect-to-test-env.md`](./connect-to-test-env.md)** when the parent has not already brought the env up.
-3. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan.
-4. Run and triage with the real runner; report workflow completion when standalone.
+3. **Filter by verification strategy (required before authoring):** After the in-scope scenario ordinals are known (from coverage, plans, or the approved plan), call **`get-spec-lifecycle-details --scenario-ids …`** (CLI ≥ **0.1.30** / MCP `get-spec-lifecycle-details`) in one batch. For each scenario, read `lifecycleFields.verification_strategy`. **Skip** scenarios where the value is **`manual`**. Missing / empty → treat as **`auto`**. Only author SmartTests for **`auto`** scenarios. Note skipped manual scenarios on the plan. Do **not** infer this from plan markdown frontmatter — it is platform lifecycle only.
+4. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan (automated scenarios only).
+5. Run and triage with the real runner; report workflow completion when standalone.
 
 ---
 

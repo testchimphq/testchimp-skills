@@ -161,6 +161,8 @@ Legacy (read-only / migrate opportunistically): `knowledge/branch_test_plans/`, 
 
 For **`create-issue`**, **`create-user-story`**, **`create-test-scenario`**, **`update-user-story`**, **`update-test-scenario`**, and **`update-issue-status`**, pass policy/traceability **on the mutating call** via nested **`agentTraceability`** (or flat CLI flags: `--workflow-id`, `--workflow-execution-id`, `--policy-file`, `--policy-version`, `--git-sha`, `--actor-type`, `--branch-name`, `--agent-model`).
 
+**Required for Activity attachment:** both **`workflow_id`** and **`workflow_execution_id`** (the stable Plan ULID for the whole run). Omitting `workflow_execution_id` does **not** create a workflow execution and does **not** record inline Activity — the server never auto-mints an execution id (that previously spawned orphan RUNNING rows per mutation). Pass the **same** ULID on every mutating call in the run.
+
 The server records the same `workflow_executions` + `AGENT_WORKFLOW_ACTIVITY` rows that `report-agent-action` would — **no separate `report-agent-action` for that mutation**. Do **not** double-call (CRUD + RAA for the same CREATED/UPDATED).
 
 Still use **`report-agent-action`** for **`mark-plan-items-implementation-done`**, **`update-plan-items-lifecycle-status`**, **`upsert-policy`**, **`upsert-plans-support-file`**, SmartTest locator actions, analyze, and **`ACTION_COMPLETED` / `ACTION_FAILED`**.
@@ -189,7 +191,7 @@ At end of every **standalone** Execute (or when aborting), report **`ACTION_COMP
 
 **`init` (bootstrap, not catalog):** During **`/testchimp init`**, after workstation-gate **`get-eaas-config`** succeeds, best-effort report **`ACTION_COMPLETED`** with `workflow_id` / `entityIdentity` **`init`** and a fresh ULID (no policy fields). Omit `user_id` — MCP injects **`TESTCHIMP_USER_ID`** from mcp.json when set. Report failure must not block init. See [`init-testchimp.md`](./init-testchimp.md)#workstation-gate-always-first.
 
-**First successful report** for a new `workflow_execution_id` **creates** the DB workflow execution (`execution_created: true`); later reports append actions to the same execution. **`upsert-plans-support-file` alone does not create a workflow execution** — without RAA / inline `agentTraceability`, the platform shows no run.
+**First successful report** for a client-supplied `workflow_execution_id` **creates** the DB workflow execution (`execution_created: true`); later reports with that **same** id append actions. The server **requires** `workflow_execution_id` on every `report-agent-action` (no auto-mint). **`upsert-plans-support-file` alone does not create a workflow execution** — without RAA / inline `agentTraceability` (with both workflow id + execution id), the platform shows no run.
 
 **Since last run:** **`get-last-run-workflow-detail`** (`workflow_id`, optional `branch_name`, optional `user_id`).
 
