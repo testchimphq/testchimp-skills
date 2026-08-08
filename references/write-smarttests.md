@@ -3,7 +3,7 @@
 This document explains **how to write SmartTests** for agents during the **Execution phase** of `/testchimp test` (phased flow in [`run-qa.md`](./run-qa.md)). SmartTests are **Playwright-class tests** with optional **intelligent steps** on **web** only. Optional **ExploreChimp** UX analytics reuse the same UI tests when **`markScreenState`** is in place—see **[`run-explorechimp.md`](./run-explorechimp.md)**. Here are the key points:
 - Playwright / Mobilewright tests in a **tests** folder mapped in TestChimp platform,
 - **Web:** natural language / intelligent steps via **ai-wright** where appropriate. **Mobile:** deterministic Mobilewright steps only (no ai-wright yet).
-- scenario linking via in-code structured comments in test (for built-in requirement traceability).
+- scenario linking via Playwright **`annotation`** on the test (for built-in requirement traceability).
 - You can use **`@testchimp/cli`** (MCP) to query coverage insights to decide what tests need authoring.
 
 For **full** `ai-wright` API details (options, env vars, troubleshooting), see **[`ai-wright-usage.md`](./ai-wright-usage.md)** — **web projects only**. **Mobile** projects use **Mobilewright** — see **[`mobilewright-smarttests.md`](./mobilewright-smarttests.md)**. **Do not** use **`ai.act` / `ai.verify` / `ai.extract`** on mobile.
@@ -96,24 +96,25 @@ Recommended takeover loop:
 
    **`installTestChimp`** lives only in each barrel’s **`index.js`**, not in spec files.
 
-6. **Scenario link** — As the **first statement inside the test body**:
-   - `// @Scenario: #TS-xxx <Scenario title>`  
-   Use the **`#TS-xxx`** id that **already exists** in TestChimp (from plan markdown **`id:`**, or from MCP **`create-test-scenario`** / **`create-user-story`** responses). **Never invent** scenario or story ids: create scenarios (and parent stories if needed) **before** adding this comment so links stay stable and real. Same pattern as: 
-   `// @Scenario: #TS-102 Checkout with credit card`.
+6. **Scenario link** — Pass Playwright **`annotation`** on the test options (second argument to `test(...)`), **not** a body comment:
+   - Use the **`#TS-xxx`** id that **already exists** in TestChimp (from plan markdown **`id:`**, or from MCP **`create-test-scenario`** / **`create-user-story`** responses). **Never invent** scenario or story ids: create scenarios (and parent stories if needed) **before** adding annotations so links stay stable and real.
 
    **Strict format rules (do not deviate):**
-   - Must be a single-line `//` comment
-   - Must start with exactly `// @Scenario: `
-   - Must include the `#TS-<n>` ordinal id (with the leading `#`)
-   - The **first** `// @Scenario:` line must be the **first statement inside the test body** (immediately after the opening `{`).
+   - `type` must be exactly **`scenario`**
+   - `description` is **only** `#TS-<n>` (leading `#` required) — **no** free-form title or other text
+   - Put annotations in the test’s options object: `test('title', { annotation: [ … ] }, async (…) => { … })`
+   - **Do not** write `// @Scenario:` comments (deprecated; still parsed by TestChimp for older specs, but agents must not author them)
 
-   **Multiple scenarios in one test:** If a single test legitimately covers **more than one** scenario (e.g. one end-to-end flow that satisfies two acceptance criteria), add **additional** `// @Scenario: #TS-… <title>` lines **inside the same test**, each on its own line, using the same strict format. Place extra comments **before the steps that exercise that scenario**. Do not merge multiple ids into one comment.
+   **Multiple scenarios in one test:** If a single test legitimately covers **more than one** scenario (e.g. one end-to-end flow that satisfies two acceptance criteria), add **additional** `{ type: 'scenario', description: '#TS-…' }` entries in the **same** `annotation` array. Do not merge multiple ids into one description.
 
    **Example (copy/paste shape):**
 
    ```js
-   test('usage graphs show daily usage by project', async ({ page }) => {
-     // @Scenario: #TS-2100 Validate event ingest volume graphs display correctly
+   test('usage graphs show daily usage by project', {
+     annotation: [
+       { type: 'scenario', description: '#TS-2100' },
+     ],
+   }, async ({ page }) => {
      // ...
    });
    ```
@@ -121,13 +122,14 @@ Recommended takeover loop:
    **Example (multiple scenario links in one test):**
 
    ```js
-   test('checkout confirms order and sends receipt', async ({ page }) => {
-     // @Scenario: #TS-101 Submit checkout
+   test('checkout confirms order and sends receipt', {
+     annotation: [
+       { type: 'scenario', description: '#TS-101' },
+       { type: 'scenario', description: '#TS-102' },
+     ],
+   }, async ({ page }) => {
      await page.goto('/checkout');
-     // ... steps for checkout ...
-
-     // @Scenario: #TS-102 Email receipt after purchase
-     // ... steps that assert receipt / email ...
+     // ... steps for checkout and receipt ...
    });
    ```
 
@@ -458,23 +460,27 @@ const title = await ai.extract(
 
 ## More on linking tests to scenarios
 
-- Format: `// @Scenario: <scenario-id> [optional title]` with id from plans (e.g. `#TS-102`).
+- Format: Playwright `annotation: [{ type: 'scenario', description: '#TS-<n>' }]` with id from plans (e.g. `#TS-102`).
+- `description` is **only** the ordinal id — no title text.
 - Keeps traceability **in the repo** and helps agents and TestChimp associate runs with scenarios.
+- Deprecated: `// @Scenario: #TS-<n> …` comments are still parsed for existing specs; **do not** author new ones.
 
 ---
 
 ## Example SmartTest (full file)
 
-Illustrative end-to-end shape: **`test` / `expect` from the correct `fixtures/index.js` barrel** (merged `test` wrapped with **`installTestChimp`**), scenario comment, plain Playwright plus one AI step. Adjust the relative import and selectors to match the repo scaffold.
+Illustrative end-to-end shape: **`test` / `expect` from the correct `fixtures/index.js` barrel** (merged `test` wrapped with **`installTestChimp`**), scenario annotation, plain Playwright plus one AI step. Adjust the relative import and selectors to match the repo scaffold.
 
 ```ts
 import { test, expect } from '../fixtures/index.js';
 import { ai } from 'ai-wright';
 
 test.describe('Checkout (illustrative)', () => {
-  test('guest can reach checkout with valid cart', async ({ page, test, markScreenState }) => {
-    // @Scenario: #TS-204 Guest checkout with single item
-
+  test('guest can reach checkout with valid cart', {
+    annotation: [
+      { type: 'scenario', description: '#TS-204' },
+    ],
+  }, async ({ page, test, markScreenState }) => {
     await page.goto(`/shop`);
     await page.getByRole('link', { name: 'Add to cart' }).first().click();
 

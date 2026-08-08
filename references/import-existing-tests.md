@@ -116,9 +116,9 @@ Docs: [Run SmartTests in CI (Playwright)](https://docs.testchimp.io/smart-tests/
 
 ---
 
-## Phase 5 — Scenario link comments
+## Phase 5 — Scenario annotations
 
-Goal: imported specs get `// @Scenario: #TS-<n> <title>` where a TestChimp scenario exists. **Keep existing TMS tags**; only **add** TestChimp links. Skip tests that already have a correct `// @Scenario: #TS-…` line.
+Goal: imported specs get Playwright scenario annotations (`{ type: 'scenario', description: '#TS-<n>' }`) where a TestChimp scenario exists. **Keep existing TMS tags**; only **add** TestChimp links. Skip tests that already have a correct scenario annotation (or a deprecated `// @Scenario: #TS-…` line — optionally rewrite to annotations when touching the file).
 
 ### Batching external-id lookups
 
@@ -135,13 +135,19 @@ When extracting many TMS ids, call `get-test-scenarios` in **batches of ~50–10
    ```
 
    Backend matches **exact** `external_id` first, then strips prefixes and matches the **numerical** part (leading zeros normalized). Prefer MCP when available.
-4. On a match, insert (first statement inside the test body):
+4. On a match, add Playwright test options (do **not** insert a body comment):
 
    ```javascript
-   // @Scenario: #TS-102 Checkout with credit card
+   test('checkout with credit card', {
+     annotation: [
+       { type: 'scenario', description: '#TS-102' },
+     ],
+   }, async ({ page }) => {
+     // ...
+   });
    ```
 
-   Format rules: [`write-smarttests.md`](./write-smarttests.md). Multiple `@Scenario` lines allowed when one test covers several scenarios.
+   Format rules: [`write-smarttests.md`](./write-smarttests.md). Multiple scenario annotations allowed in the same `annotation` array when one test covers several scenarios.
 5. If multiple scenarios match one numeric id (e.g. `PROJ-101` and another key sharing `101`), **disambiguate with the user** — do not pick silently. Prefer exact-string matches when both exact and numerical hits exist.
 6. Jira/Xray often store API issue ids, not keys — try both key and numeric forms; if none match, leave unlinked and report.
 
@@ -179,7 +185,7 @@ Ask whether the agent should **heuristically** match against scenarios under the
 ## Related references
 
 - [`init-testchimp.md`](./init-testchimp.md) — init nests this workflow when unmigrated suites are detected
-- [`write-smarttests.md`](./write-smarttests.md) — `@Scenario`, fixtures, authoring
+- [`write-smarttests.md`](./write-smarttests.md) — scenario **`annotation`**, fixtures, authoring
 - [`configure-ci-test-execution.md`](./configure-ci-test-execution.md) — CI details
 - [`connect-to-test-env.md`](./connect-to-test-env.md) — required for markScreenState phase
 - [`run-explorechimp.md`](./run-explorechimp.md) — why screen-states matter

@@ -29,7 +29,7 @@ Follow the **overarching** scoping rule in [`policies-and-traceability.md`](./po
 
 After **new/changed** tests are **authored and validated**, find **existing** coverage that the change may have broken, **run** those SmartTests/API tests, and **rectify** failures (test vs product — same triage as `/testchimp test` Validate).
 
-This workflow is **codebase-driven** (no new platform APIs required beyond coverage helpers): scenarios and stories live under the mapped **`plans/`** tree; linkage to specs is via **`// @Scenario: #TS-<n>`** comments in the SmartTests root.
+This workflow is **codebase-driven** (no new platform APIs required beyond coverage helpers): scenarios and stories live under the mapped **`plans/`** tree; linkage to specs is via Playwright scenario **`annotation`** entries (and deprecated `// @Scenario:` comments still present in older specs) in the SmartTests root.
 
 ### When to run
 
@@ -60,8 +60,11 @@ Using **scope** (above), **PR/branch diff** when on a feature branch, plan markd
 
 From the SmartTests root (directory containing **`.testchimp-tests`**):
 
-1. Search **`*.spec.{js,ts}`** for `// @Scenario: #TS-<n>` matching each affected scenario id (a spec may cover **multiple** scenarios).
-2. Build a **deduplicated** list of spec files (and API tests if they use the same comment convention).
+1. Search **`*.spec.{js,ts}`** for each affected scenario id using **both**:
+   - **Canonical:** `type: 'scenario'` (or `type: "scenario"`) with `description: '#TS-<n>'` (or `"#TS-<n>"`) in the test’s `annotation` array
+   - **Deprecated (still linked):** `// @Scenario: #TS-<n>` comments
+   A spec may cover **multiple** scenarios.
+2. Build a **deduplicated** list of spec files (and API tests if they use the same annotation / comment convention).
 3. Record the list under completion notes on the plan.
 
 ---
@@ -82,7 +85,7 @@ Apply the same triage as [`run-qa.md`](./run-qa.md) → Validation failure triag
 - **Product regression:** fix application code; keep tests aligned with intended behavior.
 - **Test outdated:** update the **existing** spec (fixtures, steps, assertions, probes)—document material changes for **ExploreChimp** handoff when nested under run-qa.
 
-If a failure reveals a **missing** scenario for new behavior, add it to the plan backlog (create in platform during Execute rules if not already done)—do not invent ids in comments.
+If a failure reveals a **missing** scenario for new behavior, add it to the plan backlog (create in platform during Execute rules if not already done)—do not invent ids in annotations.
 
 **Best-effort:** `report-agent-action` for each material fix (`action_type` created/updated; SmartTests via `test` TestLocator; scenarios/stories via ordinal `entityIdentity`).
 
@@ -94,7 +97,7 @@ If a failure reveals a **missing** scenario for new behavior, add it to the plan
 
 - [ ] Scope resolved (explicit / feature branch / default+last-run / nested §6).
 - [ ] Affected scenarios identified from **plans + change set** (listed on plan).
-- [ ] Linked specs resolved via **`// @Scenario:`** grep (listed on plan).
+- [ ] Linked specs resolved via scenario **`annotation`** / deprecated `// @Scenario:` grep (listed on plan).
 - [ ] Regression suite executed with real runner (**`TESTCHIMP_API_KEY`** on process).
 - [ ] Failures triaged; tests and/or product updated; suite re-run to green or explicit blockers recorded.
 - [ ] When nested under run-qa with ExploreChimp **`yes`**: plan ExploreChimp targets updated to include **regression-touched** UI specs.

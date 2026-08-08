@@ -71,7 +71,7 @@ For every gate line: **done**, **blocked**, or **`N/A`** + one-line justificatio
    - Record the full set: primary + related scenarios. Plan file may narrow in-scope scenarios—honor explicit in/out lists in the plan.
 
 3. **Gaps, ambiguities, and testability**
-   - Skim acceptance criteria vs code / existing SmartTests (`// @Scenario:` links).
+   - Skim acceptance criteria vs code / existing SmartTests (scenario **`annotation`** links, or deprecated `// @Scenario:` in older specs).
    - Note missing scenarios, ambiguous acceptance criteria, and product areas that must change.
    - **Requirement quality (agent judgment):** When the requirement looks thin, ambiguous, or hard to test — or the user asks — call **`get-requirement-quality-report`**. If no prior analysis exists (subject stub only: no findings/metrics), **ask** whether to run quality analytics via [`run-requirement-quality-checks.md`](./run-requirement-quality-checks.md) (that playbook updates the platform report). Do **not** treat quality analytics as mandatory on every run.
 

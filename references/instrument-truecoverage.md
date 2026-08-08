@@ -397,7 +397,7 @@ Required remediation order:
 
 1. Map uncovered event/slice to business behavior and user scenario(s).
 2. If scenario/story artifacts are missing, add them to the plan and create them **after user approval** per workflow guardrails.
-3. Author or update tests for those scenarios; add `// @Scenario:` links with real IDs.
+3. Author or update tests for those scenarios; add scenario **`annotation`** links with real IDs.
 4. Validate that tests now traverse the previously uncovered event path/slice.
 
 Do not resolve gaps by writing minimal "emit tick" tests that are detached from business use cases.

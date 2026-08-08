@@ -129,10 +129,10 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
   - During **Execute**, follow [Batched order (Execute phase)](#batched-order-execute-phase): **first** bump **`@testchimp/playwright`** to latest when behind ([`create-tests.md`](./create-tests.md) upgrade section / Preamble **#8**), then implement **all** seed endpoint updates for **all** planned tests, then **all** probe endpoint updates, then **(re)start the backend** if any endpoints changed, then **all** fixtures, **then** author tests, UI actions, and assertions per the Plan.
 - **Re-run is mandatory**:
   - Any new/changed automated test MUST be executed with the real runner (UI: Playwright + browser; API: real HTTP execution) and re-run after fixes until it passes, or is explicitly recorded as failing with next steps. No “assumed pass”.
-- **Scenario-link comments (required; keep existing platform workflow)**:
+- **Scenario annotations (required; keep existing platform workflow)**:
   - The existing flow—create/update **user stories** and **test scenarios** via MCP/CLI after plan approval, with **real** `#TS-…` / `#US-…` ids—is **unchanged** and still required.
-  - Every SmartTest that represents a scenario MUST include one or more `// @Scenario: #TS-<n> <Title>` comments **as the first statement(s) in the test body** (see `SKILL.md` guardrails).
-  - **Execution-time rule:** when **authoring** each test (per [Batched order (Execute phase)](#batched-order-execute-phase)), add the **scenario link comment** to the test after the corresponding platform ids exist, consistent with the Plan’s story/scenario list.
+  - Every SmartTest that represents a scenario MUST include one or more Playwright scenario annotations — `{ type: 'scenario', description: '#TS-<n>' }` in the test’s `annotation` array (see `SKILL.md` guardrails and [`write-smarttests.md`](./write-smarttests.md)). **Do not** author deprecated `// @Scenario:` comments.
+  - **Execution-time rule:** when **authoring** each test (per [Batched order (Execute phase)](#batched-order-execute-phase)), add the **scenario annotation(s)** to the test after the corresponding platform ids exist, consistent with the Plan’s story/scenario list.
 - **Validation failure triage (REQUIRED):** see [Validation failure triage](#validation-failure-triage).
 - **Cleanup (Phase 7) is mandatory**:
   - Any environment created or started during Execute (local stack, dev server, ephemeral/EaaS env) MUST be torn down in **Phase 7**, and the plan must record what was stopped/destroyed (or `N/A` with reason).
@@ -275,7 +275,7 @@ After the user approves the Plan, during **Execute** implement work in this orde
    For each test, in spec code—**map 1:1 from the Plan’s Arrange / Act / Assert**:
 
    - **Arrange (code):** Use the **fixtures** from that test’s **Fixtures plan** so the browser (or client) starts from the documented posture.
-   - Add **`// @Scenario: #TS-…`** link comment(s) only after stories/scenarios were created in **Execute** (step before fixtures/tests, or earlier in this batch) with **real** ids from MCP/CLI — never invent, never leave plan markdown without `id:`.
+   - Add scenario **`annotation`** entries (`{ type: 'scenario', description: '#TS-…' }`) only after stories/scenarios were created in **Execute** (step before fixtures/tests, or earlier in this batch) with **real** ids from MCP/CLI — never invent, never leave plan markdown without `id:`. Do **not** write `// @Scenario:` comments.
    - **Act (code):** Implement the ordered steps from the Plan’s **Act** section (UI or API automation).
    - **Assert (code):** Implement the Plan’s **Assert** section: **UI validations** plus **probe-based API checks** from **Backend validations** where specified.
 
@@ -316,7 +316,7 @@ The Analyze phase must gather:
   - Whether new stories/scenarios are needed.
 - **Candidate tests and posture (high level; no implementation yet)**
   - A preliminary list of **which tests** might be needed. For each, jot **rough Arrange / Act / Assert** so Phase 2 is not cold-starting—the full three-section template is still required in **Plan**.
-- **Smart regression (reconnaissance for Plan §6)** — From PR diff + existing **`plans/stories/`** and **`plans/scenarios/`** under `<MAPPED_PLANS_ROOT>`, note **likely affected** scenarios (same feature area, shared flows, touched APIs/screens). Record candidate **`#TS-…`** ids for the branch plan; linked specs are resolved in **Phase 5** via `// @Scenario:` grep under the SmartTests root.
+- **Smart regression (reconnaissance for Plan §6)** — From PR diff + existing **`plans/stories/`** and **`plans/scenarios/`** under `<MAPPED_PLANS_ROOT>`, note **likely affected** scenarios (same feature area, shared flows, touched APIs/screens). Record candidate **`#TS-…`** ids for the branch plan; linked specs are resolved in **Phase 5** via scenario **`annotation`** / deprecated `// @Scenario:` grep under the SmartTests root.
 - **ExploreChimp (reconnaissance for Plan §7)** — For **UI** changes, note which SmartTests could serve **Phase 6** (**new**, **regression-touched**, and **materially changed** UI specs; new screen-states). The **`yes`** vs **`N/A`** decision and target list are finalized in the branch plan under **[Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)** (default **`yes`** for UI SmartTest deltas unless an allowed exception applies); this Analyze bullet is reconnaissance only.
 - **Platform scope (mobile & multi-platform only)** — Read **`.testchimp-tests`** `project_type`. If **`mobile`** or **`multi-platform`**, apply [`platform-scope.md`](./platform-scope.md): draft **`## Platform scope (this run)`** on the branch plan (decision, confidence, rationale). **Inform** the user of the chosen platform(s) or **ask** when the PR diff does not clearly imply a single platform. Do not proceed to **Plan** user approval with **User confirmed: pending**.
 - **Platform evidence (via TestChimp CLI/MCP when available)**
@@ -371,7 +371,7 @@ The Plan MUST be written under the branch plan file. It MUST include the followi
    - Run the [Plan structure guard (before user approval)](#plan-structure-guard-before-user-approval) for every test; record pass/fail or `TBD` items.
 6. **Smart regression scope (likely affected scenarios)**
    - List **candidate** scenario ids (**`#TS-…`**) likely affected by the PR, with a **one-line rationale** each (from **`plans/scenarios/`**, parent **`plans/stories/`**, and PR diff—not invented ids).
-   - Note that **linked SmartTests** will be resolved in **Phase 5** by searching the SmartTests root for `// @Scenario: #TS-<n>` (and optional MCP **`get-requirement-coverage`** on affected `plans/...` folders).
+   - Note that **linked SmartTests** will be resolved in **Phase 5** by searching the SmartTests root for `type: 'scenario'` / `description: '#TS-<n>'` annotations **and** deprecated `// @Scenario: #TS-<n>` comments (and optional MCP **`get-requirement-coverage`** on affected `plans/...` folders).
    - Record **`N/A`** only when the PR is **greenfield** (no existing scenarios in scope) or **no plausible regression surface** (e.g. docs-only)—with one-line justification.
 7. **ExploreChimp branch plan (yes or documented N/A)**
    - **Default:** When the PR/plan scope includes **new or materially changed UI SmartTests** (real UI; **`markScreenState`** in use or planned once stable—especially **new screen-states** in authored tests), record **`yes`** in §7 and list **target UI SmartTest files** (paths or globs). **Phase 6** then runs after **Phase 5: Smart regression** is green. Treat **§7 as `yes`** in those cases unless the user **explicitly opts out** before plan approval or the case is **`N/A`** with a **one-line rationale** (e.g. **API-only** change, **no UI journey**, **user declined cost**). **`N/A`** must appear on the branch plan (same approval window as the rest of the plan)—do **not** skip Phase 6 silently or treat ExploreChimp as “only if the user asks later.”
@@ -441,7 +441,7 @@ During Execute, the agent MUST maintain a checklist in the branch plan file and 
 - [ ] For **each** new story: **`create-user-story`** → **Write returned `content`** (already has **`id: US-<ordinalId>`**) → edit body if needed → **`update-user-story`**.
 - [ ] For **each** new scenario: **`create-test-scenario`** → **Write returned `content`** (already has **`id: TS-<ordinalId>`** + **`story:`**) → edit body if needed → **`update-test-scenario`**.
 - [ ] **Never** write story/scenario markdown that omits or blanks **`id:`** (that is not a valid “don’t invent ids” workaround). If **`update-*`** errors on missing id/story, fix by using create’s returned content — do not invent ids.
-- [ ] Obtain **real** ids for `// @Scenario:` comments from those create responses (or existing synced plan files).
+- [ ] Obtain **real** ids for scenario **`annotation`** entries from those create responses (or existing synced plan files).
 - [ ] Self-check: every new/changed story/scenario path under the plans root has a non-empty **`id:`** before leaving this step.
 
 ### 5) Fixtures (all tests)
@@ -450,7 +450,7 @@ During Execute, the agent MUST maintain a checklist in the branch plan file and 
 
 ### 6) Tests (authoring + validations)
 
-- [ ] For **each** planned test: author SmartTest (and/or API test) using the named **fixtures**; add **`// @Scenario:`** with real ids; implement **Act**; implement **Assert** (UI + probe API calls as planned).
+- [ ] For **each** planned test: author SmartTest (and/or API test) using the named **fixtures**; add scenario **`annotation`** entries with real ids; implement **Act**; implement **Assert** (UI + probe API calls as planned).
 - [ ] When the user pastes a platform **Copy test generate prompt** for **`TS-<n>`**: call **`get-test-scenarios`** with that ordinal, then **`get-user-stories`** for linked story ordinals returned (see [`author-plans.md`](./author-plans.md)).
 - [ ] When the user pastes a **Copy test generate prompt** / **Copy prompt** / legacy **Copy script generate prompt** from the manual session viewer (or **`/testchimp author test for manual session`**): call **`get-manual-session-details`**, then follow [`author-test-from-manual-session.md`](./author-test-from-manual-session.md) (authoring-only; use **`linkedScenarioOrdinalIds`** for a single **`get-test-scenarios`** batch when plans are not synced).
 - [ ] **Insufficient context fallback (only after codebase inference fails):** If a planned scenario is too thin to author and the repo/PR still does not reveal the journey, **do not invent steps** — suggest Chrome-extension manual session capture (scenario selected) and wait for the pasted prompt. Guidance: [`write-smarttests.md`](./write-smarttests.md) § **Insufficient scenario context**; docs: [manual session capture](https://docs.testchimp.io/smart-tests/creating#2-from-manual-session-capture-chrome-extension). Continue other tests that have enough context.
@@ -474,9 +474,10 @@ Goal: ensure the resulting test suite is correctly linked to requirements and ca
 
 ### What to validate
 
-1. **Scenario-link comment audit (required)**
+1. **Scenario-annotation audit (required)**
    - For every SmartTest that should correspond to a scenario:
-     - Confirm there is at least one `// @Scenario: #TS-<n> <Title>` comment INSIDE the test body.
+     - Confirm there is at least one Playwright annotation `{ type: 'scenario', description: '#TS-<n>' }` on the test options (`description` is **only** the id — no title).
+     - Legacy specs may still use deprecated `// @Scenario: #TS-<n> …` comments; treat those as linked for coverage, but **rewrite to annotations** when you touch the file.
 2. **Screen-state atlas (SmartTests) — during Validate only**
    - **Do not** spend multi-iteration **Execute** time naming every screen/state; do vocabulary work **here**, after tests pass functionally.
    - **Before** the validation run (or before editing specs for trace quality): load existing project vocabulary with **`testchimp list-screen-states`** in the **shell** (preferred for agents; see [`cli.md`](./cli.md) § **Screen-state atlas**) **or** MCP **`list-screen-states`** when MCP is available. Parse the JSON response and keep **`(screen, state)`** pairs in working memory for reuse.
@@ -484,11 +485,11 @@ Goal: ensure the resulting test suite is correctly linked to requirements and ca
    - After **stable** UI following a real transition (navigation, modal, meaningful DOM change), compare to the prior checkpoint; when the UI meaningfully changes, **reuse** an existing **`(screen, state)`** from the list when it fits; otherwise call **`testchimp upsert-screen-states`** (or MCP **`upsert-screen-states`**) **before** editing the spec, then add **`await markScreenState`** with the **exact** strings you registered. Ensure the test callback includes **`markScreenState`** (fixture from **`installTestChimp`** on the merged `test` in **`fixtures/index.js`**), then add **`await markScreenState('<Screen>', '<State>')`** (or omit the second argument for **`default`**) on the correct line so it appears in Playwright traces. **Do not** add `import { markScreenState } from '@testchimp/playwright/runtime'`.
    - **Do not** add or rely on legacy **`// @Screen:`** / **`// @State:`** comment annotations for new or updated work — that path is **legacy**; the **`markScreenState` fixture** is canonical for new specs.
 3. **Anomaly handling (required)**
-   - If a test is missing `// @Scenario:`:
+   - If a test is missing a scenario **`annotation`** (and has no deprecated `// @Scenario:` link either):
      - Treat it as an anomaly.
      - Determine whether a relevant scenario already exists (from plans, or by querying TestChimp).
-     - If it exists: add the comment.
-     - If it does not exist: create the scenario via **MCP tools first** (fallback to CLI) using **create → write with `id: TS-…` → update**, then add the comment using the real returned ID.
+     - If it exists: add the scenario **`annotation`**.
+     - If it does not exist: create the scenario via **MCP tools first** (fallback to CLI) using **create → write with `id: TS-…` → update**, then add the annotation using the real returned ID.
    - Never hallucinate `#TS-*` ids - only use ones returned by using create-test-scenario exposed by cli / mcp.
    - Never “fix” a missing scenario by writing `plans/scenarios/**/*.md` without a platform **`id:`**.
 
@@ -496,8 +497,8 @@ Goal: ensure the resulting test suite is correctly linked to requirements and ca
 
 Record in branch plan file:
 
-- [ ] Scenario-link comment audit completed for all touched/new SmartTests.
-- [ ] Any missing links remediated (scenario created if needed; comments added).
+- [ ] Scenario-annotation audit completed for all touched/new SmartTests.
+- [ ] Any missing links remediated (scenario created if needed; annotations added).
 - [ ] Screen/state vocabulary: **`testchimp list-screen-states`** (CLI) or MCP **`list-screen-states`** was used before atlas / `markScreenState` edits (or **`N/A`** with reason — e.g. no UI SmartTests touched).
 - [ ] Meaningful UI transitions in touched SmartTests have **`markScreenState`** at the right step, or **`N/A`** with reason (no meaningful transitions in scope).
 - [ ] Any remaining anomalies explicitly listed with next steps (only if blocked).
@@ -517,7 +518,7 @@ For **prioritization during `/testchimp test` Analyze**, treat a scenario as imp
 
 Goal: after **new/changed** tests are **authored and validated** (Phase 4), find **existing** coverage that the PR may have broken, **run** those SmartTests/API tests, and **rectify** failures (test vs product per [Validation failure triage](#validation-failure-triage)).
 
-This phase is **codebase-driven** (no new platform APIs required): scenarios and stories live under the mapped **`plans/`** tree; linkage to specs is via **`// @Scenario: #TS-<n>`** comments in the SmartTests root.
+This phase is **codebase-driven** (no new platform APIs required): scenarios and stories live under the mapped **`plans/`** tree; linkage to specs is via Playwright scenario **`annotation`** entries (and deprecated `// @Scenario:` comments still present in older specs) in the SmartTests root.
 
 ### When to run
 
@@ -542,8 +543,11 @@ Using **PR diff**, **branch plan §6**, and plan markdown under **`<MAPPED_PLANS
 
 From the SmartTests root (directory containing **`.testchimp-tests`**):
 
-1. Search **`*.spec.{js,ts}`** for `// @Scenario: #TS-<n>` matching each affected scenario id (a spec may cover **multiple** scenarios).
-2. Build a **deduplicated** list of spec files (and API tests if they use the same comment convention).
+1. Search **`*.spec.{js,ts}`** for each affected scenario id using **both**:
+   - **Canonical:** `type: 'scenario'` (or `type: "scenario"`) with `description: '#TS-<n>'` (or `"#TS-<n>"`) in the test’s `annotation` array
+   - **Deprecated (still linked):** `// @Scenario: #TS-<n>` comments
+   A spec may cover **multiple** scenarios.
+2. Build a **deduplicated** list of spec files (and API tests if they use the same annotation / comment convention).
 3. Record the list on the branch plan under **Phase 5 completion**.
 
 ### 3) Run the regression suite
@@ -559,12 +563,12 @@ Apply [Validation failure triage](#validation-failure-triage):
 - **Product regression:** fix application code; keep tests aligned with intended behavior.
 - **Test outdated:** update the **existing** spec (fixtures, steps, assertions, probes)—document material changes on the branch plan for **ExploreChimp** handoff.
 
-If a failure reveals a **missing** scenario for new behavior, add it to the branch plan backlog (create in platform during Execute rules if not already done)—do not invent ids in comments.
+If a failure reveals a **missing** scenario for new behavior, add it to the branch plan backlog (create in platform during Execute rules if not already done)—do not invent ids in annotations.
 
 ### Phase 5 checklist
 
 - [ ] Affected scenarios identified from **plans + PR** (listed on branch plan).
-- [ ] Linked specs resolved via **`// @Scenario:`** grep (listed on branch plan).
+- [ ] Linked specs resolved via scenario **`annotation`** / deprecated `// @Scenario:` grep (listed on branch plan).
 - [ ] Regression suite executed with real runner (**`TESTCHIMP_API_KEY`** on process).
 - [ ] Failures triaged; tests and/or product updated; suite re-run to green or explicit blockers recorded.
 - [ ] Branch plan **§7 ExploreChimp targets** updated to include **regression-touched** UI specs (if **§7** is **`yes`**).

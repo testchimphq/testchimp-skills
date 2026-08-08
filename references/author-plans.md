@@ -4,7 +4,7 @@
 > **Plan → approve → execute → report:** When this workflow runs **standalone**, write `knowledge/workflow_plans/author-plans/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Story/scenario create/update carry **inline `agentTraceability`**. Before finishing standalone, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `author-plans`). Nested under a composite: reuse the parent plan (parent closes). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Synonym:** `/testchimp plan` (same workflow **`author-plans`**).
 
-This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and `@Scenario` links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
+This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and scenario **`annotation`** links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
 
 **Ids (hard rules — BLOCKING):**
 - **Never hallucinate** **`US-…`** or **`TS-…`** ids (the ordinals are TestChimp-generated, not freetext).
@@ -76,11 +76,19 @@ Each story or scenario is a **`.md` file** with a **YAML frontmatter** block bet
 
 ## Linking SmartTests to scenarios
 
-In Playwright specs, link to a scenario ordinal with a structured comment as the first statement(s) inside the test (see **`write-smarttests.md`**):
+In Playwright specs, link to a scenario ordinal with a Playwright **`annotation`** on the test options (see **`write-smarttests.md`**):
 
-`// @Scenario: #TS-107 Empty messages cannot be sent`
+```js
+test('empty messages cannot be sent', {
+  annotation: [
+    { type: 'scenario', description: '#TS-107' },
+  ],
+}, async ({ page }) => {
+  // steps
+});
+```
 
-Use the **`#TS-<n>`** from the scenario markdown **`id`**.
+Use the **`#TS-<n>`** from the scenario markdown **`id`**. `description` is **only** that id — no title text. Do **not** author deprecated `// @Scenario:` comments.
 
 ---
 
@@ -133,5 +141,5 @@ When the user asks for **`/testchimp plan`** (or equivalent: fill gaps in the te
 ## Related references
 
 - **[`SKILL.md`](../SKILL.md)** — command routing and MCP tool list.
-- **[`write-smarttests.md`](./write-smarttests.md)** — SmartTests, coverage MCP, `@Scenario` comments, platform vs repo paths for **`tests/`**.
+- **[`write-smarttests.md`](./write-smarttests.md)** — SmartTests, coverage MCP, scenario **`annotation`** links, platform vs repo paths for **`tests/`**.
 - **[`upkeep.md`](./upkeep.md)** — `/testchimp evolve`: **Analyze → Plan → Execute** with phase gates; persisted plans under `<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/upkeep/<workflow_execution_id>.plan.md`.

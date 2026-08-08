@@ -12,7 +12,7 @@ Use this reference when **`.testchimp-tests`** has **`project_type=mobile`**, **
 | AI steps (ai-wright) | Supported | **Not supported** |
 | TrueCoverage | `@testchimp/rum-js` + `installTestChimp` on web barrel | TestChimpRum in app + **`installTestChimp(..., { uiFixture: 'screen' })`** on **`mobile/fixtures/index.js`**; **`projects[].use.platform`** (`ios`/`android`) — [`instrument-truecoverage.md`](./instrument-truecoverage.md) |
 | ExploreChimp | `markScreenState` + `page` | Same fixture on **`screen`** — [`run-explorechimp.md`](./run-explorechimp.md) |
-| Traceability | `// @Scenario: #TS-…` | Same |
+| Traceability | Playwright `annotation: [{ type: 'scenario', description: '#TS-…' }]` | Same |
 
 ## Where to put tests
 

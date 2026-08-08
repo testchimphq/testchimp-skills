@@ -52,7 +52,7 @@ When **`branchName`** is present, resolve **`BASE_URL`** per [`environment-manag
 
 ### 2) Load business context from linked scenarios
 
-If **`linkedScenarioOrdinalIds`** is **empty**, the session has no mapped scenarios — derive test intent from session title/steps/notes and ask the user to link scenarios in the platform if **`// @Scenario:`** linkage is required.
+If **`linkedScenarioOrdinalIds`** is **empty**, the session has no mapped scenarios — derive test intent from session title/steps/notes and ask the user to link scenarios in the platform if scenario **`annotation`** linkage is required.
 
 Otherwise:
 
@@ -80,9 +80,9 @@ Load these references as needed during authoring:
 
 - [`run-qa.md`](./run-qa.md) — Execute-phase batched order (seeds → probes → env → fixtures → tests); use the **Execute** sections only (not full Analyze/Plan/Validate chain)
 - [`seeding-endpoints.md`](./seeding-endpoints.md), [`fixture-usage.md`](./fixture-usage.md), [`mocking_strategy.md`](./mocking_strategy.md)
-- [`write-smarttests.md`](./write-smarttests.md) for UI SmartTest patterns and **`// @Scenario:`** comment rules
+- [`write-smarttests.md`](./write-smarttests.md) for UI SmartTest patterns and scenario **`annotation`** rules
 
-**Multi-scenario sessions:** author **one SmartTest** with multiple `// @Scenario: #TS-<n> <Title>` comments (one per linked scenario; see [`write-smarttests.md`](./write-smarttests.md)).
+**Multi-scenario sessions:** author **one SmartTest** with multiple scenario annotations in the same `annotation` array (one `{ type: 'scenario', description: '#TS-<n>' }` per linked scenario; see [`write-smarttests.md`](./write-smarttests.md)).
 
 ### 4) Author the SmartTest using the manual session as reference
 
@@ -94,13 +94,13 @@ Autonomously navigate the app (headed) the same way you would for scenario-only 
 
 Do **not** copy the recorded script line-for-line. Translate into maintainable SmartTest code with proper fixtures, seeds, and assertions aligned to the linked scenarios - following the rest of the test suite.
 
-**Naming (file, test title, and script):** Name the spec file and `test('…')` title from the **linked scenario(s)** — slug the scenario title or reuse an existing spec in the same feature area (see [`write-smarttests.md`](./write-smarttests.md)). The manual session id is an opaque platform identifier; **do not** embed it in the filename, test title, or comments. Use **`// @Scenario: #TS-<n> <Title>`** for traceability instead.
+**Naming (file, test title, and script):** Name the spec file and `test('…')` title from the **linked scenario(s)** — slug the scenario title or reuse an existing spec in the same feature area (see [`write-smarttests.md`](./write-smarttests.md)). The manual session id is an opaque platform identifier; **do not** embed it in the filename, test title, or comments. Use scenario **`annotation`** entries (`{ type: 'scenario', description: '#TS-<n>' }`) for traceability instead.
 
 Implement:
 
 - Reuse or author **seed endpoints** and **probes** as needed
 - Reuse or author **fixtures** (test-run scoped per [`fixture-usage.md`](./fixture-usage.md))
-- Add **`// @Scenario: #TS-<n> <Title>`** using ordinals/titles from **`linkedScenarios`** (never invent `#TS-*` ids)
+- Add scenario **`annotation`** entries (`{ type: 'scenario', description: '#TS-<n>' }`) using ordinals from **`linkedScenarios`** (never invent `#TS-*` ids; `description` is **only** the id — no title)
 - Run the test until it passes or report a clear blocker after multiple attempts fail.
 
 ### 5) Finish
