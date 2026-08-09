@@ -2,25 +2,45 @@
 
 **Workflow id:** `fix-test-execution` (prompts: `/testchimp fix test failure`, fix test execution).
 
-> **Traceability:** Persist a **ULID** `workflow_execution_id` before Execute; write the plan at **`knowledge/workflow_plans/fix-test-execution/<workflow_execution_id>.plan.md`**, call **`upsert-plans-support-file`** (blocking), then seek **explicit user approval** (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). On **`create-issue`** / **`update-issue-status`**, pass **inline `agentTraceability`**. Report SmartTest mutations via **`report-agent-action`**. Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `fix-test-execution`). Vocabulary: [`policies-and-traceability.md`](./policies-and-traceability.md).
+**Standalone** (`/testchimp fix test failure`) **or** as an **upkeep** subflow (default upkeep policy includes **`fix-test-execution`** after connect-to-test-env — see [`upkeep.md`](./upkeep.md)).
+
+> **Composite nesting:** When invoked as a subflow under `/testchimp upkeep` / `evolve`, do **not** open a second Plan → approve cycle — execute under the parent composite’s approved plan (section **Recently failing tests**) and reuse its `workflow_execution_id`. Standalone still uses Plan → approve → Execute below.
+
+> **Traceability:** Persist a **ULID** `workflow_execution_id` before Execute; write the plan at **`knowledge/workflow_plans/fix-test-execution/<workflow_execution_id>.plan.md`**, call **`upsert-plans-support-file`** (blocking), then seek **explicit user approval** (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). On **`create-issue`** / **`update-issue-status`**, pass **inline `agentTraceability`**. Report SmartTest mutations via **`report-agent-action`**. Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `fix-test-execution`). Vocabulary: [`policies-and-traceability.md`](./policies-and-traceability.md). Nested under upkeep: parent closes.
 
 **Plan → approve → execute → report:** Mint `workflow_execution_id`, write **`knowledge/workflow_plans/fix-test-execution/<workflow_execution_id>.plan.md`** (failures, hypothesized causes, fix steps), **`upsert-plans-support-file`** (blocking), then explicit user approval before applying fixes — unless `--mode=non-interactive` or policy `allow-execute-without-approval: true`. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 ## Goal
 
-Given a failed SmartTest execution id (either a batch invocation id from the batch execution viewer, or an individual job id from the test execution viewer), fetch a structured failure report via TestChimp MCP/CLI, analyze common causes and historical flake patterns, triage test-incorrect vs product-broken, then either apply root-cause fixes (and re-run) or file issues on approval.
-
-This command is specifically for raw SmartTest execution failures identified by
-`batch_invocation_id` or `job_id`.
+Fetch structured failure reports for recently failing SmartTests via TestChimp MCP/CLI, analyze common causes and historical flake patterns, triage test-incorrect vs product-broken, then either apply root-cause fixes (and re-run) or file issues on approval.
 
 ## Inputs
 
+Provide **one** of:
+
 - **Batch run**: `batch_invocation_id` (from the webapp URL query param)
 - **Single run**: `job_id` (from the webapp URL query param)
-
-Exactly one must be provided.
+- **Discovery (upkeep / no id)**: no batch/job id — discover recently failing tests via `get-execution-history` (below), then call `fetch-execution-report` per failing `executionJobId` (or a known batch id if one surfaces)
 
 ## Workflow
+
+### 0) Discover recently failing tests (when no batch/job id)
+
+Used by **`/testchimp upkeep`** and whenever the user asks to fix recent failures without pasting an execution URL.
+
+1. List recent executions for the suite (or scoped folder):
+
+   ```bash
+   testchimp get-execution-history --folder-path tests
+   ```
+
+   MCP: `get-execution-history` with `{ "scope": { "folderPath": "tests" } }`. Prefer omitting `--environment` / `--branch-name` unless the user scoped them. Default server window is ~30 days.
+
+2. Group `records[]` by `testId`, take the **latest** record per test, keep those with status **`SMART_TEST_EXECUTION_FAILED`**. Cap to a high-ROI set (shared error signatures first).
+
+3. For each selected failing record, use its **`executionJobId`** as the `job_id` input to step 1 (or a `batch_invocation_id` if the user/CI provided one).
+
+If discovery finds **no** recent failures: stop with **`N/A`** (nested under upkeep: tick the plan section and continue other subflows).
 
 ### 1) Fetch the execution report (MCP preferred)
 

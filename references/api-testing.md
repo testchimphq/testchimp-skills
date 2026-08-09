@@ -66,6 +66,16 @@ Alternate identities (when ULID absent): `--root-file-path` + `--oas-operation-i
 
 Prioritize gaps by: **missing coverage** + **business criticality** + **likely distinct backend branch complexity**. Examples of high-ROI shapes (not only filters): auth/role gates, pagination vs full page, idempotency keys, status-transition enums, error-code paths, optional nested resources that trigger secondary loads, feature-flagged payloads, soft-delete / include-archived toggles.
 
+### Check existing scenarios/stories before authoring (required)
+
+Same rule as upkeep signal-only gaps and [`create-tests.md`](./create-tests.md) § API operation scopes:
+
+1. Search existing scenarios/stories (mapped `plans/`, `get-test-scenarios` / `get-requirement-coverage` / semantic-nearby) for a match to the API signal.
+2. Prefer **linking an existing scenario** (and story) when one fits; only propose **new** plan items when none exist.
+3. **Explicit user approval** before creating any new story/scenario.
+4. Create approved missing items as lifecycle **`ready`** + verification **`auto`**, then author/update SmartTests with scenario annotations. No duplicates / phantom ids.
+5. Soft-notify suite size via **`get-suite-execution-stats`** vs `global.policy.md` when over or within ~10% of a non-zero cap.
+
 Then apply the [coverage strategy](#goal) above (update existing → new UI → new `api/` as needed).
 
 ---

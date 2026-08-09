@@ -42,8 +42,20 @@ When nested under run-qa / upkeep, inherit the **parent** scope and plan.
 | API tests / **API operation coverage scopes** | [`api-testing.md`](./api-testing.md) (coverage strategy: update existing UI or API tests; dedicated `api/` specs are one option) |
 | Seeds / probes | [`seeding-endpoints.md`](./seeding-endpoints.md) |
 | Environment | [`connect-to-test-env.md`](./connect-to-test-env.md) |
+| Suite tags / goals | Project **`plans/knowledge/policies/global.policy.md`** (seed: [`assets/policies/global.policy.md`](../assets/policies/global.policy.md); or **`get-policy --policy-file-name global.policy.md`**) — coverage target, prioritization, **`annotations:`** |
 
 For Arrange → Act → Assert planning and Execute batching when running as part of run-qa, reuse the Execute guidance in [`run-qa.md`](./run-qa.md) without re-running Analyze/Plan.
+
+### Global policy annotations (blocking before authoring)
+
+Before writing or updating any SmartTest:
+
+1. Read **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `annotations:`** (CLI: **`get-policy --policy-file-name global.policy.md`**).
+2. For each annotation type, use its **`instructions`** to choose the Playwright `description` (`value_mode: fixed` → only listed `values`).
+3. Put `{ type: '<policy-type>', description: '<value>' }` on every new/changed test in the same `annotation` array as scenario links (e.g. `{ type: 'group', description: 'smoke' }`).
+4. Do not invent types/values outside the policy. If `annotations:` is empty, suite tags are **`N/A`**.
+
+Canonical rules: [`write-smarttests.md`](./write-smarttests.md) §6b · [`policies-and-traceability.md`](./policies-and-traceability.md)#global-policy--suite-annotations-required-when-authoring-tests.
 
 ---
 
@@ -74,20 +86,24 @@ After Plan approval (standalone) or when the parent hands off (nested):
 1. **[`@testchimp/playwright` upgrade](#testchimpplaywright-upgrade-autonomous)** — complete before any new/changed specs or runner invocations.
 2. **[`connect-to-test-env.md`](./connect-to-test-env.md)** when the parent has not already brought the env up.
 3. **Filter by verification strategy (required before authoring):** After the in-scope scenario ordinals are known (from coverage, plans, or the approved plan), call **`get-spec-lifecycle-details --scenario-ids …`** (CLI ≥ **0.1.30** / MCP `get-spec-lifecycle-details`) in one batch. For each scenario, read `lifecycleFields.verification_strategy`. **Skip** scenarios where the value is **`manual`**. Missing / empty → treat as **`auto`**. Only author SmartTests for **`auto`** scenarios. Note skipped manual scenarios on the plan. Do **not** infer this from plan markdown frontmatter — it is platform lifecycle only.
-4. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan (automated scenarios only).
+4. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan (automated scenarios only) — include **suite annotations** from [Global policy annotations](#global-policy-annotations-blocking-before-authoring).
 5. Run and triage with the real runner; report workflow completion when standalone.
 
 ---
 
 ## API operation scopes (summary)
 
-When the prompt is `/testchimp create tests for …` with an **API operation** identity (TestChimp operation id, OpenAPI root, method+path, and optional field/response-code cover):
+When the prompt is `/testchimp create tests for …` with an **API operation** identity (TestChimp operation id, OpenAPI root, method+path, and optional field/response-code cover) — including Operations UI **Copy Test** prompts:
 
 1. **Immediately** load [`api-testing.md`](./api-testing.md) → *API operation coverage scopes* (and *Prompt → CLI mapping*).
 2. Treat any `Hint: …` line after the prompt as human-readable context only — scope identity is the `for …` clause.
 3. Fetch coverage with CLI/MCP: `list-api-operation-services`, `list-api-operations`, `get-api-operation-detail` (CLI ≥ **0.1.28**). Do not invent coverage without those tools.
-4. Close gaps by **updating existing tests** and/or **authoring new ones** (UI e2e that hits the API counts). Prefer extending an existing journey; a dedicated API test is not required per gap. Operation-level covering tests do **not** imply field/response-code coverage — use detail for those gaps.
-5. **Standalone Plan** for API scopes: list the target operation(s)/fields, chosen vehicle tests (update vs new, UI vs `api/`), and Arrange/Act/Assert for each new or changed test — then upsert + approve as usual.
+4. **Check existing plan items first (required):** search mapped `plans/`, `get-test-scenarios` / `get-requirement-coverage` / semantic-nearby if useful for a scenario (or story) that already matches the signal (same journey, operation, field, or response path). Prefer **linking an existing scenario** when one fits.
+5. Only when **no suitable scenario exists**, propose new scenario(s) — and a parent **story** only if no relevant story exists (link an existing story when one fits). Record titles, rationale, linked signal, and that the existence check found none.
+6. **Explicit user approval** (Plan → approve) before creating any new story/scenario. Do not create plan entities on a silent path.
+7. Close gaps by **updating existing tests** and/or **authoring new ones** (UI e2e that hits the API counts). Prefer extending an existing journey; a dedicated API test is not required per gap. Create **only approved missing** plan items as lifecycle **`ready`** + verification **`auto`**, then author SmartTests with scenario `annotation` links. No phantom ids; never duplicate a scenario that already covers the gap. Operation-level covering tests do **not** imply field/response-code coverage — use detail for those gaps.
+8. **Suite size soft hint:** call `get-suite-execution-stats` vs `global.policy.md` caps; if over or within ~10% of a non-zero cap, inform the user (not a hard blocker).
+9. **Standalone Plan** for API scopes: list the target operation(s)/fields, existence-check outcome, chosen vehicle tests (update vs new, UI vs `api/`), and Arrange/Act/Assert for each new or changed test — then upsert + approve as usual.
 
 ---
 

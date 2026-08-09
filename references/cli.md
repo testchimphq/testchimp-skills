@@ -116,11 +116,40 @@ testchimp get-org-capabilities
 
 ---
 
+## `get-suite-execution-stats`
+
+Full-suite execution rollup for **bloat checks** against **`global.policy.md`** (`max_full_suite_duration_minutes`, `max_test_count`). Client-side aggregate of **`list_execution_history`** `testStats` (same timing math as the Tests UI execution-stats pane / `ExecutionTimingSummary`).
+
+**Soft notify (not a hard blocker):** When planning/authoring new tests (`upkeep`, `create-tests`, `run-qa`), compare stats to policy caps. If over **or close** (e.g. within ~10% of a non-zero cap), **inform the user** and prefer prune/consolidate suggestions. Treat **`0`** as unlimited.
+
+**Availability:** Prefer **`@testchimp/cli@latest`** (package ≥ **0.1.30**). If the command/tool is missing, bump MCP to `@latest` and reload.
+
+**API:** `POST /api/mcp/list_execution_history` (tool rolls up `testStats` locally — there is no separate `get_suite_execution_stats` HTTP route)
+
+| Flag | Required | Notes |
+|------|----------|-------|
+| `--folder-path` / `--file-paths` / `--branch-name` / `--platform` / … | No | Same filters as **`get-execution-history`** |
+| `--json-input …` | No | Full filter object |
+
+**Response fields:** `testCount`, `timedTestCount`, `sumSuccessMeanSecs`, `sumFailMeanSecs`, `maxSuccessMeanSecs`, `slowTestCount` (success mean > 30s).
+
+**Agent rule:** Call before planning large suite growth in **`/testchimp upkeep`**. Compare `sumSuccessMeanSecs` / `testCount` to **`global.policy.md`** yourself (this tool only returns stats — do not expect `exceedsLimit`); **notify the user** when limits are exceeded (`0` = unlimited for count caps). See [`upkeep.md`](./upkeep.md).
+
+**Example:**
+
+```bash
+testchimp get-suite-execution-stats --folder-path tests
+```
+
+---
+
 ## Coverage and execution
 
 ### `get-requirement-coverage`
 
 **API:** `POST /api/mcp/list_requirement_coverage`
+
+Answers: **which top N scenarios should we cover next?** Agents should expand **`global.policy.md`** Coverage target + Prioritization signals into the flags below and prefer **`rankedScenarios[]`** as the work queue.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
@@ -129,11 +158,33 @@ testchimp get-org-capabilities
 | `--branch-name <s>` | No | `branchName` | Optional Git branch; omit for cross-branch coverage (recommended for `/testchimp test` Analyze). |
 | `--platform <web\|ios\|android>` | No | `platform` | Optional filter: latest coverage for that platform only (`web`, `ios`, or `android`). |
 | `--record-types <csv>` | No | `recordTypes` | Coverage sources to include: `smart_test` (automated) and/or `manual`. Default (omit): `smart_test` only. |
-| `--include-manual` | No | `recordTypes` | Convenience: include manual coverage in addition to automated (equivalent to `--record-types smart_test,manual`). |
+| `--include-manual` | No | `recordTypes` | Convenience: include manual **session** coverage in addition to automated (equivalent to `--record-types smart_test,manual`). Not the default. |
 | `--manual-only` | No | `recordTypes` | Convenience: manual-only coverage (equivalent to `--record-types manual`). |
+| `--lifecycle-statuses <csv>` | No | `scenarioLifecycleStatuses` | Allowlist. Empty/omit = no status filter (UI Insights). Agent: policy **`ready`** → `ready`; policy **Draft+** / `lifecycle_status: draft` → `draft,ready`. Blank scenario status is treated as `ready`. |
+| `--limit <n>` | No | `limit` | After filter+rank, return only top N **gaps** in **`rankedScenarios`**. Server clamps to **200** (also the max when only `consider_*` is set without `--limit`). |
+| `--consider-scenario-priority` | No | `considerScenarioPriority` | Rank high → medium → low → unset (from policy `scenario_priority`). |
+| `--consider-semantic-coverage` | No | `considerSemanticCoverage` | Reserved ranking signal (accepted; ignored by server in v1). Pass when policy `semantic_coverage: true`. |
+| `--auto-verification-only` | No | `autoVerificationOnly` | Exclude `verification_strategy=manual`. Server already defaults to **true** when unset. |
+| `--include-manual-verification` | No | `autoVerificationOnly: false` | Escape hatch to include manual-verification scenarios (overrides `--auto-verification-only`). |
 | `--file-paths <csv>` | No | `scope.filePaths` | Comma-separated paths under **platform tests or plans** root. |
 | `--folder-path <path>` | No | `scope.folderPath` | Slash-separated folder under tests or plans root; sent as normalized path segments. |
 | `--json-input …` | No | (merge) | e.g. `includeNonCoveredUserStories`, `includeNonCoveredTestScenarios`, or `scope.folderPath` as **array** of segments. |
+
+**`rankedScenarios[]` shape (when `--limit` or any `consider_*` is set):** flat, server-sorted list of **gap** scenarios only (empty coverage, only `NOT_ATTEMPTED`, or partial multi-platform gaps with at least one `NOT_ATTEMPTED`). Fully covered scenarios are omitted. Each row has `scenarioOrdinalId`, `scenarioTitle`, `scenarioLifecycleStatus`, `scenarioPriority`, and `coverageRecords`. Sort: full gaps before partial gaps; then priority when requested; tie-break ordinal ascending. Nested `userStories` / `unmappedScenarios` remain for tree views — agents targeting gaps prefer **`rankedScenarios`** (eligibility = present there).
+
+**Example — top-N gaps from global policy (Ready + priority + semantic flags):**
+
+```bash
+testchimp get-requirement-coverage \
+  --lifecycle-statuses ready \
+  --consider-scenario-priority \
+  --consider-semantic-coverage \
+  --limit 20 \
+  --json-input '{
+    "includeNonCoveredUserStories": true,
+    "includeNonCoveredTestScenarios": true
+  }'
+```
 
 ### `get-execution-history`
 
@@ -150,6 +201,17 @@ testchimp get-org-capabilities
 | `--file-paths <csv>` | No | `scope.filePaths` | Comma-separated under platform tests or plans root. |
 | `--folder-path <path>` | No | `scope.folderPath` | Slash-separated; same normalization as coverage. |
 | `--json-input …` | No | (merge) | e.g. `dimensionFilters` (`[{ "dimension": "PLATFORM_EXECUTION_JOB_FILTER_DIMENSION", "values": ["WEB"] }]`), `limit`, `offset`. |
+
+**There is no separate “list failing tests” command.** For **`/testchimp upkeep`** / fix-recent-failures discovery: call with `--folder-path tests` (or scoped paths), group `records[]` by `testId`, keep tests whose **latest** `status` is `SMART_TEST_EXECUTION_FAILED`, then deepen with **`fetch-execution-report --job-id <executionJobId>`** and optional **`--test-id`** history. See [`upkeep.md`](./upkeep.md) § Recently failing tests and [`fix-test-execution.md`](./fix-test-execution.md) §0.
+
+**Example — discover recently failing tests (upkeep):**
+
+```bash
+testchimp get-execution-history --folder-path tests
+# Then for each latest-failed test's executionJobId:
+testchimp fetch-execution-report --job-id "<execution-job-id>"
+testchimp get-execution-history --test-id "<test-uuid>"
+```
 
 ### `fetch-execution-report`
 
@@ -235,6 +297,11 @@ testchimp get-execution-history \
 ### `mark-plan-items-implementation-done`
 
 **API:** `POST /api/mcp/mark_plan_items_implementation_done`
+
+After Validate (run-qa), marks planned items implemented in DB lifecycle fields (does **not** write status into plan markdown):
+
+- **Scenarios** → **`ready`** (idempotent if already ready). Scenarios do **not** use `done`.
+- **User stories** → **`done`**.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
@@ -1064,7 +1131,12 @@ Policies live under **`plans/knowledge/policies/*.policy.md`**. See [`policies-a
 
 | Flag | Required | Body field | Notes |
 |------|----------|------------|-------|
-| `--json-input` | Yes (today) | `policyFileName` | e.g. `connect-to-test-env.policy.md`. Server coerces to `*.policy.md` (same rules as `upsert-policy`). |
+| `--policy-file-name <name>` | Yes* | `policyFileName` | e.g. `connect-to-test-env.policy.md`, **`global.policy.md`**. Server coerces to `*.policy.md` (same rules as `upsert-policy`). |
+| `--json-input` | Yes* | `policyFileName` | Alternative to `--policy-file-name`. |
+
+\*Provide **`policyFileName`** via flag or JSON.
+
+**Global policy:** `testchimp get-policy --policy-file-name global.policy.md` — frontmatter is **`policy-kind: global`** (no `workflow-id`). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 ### `list-policies`
 

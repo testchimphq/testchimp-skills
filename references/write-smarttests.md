@@ -133,6 +133,32 @@ Recommended takeover loop:
    });
    ```
 
+6b. **Suite annotations from global policy (required when configured)** — In addition to scenario links, tag tests per **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `annotations:`** (or **`get-policy --policy-file-name global.policy.md`**). These are ordinary Playwright `{ type, description }` annotations in the **same** `annotation` array. They organize the suite (e.g. smoke vs regression); they do **not** replace scenario links.
+
+   **Before authoring any SmartTest** in `create-tests` / `run-qa` / `upkeep` (or nested authorship):
+
+   1. Read the global policy annotations list.
+   2. For **each** configured annotation type, choose a `description` using that entry’s **`instructions`**.
+   3. If `value_mode: fixed`, use **only** a value from `values` (exact string match).
+   4. If `value_mode: free-form`, follow `instructions` for allowed wording.
+   5. Emit `{ type: '<policy-type>', description: '<chosen-value>' }` on the test options.
+   6. Record the planned tags on the workflow plan (so Execute does not skip them).
+
+   **Default policy (`group` / smoke|regression):** use `smoke` for critical-path checks intended on every PR; use `regression` for broader coverage outside smoke — unless the project’s `instructions` say otherwise.
+
+   ```js
+   test('guest can reach checkout with valid cart', {
+     annotation: [
+       { type: 'scenario', description: '#TS-204' },
+       { type: 'group', description: 'smoke' },
+     ],
+   }, async ({ page }) => {
+     // ...
+   });
+   ```
+
+   If the policy has **no** `annotations:` entries, skip suite tags (scenario annotations still required). Do **not** invent annotation types that are not in the policy. Details: [`policies-and-traceability.md`](./policies-and-traceability.md)#global-policy--suite-annotations-required-when-authoring-tests.
+
 7. **Screen / state atlas workflow (`markScreenState`)** — follow this exact sequence (CLI details: [`cli.md`](./cli.md) § **Screen-state atlas**):
 
    - **Before any Playwright run whose purpose is placing or changing `markScreenState` names:** load the project atlas **first**. In **agent shells**, prefer the **CLI** (after **`export TESTCHIMP_API_KEY=…`** from the SmartTests-root MCP walk-up per **`SKILL.md`**; **never print** the key): run **`testchimp list-screen-states`** (optional **`--environment <s>`**), parse **stdout JSON**, and keep existing **`screen` / `states[]`** pairs in working memory for reuse. **MCP** **`list-screen-states`** is equivalent when the bridge works.
@@ -229,6 +255,13 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 | `includeNonCoveredTestScenarios` | boolean | Include scenarios with no coverage. |
 | `branchName` | string | Optional Git branch name when results must be limited to **one** branch. **Omit** for cross-branch coverage (default for Analyze in `/testchimp test`): aggregates all active branch copies; execution jobs are deduped by stable hash of tests-root-relative file path + Playwright test name. |
 | `platform` | string | Optional: `web`, `ios`, or `android`. When set, each scenario returns at most one coverage record for that platform. When omitted, rollup follows project scaffold (see [`cli.md`](./cli.md) § Platform execution reporting). Requires **`@testchimp/cli` ≥ 0.1.6** and ingested runs from **`@testchimp/playwright` ≥ 0.2.0**. |
+| `scenarioLifecycleStatuses` | string[] | Allowlist (e.g. `["ready"]` or `["draft","ready"]`). Empty/omit = no status filter. |
+| `limit` | number | Top N into **`rankedScenarios`** after filter+rank (server clamps to **200**). |
+| `considerScenarioPriority` | boolean | Rank by priority high→medium→low→unset. |
+| `considerSemanticCoverage` | boolean | Reserved ranking signal (accepted; ignored in v1). |
+| `autoVerificationOnly` | boolean | Exclude `verification_strategy=manual`. Server defaults to **true** when unset. |
+
+**Response:** Prefer **`rankedScenarios[]`** for gap work queues when `limit` or any `consider_*` is set. Server returns **gaps only** (empty / not-attempted / partial platform gaps) with `scenarioLifecycleStatus`, `scenarioPriority`, ordinal, and coverage records. Nested `userStories` / `unmappedScenarios` remain for tree views.
 
 **Example MCP tool call (conceptual):**
 
@@ -270,7 +303,7 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 
 ### Tool: `mark-plan-items-implementation-done`
 
-**Purpose:** After validated implementation, mark stories/scenarios **`done`** in platform lifecycle (DB only).
+**Purpose:** After validated implementation, mark **scenarios → `ready`** and **user stories → `done`** in platform lifecycle (DB only). Scenarios do not use `done`.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -464,12 +497,13 @@ const title = await ai.extract(
 - `description` is **only** the ordinal id — no title text.
 - Keeps traceability **in the repo** and helps agents and TestChimp associate runs with scenarios.
 - Deprecated: `// @Scenario: #TS-<n> …` comments are still parsed for existing specs; **do not** author new ones.
+- Also add **suite annotations** from **`global.policy.md`** when configured (see §6b above) — e.g. `{ type: 'group', description: 'smoke' }` — in the same `annotation` array.
 
 ---
 
 ## Example SmartTest (full file)
 
-Illustrative end-to-end shape: **`test` / `expect` from the correct `fixtures/index.js` barrel** (merged `test` wrapped with **`installTestChimp`**), scenario annotation, plain Playwright plus one AI step. Adjust the relative import and selectors to match the repo scaffold.
+Illustrative end-to-end shape: **`test` / `expect` from the correct `fixtures/index.js` barrel** (merged `test` wrapped with **`installTestChimp`**), scenario + suite (`group`) annotations, plain Playwright plus one AI step. Adjust the relative import and selectors to match the repo scaffold.
 
 ```ts
 import { test, expect } from '../fixtures/index.js';
@@ -479,6 +513,7 @@ test.describe('Checkout (illustrative)', () => {
   test('guest can reach checkout with valid cart', {
     annotation: [
       { type: 'scenario', description: '#TS-204' },
+      { type: 'group', description: 'smoke' },
     ],
   }, async ({ page, test, markScreenState }) => {
     await page.goto(`/shop`);

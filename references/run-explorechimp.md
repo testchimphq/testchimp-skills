@@ -10,6 +10,15 @@ This reference supports **local ExploreChimp** runs: Playwright UI tests drive t
 
 **P0 — honor config reporters + complete explorations:** Spawn Playwright/Mobilewright **exactly** via the SmartTests config (no CLI **`--reporter`**). After every ExploreChimp batch, the platform exploration for **`TESTCHIMP_BATCH_INVOCATION_ID`** must be **`COMPLETED_EXPLORATION`** before the workflow treats Explore as done — see [Honor Playwright config reporters (P0)](#honor-playwright-config-reporters-p0) and [Exploration completion (required)](#exploration-completion-required).
 
+## Policy: UX testing preferences
+
+Before selecting sources or reporting bugs, read **`plans/knowledge/policies/run-explorechimp.policy.md`** (and/or **`global.policy.md`** when UX preferences are mirrored there). Honor the **`## UX testing`** section:
+
+- **`enabled`**, **`sources`** (map to **`EXPLORECHIMP_SOURCES_TO_ANALYZE`** when set)
+- **`excluded_bug_categories`** — **do not report** (create/file/surface) bugs whose **`BugCategory`** is in that list. Skip them in summaries and issue creation.
+
+---
+
 ## When to use this doc vs commands
 
 | User intent | Where to go |

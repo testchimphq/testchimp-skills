@@ -32,7 +32,7 @@ Record the chosen scope on the plan (or say it clearly before Execute) so nested
 
 ## Policy frontmatter (required)
 
-Every policy file must start with:
+**Workflow policies** must start with:
 
 ```yaml
 ---
@@ -41,7 +41,45 @@ version: <semver string, e.g. 1.0.0>
 ---
 ```
 
-Optional recommended sections: `### Summary`, `### Pre-Execute Workflows`, `### Post-Execute Workflows`, `### Subflows` (composites), `### Scoping Rules`, then workflow-specific body.
+**Global policy** (`plans/knowledge/policies/global.policy.md`) is different: frontmatter uses **`policy-kind: global`** and **`version`** — **no** `workflow-id`. It holds project-wide suite goals (coverage target, prioritization signals, suite size / annotation constraints). Fetch via **`get-policy --policy-file-name global.policy.md`** (or `--json-input '{"policyFileName":"global.policy.md"}'`). Default seed: [`assets/policies/global.policy.md`](../assets/policies/global.policy.md).
+
+### Global policy → suite annotations (required when authoring tests)
+
+Under **`## Test suite management` → `annotations:`**, the project defines **Playwright annotation types** used to tag SmartTests (suite organization — distinct from scenario-link annotations). Agents **must** read this list before authoring or updating tests in **`run-qa`**, **`create-tests`**, **`upkeep`**, or any nested test-authorship subflow.
+
+For **each** annotation entry in the policy:
+
+| Field | Meaning |
+| --- | --- |
+| `type` | Playwright annotation `type` string (e.g. `group`) |
+| `value_mode` | `fixed` = choose only from `values`; `free-form` = any description allowed by `instructions` |
+| `values` | Allowed `description` values when `value_mode: fixed` (e.g. `smoke`, `regression`) |
+| `instructions` | **When** to apply which value — follow this text; do not invent alternate tagging schemes |
+
+**Apply on every new/changed SmartTest:**
+
+1. Read local **`plans/knowledge/policies/global.policy.md`** (or **`get-policy --policy-file-name global.policy.md`**).
+2. For each configured annotation type, decide the value using that entry’s **`instructions`** (and the test’s role: critical-path vs broader coverage, etc.).
+3. Add a Playwright annotation in the same `annotation` array as scenario links:
+   - `type` = policy `type` (exact string)
+   - `description` = chosen value (exact string from `values` when fixed)
+4. If the policy defines **multiple** annotation types, apply **each** type that the instructions call for (usually one value per type).
+5. If **`annotations:`** is missing/empty: no suite tags required (scenario `annotation` links still required).
+
+**Default seed example** (`type: group`, values `smoke` / `regression`):
+
+```js
+test('critical checkout path', {
+  annotation: [
+    { type: 'scenario', description: '#TS-101' },
+    { type: 'group', description: 'smoke' },
+  ],
+}, async ({ page }) => { /* … */ });
+```
+
+Full authoring rules: [`write-smarttests.md`](./write-smarttests.md) § **Suite annotations from global policy**.
+
+Optional recommended sections for workflow policies: `### Summary`, `### Pre-Execute Workflows`, `### Post-Execute Workflows`, `### Subflows` (composites), `### Scoping Rules`, then workflow-specific body.
 
 Default composites shipped in the skill: [`assets/policies/run-qa.policy.md`](../assets/policies/run-qa.policy.md), [`assets/policies/upkeep.policy.md`](../assets/policies/upkeep.policy.md). Init seeds these into **`plans/knowledge/policies/`** when missing. Authoring aid (not auto-seeded): [`assets/policies/connect-to-test-env.policy.md`](../assets/policies/connect-to-test-env.policy.md). Author more via [`create-policy.md`](./create-policy.md).
 
