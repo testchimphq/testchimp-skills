@@ -378,12 +378,12 @@ Set **`automationEmitsOnly: true`** on **`comparisonExecutionScope`** or **`cove
 ### Recommended flow
 
 1. **`list-rum-environments`** — Lists environment tags present in data; pick env values for scopes.
-2. **`get-truecoverage-events`** — Body: `baseExecutionScope`, optional `comparisonExecutionScope` (add `automationEmitsOnly` on comparison when you want test-only coverage; set **`platform`** on each scope for web vs iOS vs Android — see [`cli.md`](./cli.md) § `ExecutionScope`). **Returns** `eventSummaries[]` with `eventTitle`, `relativeFrequency`, `coverageStatus` (PRESENT/ABSENT vs comparison), position/histogram summaries, `numUniqueSessions`, terminal %.
+2. **`get-truecoverage-events`** — Body: `baseExecutionScope`, optional `comparisonExecutionScope` (add `automationEmitsOnly` on comparison when you want test-only coverage; set **`platform`** on each scope for web vs iOS vs Android — see [`cli.md`](./cli.md) § `ExecutionScope`). **Returns** `eventSummaries[]` with `eventTitle`, `relativeFrequency`, `coverageStatus` (PRESENT/ABSENT vs comparison), position/histogram summaries, `numUniqueSessions`, terminal %. **Ignored gaps are omitted** from MCP list responses — do not invent work for events users marked Ignore Gap in the TrueCoverage UI (purple chips). Session UI still shows them with `gapIgnored` for humans.
 3. Choose high-impact gaps, then for the identified events that you want to drill in to:
-   - **`get-truecoverage-event-details`** — Time series, sample sessions, **metadata** breakdown with per-value **comparison coverage** (use `automationEmitsOnly` on `comparisonExecutionScope` to align metadata “covered” with test-tagged emits only).
-   - **`get-truecoverage-child-event-tree`** — Top **next** events after the current title; pass **`coverage_scope`** with `automationEmitsOnly` when transition coverage should ignore manual paths.
+   - **`get-truecoverage-event-details`** — Time series, sample sessions, **metadata** breakdown with per-value **comparison coverage** (use `automationEmitsOnly` on `comparisonExecutionScope` to align metadata “covered” with test-tagged emits only). Skip metadata values flagged `gapIgnored` (or prefer UI “Ignored” slices).
+   - **`get-truecoverage-child-event-tree`** — Top **next** events after the current title; pass **`coverage_scope`** with `automationEmitsOnly` when transition coverage should ignore manual paths. MCP drops ABSENT+ignored transitions.
    - **`get-truecoverage-event-transition`** / **`get-truecoverage-event-time-series`** — Deeper transition and metric series as needed.
-4. Turn gaps into a prioritized plan (tests and scenario coverage first; instrumentation only when truly missing in product code).
+4. Turn gaps into a prioritized plan (tests and scenario coverage first; instrumentation only when truly missing in product code). **Never prioritize ignored TrueCoverage or scenario coverage gaps.**
 
 ### Interpreting "not covered" events (strict)
 

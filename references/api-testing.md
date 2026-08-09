@@ -47,7 +47,7 @@ Also accepted (resolve via CLI): `rootFilePath` + OAS `operationId`, or `rootFil
 ### Fetch coverage (required before authoring)
 
 1. **`list-api-operation-services`** — configured roots; empty → OAS not configured (`N/A` / ask user).
-2. **`list-api-operations --root-file-path <path>`** — same list payload as the Operations UI (`coverageSummary`, covering-test previews). Prefer low `coverageScore` / zero covering tests. Always pass **`--root-file-path`** when more than one service exists (omitting it returns all services’ ops mixed together).
+2. **`list-api-operations --root-file-path <path>`** — same list payload as the Operations UI (`coverageSummary`, covering-test previews). Prefer low `coverageScore` / zero covering tests. **Ignored gaps score as covered** (`gapIgnored` / score 100) — skip them when picking work. Always pass **`--root-file-path`** when more than one service exists (omitting it returns all services’ ops mixed together).
 3. **`get-api-operation-detail --id <ULID>`** (or root + oas / method+path) — request/query/response fields and response codes with covering tests.
 
 ### Prompt → CLI mapping
