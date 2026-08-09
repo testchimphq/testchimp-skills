@@ -15,7 +15,7 @@ Between phases, **stop and complete the phase’s completion gate** before conti
 
 ## Purpose
 
-`/testchimp init` often includes long-running and branching work: EaaS decisions, seeding strategy, harness setup, mocking (Playwright `page.route` + optional AIMock), optional nested **import** of existing E2E, CI wiring, and TrueCoverage setup. Init may run in a **plans/tests-only mapped repo** when product code lives in sibling workspace roots — see [`split-repo-workspaces.md`](./split-repo-workspaces.md). To keep this reliable, agents must:
+`/testchimp init` often includes long-running and branching work: EaaS decisions, seeding strategy, harness setup, mocking (Playwright `page.route` + optional AIMock), optional nested **import** of existing E2E, CI wiring, and TrueCoverage setup. Init usually runs with `plans/` and `tests/` in the **same repo as the product** (recommended). It may also run in a **plans/tests-only mapped repo** when the team chose separation and product code lives in sibling workspace roots — see [`split-repo-workspaces.md`](./split-repo-workspaces.md). To keep this reliable, agents must:
 
 1. collaborate with the user on a concrete action plan first,
 2. persist decisions and item status in `plans/knowledge/ai-test-instructions.md`,

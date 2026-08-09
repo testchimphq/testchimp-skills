@@ -139,7 +139,7 @@ At each ancestor directory from **`.testchimp-tests`** up to the git root, check
 
 ## How TestChimp works
 
-1. Create a project in TestChimp and connect the Git repo. Map 2 folders in the repo to the project created in TestChimp platform **`tests`** (SmartTests) and **`plans`** (test plans). Those can be mapped after logging in to TestChimp -> Select Project -> Project Settings -> Integrations -> GitHub. The mapped repo **need not** contain product application code — see **[Split-repo / multi-root workspaces](#split-repo--multi-root-workspaces)** and [`references/split-repo-workspaces.md`](references/split-repo-workspaces.md).
+1. Create a project in TestChimp and connect the Git repo. Map 2 folders in the repo to the project created in TestChimp platform **`tests`** (SmartTests) and **`plans`** (test plans). Those can be mapped after logging in to TestChimp -> Select Project -> Project Settings -> Integrations -> GitHub. **Recommended:** keep those folders in the **same repo as the product code**. Separation (plans/tests-only mapped repo + product elsewhere) is supported when you want it — see **[Split-repo / multi-root workspaces](#split-repo--multi-root-workspaces)** and [`references/split-repo-workspaces.md`](references/split-repo-workspaces.md).
 2. Run SmartTests with **Playwright** (web) or **Mobilewright** (native mobile — **`project_type`** in **`.testchimp-tests`**); install **`@testchimp/playwright`** as documented in [`references/write-smarttests.md`](references/write-smarttests.md). On **web**, dependencies typically include **`ai-wright`** for intelligent steps; **mobile** does not use ai-wright yet ([`references/mobilewright-smarttests.md`](references/mobilewright-smarttests.md)).
 3. Local and CI calls use the project’s **`TESTCHIMP_API_KEY`** — scope per project; placement and runner rules: **Preamble checks #4**.
 
@@ -157,7 +157,9 @@ TestChimp adds **marker files** after mapping: **`.testchimp-tests`** at the **S
 
 ### Split-repo / multi-root workspaces
 
-Supported layout: a **TestChimp-mapped repo** that is mostly `plans/` + `tests/`, with product code in **other workspace roots**. Local agents should open a multi-root workspace (product folder(s) + mapped repo), read product roots for context, and write plans/tests only under the marked roots. Detect when the mapped git root looks plans/tests-only and sibling roots look like apps — **inform the user once** of the multi-root approach. Full rules: [`references/split-repo-workspaces.md`](references/split-repo-workspaces.md).
+**Recommended:** put `plans/` and `tests/` in the **same repo as the product**. The split layout below is only for teams that want separation.
+
+Optional layout: a **TestChimp-mapped repo** that is mostly `plans/` + `tests/`, with product code in **other workspace roots**. Local agents should open a multi-root workspace (product folder(s) + mapped repo), read product roots for context, and write plans/tests only under the marked roots. Detect when the mapped git root looks plans/tests-only and sibling roots look like apps — **inform the user once** of the multi-root approach. Full rules: [`references/split-repo-workspaces.md`](references/split-repo-workspaces.md).
 
 ## Agent guardrails (must follow)
 
@@ -429,7 +431,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`references/fixture-usage.md`](references/fixture-usage.md) | `mergeTests`, fixture barrels, `shared/` helpers |
 | [`references/mobilewright-smarttests.md`](references/mobilewright-smarttests.md) | Native mobile SmartTests |
 | [`references/platform-scope.md`](references/platform-scope.md) | PR-branch platform scope for mobile / multi-platform |
-| [`references/split-repo-workspaces.md`](references/split-repo-workspaces.md) | Split-repo / multi-root: plans/tests-only mapped repo + product folders in the same local workspace |
+| [`references/split-repo-workspaces.md`](references/split-repo-workspaces.md) | Optional split-repo / multi-root (recommended default is plans+tests in the product repo): plans/tests-only mapped repo + product folders in the same local workspace |
 | [`assets/template_playwright.config.js`](assets/template_playwright.config.js) | Web-only Playwright config |
 | [`assets/template_mobile_mobilewright.config.ts`](assets/template_mobile_mobilewright.config.ts) | Mobile: setup + api + ios + android |
 | [`assets/template_multi_platform_playwright.config.js`](assets/template_multi_platform_playwright.config.js) | Multi-platform web + api |

@@ -1,11 +1,15 @@
 # Split-repo / multi-root workspaces
 
-Teams may map a **TestChimp-only repo** (essentially `plans/` + `tests/`) while product application code lives in one or more other repositories. Local coding agents support this via a **multi-root workspace**.
+**Recommended default:** Keep `plans/` and `tests/` in the **same repo as the product code**. Map those folders in TestChimp and work in a single workspace root — no multi-root setup required.
+
+Use this guide only when you want **separation**: a **TestChimp-only repo** (essentially `plans/` + `tests/`) while product application code lives in one or more other repositories. Local coding agents support that via a **multi-root workspace**.
 
 ## When to use
 
 - The product spans **multiple repos**, or
 - The team prefers the **TestChimp-mapped repo** to stay separate from the product repo(s) (plans/tests only).
+
+Otherwise, colocate `plans/` and `tests/` with the product — that is the simpler, recommended path.
 
 ## Workspace setup (local agents)
 
