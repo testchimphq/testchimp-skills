@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — policy-backed workflows (run-qa, upkeep, implement, init, import, subflows), SmartTests (Playwright on web; Mobilewright on native mobile), markdown test plans (read/author via MCP or CLI), coverage, TrueCoverage (RUM on web and native mobile), ExploreChimp UX analytics on UI test pathways, and TestChimp tools (`@testchimp/cli`). Use when the user mentions TestChimp, /testchimp commands (init, import, run QA, test, upkeep, evolve, implement, plan, explore, skill upgrade), SmartTests, agent-driven test or plan authoring, ExploreChimp, policies, or updating this skill from Git.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). Playwright plugin: **#8** (`@testchimp/playwright` — bump on create-tests / run-qa / upkeep). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.28** for API operation coverage tools (`list-api-operation-services`, `list-api-operations`, `get-api-operation-detail`), semantic nearby tools, workflow/policy tools, `get-execution-history --test-id`, and `get-test-scenarios --external-ids`. CLI ≥ **0.1.29** for `get-org-capabilities` (org capability soft-gating for TrueCoverage / API contract coverage). CLI ≥ **0.1.30** for `get-spec-lifecycle-details` (scenario `verification_strategy` before authoring SmartTests).
-version: 1.0.17
+version: 1.0.18
 required_cli_version: "0.1.29"
 ---
 
@@ -139,7 +139,7 @@ At each ancestor directory from **`.testchimp-tests`** up to the git root, check
 
 ## How TestChimp works
 
-1. Create a project in TestChimp and connect the Git repo. Map 2 folders in the repo to the project created in TestChimp platform **`tests`** (SmartTests) and **`plans`** (test plans). Those can be mapped after logging in to TestChimp -> Select Project -> Project Settings -> Integrations -> GitHub.
+1. Create a project in TestChimp and connect the Git repo. Map 2 folders in the repo to the project created in TestChimp platform **`tests`** (SmartTests) and **`plans`** (test plans). Those can be mapped after logging in to TestChimp -> Select Project -> Project Settings -> Integrations -> GitHub. The mapped repo **need not** contain product application code — see **[Split-repo / multi-root workspaces](#split-repo--multi-root-workspaces)** and [`references/split-repo-workspaces.md`](references/split-repo-workspaces.md).
 2. Run SmartTests with **Playwright** (web) or **Mobilewright** (native mobile — **`project_type`** in **`.testchimp-tests`**); install **`@testchimp/playwright`** as documented in [`references/write-smarttests.md`](references/write-smarttests.md). On **web**, dependencies typically include **`ai-wright`** for intelligent steps; **mobile** does not use ai-wright yet ([`references/mobilewright-smarttests.md`](references/mobilewright-smarttests.md)).
 3. Local and CI calls use the project’s **`TESTCHIMP_API_KEY`** — scope per project; placement and runner rules: **Preamble checks #4**.
 
@@ -154,6 +154,10 @@ TestChimp adds **marker files** after mapping: **`.testchimp-tests`** at the **S
 **Using SmartTests root:** The directory that contains **`.testchimp-tests`** is the SmartTests root—use it for the API key walk-up (**Preamble #4**), Playwright install resolution (**#6**), and every **`npx playwright …`** run (Agent guardrails).
 
 **If markers are missing after mapping:** Confirm **sync PRs from the TestChimp platform were raised and merged for each mapped folder** and the **local workspace was updated** (e.g. `git pull`)—see [`references/init-testchimp.md`](references/init-testchimp.md) (Key Area 1 and Action item A).
+
+### Split-repo / multi-root workspaces
+
+Supported layout: a **TestChimp-mapped repo** that is mostly `plans/` + `tests/`, with product code in **other workspace roots**. Local agents should open a multi-root workspace (product folder(s) + mapped repo), read product roots for context, and write plans/tests only under the marked roots. Detect when the mapped git root looks plans/tests-only and sibling roots look like apps — **inform the user once** of the multi-root approach. Full rules: [`references/split-repo-workspaces.md`](references/split-repo-workspaces.md).
 
 ## Agent guardrails (must follow)
 
@@ -193,7 +197,7 @@ TestChimp adds **marker files** after mapping: **`.testchimp-tests`** at the **S
 
 8. **Platform scope on PR branches (mobile & multi-platform).** When **`project_type`** is **`mobile`** or **`multi-platform`**, **`/testchimp test`** and **`/testchimp explore`** must resolve which of **`web`**, **`ios`**, and **`android`** are in scope for the branch. **Deduce** from PR diff and touched specs when evidence is strong; **always inform** the user of the chosen platform(s) and rationale. **Ask** which platform(s) to test when deduction is ambiguous—do not default to all platforms silently. Persist **`## Platform scope (this run)`** on the branch plan and require user confirmation before Execute. Full rules: [`references/platform-scope.md`](references/platform-scope.md).
 
-9. **Insufficient scenario context — infer first, then manual-session fallback.** When authoring a SmartTest for a scenario that lacks detail (e.g. a one-line description), **first** try to recover Arrange/Act/Assert from the **codebase / PR changes** and existing harness. Only if that still is not enough: **do not invent** the journey — suggest Chrome-extension **manual session** capture (scenario selected) and ask the user to paste **Copy test generate prompt** from the session view. Docs: [manual session capture](https://docs.testchimp.io/smart-tests/creating#2-from-manual-session-capture-chrome-extension). Details: [`references/write-smarttests.md`](references/write-smarttests.md) § **Insufficient scenario context**; after paste, [`references/author-test-from-manual-session.md`](references/author-test-from-manual-session.md).
+9. **Insufficient scenario context — infer first, then manual-session fallback.** When authoring a SmartTest for a scenario that lacks detail (e.g. a one-line description), **first** try to recover Arrange/Act/Assert from the **codebase / PR changes** and existing harness. In a **split-repo / multi-root** workspace, search **product workspace roots** for application context (not only the mapped TestChimp repo) — [`references/split-repo-workspaces.md`](references/split-repo-workspaces.md). Only if that still is not enough: **do not invent** the journey — suggest Chrome-extension **manual session** capture (scenario selected) and ask the user to paste **Copy test generate prompt** from the session view. Docs: [manual session capture](https://docs.testchimp.io/smart-tests/creating#2-from-manual-session-capture-chrome-extension). Details: [`references/write-smarttests.md`](references/write-smarttests.md) § **Insufficient scenario context**; after paste, [`references/author-test-from-manual-session.md`](references/author-test-from-manual-session.md).
 
 ## MCP client and CLI (agents)
 
@@ -425,6 +429,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`references/fixture-usage.md`](references/fixture-usage.md) | `mergeTests`, fixture barrels, `shared/` helpers |
 | [`references/mobilewright-smarttests.md`](references/mobilewright-smarttests.md) | Native mobile SmartTests |
 | [`references/platform-scope.md`](references/platform-scope.md) | PR-branch platform scope for mobile / multi-platform |
+| [`references/split-repo-workspaces.md`](references/split-repo-workspaces.md) | Split-repo / multi-root: plans/tests-only mapped repo + product folders in the same local workspace |
 | [`assets/template_playwright.config.js`](assets/template_playwright.config.js) | Web-only Playwright config |
 | [`assets/template_mobile_mobilewright.config.ts`](assets/template_mobile_mobilewright.config.ts) | Mobile: setup + api + ios + android |
 | [`assets/template_multi_platform_playwright.config.js`](assets/template_multi_platform_playwright.config.js) | Multi-platform web + api |
