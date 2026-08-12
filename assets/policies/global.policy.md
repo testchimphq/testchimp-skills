@@ -20,13 +20,16 @@ version: 1.0.0
 - max_full_suite_duration_minutes: 120
 - max_test_count: 0
 - max_new_tests_per_workflow_execution: 0
-- tags:
+
+```yaml
+tags:
   - value: smoke
     instructions: |
       Apply @smoke to critical-path checks intended to run on every PR.
   - value: regression
     instructions: |
       Apply @regression to broader suite coverage outside the smoke subset.
+```
 
 ## Notes for agents
 

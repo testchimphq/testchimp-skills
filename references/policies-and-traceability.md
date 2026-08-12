@@ -45,7 +45,7 @@ version: <semver string, e.g. 1.0.0>
 
 ### Global policy → suite tags (required when authoring tests)
 
-Under **`## Test suite management` → `tags:`**, the project defines **Playwright tags** used to group SmartTests (suite organization — CLI-filterable). **Annotations** are reserved for scenario linking (`type: 'scenario'`). Agents **must** read this list before authoring or updating tests in **`run-qa`**, **`create-tests`**, **`upkeep`**, or any nested test-authorship subflow.
+Under **`## Test suite management`**, the project defines **Playwright tags** used to group SmartTests (suite organization — CLI-filterable). The list is usually a fenced **`yaml`** block starting with **`tags:`** (so markdown editors do not flatten nested YAML). **Annotations** are reserved for scenario linking (`type: 'scenario'`). Agents **must** read this list before authoring or updating tests in **`run-qa`**, **`create-tests`**, **`upkeep`**, or any nested test-authorship subflow.
 
 **Why tags, not grouping annotations:** Playwright CLI can filter with `--grep @smoke`. It **cannot** filter by custom annotations such as `{ type: 'group', description: 'smoke' }`. Never emit `group` (or other suite-grouping) annotations.
 
