@@ -197,7 +197,7 @@ Legacy (read-only / migrate opportunistically): `knowledge/branch_test_plans/`, 
 
 ## Inline `agentTraceability` on mutating CRUDs (preferred)
 
-For **`create-issue`**, **`create-user-story`**, **`create-test-scenario`**, **`update-user-story`**, **`update-test-scenario`**, and **`update-issue-status`**, pass policy/traceability **on the mutating call** via nested **`agentTraceability`** (or flat CLI flags: `--workflow-id`, `--workflow-execution-id`, `--policy-file`, `--policy-version`, `--git-sha`, `--actor-type`, `--branch-name`, `--agent-model`).
+For **`create-issue`**, **`create-user-story`**, **`create-test-scenario`**, **`update-user-story`**, **`update-test-scenario`**, and **`update-issue-status`**, pass policy/traceability **on the mutating call** via nested **`agentTraceability`** (or flat CLI flags: `--workflow-id`, `--workflow-execution-id`, `--policy-file`, `--policy-version`, `--git-sha`, `--actor-type`, `--branch-name`, `--agent-model`, `--skill-version`, `--cli-version`).
 
 **Required for Activity attachment:** both **`workflow_id`** and **`workflow_execution_id`** (the stable Plan ULID for the whole run). Omitting `workflow_execution_id` does **not** create a workflow execution and does **not** record inline Activity — the server never auto-mints an execution id (that previously spawned orphan RUNNING rows per mutation). Pass the **same** ULID on every mutating call in the run.
 
@@ -206,6 +206,8 @@ The server records the same `workflow_executions` + `AGENT_WORKFLOW_ACTIVITY` ro
 Still use **`report-agent-action`** for **`mark-plan-items-implementation-done`**, **`update-plan-items-lifecycle-status`**, **`upsert-policy`**, **`upsert-plans-support-file`**, SmartTest locator actions, analyze, and **`ACTION_COMPLETED` / `ACTION_FAILED`**.
 
 Optional **`agentModel`**: free-form model id from the agent/CLI only (`--agent-model` or `TESTCHIMP_AGENT_MODEL`). Platform backend reporters leave it unset.
+
+**Skill + CLI versions (include on every report):** Pass **`skillVersion`** from this skill’s `SKILL.md` frontmatter `version` (`--skill-version` or `TESTCHIMP_SKILL_VERSION`). **`cliVersion`** is auto-filled by `@testchimp/cli` from its package version when omitted (`--cli-version` / `TESTCHIMP_CLI_VERSION` override). These appear on workflow execution history in the UI.
 
 ## `report-agent-action` (non-CRUD / completion)
 
@@ -221,6 +223,8 @@ Still use for analyze/completion and non-CRUD entities (SmartTest locator action
 | `user_id` | Optional; from MCP env when present |
 | `branch_name` | Current git branch |
 | `agent_model` / nested `traceability` | Optional; agent/CLI only |
+| `skill_version` | Skill `SKILL.md` frontmatter `version` (`--skill-version` / `TESTCHIMP_SKILL_VERSION`) |
+| `cli_version` | `@testchimp/cli` package version (auto-filled by CLI when omitted) |
 | `entity_type` | e.g. `test`, `story`, `scenario`, `issue`, `test_execution`, `batch_invocation`, `workflow` |
 | `test` **or** `entityIdentity` | **Mutually exclusive** (camelCase on the wire). SmartTests → `test` TestLocator (`folderPath`, `fileName`, `testSuite`, `testName`). Other artifacts → `entityIdentity` as project-scoped **ordinal id** (readable int string). Do **not** use platform UUIDs. Exception: execution/batch ids only when the prompt explicitly provided them. |
 | `action_type` | `created` / `updated` / `deleted` / `analyzed` / **`completed`** (`ACTION_COMPLETED`) / **`failed`** (`ACTION_FAILED`). Completing/failing marks the workflow execution done (`completedAtMillis`). Prefer `entity_type: workflow` for those. |
@@ -250,6 +254,7 @@ At end of every **standalone** Execute (or when aborting), report **`ACTION_COMP
    - `entity_type`: **`WORKFLOW`**
    - `entity_identity`: the catalog **`workflow_id`** (e.g. `fix-issue`, `run-qa`)
    - same `workflow_execution_id`, `workflow_id`, policy file/version (when resolved), `git_sha`, `actor_type`, `branch_name`
+   - **`skill_version`** from local `SKILL.md` frontmatter (CLI auto-fills `cli_version`)
 
 CLI sketch:
 
@@ -262,7 +267,8 @@ testchimp report-agent-action \
   --entity-identity fix-issue \
   --git-sha "$(git rev-parse HEAD)" \
   --actor-type LOCAL_AGENT \
-  --branch-name "$(git branch --show-current)"
+  --branch-name "$(git branch --show-current)" \
+  --skill-version "<version from SKILL.md frontmatter>"
 ```
 
 **Plan-only / stop-after-upsert** (Workflow Automation first invoke): do **not** send `ACTION_COMPLETED` — no Execute yet. The Approve re-invoke owns Execute + Report.
