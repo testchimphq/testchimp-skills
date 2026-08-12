@@ -8,7 +8,7 @@ TestChimp skill for **policy-backed QA workflows** (skill **≥ 1.0.0**). Agents
 |---------|-------------|--------------|
 | `/testchimp init` | `init` (One-Off) | Set up QA infra, seed default policies, MCP / workstation gate |
 | `/testchimp import` | `import` (One-Off) | Import existing E2E into SmartTests (Playwright as-is or translate) |
-| `/testchimp run QA` | `run-qa` | Full PR QA composite (plans → env → tests → regression → ExploreChimp → TrueCoverage) |
+| `/testchimp run QA` | `run-qa` | Full PR QA composite (plans → env → tests → smart smoke → ExploreChimp → TrueCoverage) |
 | `/testchimp upkeep` | `upkeep` | Coverage / TrueCoverage / cleanup composite (periodic maintenance) |
 | `/testchimp implement` | `implement` | Implement a story/scenario or a finetuned plan file end-to-end |
 | `/testchimp explore` | `run-explorechimp` | ExploreChimp UX analytics on SmartTest pathways |
@@ -18,7 +18,7 @@ TestChimp skill for **policy-backed QA workflows** (skill **≥ 1.0.0**). Agents
 
 **Synonyms (same workflow):** `/testchimp test` → **`run QA`**; `/testchimp evolve` (legacy `/testchimp audit`) → **`upkeep`**; `/testchimp plan` → **`author plans`**.
 
-Thin / nested playbooks (also invokable on their own): **`connect-to-test-env`**, **`create-tests`**, **`execute-tests`**, **`run-smart-regression`**, **`author-plans`**, **`fix-test-execution`**, **`fix-issue`**, **`cleanup`**, security scans, requirement quality, and more — see [Command routing](SKILL.md#command-routing) in **`SKILL.md`**.
+Thin / nested playbooks (also invokable on their own): **`connect-to-test-env`**, **`create-tests`**, **`execute-tests`**, **`run-smart-smoke`**, **`author-plans`**, **`fix-test-execution`**, **`fix-issue`**, **`cleanup`**, security scans, requirement quality, and more — see [Command routing](SKILL.md#command-routing) in **`SKILL.md`**.
 
 Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environments-skill](https://github.com/bunnyshell/bunnyshell-environments-skill)): **`SKILL.md` at the repository root**, with **`references/`** and **`assets/`** beside it. **`name` in `SKILL.md` is `testchimp`**, so the install directory must be named **`testchimp`** (see [Agent Skills spec — `name` matches directory](https://agentskills.io/specification)).
 
@@ -61,7 +61,8 @@ testchimp-skills/
 │   ├── author-plans.md
 │   ├── connect-to-test-env.md
 │   ├── execute-tests.md
-│   ├── run-smart-regression.md
+│   ├── run-smart-smoke.md
+│   ├── run-smart-regression.md  # legacy stub → run-smart-smoke
 │   ├── run-explorechimp.md
 │   ├── instrument-truecoverage.md
 │   ├── create-policy.md

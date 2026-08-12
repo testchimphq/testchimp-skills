@@ -4,7 +4,7 @@
 
 This document defines the **strict workflow** for Run QA with TestChimp (typically on a PR / feature branch).
 
-> **Workflow overlay (skill ≥ 1.0.0)** — **Workflow id:** `run-qa` (canonical prompt **`/testchimp run QA`**; synonym **`/testchimp test`**). **Policy:** `plans/knowledge/policies/run-qa.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default subflow order includes **`run-smart-regression`** after create-tests (see [`assets/policies/run-qa.policy.md`](../assets/policies/run-qa.policy.md)). **Plan path:** `knowledge/workflow_plans/run-qa/<workflow_execution_id>.plan.md`. After Plan: write file → **`upsert-plans-support-file`** (blocking) → explicit user approval (unless `--mode=non-interactive` or policy `allow-execute-without-approval`) → Execute. Persist **ULID** `workflow_execution_id` in frontmatter; on mutating actions call **`report-agent-action`** (best-effort) with that same id. **Before treating the run as done:** [Report workflow execution](./policies-and-traceability.md#report-workflow-execution) (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `run-qa`). Details: [`policies-and-traceability.md`](./policies-and-traceability.md). Full Smart regression playbook: [`run-smart-regression.md`](./run-smart-regression.md) (Phase 5 below remains authoritative if an agent only reads this file).
+> **Workflow overlay (skill ≥ 1.0.0)** — **Workflow id:** `run-qa` (canonical prompt **`/testchimp run QA`**; synonym **`/testchimp test`**). **Policy:** `plans/knowledge/policies/run-qa.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default subflow order includes **`run-smart-smoke`** after create-tests (see [`assets/policies/run-qa.policy.md`](../assets/policies/run-qa.policy.md)). **Plan path:** `knowledge/workflow_plans/run-qa/<workflow_execution_id>.plan.md`. After Plan: write file → **`upsert-plans-support-file`** (blocking) → explicit user approval (unless `--mode=non-interactive` or policy `allow-execute-without-approval`) → Execute. Persist **ULID** `workflow_execution_id` in frontmatter; on mutating actions call **`report-agent-action`** (best-effort) with that same id. **Before treating the run as done:** [Report workflow execution](./policies-and-traceability.md#report-workflow-execution) (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `run-qa`). Details: [`policies-and-traceability.md`](./policies-and-traceability.md). Full Smart smoke playbook: [`run-smart-smoke.md`](./run-smart-smoke.md) (Phase 5 below remains authoritative if an agent only reads this file).
 
 > **create-tests / nested under run-qa:** When the user asked only **`/testchimp create tests`** or this playbook is reached as a **subflow of run-qa / upkeep**, do **not** start a second Plan → approve → Execute cycle. Use the parent plan’s scope and `workflow_execution_id`; run the **Execute** authorship steps for tests only (skip a nested Analyze/Plan gate and skip later run-qa-only phases unless the parent plan called for them). Standalone **`/testchimp run QA`** (or synonym **`/testchimp test`**) still follows the full phase chain below.
 
@@ -19,7 +19,7 @@ The objective of **`/testchimp run QA`** (synonym **`/testchimp test`**) is to *
 ## “Run tests” / CI green vs `/testchimp run QA`
 
 - **“Run tests” / CI green** (colloquial or CI-only checks) means at minimum **Phase 4: Validate** is **green** for the relevant automated specs: real runner, scenario links, and agreed validation bar met.
-- **`/testchimp run QA`** (synonym **`/testchimp test`**) means this document’s **full phase chain** through **Phase 5 (Smart regression)**, then **Phase 6 (ExploreChimp)** whenever the PR/branch plan scope includes **new or materially changed UI SmartTests** (specs that drive real UI and use **`markScreenState`** or will once stable—especially when new screen-states are introduced), unless the branch plan records **`N/A`** with a **one-line rationale** under **Phase 2, section 7** (same user approval window as the rest of the plan). **`N/A`** is the **exception** (e.g. API-only change, no UI journey, user declined cost)—not the default. **`/testchimp explore`** remains the path when exploration is the **primary** task; Phase 6 reuses the same playbook after Smart regression.
+- **`/testchimp run QA`** (synonym **`/testchimp test`**) means this document’s **full phase chain** through **Phase 5 (Smart smoke)**, then **Phase 6 (ExploreChimp)** whenever the PR/branch plan scope includes **new or materially changed UI SmartTests** (specs that drive real UI and use **`markScreenState`** or will once stable—especially when new screen-states are introduced), unless the branch plan records **`N/A`** with a **one-line rationale** under **Phase 2, section 7** (same user approval window as the rest of the plan). **`N/A`** is the **exception** (e.g. API-only change, no UI journey, user declined cost)—not the default. **`/testchimp explore`** remains the path when exploration is the **primary** task; Phase 6 reuses the same playbook after Smart smoke.
 
 - **Recommend manual testing only as a last resort**—when automation is genuinely blocked after documented attempts (e.g. missing credentials the user must supply, hardware-only flows, legal restriction), and the branch plan must state **why** automation was not completed and what remains.
 - Do **not** substitute “user should click through X” for missing SmartTests/API tests when the stack and requirements support automation.
@@ -44,8 +44,8 @@ The objective of **`/testchimp run QA`** (synonym **`/testchimp test`**) is to *
 2. **Plan**
 3. **Execute**
 4. **Validate**
-5. **Smart regression** — [Phase 5](#phase-5-smart-regression-check): run linked specs for **likely affected** scenarios (from `plans/` + PR); fix regressions in existing tests when needed.
-6. **ExploreChimp** — [Phase 6](#phase-6-explorechimp): **default-on** for UI SmartTest deltas once **Phase 5** is green; branch plan **`yes`** or documented **`N/A`** ([Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)). Run on **new + materially changed + regression-touched** UI specs (see Phase 6).
+5. **Smart smoke** — [Phase 5](#phase-5-smart-smoke-check): impact analysis → `plans/smart-smoke/<branch>/related-tests.json`, then related-tests-only or budgeted smoke (`TESTCHIMP_SMART_SMOKE_ENABLED`); fix failures in existing tests when needed.
+6. **ExploreChimp** — [Phase 6](#phase-6-explorechimp): **default-on** for UI SmartTest deltas once **Phase 5** is green; branch plan **`yes`** or documented **`N/A`** ([Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)). Run on **new + materially changed + smoke-touched** UI specs (see Phase 6).
 7. **Cleanup** (see [Phase 7: Cleanup](#phase-7-cleanup-environment-teardown))
 
 Use this as the primary reference for `/testchimp run QA` (synonym `/testchimp test`). During **Plan** and **Execute**, load **[`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)** first so every proposed test names its **folder**, **fixture barrel**, and **runner**. For SmartTest authoring patterns, load **[`write-smarttests.md`](./write-smarttests.md)**; for **mobile** UI, **[`mobilewright-smarttests.md`](./mobilewright-smarttests.md)**. For **fixtures** (`mergeTests`, `api/fixtures`, `mobile/fixtures`, `web/fixtures`, `shared/` helpers), load **[`fixture-usage.md`](./fixture-usage.md)**. For **test-only seed, teardown, and read** endpoints (discovery, proxy pattern, idempotency, post-UI assertions), load **[`seeding-endpoints.md`](./seeding-endpoints.md)**. For TrueCoverage rules (instrumentation, `plans/events/*.event.md`), load **[`instrument-truecoverage.md`](./instrument-truecoverage.md)** when RUM is in scope. For **ExploreChimp** (UX analytics on UI test pathways), load **[`run-explorechimp.md`](./run-explorechimp.md)** for env vars, operator checklist, and execution details once **Phase 2 §7** is **`yes`** (or when running **`/testchimp explore`**). **Environment:** follow **[Binding: ai-test-instructions (environment and FAQ playbook)](#binding-ai-test-instructions-environment-and-faq-playbook)** below; [`environment-management.md`](./environment-management.md) supplements that file but does **not** override it.
@@ -54,7 +54,7 @@ Use this as the primary reference for `/testchimp run QA` (synonym `/testchimp t
 
 ### Phase gating (required)
 
-Do **not** advance **Analyze → Plan → Execute → Validate → Phase 5 (Smart regression) → Phase 6 (ExploreChimp) → Phase 7 (Cleanup)** until the **prior phase’s completion gate** is satisfied. **Nothing implied; nothing skipped silently.**
+Do **not** advance **Analyze → Plan → Execute → Validate → Phase 5 (Smart smoke) → Phase 6 (ExploreChimp) → Phase 7 (Cleanup)** until the **prior phase’s completion gate** is satisfied. **Nothing implied; nothing skipped silently.**
 
 - For **every** gate line item: mark **done**, **blocked**, or **`N/A`** with a **one-line justification**.
 - Record gate outcomes in the **branch plan file** (`<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/run-qa/<workflow_execution_id>.plan.md`) under a short **“Phase N completion”** subsection (or tick inline next to the plan checklist) so reruns are deterministic.
@@ -293,7 +293,7 @@ After the user approves the Plan, during **Execute** implement work in this orde
 6. **Run and triage**  
    Execute the real runner. On failure, apply [Validation failure triage](#validation-failure-triage) (system bug → fix product; test bug → fix test).
 
-**Relationship to phases below:** The checklist subsections in **Phase 3: Execute** follow this order. **Phase 4: Validate** remains for **scenario-link audit** and any cross-cutting anomalies; it does not replace per-test assertions in step 5–6. **Phase 5 (Smart regression)** runs after Phase 4 is **green** (see [Phase 5](#phase-5-smart-regression-check)). **Phase 6 (ExploreChimp)** runs after Phase 5 when **Phase 2 §7** is **`yes`** (default for UI SmartTest deltas—see [§7](#7-explorechimp-branch-plan-yes-or-documented-na)); when **`N/A`**, skip Phase 6 per the branch plan ([`run-explorechimp.md`](./run-explorechimp.md)).
+**Relationship to phases below:** The checklist subsections in **Phase 3: Execute** follow this order. **Phase 4: Validate** remains for **scenario-link audit** and any cross-cutting anomalies; it does not replace per-test assertions in step 5–6. **Phase 5 (Smart smoke)** runs after Phase 4 is **green** (see [Phase 5](#phase-5-smart-smoke-check)). **Phase 6 (ExploreChimp)** runs after Phase 5 when **Phase 2 §7** is **`yes`** (default for UI SmartTest deltas—see [§7](#7-explorechimp-branch-plan-yes-or-documented-na)); when **`N/A`**, skip Phase 6 per the branch plan ([`run-explorechimp.md`](./run-explorechimp.md)).
 
 ---
 
@@ -327,8 +327,8 @@ The Analyze phase must gather:
   - Whether new stories/scenarios are needed.
 - **Candidate tests and posture (high level; no implementation yet)**
   - A preliminary list of **which tests** might be needed. For each, jot **rough Arrange / Act / Assert** so Phase 2 is not cold-starting—the full three-section template is still required in **Plan**.
-- **Smart regression (reconnaissance for Plan §6)** — From PR diff + existing **`plans/stories/`** and **`plans/scenarios/`** under `<MAPPED_PLANS_ROOT>`, note **likely affected** scenarios (same feature area, shared flows, touched APIs/screens). Record candidate **`#TS-…`** ids for the branch plan; linked specs are resolved in **Phase 5** via scenario **`annotation`** / deprecated `// @Scenario:` grep under the SmartTests root.
-- **ExploreChimp (reconnaissance for Plan §7)** — For **UI** changes, note which SmartTests could serve **Phase 6** (**new**, **regression-touched**, and **materially changed** UI specs; new screen-states). The **`yes`** vs **`N/A`** decision and target list are finalized in the branch plan under **[Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)** (default **`yes`** for UI SmartTest deltas unless an allowed exception applies); this Analyze bullet is reconnaissance only.
+- **Smart smoke (reconnaissance for Plan §6)** — From PR diff + existing **`plans/stories/`** and **`plans/scenarios/`** under `<MAPPED_PLANS_ROOT>`, note **likely affected** scenarios (same feature area, shared flows, touched APIs/screens). Record candidate **`#TS-…`** ids for the branch plan; Phase 5 resolves linked tests → TestLocators and writes **`plans/smart-smoke/<branch>/related-tests.json`**.
+- **ExploreChimp (reconnaissance for Plan §7)** — For **UI** changes, note which SmartTests could serve **Phase 6** (**new**, **smoke-touched**, and **materially changed** UI specs; new screen-states). The **`yes`** vs **`N/A`** decision and target list are finalized in the branch plan under **[Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)** (default **`yes`** for UI SmartTest deltas unless an allowed exception applies); this Analyze bullet is reconnaissance only.
 - **Platform scope (mobile & multi-platform only)** — Read **`.testchimp-tests`** `project_type`. If **`mobile`** or **`multi-platform`**, apply [`platform-scope.md`](./platform-scope.md): draft **`## Platform scope (this run)`** on the branch plan (decision, confidence, rationale). **Inform** the user of the chosen platform(s) or **ask** when the PR diff does not clearly imply a single platform. Do not proceed to **Plan** user approval with **User confirmed: pending**.
 - **Platform evidence (via TestChimp CLI/MCP when available)**
   - Use **TestChimp CLI** (`testchimp ...`) when MCP tools are not available.
@@ -350,7 +350,7 @@ Before proceeding to **Plan**, the agent must record **done/blocked/`N/A`** for 
 - [ ] **`ai-test-instructions.md`:** re-read (or created stub via user direction) **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`** (or `N/A` + reason if plans root missing—then stop and recommend `/testchimp init`).
 - [ ] Coverage/execution history queried via CLI/MCP where applicable (or `N/A`).
 - [ ] **Org capabilities** checked via `get-org-capabilities` (or noted as failed/skipped); TrueCoverage analytics and API operation gap queries above reflect **`TRUE_COVERAGE`** / **`API_CONTRACT_COVERAGE`** gating when off (soft-skip that insight only, not the rest of Analyze).
-- [ ] **Smart regression:** candidate affected scenarios noted for **Plan §6** (reconnaissance; final list refined in **Phase 5**).
+- [ ] **Smart smoke:** candidate affected scenarios noted for **Plan §6** (reconnaissance; final list refined in **Phase 5**).
 - [ ] **ExploreChimp:** candidate UI specs noted for **Plan §7** (reconnaissance only; final **`yes`** / **`N/A`** belongs in **[Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)** during **Plan**).
 - [ ] **Platform scope:** for **`mobile`** / **`multi-platform`**, branch plan **`## Platform scope (this run)`** drafted; user **informed** or **asked** per [`platform-scope.md`](./platform-scope.md) (`N/A` for **web-only** `project_type`).
 
@@ -362,7 +362,7 @@ Goal: produce a written plan (persisted in the branch plan file) that the user e
 
 The Plan MUST be written under the branch plan file. It MUST include the following **top-level** sections (in order), **and** the [Required structure for each proposed test (Plan phase)](#required-structure-for-each-proposed-test-plan-phase) for every listed test.
 
-0. **Platform scope (this run)** — **Required** when **`project_type`** is **`mobile`** or **`multi-platform`**. Use the template in [`platform-scope.md`](./platform-scope.md). Filter **Tests to write**, **§6 Smart regression**, and **§7 ExploreChimp** to platforms in scope. **Web-only** projects: omit this section or mark **`N/A`**.
+0. **Platform scope (this run)** — **Required** when **`project_type`** is **`mobile`** or **`multi-platform`**. Use the template in [`platform-scope.md`](./platform-scope.md). Filter **Tests to write**, **§6 Smart smoke**, and **§7 ExploreChimp** to platforms in scope. **Web-only** projects: omit this section or mark **`N/A`**.
 1. **Test plan updates** (plans layer)
    - Stories/scenarios to create/update.
      - **Never invent IDs** means: never assume fake `#US-...` / `#TS-...` ids, and **never** plan to write story/scenario `.md` files without a platform-issued `id:` (omitting `id` is forbidden).
@@ -380,18 +380,18 @@ The Plan MUST be written under the branch plan file. It MUST include the followi
 5. **User approval and plan structure guard**
    - **Explicit user approval:** The agent must stop until the user approves the branch plan. Record approval status in plan frontmatter when the user consents.
    - Run the [Plan structure guard (before user approval)](#plan-structure-guard-before-user-approval) for every test; record pass/fail or `TBD` items.
-6. **Smart regression scope (likely affected scenarios)**
+6. **Smart smoke scope (likely affected scenarios)**
    - List **candidate** scenario ids (**`#TS-…`**) likely affected by the PR, with a **one-line rationale** each (from **`plans/scenarios/`**, parent **`plans/stories/`**, and PR diff—not invented ids).
-   - Note that **linked SmartTests** will be resolved in **Phase 5** by searching the SmartTests root for `type: 'scenario'` / `description: '#TS-<n>'` annotations **and** deprecated `// @Scenario: #TS-<n>` comments (and optional MCP **`get-requirement-coverage`** on affected `plans/...` folders).
-   - Record **`N/A`** only when the PR is **greenfield** (no existing scenarios in scope) or **no plausible regression surface** (e.g. docs-only)—with one-line justification.
+   - Note that **Phase 5** will resolve linked tests → TestLocators, write **`plans/smart-smoke/<branch>/related-tests.json`**, and prefer **related-tests-only** (`TESTCHIMP_SMART_SMOKE_RELATED_TESTS_ONLY`) unless the plan/user chooses budgeted smoke. Tags for budgeted mode: Playwright **`tag: '@smoke'`** only (see [`run-smart-smoke.md`](./run-smart-smoke.md)).
+   - Record **`N/A`** only when the PR is **greenfield** (no existing scenarios in scope) or **no plausible smoke surface** (e.g. docs-only)—with one-line justification.
 7. **ExploreChimp branch plan (yes or documented N/A)**
-   - **Default:** When the PR/plan scope includes **new or materially changed UI SmartTests** (real UI; **`markScreenState`** in use or planned once stable—especially **new screen-states** in authored tests), record **`yes`** in §7 and list **target UI SmartTest files** (paths or globs). **Phase 6** then runs after **Phase 5: Smart regression** is green. Treat **§7 as `yes`** in those cases unless the user **explicitly opts out** before plan approval or the case is **`N/A`** with a **one-line rationale** (e.g. **API-only** change, **no UI journey**, **user declined cost**). **`N/A`** must appear on the branch plan (same approval window as the rest of the plan)—do **not** skip Phase 6 silently or treat ExploreChimp as “only if the user asks later.”
-   - **ExploreChimp target list (when `yes`):** Include **all** of: (a) **new** UI specs from this PR, (b) **materially changed** UI specs from this PR, and (c) **regression suite** UI specs that were **run or updated** in **Phase 5** (not only net-new tests). Refresh the list on the branch plan after Phase 5 completes.
+   - **Default:** When the PR/plan scope includes **new or materially changed UI SmartTests** (real UI; **`markScreenState`** in use or planned once stable—especially **new screen-states** in authored tests), record **`yes`** in §7 and list **target UI SmartTest files** (paths or globs). **Phase 6** then runs after **Phase 5: Smart smoke** is green. Treat **§7 as `yes`** in those cases unless the user **explicitly opts out** before plan approval or the case is **`N/A`** with a **one-line rationale** (e.g. **API-only** change, **no UI journey**, **user declined cost**). **`N/A`** must appear on the branch plan (same approval window as the rest of the plan)—do **not** skip Phase 6 silently or treat ExploreChimp as “only if the user asks later.”
+   - **ExploreChimp target list (when `yes`):** Include **all** of: (a) **new** UI specs from this PR, (b) **materially changed** UI specs from this PR, and (c) **smoke suite** UI specs that were **run or updated** in **Phase 5** (not only net-new tests). Refresh the list on the branch plan after Phase 5 completes.
    - If **`yes`**: confirm the user accepts **extra runtime / API cost** as part of the same plan approval. Execution: **[Phase 6: ExploreChimp](#phase-6-explorechimp)** and [`run-explorechimp.md`](./run-explorechimp.md).
 8. **Workflow checklists (phase hygiene)**
    - An **Execute checklist** (Phase 3) that mirrors [Batched order (Execute phase)](#batched-order-execute-phase) (including **step 0** `@testchimp/playwright` upgrade) plus environment bring-up, test runs, and triage.
    - A **Validate checklist** (Phase 4): scenario-link comment audit + **`markScreenState`** / atlas remediation.
-   - A **Smart regression checklist** (Phase 5): affected scenarios, linked specs, run results, fixes.
+   - A **Smart smoke checklist** (Phase 5): related-tests.json, smoke mode (related-tests-only vs budgeted), run results, fixes.
    - A **Cleanup checklist** (Phase 7): local env/process teardown and/or ephemeral environment destroy, aligned to the environment strategy used.
 
 The Plan MUST also include:
@@ -411,8 +411,8 @@ Before proceeding to **Execute**, the agent must record **done/blocked/`N/A`** f
 - [ ] User explicitly approved the plan to proceed (or `--mode=non-interactive` with `PlanApproved: yes` + `ApprovedBy: auto`, or policy `allow-execute-without-approval` + `PlanApproved: policy-non-interactive`).
 - [ ] Plan file upserted via **`upsert-plans-support-file`** (`knowledge/workflow_plans/run-qa/<ulid>.plan.md`) — **blocking**.
 - [ ] **Platform scope:** **`User confirmed: yes`** on branch plan (or **`N/A`** — web-only project); platform list matches inventory and §6/§7.
-- [ ] **Smart regression:** branch plan **§6** lists candidate affected scenarios (or **`N/A`** + rationale).
-- [ ] **ExploreChimp:** branch plan **§7** records **`yes`** vs **`N/A`** (+ target specs when **`yes`**, including new + changed + regression-touched UI specs); default-on policy for UI deltas applied; matches what the user approved.
+- [ ] **Smart smoke:** branch plan **§6** lists candidate affected scenarios (or **`N/A`** + rationale).
+- [ ] **ExploreChimp:** branch plan **§7** records **`yes`** vs **`N/A`** (+ target specs when **`yes`**, including new + changed + smoke-touched UI specs); default-on policy for UI deltas applied; matches what the user approved.
 
 ---
 
@@ -524,19 +524,17 @@ For **prioritization during `/testchimp test` Analyze**, treat a scenario as in-
 
 ---
 
-## Phase 5: Smart regression check
+## Phase 5: Smart smoke check
 
-> **Full guidance:** [`run-smart-regression.md`](./run-smart-regression.md) (`workflow-id: run-smart-regression`) — scoping (explicit / feature branch / default + `get-last-run-workflow-detail`), depends on connect-to-test-env, plan→approve when standalone, and `report-agent-action` on fixes. **Keep reading this section** so Phase 5 behavior is unchanged if the agent only has this file.
+> **Full guidance:** [`run-smart-smoke.md`](./run-smart-smoke.md) (`workflow-id: run-smart-smoke`) — scoping (explicit / feature branch / default + `get-last-run-workflow-detail` preferring `run-smart-smoke`, one fallback to legacy `run-smart-regression`), depends on connect-to-test-env, plan→approve when standalone, and `report-agent-action` on fixes. **Keep reading this section** so Phase 5 behavior is unchanged if the agent only has this file. Legacy prompt **`/testchimp run smart regression`** is a one-release synonym.
 
-Goal: after **new/changed** tests are **authored and validated** (Phase 4), find **existing** coverage that the PR may have broken, **run** those SmartTests/API tests, and **rectify** failures (test vs product per [Validation failure triage](#validation-failure-triage)).
-
-This phase is **codebase-driven** (no new platform APIs required): scenarios and stories live under the mapped **`plans/`** tree; linkage to specs is via Playwright scenario **`annotation`** entries (and deprecated `// @Scenario:` comments still present in older specs) in the SmartTests root.
+Goal: after **new/changed** tests are **authored and validated** (Phase 4), **analyze impact**, write **related TestLocators**, collaborate on smoke config (**related-tests-only** safe default vs budgeted), enable **`TESTCHIMP_SMART_SMOKE_ENABLED`**, run via the **same** `npx playwright test` (no smart-smoke CLI flags), and **rectify** failures (test vs product per [Validation failure triage](#validation-failure-triage)).
 
 ### When to run
 
 **Always** after **Phase 4** is green, unless the branch plan **§6** records **`N/A`** with rationale (e.g. greenfield repo with no existing scenarios, docs-only PR). **Do not** skip silently when existing plans and linked tests exist.
 
-### 1) Identify likely affected scenarios
+### 1) Analyze impact → write `related-tests.json`
 
 Using **PR diff**, **branch plan §6**, and plan markdown under **`<MAPPED_PLANS_ROOT>`**:
 
@@ -545,28 +543,35 @@ Using **PR diff**, **branch plan §6**, and plan markdown under **`<MAPPED_PLANS
    - The same **feature area**, screens, routes, or APIs touched by the PR
    - The same **user journey** or business rules changed in product code
    - **Sibling** scenarios under the same story folder when the story’s scope overlaps the PR
-3. **Exclude** scenarios already covered by **new** tests authored in this run (unless you still want a regression run for confidence).
+3. **Exclude** scenarios already covered by **new** tests authored in this run (unless you still want them in the related set).
 4. Optionally corroborate with MCP/CLI **`get-requirement-coverage`** scoped to affected **`plans/...`** folders (omit **`--branch-name`** unless you need one branch only).
-5. Record on the branch plan: **`#TS-…`** id, title, **why** it is in the regression set.
+5. Record on the branch plan: **`#TS-…`** id, title, **why** it is in the related set.
 
 **Never invent** `#TS-…` ids—only ids present in plan files or returned by the platform.
-
-### 2) Resolve linked SmartTests
 
 From the SmartTests root (directory containing **`.testchimp-tests`**):
 
 1. Search **`*.spec.{js,ts}`** for each affected scenario id using **both**:
    - **Canonical:** `type: 'scenario'` (or `type: "scenario"`) with `description: '#TS-<n>'` (or `"#TS-<n>"`) in the test’s `annotation` array
-   - **Deprecated (still linked):** `// @Scenario: #TS-<n>` comments
+   - **Deprecated (still linked):** `// @Scenario: #TS-<n>` comments  
    A spec may cover **multiple** scenarios.
-2. Build a **deduplicated** list of spec files (and API tests if they use the same annotation / comment convention).
-3. Record the list on the branch plan under **Phase 5 completion**.
+2. Build **TestLocators** for each matching test — paths **relative to the SmartTests / mapped tests root**; **`folderPath` must not** prefix `tests/` (e.g. `["auth"]`, not `["tests","auth"]`). Include `fileName`, `testSuite`, `testName`.
+3. Write **`plans/smart-smoke/<branch>/related-tests.json`** (array or `{ "relatedTests": […] }`). Record the path on the branch plan under **Phase 5 completion**.
 
-### 3) Run the regression suite
+### 2) Collaborate on smoke config
 
-- **`cd`** SmartTests root; run per [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) — **Preamble #4** required.
-- Prefer **headless** for regression unless debugging (headed default remains for **authoring** per `SKILL.md`).
-- Re-run after fixes until **pass** or each failure is **explicitly blocked** with next steps.
+Agree with the user (or record on the plan in non-interactive mode):
+
+- **Related-tests-only** (preferred **safe default**) — `TESTCHIMP_SMART_SMOKE_RELATED_TESTS_ONLY=true` (or `1`): run only locators from `related-tests.json`.
+- **Budgeted smoke** — size via `TESTCHIMP_SMART_SMOKE_MAX_TIME_BUDGET_MINS` / `MAX_TESTS` / `SUITE_PERCENTAGE` plus optional `INCLUDE_TAGS` (Playwright **`tag: '@smoke'`** only — not group annotations). Project defaults may live in `use.testchimpSmartSmoke` (`suitePercentage: 20`, `includeTags: ['smoke']`) but **never auto-enable**.
+
+Enable the run with **`TESTCHIMP_SMART_SMOKE_ENABLED=true`** (or `1`). Set **`TESTCHIMP_BRANCH_NAME`** to the current branch when not already set by CI.
+
+### 3) Run the smoke suite
+
+- **`cd`** SmartTests root; export Preamble **#4** + smart-smoke env; run per [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) — **same** `npx playwright test` (no `--smart-smoke` / bin flags).
+- Prefer **headless** for smoke unless debugging (headed default remains for **authoring** per `SKILL.md`).
+- Re-run after fixes until **pass** or each failure is **explicitly blocked** with next steps (keep smart-smoke env on re-runs).
 
 ### 4) Rectify failures
 
@@ -580,20 +585,21 @@ If a failure reveals a **missing** scenario for new behavior, add it to the bran
 ### Phase 5 checklist
 
 - [ ] Affected scenarios identified from **plans + PR** (listed on branch plan).
-- [ ] Linked specs resolved via scenario **`annotation`** / deprecated `// @Scenario:` grep (listed on branch plan).
-- [ ] Regression suite executed with real runner (**`TESTCHIMP_API_KEY`** on process).
+- [ ] **`plans/smart-smoke/<branch>/related-tests.json`** written (TestLocators; no `tests/` prefix on `folderPath`).
+- [ ] Smoke mode agreed: **related-tests-only** (safe default) or budgeted; `TESTCHIMP_SMART_SMOKE_ENABLED` (+ overrides) set.
+- [ ] Smoke suite executed with real runner (**`TESTCHIMP_API_KEY`** on process) via normal `npx playwright test`.
 - [ ] Failures triaged; tests and/or product updated; suite re-run to green or explicit blockers recorded.
-- [ ] Branch plan **§7 ExploreChimp targets** updated to include **regression-touched** UI specs (if **§7** is **`yes`**).
-- [ ] Best-effort **`report-agent-action`** on mutating regression fixes (same ULID as the run-qa plan).
+- [ ] Branch plan **§7 ExploreChimp targets** updated to include **smoke-touched** UI specs (if **§7** is **`yes`**).
+- [ ] Best-effort **`report-agent-action`** on mutating smoke fixes (same ULID as the run-qa plan).
 
 ### Phase 5 completion gate (Phase 5 → Phase 6)
 
 Record in branch plan file:
 
-- [ ] Affected scenarios + linked spec paths documented (or **`N/A`** + rationale per **§6**).
-- [ ] Regression run results recorded (pass / fail / blocked).
+- [ ] Affected scenarios + `related-tests.json` documented (or **`N/A`** + rationale per **§6**).
+- [ ] Smoke mode + run results recorded (pass / fail / blocked).
 - [ ] Any **materially changed** existing specs noted for **Phase 6** ExploreChimp scope.
-- [ ] **Handoff to Phase 6:** If **§7** is **`yes`**, confirm ExploreChimp target list = **union** of new UI specs, changed UI specs, and regression-updated UI specs with **`markScreenState`** (add markers in Phase 4 or a quick Validate pass on touched regression specs if UI flows changed).
+- [ ] **Handoff to Phase 6:** If **§7** is **`yes`**, confirm ExploreChimp target list = **union** of new UI specs, changed UI specs, and smoke-updated UI specs with **`markScreenState`** (add markers in Phase 4 or a quick Validate pass on touched smoke specs if UI flows changed).
 
 ---
 
@@ -611,7 +617,7 @@ Run ExploreChimp on the **union** of:
 
 1. **New** UI SmartTests authored for this PR (branch plan inventory).
 2. **Materially changed** UI SmartTests from this PR (edits in Execute/Validate).
-3. **Regression suite** UI SmartTests that were **executed or updated** in **Phase 5** (existing linked specs—not only net-new files).
+3. **Smoke suite** UI SmartTests that were **executed or updated** in **Phase 5** (existing linked specs—not only net-new files).
 
 **Do not** limit Phase 6 to newly authored tests only. Pure API specs remain out of scope ([`run-explorechimp.md`](./run-explorechimp.md)).
 
@@ -630,7 +636,7 @@ Record in branch plan file:
 
 - [ ] ExploreChimp batch **completed** per plan, or **`N/A`** with justification (per **§7**).
 - [ ] Platform exploration status is **completed** (not left **In progress**) for the batch id used.
-- [ ] Target spec list matches **new + changed + regression-touched** UI coverage (not new-only).
+- [ ] Target spec list matches **new + changed + smoke-touched** UI coverage (not new-only).
 
 ---
 
@@ -661,8 +667,8 @@ At the end, report:
 - What changed in system infra (seed/probe/TrueCoverage).
 - What changed in test infra (fixtures/mocks).
 - What tests were added/updated and their run results.
-- **Smart regression (Phase 5):** affected scenarios, linked specs run, pass/fail, and any existing tests updated—or **`N/A`** with rationale.
-- **ExploreChimp (Phase 6):** executed per branch plan **§7** (specs targeted: new + changed + regression-touched) when **`yes`**, or **`N/A`** with rationale on the plan; whether **`## ExploreChimp`** in **`ai-test-instructions.md`** was updated.
+- **Smart smoke (Phase 5):** related-tests.json path, smoke mode, run pass/fail, and any existing tests updated—or **`N/A`** with rationale.
+- **ExploreChimp (Phase 6):** executed per branch plan **§7** (specs targeted: new + changed + smoke-touched) when **`yes`**, or **`N/A`** with rationale on the plan; whether **`## ExploreChimp`** in **`ai-test-instructions.md`** was updated.
 - Validate outcomes (scenario-link audit: pass/fail/anomalies fixed).
 - Any cleanup done (local env stop, ephemeral env destroy, temp artifacts removed, generated artifacts not committed).
 - Whether **`ai-test-instructions.md`** FAQ (**`## Past learnings — authoring & validation (FAQ)`**) was **updated** with any new Q/A entries from this run (or explicitly **none**).

@@ -5,7 +5,7 @@ version: 1.0.0
 
 ### Summary
 
-How this project procures and connects to test environments for create-tests, smart regression, ExploreChimp, and related flows.
+How this project procures and connects to test environments for create-tests, smart smoke, ExploreChimp, and related flows.
 
 ### Pre-Execute Workflows
 

@@ -6,7 +6,7 @@
 
 **Synonyms:** `/testchimp provision test environment`
 
-Bring up or connect to the environment used for create-tests, smart regression, ExploreChimp, DAST, etc.
+Bring up or connect to the environment used for create-tests, smart smoke, ExploreChimp, DAST, etc.
 
 ## Policy (required)
 

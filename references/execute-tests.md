@@ -8,7 +8,7 @@
 
 **Synonym form:** `/testchimp execute tests <folder scope / file path> in <env>`
 
-This playbook executes **existing** SmartTests for an **explicit** folder or file scope against a **named** environment. It is **not** full `/testchimp run QA` (author + validate + ExploreChimp) and **not** [`run-smart-regression`](./run-smart-regression.md) (affected-suite selection from plans/diff). Prefer this when the user (or UI copy-prompt) already knows which specs to execute.
+This playbook executes **existing** SmartTests for an **explicit** folder or file scope against a **named** environment. It is **not** full `/testchimp run QA` (author + validate + ExploreChimp) and **not** [`run-smart-smoke`](./run-smart-smoke.md) (affected-suite selection from plans/diff). Prefer this when the user (or UI copy-prompt) already knows which specs to execute.
 
 **Policy:** Resolve `connect-to-test-env` via `--policy` → `connect-to-test-env.policy.md` → matching frontmatter → fallback in `plans/knowledge/ai-test-instructions.md`. See [`policies-and-traceability.md`](./policies-and-traceability.md). Optional `execute-tests.policy.md` may refine runner flags; it is not required for catalog status.
 
@@ -21,7 +21,7 @@ This playbook executes **existing** SmartTests for an **explicit** folder or fil
 | User intent | Where to go |
 |-------------|-------------|
 | Execute a known folder/file against an env | **This file** (`execute-tests`) |
-| Select affected + related specs from plans/diff | [`run-smart-regression.md`](./run-smart-regression.md) |
+| Select related / budgeted smart smoke from plans/diff | [`run-smart-smoke.md`](./run-smart-smoke.md) |
 | Full PR QA loop | [`run-qa.md`](./run-qa.md) |
 | Configure CI to run tests | [`configure-ci-test-execution.md`](./configure-ci-test-execution.md) |
 
@@ -31,7 +31,7 @@ This playbook executes **existing** SmartTests for an **explicit** folder or fil
 
 Parse from the user prompt:
 
-1. **Scope** — SmartTests-relative folder path (e.g. `tests/auth`) or file path (e.g. `tests/checkout/cart.spec.ts`). If omitted, ask which folder/file to execute (do not invent a smart-regression selection).
+1. **Scope** — SmartTests-relative folder path (e.g. `tests/auth`) or file path (e.g. `tests/checkout/cart.spec.ts`). If omitted, ask which folder/file to execute (do not invent a smart-smoke selection).
 2. **Environment** — name after `in` (e.g. `QA`, `Staging`). Maps to **`TESTCHIMP_ENV=<env>`** and dotenv **`.env-<env>`** under the SmartTests root (directory containing **`.testchimp-tests`**). Default **`QA`** if the user omitted env and a `.env-QA` exists.
 
 ---

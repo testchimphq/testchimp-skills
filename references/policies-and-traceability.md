@@ -18,13 +18,14 @@ When **authoring** or updating one: capture those decisions in plain markdown un
 
 ## Scoping (overarching — all workflows)
 
-Resolve **what to work on** in this order. This rule is **not** workflow-specific; individual playbooks and policy `### Scoping Rules` may **narrow or specialize** it (e.g. Smart regression’s identification steps) but must not contradict it.
+Resolve **what to work on** in this order. This rule is **not** workflow-specific; individual playbooks and policy `### Scoping Rules` may **narrow or specialize** it (e.g. Smart smoke’s identification steps) but must not contradict it.
 
 0. **Working branch (cloud / automation prompts)** — If the prompt includes a line `Working branch: <name>` (injected by the platform outside the editable Tasks block), **check out that branch before scoping or planning** (`git fetch && git checkout <name>`). Do **not** ask the user which branch to use in `--mode=non-interactive` or other non-interactive cloud runs. If you are already on that branch (typical for local agents), treat the line as confirmatory and continue. After checkout of the **default** branch for an **`implement`** workflow, create a **new feature branch** before coding (same rule as Raise a PR below).
 1. **Explicit scope** — user (or trigger) named plans paths, scenario/story ordinals, files, plain-English focus, or similar → use that as the scope.
 2. **Feature / PR branch** (no explicit scope) — scope = **changes on this branch** (diff vs the merge base / default branch): touched plans, code, and linked tests.
 3. **Default branch** (no explicit scope) — scope = **changes since the last run of the same workflow**:
    - Call **`get-last-run-workflow-detail`** (`workflowId`, optional `branchName`, optional `userId`).
+   - For **`run-smart-smoke`**: prefer `workflowId: run-smart-smoke`; if no last run, **fall back once** to `workflowId: run-smart-regression` (one-release legacy id).
    - If a last run exists and is a useful bound, use commits/changes since that run’s git SHA / start.
    - If missing, stale, or ambiguous: **ask the user** whether to focus on the last few commits (and since when) vs a broader window — get consent before proceeding. In **non-interactive** mode, prefer the last-run bound when available; otherwise use a short recent window (e.g. last few commits) rather than blocking.
 
@@ -241,7 +242,7 @@ At end of every **standalone** Execute (or when aborting), report **`ACTION_COMP
 
 **Required** before treating any **standalone** catalog workflow as done (and for composite parents like `run-qa` / `upkeep` / `implement`). Nested subflows **do not** emit their own `ACTION_COMPLETED` — the parent reuses the same ULID and closes once.
 
-**Applies to every catalog workflow** that mints a `workflow_execution_id` (including thin playbooks: `fix-issue`, `fix-test-execution`, `cleanup`, `execute-tests`, `author-plans`, `run-explorechimp`, `connect-to-test-env`, `run-smart-regression`, `run-requirement-quality-checks`, `instrument-truecoverage`, `create-policy`, `run-release-check`, `import`, …). Omitting this step leaves the platform with a plan support file but **no** `workflow_executions` row (or a stuck `RUNNING` timeline).
+**Applies to every catalog workflow** that mints a `workflow_execution_id` (including thin playbooks: `fix-issue`, `fix-test-execution`, `cleanup`, `execute-tests`, `author-plans`, `run-explorechimp`, `connect-to-test-env`, `run-smart-smoke`, `run-requirement-quality-checks`, `instrument-truecoverage`, `create-policy`, `run-release-check`, `import`, …). Omitting this step leaves the platform with a plan support file but **no** `workflow_executions` row (or a stuck `RUNNING` timeline).
 
 ### Steps (blocking before “done”)
 

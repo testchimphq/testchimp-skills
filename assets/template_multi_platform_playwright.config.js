@@ -23,6 +23,11 @@ export default defineConfig({
     actionTimeout: 15 * 1000,
     trace: 'retain-on-failure',
     screenshot: 'on',
+    /* Smart-smoke defaults. Never auto-enable — set TESTCHIMP_SMART_SMOKE_ENABLED=true (or 1) per run. */
+    testchimpSmartSmoke: {
+      suitePercentage: 20,
+      includeTags: ['smoke'],
+    },
   },
   projects: [
     {

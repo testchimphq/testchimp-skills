@@ -24,7 +24,7 @@ Before selecting sources or reporting bugs, read **`plans/knowledge/policies/run
 | User intent | Where to go |
 |-------------|-------------|
 | **ExploreChimp as the primary goal** (pick tests, scope, env, interpret results) | This file + user’s scope. Treat semantically like **`/testchimp explore`**: same playbook, with **extra user instructions** on area, depth, or test list when needed. |
-| **Explorations inside full PR QA** | [`run-qa.md`](./run-qa.md) — **Phase 5: Smart regression** after **Phase 4: Validate**; then branch plan **[Phase 2 §7 — ExploreChimp branch plan (yes or documented N/A)](./run-qa.md#7-explorechimp-branch-plan-yes-or-documented-na)** records **`yes`** (default for **new or materially changed UI SmartTests**) or **`N/A`** with one-line rationale. **Phase 6** runs after Phase 5 when **`yes`** on specs that are **new, materially changed, and regression-touched**; then **Phase 7: Cleanup**. |
+| **Explorations inside full PR QA** | [`run-qa.md`](./run-qa.md) — **Phase 5: Smart smoke** after **Phase 4: Validate**; then branch plan **[Phase 2 §7 — ExploreChimp branch plan (yes or documented N/A)](./run-qa.md#7-explorechimp-branch-plan-yes-or-documented-na)** records **`yes`** (default for **new or materially changed UI SmartTests**) or **`N/A`** with one-line rationale. **Phase 6** runs after Phase 5 when **`yes`** on specs that are **new, materially changed, and smoke-touched**; then **Phase 7: Cleanup**. |
 | **`/testchimp evolve`** (coverage improvement cycle) | [`upkeep.md`](./upkeep.md) — Use **TrueCoverage** signals (drop-offs, high-duration / high-demand events, automation gaps) to choose **which UI SmartTests** to run with ExploreChimp; **new tests** written in the same evolve cycle are valid targets once stable with **`markScreenState`**. |
 
 ---
@@ -88,8 +88,8 @@ Standalone **`/testchimp explore`:** if no branch plan exists, still inform or a
 
 ## Choosing which tests to include
 
-- **`/testchimp test` (Phase 6):** Run ExploreChimp on the **union** of **new**, **materially changed**, and **regression-touched** UI SmartTests from the branch plan **§7** (after **Phase 5: Smart regression**)—not only net-new specs—**filtered by platform scope** when applicable. See [Phase 6: ExploreChimp](./run-qa.md#phase-6-explorechimp) in [`run-qa.md`](./run-qa.md).
-- **PR / branch focus (standalone `/testchimp explore`):** Prefer **new or materially updated** SmartTests on the branch, plus any **linked regression** specs the user names.
+- **`/testchimp test` (Phase 6):** Run ExploreChimp on the **union** of **new**, **materially changed**, and **smoke-touched** UI SmartTests from the branch plan **§7** (after **Phase 5: Smart smoke**)—not only net-new specs—**filtered by platform scope** when applicable. See [Phase 6: ExploreChimp](./run-qa.md#phase-6-explorechimp) in [`run-qa.md`](./run-qa.md).
+- **PR / branch focus (standalone `/testchimp explore`):** Prefer **new or materially updated** SmartTests on the branch, plus any **linked smoke** specs the user names.
 - **User gave an area / feature:** Read specs and existing **`markScreenState`** / **`list-screen-states`** vocabulary to see which **screens and states** each test visits; pick the **minimal** set that covers the requested flows.
 - **One screen:** Pick (or add) a short test that reaches that screen with a marker after the UI stabilizes.
 - **Release targeting** (prompt like `/testchimp run explorechimp targeting release '<name>'` or `/testchimp explore` with a release): see [Targeting a release](#targeting-a-release-release-checks).
@@ -211,7 +211,7 @@ Mirror **FAQ-worthy** runner issues in **`## Past learnings — authoring & vali
 - [`write-smarttests.md`](./write-smarttests.md) — **`markScreenState`**, atlas MCP tools, authoring order
 - [`cli.md`](./cli.md) — **`testchimp list-screen-states`**, **`testchimp upsert-screen-states`** (§ **Screen-state atlas**)
 - [`platform-scope.md`](./platform-scope.md) — PR-branch **web / ios / android** scope: deduce, inform, or ask (test + explore)
-- [`run-qa.md`](./run-qa.md) — **Phase 4** markers + **Phase 5** Smart regression + **Phase 6** ExploreChimp (**default-on** for UI SmartTest deltas; **[§7](./run-qa.md#7-explorechimp-branch-plan-yes-or-documented-na)** **`yes`** or **`N/A`**) on **new + changed + regression-touched** UI specs
+- [`run-qa.md`](./run-qa.md) — **Phase 4** markers + **Phase 5** Smart smoke + **Phase 6** ExploreChimp (**default-on** for UI SmartTest deltas; **[§7](./run-qa.md#7-explorechimp-branch-plan-yes-or-documented-na)** **`yes`** or **`N/A`**) on **new + changed + smoke-touched** UI specs
 - [`upkeep.md`](./upkeep.md) — **TrueCoverage → test selection → ExploreChimp** in **`/testchimp evolve`**
 - [`fixture-usage.md`](./fixture-usage.md) — `mergeTests` / **`fixtures/index.js`**
 - [`init-testchimp.md`](./init-testchimp.md) — `ai-test-instructions.md` template

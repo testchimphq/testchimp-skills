@@ -53,6 +53,11 @@ export default defineConfig({
     trace: 'retain-on-failure',
     /* Capture screenshots when tests fail */
     screenshot: 'on',
+    /* Smart-smoke defaults. Never auto-enable — set TESTCHIMP_SMART_SMOKE_ENABLED=true (or 1) per run. */
+    testchimpSmartSmoke: {
+      suitePercentage: 20,
+      includeTags: ['smoke'],
+    },
   },
 
   projects: [

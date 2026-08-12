@@ -49,7 +49,9 @@ Playwright tags on each test (`tag: '@<value>'` or `tag: ['@a', '@b']`) using
 each entry's instructions. Use Playwright annotations only for scenario linking
 (`{ type: 'scenario', description: '#TS-…' }`). Never emit
 `{ type: 'group', description: '…' }` — Playwright CLI cannot filter by
-annotations (`npx playwright test --grep @smoke` filters tags). Do not invent
-tag values outside this list. If `tags:` is missing but legacy `annotations:`
-exists, treat listed `values` as tags (emit `tag: '@<value>'`, not group
-annotations).
+annotations (`npx playwright test --grep @smoke` filters tags), and
+**smart smoke** (`run-smart-smoke` / `use.testchimpSmartSmoke.includeTags`)
+matches Playwright tags only (e.g. `@smoke`), not group annotations. Do not
+invent tag values outside this list. If `tags:` is missing but legacy
+`annotations:` exists, treat listed `values` as tags (emit `tag: '@<value>'`,
+not group annotations).

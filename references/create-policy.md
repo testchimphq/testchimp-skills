@@ -127,7 +127,7 @@ Do **not** invent complex playbook logic — record the team’s choices so agen
 Ask relevant questions about agent **adherence** for that workflow, then write the policy accordingly. Examples:
 
 - **`run-explorechimp`** — common issue types that should not be captured; areas to focus more thoroughly on; screens/paths to skip.
-- **`create-tests` / `run-smart-regression`** — naming, folder conventions, mocks vs live, flaky-test handling.
+- **`create-tests` / `run-smart-smoke`** — naming, folder conventions, mocks vs live, flaky-test handling.
 - **`cleanup`** — aggressiveness, retention, paths never to delete.
 - Composites (**`run-qa` / `upkeep`**) — which subflows to include/skip and order overrides (see default assets).
 
