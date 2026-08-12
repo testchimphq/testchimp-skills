@@ -41,43 +41,43 @@ version: <semver string, e.g. 1.0.0>
 ---
 ```
 
-**Global policy** (`plans/knowledge/policies/global.policy.md`) is different: frontmatter uses **`policy-kind: global`** and **`version`** — **no** `workflow-id`. It holds project-wide suite goals (coverage target, prioritization signals, suite size / annotation constraints). Fetch via **`get-policy --policy-file-name global.policy.md`** (or `--json-input '{"policyFileName":"global.policy.md"}'`). Default seed: [`assets/policies/global.policy.md`](../assets/policies/global.policy.md).
+**Global policy** (`plans/knowledge/policies/global.policy.md`) is different: frontmatter uses **`policy-kind: global`** and **`version`** — **no** `workflow-id`. It holds project-wide suite goals (coverage target, prioritization signals, suite size / tag constraints). Fetch via **`get-policy --policy-file-name global.policy.md`** (or `--json-input '{"policyFileName":"global.policy.md"}'`). Default seed: [`assets/policies/global.policy.md`](../assets/policies/global.policy.md).
 
-### Global policy → suite annotations (required when authoring tests)
+### Global policy → suite tags (required when authoring tests)
 
-Under **`## Test suite management` → `annotations:`**, the project defines **Playwright annotation types** used to tag SmartTests (suite organization — distinct from scenario-link annotations). Agents **must** read this list before authoring or updating tests in **`run-qa`**, **`create-tests`**, **`upkeep`**, or any nested test-authorship subflow.
+Under **`## Test suite management` → `tags:`**, the project defines **Playwright tags** used to group SmartTests (suite organization — CLI-filterable). **Annotations** are reserved for scenario linking (`type: 'scenario'`). Agents **must** read this list before authoring or updating tests in **`run-qa`**, **`create-tests`**, **`upkeep`**, or any nested test-authorship subflow.
 
-For **each** annotation entry in the policy:
+**Why tags, not grouping annotations:** Playwright CLI can filter with `--grep @smoke`. It **cannot** filter by custom annotations such as `{ type: 'group', description: 'smoke' }`. Never emit `group` (or other suite-grouping) annotations.
+
+For **each** tag entry in the policy:
 
 | Field | Meaning |
 | --- | --- |
-| `type` | Playwright annotation `type` string (e.g. `group`) |
-| `value_mode` | `fixed` = choose only from `values`; `free-form` = any description allowed by `instructions` |
-| `values` | Allowed `description` values when `value_mode: fixed` (e.g. `smoke`, `regression`) |
-| `instructions` | **When** to apply which value — follow this text; do not invent alternate tagging schemes |
+| `value` | Tag name **without** `@` (e.g. `smoke`). Agents emit `tag: '@smoke'`. |
+| `instructions` | **When** to apply this tag — follow this text; a test may receive **multiple** tags independently |
 
 **Apply on every new/changed SmartTest:**
 
 1. Read local **`plans/knowledge/policies/global.policy.md`** (or **`get-policy --policy-file-name global.policy.md`**).
-2. For each configured annotation type, decide the value using that entry’s **`instructions`** (and the test’s role: critical-path vs broader coverage, etc.).
-3. Add a Playwright annotation in the same `annotation` array as scenario links:
-   - `type` = policy `type` (exact string)
-   - `description` = chosen value (exact string from `values` when fixed)
-4. If the policy defines **multiple** annotation types, apply **each** type that the instructions call for (usually one value per type).
-5. If **`annotations:`** is missing/empty: no suite tags required (scenario `annotation` links still required).
+2. Prefer **`tags:`**. If `tags:` is missing but legacy **`annotations:`** exists, treat each listed `values` entry (or free-form instruction) as a tag value — still emit Playwright **`tag`**, never `{ type: 'group' }`.
+3. For each configured tag, decide whether to apply it using that entry’s **`instructions`**.
+4. Add matching Playwright tags on the test options: `tag: '@smoke'` or `tag: ['@smoke', '@p0']`.
+5. Keep scenario links as **annotations** only: `{ type: 'scenario', description: '#TS-…' }`.
+6. When touching a spec that still has `{ type: 'group', description: '…' }`, migrate those to tags.
+7. If **`tags:`** is missing/empty **and** there is no legacy `annotations:` list: no suite tags required (scenario `annotation` links still required).
 
-**Default seed example** (`type: group`, values `smoke` / `regression`):
+**Default seed example** (`smoke` / `regression`):
 
 ```js
 test('critical checkout path', {
+  tag: '@smoke',
   annotation: [
     { type: 'scenario', description: '#TS-101' },
-    { type: 'group', description: 'smoke' },
   ],
 }, async ({ page }) => { /* … */ });
 ```
 
-Full authoring rules: [`write-smarttests.md`](./write-smarttests.md) § **Suite annotations from global policy**.
+Full authoring rules: [`write-smarttests.md`](./write-smarttests.md) § **Suite tags from global policy**.
 
 Optional recommended sections for workflow policies: `### Summary`, `### Pre-Execute Workflows`, `### Post-Execute Workflows`, `### Subflows` (composites), `### Scoping Rules`, then workflow-specific body.
 

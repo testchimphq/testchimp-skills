@@ -42,20 +42,20 @@ When nested under run-qa / upkeep, inherit the **parent** scope and plan.
 | API tests / **API operation coverage scopes** | [`api-testing.md`](./api-testing.md) (coverage strategy: update existing UI or API tests; dedicated `api/` specs are one option) |
 | Seeds / probes | [`seeding-endpoints.md`](./seeding-endpoints.md) |
 | Environment | [`connect-to-test-env.md`](./connect-to-test-env.md) |
-| Suite tags / goals | Project **`plans/knowledge/policies/global.policy.md`** (seed: [`assets/policies/global.policy.md`](../assets/policies/global.policy.md); or **`get-policy --policy-file-name global.policy.md`**) — coverage target, prioritization, **`annotations:`** |
+| Suite tags / goals | Project **`plans/knowledge/policies/global.policy.md`** (seed: [`assets/policies/global.policy.md`](../assets/policies/global.policy.md); or **`get-policy --policy-file-name global.policy.md`**) — coverage target, prioritization, **`tags:`** |
 
 For Arrange → Act → Assert planning and Execute batching when running as part of run-qa, reuse the Execute guidance in [`run-qa.md`](./run-qa.md) without re-running Analyze/Plan.
 
-### Global policy annotations (blocking before authoring)
+### Global policy tags (blocking before authoring)
 
 Before writing or updating any SmartTest:
 
-1. Read **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `annotations:`** (CLI: **`get-policy --policy-file-name global.policy.md`**).
-2. For each annotation type, use its **`instructions`** to choose the Playwright `description` (`value_mode: fixed` → only listed `values`).
-3. Put `{ type: '<policy-type>', description: '<value>' }` on every new/changed test in the same `annotation` array as scenario links (e.g. `{ type: 'group', description: 'smoke' }`).
-4. Do not invent types/values outside the policy. If `annotations:` is empty, suite tags are **`N/A`**.
+1. Read **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `tags:`** (CLI: **`get-policy --policy-file-name global.policy.md`**). If `tags:` is missing, treat legacy **`annotations:`** `values` as tags.
+2. For each tag, use its **`instructions`** to decide whether to apply it. A test may receive multiple tags.
+3. Put `tag: '@<value>'` (or `tag: ['@a', '@b']`) on every new/changed test. Keep scenario links as `{ type: 'scenario', description: '#TS-…' }` on `annotation` only.
+4. Do not invent tag values outside the policy. Never emit `{ type: 'group', description: '…' }`. If `tags:` is empty (and no legacy `annotations:`), suite tags are **`N/A`**.
 
-Canonical rules: [`write-smarttests.md`](./write-smarttests.md) §6b · [`policies-and-traceability.md`](./policies-and-traceability.md)#global-policy--suite-annotations-required-when-authoring-tests.
+Canonical rules: [`write-smarttests.md`](./write-smarttests.md) §6b · [`policies-and-traceability.md`](./policies-and-traceability.md)#global-policy--suite-tags-required-when-authoring-tests.
 
 ---
 
@@ -86,7 +86,7 @@ After Plan approval (standalone) or when the parent hands off (nested):
 1. **[`@testchimp/playwright` upgrade](#testchimpplaywright-upgrade-autonomous)** — complete before any new/changed specs or runner invocations.
 2. **[`connect-to-test-env.md`](./connect-to-test-env.md)** when the parent has not already brought the env up.
 3. **Filter by verification strategy (required before authoring):** After the in-scope scenario ordinals are known (from coverage, plans, or the approved plan), call **`get-spec-lifecycle-details --scenario-ids …`** (CLI ≥ **0.1.30** / MCP `get-spec-lifecycle-details`) in one batch. For each scenario, read `lifecycleFields.verification_strategy`. **Skip** scenarios where the value is **`manual`**. Missing / empty → treat as **`auto`**. Only author SmartTests for **`auto`** scenarios. Note skipped manual scenarios on the plan. Do **not** infer this from plan markdown frontmatter — it is platform lifecycle only.
-4. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan (automated scenarios only) — include **suite annotations** from [Global policy annotations](#global-policy-annotations-blocking-before-authoring).
+4. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan (automated scenarios only) — include **suite tags** from [Global policy tags](#global-policy-tags-blocking-before-authoring).
 5. Run and triage with the real runner; report workflow completion when standalone.
 
 ---

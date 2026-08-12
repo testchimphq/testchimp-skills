@@ -20,13 +20,13 @@ version: 1.0.0
 - max_full_suite_duration_minutes: 120
 - max_test_count: 0
 - max_new_tests_per_workflow_execution: 0
-- annotations:
-  - type: group
-    value_mode: fixed
-    values: [smoke, regression]
+- tags:
+  - value: smoke
     instructions: |
-      Use smoke for critical path checks run on every PR.
-      Use regression for broader suite coverage outside smoke.
+      Apply @smoke to critical-path checks intended to run on every PR.
+  - value: regression
+    instructions: |
+      Apply @regression to broader suite coverage outside the smoke subset.
 
 ## Notes for agents
 
@@ -41,7 +41,12 @@ covered_points / total_points.
 0 means unlimited for max_full_suite_duration_minutes, max_test_count,
 and max_new_tests_per_workflow_execution.
 
-When authoring or updating SmartTests, read `annotations:` above and add matching
-Playwright annotations on each test (`type` + `description` value) using that
-entry's instructions — e.g. `{ type: 'group', description: 'smoke' }` alongside
-scenario links. Do not invent types or fixed values outside this list.
+When authoring or updating SmartTests, read `tags:` above and add matching
+Playwright tags on each test (`tag: '@<value>'` or `tag: ['@a', '@b']`) using
+each entry's instructions. Use Playwright annotations only for scenario linking
+(`{ type: 'scenario', description: '#TS-…' }`). Never emit
+`{ type: 'group', description: '…' }` — Playwright CLI cannot filter by
+annotations (`npx playwright test --grep @smoke` filters tags). Do not invent
+tag values outside this list. If `tags:` is missing but legacy `annotations:`
+exists, treat listed `values` as tags (emit `tag: '@<value>'`, not group
+annotations).

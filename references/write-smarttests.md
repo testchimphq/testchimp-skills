@@ -133,31 +133,31 @@ Recommended takeover loop:
    });
    ```
 
-6b. **Suite annotations from global policy (required when configured)** — In addition to scenario links, tag tests per **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `annotations:`** (or **`get-policy --policy-file-name global.policy.md`**). These are ordinary Playwright `{ type, description }` annotations in the **same** `annotation` array. They organize the suite (e.g. smoke vs regression); they do **not** replace scenario links.
+6b. **Suite tags from global policy (required when configured)** — In addition to scenario links, tag tests per **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `tags:`** (or **`get-policy --policy-file-name global.policy.md`**). These are Playwright **`tag`** options (`tag: '@smoke'`), **not** custom annotations. They organize the suite so CLI can filter (`npx playwright test --grep @smoke`); they do **not** replace scenario-link annotations.
 
    **Before authoring any SmartTest** in `create-tests` / `run-qa` / `upkeep` (or nested authorship):
 
-   1. Read the global policy annotations list.
-   2. For **each** configured annotation type, choose a `description` using that entry’s **`instructions`**.
-   3. If `value_mode: fixed`, use **only** a value from `values` (exact string match).
-   4. If `value_mode: free-form`, follow `instructions` for allowed wording.
-   5. Emit `{ type: '<policy-type>', description: '<chosen-value>' }` on the test options.
+   1. Read the global policy **`tags:`** list (if missing, fall back to legacy **`annotations:`** `values` and treat them as tags).
+   2. For **each** configured tag, decide whether to apply it using that entry’s **`instructions`**. A test may receive **multiple** tags.
+   3. Emit `tag: '@<value>'` or `tag: ['@a', '@b']` on the test options. Store/read policy values **without** `@`.
+   4. Keep `{ type: 'scenario', description: '#TS-…' }` on the `annotation` array for requirement linking only.
+   5. **Never** emit `{ type: 'group', description: '…' }` (or other suite-grouping annotations). When touching a spec that still has them, migrate to tags.
    6. Record the planned tags on the workflow plan (so Execute does not skip them).
 
-   **Default policy (`group` / smoke|regression):** use `smoke` for critical-path checks intended on every PR; use `regression` for broader coverage outside smoke — unless the project’s `instructions` say otherwise.
+   **Default policy (`smoke` / `regression`):** apply `@smoke` for critical-path checks intended on every PR; apply `@regression` for broader coverage outside smoke — unless the project’s `instructions` say otherwise.
 
    ```js
    test('guest can reach checkout with valid cart', {
+     tag: '@smoke',
      annotation: [
        { type: 'scenario', description: '#TS-204' },
-       { type: 'group', description: 'smoke' },
      ],
    }, async ({ page }) => {
      // ...
    });
    ```
 
-   If the policy has **no** `annotations:` entries, skip suite tags (scenario annotations still required). Do **not** invent annotation types that are not in the policy. Details: [`policies-and-traceability.md`](./policies-and-traceability.md)#global-policy--suite-annotations-required-when-authoring-tests.
+   If the policy has **no** `tags:` entries (and no legacy `annotations:`), skip suite tags (scenario annotations still required). Do **not** invent tag values that are not in the policy. Details: [`policies-and-traceability.md`](./policies-and-traceability.md)#global-policy--suite-tags-required-when-authoring-tests.
 
 7. **Screen / state atlas workflow (`markScreenState`)** — follow this exact sequence (CLI details: [`cli.md`](./cli.md) § **Screen-state atlas**):
 
@@ -497,13 +497,13 @@ const title = await ai.extract(
 - `description` is **only** the ordinal id — no title text.
 - Keeps traceability **in the repo** and helps agents and TestChimp associate runs with scenarios.
 - Deprecated: `// @Scenario: #TS-<n> …` comments are still parsed for existing specs; **do not** author new ones.
-- Also add **suite annotations** from **`global.policy.md`** when configured (see §6b above) — e.g. `{ type: 'group', description: 'smoke' }` — in the same `annotation` array.
+- Also add **suite tags** from **`global.policy.md`** when configured (see §6b above) — e.g. `tag: '@smoke'` — separate from scenario `annotation` entries.
 
 ---
 
 ## Example SmartTest (full file)
 
-Illustrative end-to-end shape: **`test` / `expect` from the correct `fixtures/index.js` barrel** (merged `test` wrapped with **`installTestChimp`**), scenario + suite (`group`) annotations, plain Playwright plus one AI step. Adjust the relative import and selectors to match the repo scaffold.
+Illustrative end-to-end shape: **`test` / `expect` from the correct `fixtures/index.js` barrel** (merged `test` wrapped with **`installTestChimp`**), scenario annotation + suite tag (`@smoke`), plain Playwright plus one AI step. Adjust the relative import and selectors to match the repo scaffold.
 
 ```ts
 import { test, expect } from '../fixtures/index.js';
@@ -511,9 +511,9 @@ import { ai } from 'ai-wright';
 
 test.describe('Checkout (illustrative)', () => {
   test('guest can reach checkout with valid cart', {
+    tag: '@smoke',
     annotation: [
       { type: 'scenario', description: '#TS-204' },
-      { type: 'group', description: 'smoke' },
     ],
   }, async ({ page, test, markScreenState }) => {
     await page.goto(`/shop`);

@@ -73,7 +73,7 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
 
 - **Hard prerequisite before Analyze/Plan (decision memory):**
   - Before starting **Analyze** or drafting the branch plan, read `plans/knowledge/ai-test-instructions.md` and extract pre-agreed environment decisions from **`## Environment Provision Strategy`** (for example local spin-up vs Bunnyshell/EaaS vs staging/branch environment path, URL resolution, and health gates).
-  - Also read **`plans/knowledge/policies/global.policy.md`** when present (or **`get-policy --policy-file-name global.policy.md`**): honor the **coverage target** (percent / lifecycle / verification strategy) and **Test suite management → annotations** when planning and authoring tests. For each annotation type (`type`, `value_mode`, `values`, **`instructions`**), decide which Playwright `{ type, description }` suite tags each planned test will get, and **add those annotations when authoring** (same `annotation` array as scenario links). Default seed: `group` → `smoke` | `regression` per instructions. Full rules: [`policies-and-traceability.md`](./policies-and-traceability.md)#global-policy--suite-annotations-required-when-authoring-tests and [`write-smarttests.md`](./write-smarttests.md) §6b.
+  - Also read **`plans/knowledge/policies/global.policy.md`** when present (or **`get-policy --policy-file-name global.policy.md`**): honor the **coverage target** (percent / lifecycle / verification strategy) and **Test suite management → tags** when planning and authoring tests. For each tag (`value`, **`instructions`**), decide which Playwright `tag: '@…'` values each planned test will get, and **add those tags when authoring**. Keep scenario links as `{ type: 'scenario' }` annotations only. Default seed: `@smoke` | `@regression` per instructions. Full rules: [`policies-and-traceability.md`](./policies-and-traceability.md)#global-policy--suite-tags-required-when-authoring-tests and [`write-smarttests.md`](./write-smarttests.md) §6b.
   - The Plan must reflect and preserve those decisions. Do not defer this read until Execute.
 
 - **Plan first (no upfront smoke runs)**:
@@ -189,13 +189,13 @@ First, a short **numbered list of all tests** to be authored in this run (titles
 
 For **each** test, include **in this order**:
 
-### Suite annotations (from global policy)
+### Suite tags (from global policy)
 
-**Goal:** Tag the test for suite organization using **`global.policy.md` → Test suite management → annotations**.
+**Goal:** Tag the test for suite organization using **`global.policy.md` → Test suite management → tags**.
 
-- List each planned Playwright suite annotation as `{ type, description }` (e.g. `group` / `smoke`), chosen via that type’s **`instructions`**.
-- `value_mode: fixed` → description must be one of `values`. Omit this subsection only when the policy has no `annotations:` entries (**`N/A`** + one-line note).
-- Execute must emit these on the test options alongside scenario links ([`write-smarttests.md`](./write-smarttests.md) §6b).
+- List each planned Playwright tag as `@smoke` / `@regression` / custom value, chosen via that tag’s **`instructions`**. A test may receive multiple tags.
+- Omit this subsection only when the policy has no `tags:` entries and no legacy `annotations:` (**`N/A`** + one-line note).
+- Execute must emit `tag: '@…'` on the test options; scenario links stay on `annotation` ([`write-smarttests.md`](./write-smarttests.md) §6b). Never emit `{ type: 'group' }`.
 
 ### Arrange
 
@@ -252,7 +252,7 @@ Plain-English: the **expected system state** after **Act** (e.g. order **accepte
 
 For **each** test in the inventory:
 
-- [ ] **Suite annotations** planned from **`global.policy.md`** (or **`N/A`** — policy has no annotation types).
+- [ ] **Suite tags** planned from **`global.policy.md`** (or **`N/A`** — policy has no tags).
 - [ ] **World-state trace** completed: entities/flags from **Arrange** mapped to fixtures/seeds or explicitly listed as new work ([World-state → seed/fixture traceability](#world-state--seedfixture-traceability-required)).
 - [ ] **Arrange** states a clear **world state** (not implementation); **Fixtures plan** and **Seed endpoint updates** align with that state.
 - [ ] **Fixtures plan** names existing + new/updated fixtures (or `N/A` with justification if no Playwright fixture is used—rare for UI tests).
@@ -286,7 +286,7 @@ After the user approves the Plan, during **Execute** implement work in this orde
 
    - **Arrange (code):** Use the **fixtures** from that test’s **Fixtures plan** so the browser (or client) starts from the documented posture.
    - Add scenario **`annotation`** entries (`{ type: 'scenario', description: '#TS-…' }`) only after stories/scenarios were created in **Execute** (step before fixtures/tests, or earlier in this batch) with **real** ids from MCP/CLI — never invent, never leave plan markdown without `id:`. Do **not** write `// @Scenario:` comments.
-   - Add **suite annotations** from the plan’s **Suite annotations** subsection / **`global.policy.md`** (e.g. `{ type: 'group', description: 'smoke' }`) in the **same** `annotation` array — follow each type’s **`instructions`**; do not invent types or fixed values outside the policy.
+   - Add **suite tags** from the plan’s **Suite tags** subsection / **`global.policy.md`** (e.g. `tag: '@smoke'`) — follow each tag’s **`instructions`**; do not invent values outside the policy. Never emit `{ type: 'group', description: '…' }`.
    - **Act (code):** Implement the ordered steps from the Plan’s **Act** section (UI or API automation).
    - **Assert (code):** Implement the Plan’s **Assert** section: **UI validations** plus **probe-based API checks** from **Backend validations** where specified.
 
@@ -461,7 +461,7 @@ During Execute, the agent MUST maintain a checklist in the branch plan file and 
 
 ### 6) Tests (authoring + validations)
 
-- [ ] For **each** planned test: author SmartTest (and/or API test) using the named **fixtures**; add scenario **`annotation`** entries with real ids **and** suite annotations from **`global.policy.md`** / the plan; implement **Act**; implement **Assert** (UI + probe API calls as planned).
+- [ ] For **each** planned test: author SmartTest (and/or API test) using the named **fixtures**; add scenario **`annotation`** entries with real ids **and** suite tags from **`global.policy.md`** / the plan; implement **Act**; implement **Assert** (UI + probe API calls as planned).
 - [ ] When the user pastes a platform **Copy test generate prompt** for **`TS-<n>`**: call **`get-test-scenarios`** with that ordinal, then **`get-user-stories`** for linked story ordinals returned (see [`author-plans.md`](./author-plans.md)).
 - [ ] When the user pastes a **Copy test generate prompt** / **Copy prompt** / legacy **Copy script generate prompt** from the manual session viewer (or **`/testchimp author test for manual session`**): call **`get-manual-session-details`**, then follow [`author-test-from-manual-session.md`](./author-test-from-manual-session.md) (authoring-only; use **`linkedScenarioOrdinalIds`** for a single **`get-test-scenarios`** batch when plans are not synced).
 - [ ] **Insufficient context fallback (only after codebase inference fails):** If a planned scenario is too thin to author and the repo/PR still does not reveal the journey, **do not invent steps** — suggest Chrome-extension manual session capture (scenario selected) and wait for the pasted prompt. Guidance: [`write-smarttests.md`](./write-smarttests.md) § **Insufficient scenario context**; docs: [manual session capture](https://docs.testchimp.io/smart-tests/creating#2-from-manual-session-capture-chrome-extension). Continue other tests that have enough context.
@@ -486,7 +486,7 @@ Goal: ensure the resulting test suite is correctly linked to requirements and ca
 ### What to validate
 
 1. **Scenario-annotation audit (required)**
-   - For every SmartTest that should correspond to a scenario (also confirm **suite annotations** from **`global.policy.md`** are present when the policy defines annotation types — e.g. `group` / `smoke|regression`):
+   - For every SmartTest that should correspond to a scenario (also confirm **suite tags** from **`global.policy.md`** are present when the policy defines tags — e.g. `@smoke` / `@regression`):
      - Confirm there is at least one Playwright annotation `{ type: 'scenario', description: '#TS-<n>' }` on the test options (`description` is **only** the id — no title).
      - Legacy specs may still use deprecated `// @Scenario: #TS-<n> …` comments; treat those as linked for coverage, but **rewrite to annotations** when you touch the file.
 2. **Screen-state atlas (SmartTests) — during Validate only**
@@ -509,7 +509,7 @@ Goal: ensure the resulting test suite is correctly linked to requirements and ca
 Record in branch plan file:
 
 - [ ] Scenario-annotation audit completed for all touched/new SmartTests.
-- [ ] Suite annotations from **`global.policy.md`** present on touched/new SmartTests (or **`N/A`** — policy has no annotation types).
+- [ ] Suite tags from **`global.policy.md`** present on touched/new SmartTests (or **`N/A`** — policy has no tags).
 - [ ] Any missing links remediated (scenario created if needed; annotations added).
 - [ ] Screen/state vocabulary: **`testchimp list-screen-states`** (CLI) or MCP **`list-screen-states`** was used before atlas / `markScreenState` edits (or **`N/A`** with reason — e.g. no UI SmartTests touched).
 - [ ] Meaningful UI transitions in touched SmartTests have **`markScreenState`** at the right step, or **`N/A`** with reason (no meaningful transitions in scope).
