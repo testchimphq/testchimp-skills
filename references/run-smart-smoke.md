@@ -50,7 +50,7 @@ Using **scope** (above), **PR/branch diff** when on a feature branch, plan markd
    - The same **feature area**, screens, routes, or APIs touched by the change
    - The same **user journey** or business rules changed in product code
    - **Sibling** scenarios under the same story folder when the story’s scope overlaps the change
-3. **Exclude** scenarios already covered by **new** tests authored in this run (unless you still want them in the related set for confidence).
+3. Prefer keeping scenarios covered by **new** tests in the related set when they still add confidence; always include locators for those new tests themselves (next section).
 4. Optionally corroborate with MCP/CLI **`get-requirement-coverage`** scoped to affected **`plans/...`** folders (omit **`--branch-name`** unless you need one branch only).
 5. Record: **`#TS-…`** id, title, **why** it is in the related set (on the branch/evolve plan or a short standalone plan markdown).
 
@@ -69,9 +69,12 @@ From the SmartTests root (directory containing **`.testchimp-tests`**):
    - **`fileName`** / **`file_name`**: spec basename (e.g. `login.spec.ts`)
    - **`testSuite`** / **`test_suite`**: nested `test.describe` titles (array; empty if none)
    - **`testName`** / **`test_name`**: the test title
-3. Deduplicate by locator identity; record the list under completion notes on the plan.
+3. **Also include** every **new or materially changed** SmartTest from this run / PR (always).
+4. Deduplicate by locator identity; record the list under completion notes on the plan.
 
-### Write `related-tests.json`
+### Write `related-tests.json` (BLOCKING)
+
+**Required** for **`run-smart-smoke`**, **run-qa Phase 5**, and **create-tests** (see [`create-tests.md`](./create-tests.md)#related-testsjson-required). Do not run smart smoke until this file exists for the branch (unless plan records **`N/A`** with rationale).
 
 Write (create parents as needed):
 

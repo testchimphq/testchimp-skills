@@ -534,7 +534,9 @@ Goal: after **new/changed** tests are **authored and validated** (Phase 4), **an
 
 **Always** after **Phase 4** is green, unless the branch plan **§6** records **`N/A`** with rationale (e.g. greenfield repo with no existing scenarios, docs-only PR). **Do not** skip silently when existing plans and linked tests exist.
 
-### 1) Analyze impact → write `related-tests.json`
+### 1) Analyze impact → write `related-tests.json` (BLOCKING)
+
+**Do not** advance to smoke Execute (or Phase 6) until this file exists for the current branch — unless plan **§6** is **`N/A`** with rationale.
 
 Using **PR diff**, **branch plan §6**, and plan markdown under **`<MAPPED_PLANS_ROOT>`**:
 
@@ -543,9 +545,8 @@ Using **PR diff**, **branch plan §6**, and plan markdown under **`<MAPPED_PLANS
    - The same **feature area**, screens, routes, or APIs touched by the PR
    - The same **user journey** or business rules changed in product code
    - **Sibling** scenarios under the same story folder when the story’s scope overlaps the PR
-3. **Exclude** scenarios already covered by **new** tests authored in this run (unless you still want them in the related set).
-4. Optionally corroborate with MCP/CLI **`get-requirement-coverage`** scoped to affected **`plans/...`** folders (omit **`--branch-name`** unless you need one branch only).
-5. Record on the branch plan: **`#TS-…`** id, title, **why** it is in the related set.
+3. Optionally corroborate with MCP/CLI **`get-requirement-coverage`** scoped to affected **`plans/...`** folders (omit **`--branch-name`** unless you need one branch only).
+4. Record on the branch plan: **`#TS-…`** id, title, **why** it is in the related set.
 
 **Never invent** `#TS-…` ids—only ids present in plan files or returned by the platform.
 
@@ -556,7 +557,8 @@ From the SmartTests root (directory containing **`.testchimp-tests`**):
    - **Deprecated (still linked):** `// @Scenario: #TS-<n>` comments  
    A spec may cover **multiple** scenarios.
 2. Build **TestLocators** for each matching test — paths **relative to the SmartTests / mapped tests root**; **`folderPath` must not** prefix `tests/` (e.g. `["auth"]`, not `["tests","auth"]`). Include `fileName`, `testSuite`, `testName`.
-3. Write **`plans/smart-smoke/<branch>/related-tests.json`** (array or `{ "relatedTests": […] }`). Record the path on the branch plan under **Phase 5 completion**.
+3. **Also include** TestLocators for **every new or materially changed SmartTest** authored in this run (even if already covered by a scenario annotation). Nested **`create-tests`** should already have written/updated this file — **refine** it here (merge impact-related + new/changed), do not delete new-test locators.
+4. Write **`plans/smart-smoke/<branch>/related-tests.json`** (array or `{ "relatedTests": […] }`). Record the path on the branch plan under **Phase 5 completion**. Create parent dirs as needed.
 
 ### 2) Collaborate on smoke config
 
@@ -585,7 +587,7 @@ If a failure reveals a **missing** scenario for new behavior, add it to the bran
 ### Phase 5 checklist
 
 - [ ] Affected scenarios identified from **plans + PR** (listed on branch plan).
-- [ ] **`plans/smart-smoke/<branch>/related-tests.json`** written (TestLocators; no `tests/` prefix on `folderPath`).
+- [ ] **`plans/smart-smoke/<branch>/related-tests.json`** written (TestLocators for **new/changed + impact-related**; no `tests/` prefix on `folderPath`).
 - [ ] Smoke mode agreed: **related-tests-only** (safe default) or budgeted; `TESTCHIMP_SMART_SMOKE_ENABLED` (+ overrides) set.
 - [ ] Smoke suite executed with real runner (**`TESTCHIMP_API_KEY`** on process) via normal `npx playwright test`.
 - [ ] Failures triaged; tests and/or product updated; suite re-run to green or explicit blockers recorded.

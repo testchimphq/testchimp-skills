@@ -87,7 +87,36 @@ After Plan approval (standalone) or when the parent hands off (nested):
 2. **[`connect-to-test-env.md`](./connect-to-test-env.md)** when the parent has not already brought the env up.
 3. **Filter by verification strategy (required before authoring):** After the in-scope scenario ordinals are known (from coverage, plans, or the approved plan), call **`get-spec-lifecycle-details --scenario-ids …`** (CLI ≥ **0.1.30** / MCP `get-spec-lifecycle-details`) in one batch. For each scenario, read `lifecycleFields.verification_strategy`. **Skip** scenarios where the value is **`manual`**. Missing / empty → treat as **`auto`**. Only author SmartTests for **`auto`** scenarios. Note skipped manual scenarios on the plan. Do **not** infer this from plan markdown frontmatter — it is platform lifecycle only.
 4. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan (automated scenarios only) — include **suite tags** from [Global policy tags](#global-policy-tags-blocking-before-authoring).
-5. Run and triage with the real runner; report workflow completion when standalone.
+5. Run and triage with the real runner until green (or explicit blockers).
+6. **Write `plans/smart-smoke/<branch>/related-tests.json` (BLOCKING)** — see [Related-tests.json (required)](#related-testsjson-required). Do **not** close create-tests (standalone or nested) without this file for the current branch.
+7. Report workflow completion when standalone.
+
+---
+
+## Related-tests.json (required)
+
+**Blocking** after authoring (standalone **and** nested under run-qa / upkeep). CI smart-smoke and `/testchimp run smart smoke` load this file for the branch — if it is missing, related selection is empty.
+
+**Path:** `plans/smart-smoke/<branch_name>/related-tests.json`  
+(`<branch_name>` = current git branch; keep `/` segments as nested dirs.)
+
+**Must include TestLocators for:**
+
+1. **Every new or materially changed SmartTest** authored in this run (always).
+2. **Impact-related existing tests** — from PR/scope analysis: scenarios sharing the same feature area / journey / APIs as the change, then specs linked via `annotation: { type: 'scenario', description: '#TS-…' }` (see [`run-smart-smoke.md`](./run-smart-smoke.md) → *Analyze impact* / *Write `related-tests.json`*).
+
+**Format:** JSON array of TestLocators, or `{ "relatedTests": [ … ] }` / `{ "related_tests": [ … ] }`.  
+`folderPath` is relative to the SmartTests root and **must not** prefix `tests/` (e.g. `["auth"]`, not `["tests","auth"]`).
+
+**Also:** set / document **`TESTCHIMP_BRANCH_NAME=<branch>`** so runners load this path. Do **not** author `.testchimp-smart-smoke-selection.json` (plugin temp sidecar only).
+
+**Nested under run-qa:** writing this file here does **not** replace run-qa **Phase 5** (smoke execute + triage). Phase 5 may **refine** the same file, then run with `TESTCHIMP_SMART_SMOKE_ENABLED`. Record the path on the plan checklist.
+
+**Completion checklist:**
+
+- [ ] `plans/smart-smoke/<branch>/related-tests.json` exists and lists new/changed + impact-related locators
+- [ ] Path recorded on the workflow plan
+- [ ] File is included in the branch commit / PR when the rest of the authorship is
 
 ---
 
@@ -109,5 +138,5 @@ When the prompt is `/testchimp create tests for …` with an **API operation** i
 
 ## Standalone vs nested
 
-- **Standalone:** Plan → `upsert-plans-support-file` → user approval (unless non-interactive) → **`@testchimp/playwright` upgrade** → connect-to-test-env → Execute authoring → report workflow completion.
-- **Nested under run-qa / upkeep:** Execute authorship only for the parent-approved items; same `workflow_execution_id`. Still honor the upgrade step unless the parent already completed it for this execution.
+- **Standalone:** Plan → `upsert-plans-support-file` → user approval (unless non-interactive) → **`@testchimp/playwright` upgrade** → connect-to-test-env → Execute authoring → **write `plans/smart-smoke/<branch>/related-tests.json`** → report workflow completion.
+- **Nested under run-qa / upkeep:** Execute authorship only for the parent-approved items; same `workflow_execution_id`. Still honor the upgrade step unless the parent already completed it for this execution. **Still write/update `related-tests.json`** before handing back to the parent (run-qa Phase 5 may refine + execute smoke).
