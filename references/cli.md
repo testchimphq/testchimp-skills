@@ -163,7 +163,7 @@ Answers: **which top N scenarios should we cover next?** Agents should expand **
 | `--lifecycle-statuses <csv>` | No | `scenarioLifecycleStatuses` | Allowlist. Empty/omit = no status filter (UI Insights). Agent: policy **`ready`** → `ready`; policy **Draft+** / `lifecycle_status: draft` → `draft,ready`. Blank scenario status is treated as `ready`. |
 | `--limit <n>` | No | `limit` | After filter+rank, return only top N **gaps** in **`rankedScenarios`**. Server clamps to **200** (also the max when only `consider_*` is set without `--limit`). |
 | `--consider-scenario-priority` | No | `considerScenarioPriority` | Rank high → medium → low → unset (from policy `scenario_priority`). |
-| `--consider-semantic-coverage` | No | `considerSemanticCoverage` | Reserved ranking signal (accepted; ignored by server in v1). Pass when policy `semantic_coverage: true`. |
+| `--consider-semantic-coverage` | No | `considerSemanticCoverage` | Pack ranked gaps by scenario-embedding novelty vs scenarios that already have linked SmartTests. Pass when policy `semantic_coverage: true`. |
 | `--auto-verification-only` | No | `autoVerificationOnly` | Exclude `verification_strategy=manual`. Server already defaults to **true** when unset. |
 | `--include-manual-verification` | No | `autoVerificationOnly: false` | Escape hatch to include manual-verification scenarios (overrides `--auto-verification-only`). |
 | `--file-paths <csv>` | No | `scope.filePaths` | Comma-separated paths under **platform tests or plans** root. |

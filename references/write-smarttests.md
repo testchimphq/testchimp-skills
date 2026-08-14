@@ -256,12 +256,12 @@ These tools are provided by the **`@testchimp/cli`** package when it is installe
 | `branchName` | string | Optional Git branch name when results must be limited to **one** branch. **Omit** for cross-branch coverage (default for Analyze in `/testchimp test`): aggregates all active branch copies; execution jobs are deduped by stable hash of tests-root-relative file path + Playwright test name. |
 | `platform` | string | Optional: `web`, `ios`, or `android`. When set, each scenario returns at most one coverage record for that platform. When omitted, rollup follows project scaffold (see [`cli.md`](./cli.md) § Platform execution reporting). Requires **`@testchimp/cli` ≥ 0.1.6** and ingested runs from **`@testchimp/playwright` ≥ 0.2.0**. |
 | `scenarioLifecycleStatuses` | string[] | Allowlist (e.g. `["ready"]` or `["draft","ready"]`). Empty/omit = no status filter. |
-| `limit` | number | Top N into **`rankedScenarios`** after filter+rank (server clamps to **200**). |
+| `limit` | number | Top N into **`rankedScenarios`** after filter+rank (server clamps to **200**). When omitted, server uses `max_new_tests_per_workflow_execution` from `global.policy.md` if `>0`, else **20**. |
 | `considerScenarioPriority` | boolean | Rank by priority high→medium→low→unset. |
-| `considerSemanticCoverage` | boolean | Reserved ranking signal (accepted; ignored in v1). |
+| `considerSemanticCoverage` | boolean | Pack `rankedScenarios` by scenario-embedding novelty vs scenarios that already have linked SmartTests (linear-sweep min cosine distance), optionally weighed with `considerScenarioPriority`. |
 | `autoVerificationOnly` | boolean | Exclude `verification_strategy=manual`. Server defaults to **true** when unset. |
 
-**Response:** Prefer **`rankedScenarios[]`** for gap work queues when `limit` or any `consider_*` is set. Server returns **gaps only** (empty / not-attempted / partial platform gaps) with `scenarioLifecycleStatus`, `scenarioPriority`, ordinal, and coverage records. Nested `userStories` / `unmappedScenarios` remain for tree views.
+**Response:** Prefer **`rankedScenarios[]`** for gap work queues when `limit` or any `consider_*` is set. With `considerSemanticCoverage`, server returns **unlinked** scenario gaps packed by embedding novelty (vs scenarios that already have linked SmartTests). Without it, returns execution gaps (empty / not-attempted / partial platform) ordered by gap severity and optional priority. Nested `userStories` / `unmappedScenarios` remain for tree views.
 
 **Example MCP tool call (conceptual):**
 
