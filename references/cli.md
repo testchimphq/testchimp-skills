@@ -369,7 +369,7 @@ With **`--environment <s>`** when your project uses env-scoped vocabulary (forwa
 
 **Requires `@testchimp/cli` ≥ `0.1.13`.**
 
-Fetch release catalog details for a version/label in the current project (cut git SHA, prior release + SHA, focus areas, payload). Used when running ExploreChimp **targeting a release**.
+Fetch release catalog details for a version/label in the current project (cut git SHA, prior release + SHA, focus areas, payload). Used when running ExploreChimp or **performance tests** **targeting a release**.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|-------|

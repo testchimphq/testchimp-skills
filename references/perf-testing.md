@@ -60,14 +60,48 @@ export const testchimp = {
 };
 ```
 
-k6 cannot read sibling `export const testchimp` from `handleSummary`. Use `k6/scripts/run-journey.sh`, which extracts id/kind/scenarios/testTypes/members into env (`TESTCHIMP_PERF_META`). Direct `k6 run` without those env vars will not ingest.
+k6 cannot read sibling `export const testchimp` from `handleSummary`. Use
+`k6/scripts/run-journey.sh` (composites: `run-composite.sh`, which execs the
+same wrapper). The wrapper extracts id/kind/scenarios/testTypes/members into
+env (`TESTCHIMP_PERF_META`) so ingest works.
+
+**Do not** call bare `k6 run` for TestChimp runs. Missing wrapper env means
+**no ingest**. Missing wrapper `--out json` + attach means ingest **without
+Executions charts**.
 
 `k6/scripts/prepare.sh` (also invoked by every `run-journey.sh`) downloads
 **npm `latest`** `@testchimp/k6` into gitignored `k6/lib/` — a new publish
 reaches users on the next prepare/run. Override with
 `K6_REPORTER_VERSION=<semver>` to pin, `K6_REPORTER_LOCAL_DIR` to dogfood a
 checkout, or `K6_REPORTER_SKIP_REFRESH=1` for offline reuse. Do **not** vendor
-the reporter into the app repo.
+the reporter into the app repo. Timeseries attach also needs `k6/lib/downsample.js`
+(Node-only). If prepare warns it is missing from CDN, pin
+`K6_REPORTER_LOCAL_DIR` until `@testchimp/k6@0.2.0+` is published.
+
+### Timeseries (Executions charts)
+
+k6 does **not** expose live p95 from JS `handleSummary`. Charts come from a
+**post-run** attach, not from sampling inside the journey script.
+
+`run-journey.sh` already:
+
+1. Runs `k6 run --out json=<tmp>/metrics.json` (do **not** add a second
+   `--out json`; do **not** put `--out json` in the journey file).
+2. Ingests the summary via `handleSummary`, which writes `runId` to a sidecar
+   (`TESTCHIMP_PERF_RUN_ID_FILE`) and prints `runId=…` on stdout.
+3. Downsamples the JSON dump in **Node** (`downsample.js`, default 5s buckets,
+   cap ~500 points) and POSTs `/api/ingest_perf_run_timeseries` keyed by that
+   **run_id**. Never attach to “latest run by test id.”
+
+Override bucket size with `TESTCHIMP_PERF_TIMESERIES_INTERVAL_SEC` (default
+`5`). Attach is **non-fatal**: a failed chart upload must not change the k6
+exit code.
+
+**Agents must not:**
+
+- Sample metrics in `handleSummary` / journey JS and POST that as timeseries
+- Teach CI `k6 run script.js --out json=…` instead of `run-journey.sh`
+- Invent a custom attach that looks up the latest run by `testchimp.id`
 
 ## Data, LLMs, and seeding
 
@@ -171,13 +205,14 @@ ignored. Execute selections with `k6/scripts/run-related.sh <artifact>`.
 
 ## Capability
 
-Org capability **`PERFORMANCE_TESTING`** (Teams + Growth; not Indie). Soft-gate with `get-org-capabilities`. If missing, tell the user the org plan does not include performance testing and stop (do not scaffold).
+Org capability **`PERFORMANCE_TESTING`** (attached on Growth upgrade and free trial). Soft-gate with `get-org-capabilities`. If missing and no trial is active, tell the user the org plan does not include performance testing and stop (do not scaffold).
 
 ## Workflows
 
 | Command | Reference |
 |---------|-----------|
 | `/testchimp init-perf` | [`init-perf.md`](./init-perf.md) |
-| `/testchimp run-perf-tests` | [`run-perf-tests.md`](./run-perf-tests.md) — **script-first** |
+| `/testchimp import-perf-tests` | [`import-perf-tests.md`](./import-perf-tests.md) — One-Off: existing Locust/k6/JMeter/etc. → `k6/` |
+| `/testchimp run-perf-tests` | [`run-perf-tests.md`](./run-perf-tests.md) — **script-first** (including **release git range**) |
 | `/testchimp create-perf-tests` | [`create-perf-tests.md`](./create-perf-tests.md) — policy-backed authoring |
 | `/testchimp upkeep-perf` | [`upkeep-perf.md`](./upkeep-perf.md) — policy-backed upkeep |

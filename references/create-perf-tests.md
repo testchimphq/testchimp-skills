@@ -12,8 +12,8 @@ resolved `create-perf-tests.policy.md`.
 
 - **Capability soft gate:** call `get-org-capabilities`. If
   `PERFORMANCE_TESTING` is absent and `freeTrialActive` is false, mark the
-  gated workflow **N/A**, explain how to enable it, and stop without
-  scaffolding or failing an enclosing workflow.
+  gated workflow **N/A**, explain how to enable it (Growth plan / free trial),
+  and stop without scaffolding or failing an enclosing workflow.
 - Use platform-provisioned scenario ordinals only. Never invent `#TS-…`.
 - Model volume and load independently: **volume = data cardinality/shape**;
   **load = concurrent arrival/VUs**. Never increase both merely to make a test
@@ -24,8 +24,11 @@ resolved `create-perf-tests.policy.md`.
 - Do not replay credentials, cookies, tokens, personal data, or raw bodies
   obtained from production. Use redacted interaction shapes and synthetic,
   seeded test data.
-- One journey/composite file equals one `k6 run`; direct `k6 run` is not the
-  supported ingest path.
+- One journey/composite file equals one `k6 run` through
+  `k6/scripts/run-journey.sh` / `run-composite.sh`. Direct `k6 run` is not
+  the supported ingest **or timeseries** path (see
+  [`perf-testing.md`](./perf-testing.md) § Timeseries). Do not add
+  `k6 run --out json` to authored scripts or CI.
 
 ## Analyze
 
@@ -35,8 +38,9 @@ resolved `create-perf-tests.policy.md`.
    `ai-test-instructions.md`, existing `k6/`, and the relevant scenarios.
 2. If `k6/` is missing, include nested `init-perf` in this workflow's one plan
    and approval cycle.
-3. Build the candidate scenario queue from explicit scope, branch impact, or
-   last `create-perf-tests` run. Query requirement coverage with policy
+3. Build the candidate scenario queue from explicit scope, **release git
+   range** (when nested under `run-perf-tests` for a release), branch impact,
+   or last `create-perf-tests` run. Query requirement coverage with policy
    `scenario_priority` and `semantic_coverage` flags, including
    `get-requirement-coverage --include-perf` when ranking perf gaps. Prefer high-priority,
    semantically novel automated scenarios; explain exceptions.
@@ -104,6 +108,24 @@ an existing or proposed composite, approval must include this prompt:
 > absolute VUs/RPS/duration separately.
 
 Never silently add composite membership.
+
+## Nested from run-perf-tests (release gaps)
+
+When **`run-perf-tests`** finds existing journeys insufficient for a
+**release git range** and the user agrees to author:
+
+- Load this playbook after [`run-perf-tests.md`](./run-perf-tests.md).
+- **Reuse** the parent `workflow_execution_id` / plan file — **one extra
+  approval** for the authoring checklist (do not start an unrelated second
+  run-perf cycle).
+- Scope Analyze to the **same prior SHA → cut SHA** range and the
+  operations/paths/scenarios already listed as uncovered. Do not expand to
+  the whole repo.
+- If `k6/` is missing, include nested `init-perf` in that same approval.
+- After Execute (journeys exist), return to `run-perf-tests` and run the new
+  plus previously related tests with **`TESTCHIMP_RELEASE`** set.
+
+Standalone `/testchimp create-perf-tests` still uses branch / last-run scope.
 
 ## Execute
 

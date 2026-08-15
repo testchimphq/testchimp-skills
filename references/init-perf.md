@@ -33,3 +33,10 @@ testing, and stop without failing an enclosing workflow.
    approves `llm_mode: real` / live externals.
 9. Shell-check scripts and run `k6 inspect` on the example journey. Do not run
    load/volume until absolute settings are approved.
+10. **Optional nested `import-perf-tests`:** if the workspace already has a
+    performance suite **outside** `<SmartTests root>/k6/` (Locust `locustfile.py`,
+    JMeter `*.jmx`, Gatling simulations, Artillery YAML, or a k6 folder elsewhere),
+    offer to run [`import-perf-tests.md`](./import-perf-tests.md) **now** as a
+    nested subflow of this init-perf (same plan + `workflow_execution_id` —
+    **one approval**), or skip for later (`/testchimp import-perf-tests <folder>`).
+    Do not start a second Plan → approve → Execute cycle.

@@ -242,7 +242,7 @@ At end of every **standalone** Execute (or when aborting), report **`ACTION_COMP
 
 **Required** before treating any **standalone** catalog workflow as done (and for composite parents like `run-qa` / `upkeep` / `implement`). Nested subflows **do not** emit their own `ACTION_COMPLETED` — the parent reuses the same ULID and closes once.
 
-**Applies to every catalog workflow** that mints a `workflow_execution_id` (including thin playbooks: `fix-issue`, `fix-test-execution`, `cleanup`, `execute-tests`, `author-plans`, `run-explorechimp`, `connect-to-test-env`, `run-smart-smoke`, `run-requirement-quality-checks`, `instrument-truecoverage`, `create-policy`, `run-release-check`, `import`, …). Omitting this step leaves the platform with a plan support file but **no** `workflow_executions` row (or a stuck `RUNNING` timeline).
+**Applies to every catalog workflow** that mints a `workflow_execution_id` (including thin playbooks: `fix-issue`, `fix-test-execution`, `cleanup`, `execute-tests`, `author-plans`, `run-explorechimp`, `connect-to-test-env`, `run-smart-smoke`, `run-requirement-quality-checks`, `instrument-truecoverage`, `create-policy`, `run-release-check`, `import`, `import-perf-tests`, …). Omitting this step leaves the platform with a plan support file but **no** `workflow_executions` row (or a stuck `RUNNING` timeline).
 
 ### Steps (blocking before “done”)
 

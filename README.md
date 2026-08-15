@@ -8,6 +8,7 @@ TestChimp skill for **policy-backed QA workflows** (skill **≥ 1.0.0**). Agents
 |---------|-------------|--------------|
 | `/testchimp init` | `init` (One-Off) | Set up QA infra, seed default policies, MCP / workstation gate |
 | `/testchimp import` | `import` (One-Off) | Import existing E2E into SmartTests (Playwright as-is or translate) |
+| `/testchimp import-perf-tests` | `import-perf-tests` (One-Off) | Import existing Locust/k6/JMeter/etc. into the TestChimp `k6/` folder |
 | `/testchimp run QA` | `run-qa` | Full PR QA composite (plans → env → tests → smart smoke → ExploreChimp → TrueCoverage) |
 | `/testchimp upkeep` | `upkeep` | Coverage / TrueCoverage / cleanup composite (periodic maintenance) |
 | `/testchimp implement` | `implement` | Implement a story/scenario or a finetuned plan file end-to-end |

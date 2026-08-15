@@ -39,6 +39,9 @@ pin_from_dir() {
   fi
   cp "$src/handleSummary.js" "$LIB/handleSummary.js"
   cp "$src/ingest.js" "$LIB/ingest.js"
+  if [ -f "$src/downsample.js" ]; then
+    cp "$src/downsample.js" "$LIB/downsample.js"
+  fi
   if [ -f "$src/package.json" ] && command -v node >/dev/null 2>&1; then
     node -e 'const p=require(process.argv[1]); process.stdout.write(p.version||"local")' \
       "$src/package.json" >"$LIB/.version"
@@ -58,6 +61,12 @@ pin_from_cdn() {
       && curl -fsSL "$base/ingest.js" -o "$tmp/ingest.js"; then
     cp "$tmp/handleSummary.js" "$LIB/handleSummary.js"
     cp "$tmp/ingest.js" "$LIB/ingest.js"
+    if curl -fsSL "$base/downsample.js" -o "$tmp/downsample.js"; then
+      cp "$tmp/downsample.js" "$LIB/downsample.js"
+    else
+      echo "Warning: downsample.js is not on CDN for @testchimp/k6@${version}." >&2
+      echo "Timeseries charts need it — pin a local checkout: K6_REPORTER_LOCAL_DIR=/path/to/k6-testchimp-reporter" >&2
+    fi
     echo "$version" >"$LIB/.version"
   else
     echo "Failed to download @testchimp/k6@${version} from jsDelivr." >&2
