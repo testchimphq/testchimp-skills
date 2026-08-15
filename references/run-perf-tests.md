@@ -47,7 +47,11 @@ Each invocation is **one `k6 run`**. The wrapper sets `TESTCHIMP_FOLDER_PATH` / 
 If a manifest requires seed data, call `k6/scripts/seed.sh "$K6_DATASET"`
 before the run and perform its documented teardown afterward. LLM journeys
 default to `LLM_MODE=mock`; the mock has deterministic configurable latency.
-Real LLM mode requires explicit cost/rate-limit approval.
+Real LLM mode requires explicit cost/rate-limit approval. Before load/volume,
+confirm the policy **Dependency modes** inventory: every SUT outbound
+external is stubbed with realistic latency (env stubs and/or
+`k6/lib/mock-external.js` / `mock-llm.js`). Do not run load/volume against
+live externals or 0 ms stubs unless the approved plan says so.
 
 `prepare.sh` downloads `@testchimp/k6` **latest** from jsDelivr (re-run on each
 journey). Pin with `K6_REPORTER_VERSION`, or dogfood with:
@@ -84,6 +88,7 @@ Standalone agent-driven runs use the canonical Analyze → Plan → approval →
 Execute → Validate → Report sequence and
 `knowledge/workflow_plans/run-perf-tests/<workflow_execution_id>.plan.md`.
 The plan names exact files, environment, profile, dataset, seed/teardown, LLM
-mode, approved absolute load, thresholds, and baseline. Upsert before approval.
+mode, external dependency mock inventory + latencies, approved absolute load,
+thresholds, and baseline. Upsert before approval.
 Nested runs reuse the parent plan. Validate reporter ingest and comparison,
 then close through Report workflow execution.

@@ -82,6 +82,50 @@ the reporter into the app repo.
   (`250ms`, zero jitter, zero error rate) and configurable through env. Real
   LLM calls require explicit approval and cost/rate-limit bounds.
 
+## External dependencies (mock with realistic latency)
+
+When the **system under test (SUT)** calls third-party or otherwise out-of-band
+systems in production (payments, email/SMS, CRM, identity providers, partner
+APIs, object storage outside the SUT, webhooks, LLMs, etc.), performance tests
+**must not** leave those calls hitting the real world by default — and **must
+not** stub them at zero latency.
+
+**Why:** Zero-latency or missing stubs hide queueing, thread/connection pool
+exhaustion, timeout budgets, and cascading slowdowns. Hitting live externals
+adds flakiness, cost, and rate-limit noise. Either failure mode produces
+**false confidence** in SUT capacity.
+
+### Agent obligations (create / upkeep / init)
+
+1. **Identify** every outbound dependency on the journey path (code, OpenAPI,
+   config, REAL E2E interaction hosts that are not the SUT, infra manifests).
+2. **Mock / stub them in the perf harness** so the SUT talks to controllable
+   doubles during the run. Prefer **environment-level** stubs (WireMock,
+   stub containers, test config pointing at local doubles) so the SUT’s real
+   client code still runs. Use `k6/lib/mock-external.js` (and `mock-llm.js`
+   for LLM paths) when the **journey script** itself needs a deterministic
+   double.
+3. **Respond with realistic latency** — not instantaneous success.
+   - Prefer redacted REAL E2E **timing distributions** (p50/p95 class) when
+     `list-api-operation-interactions` or ops telemetry is available.
+   - Else use documented typical values in policy / `ai-test-instructions.md`
+     (e.g. payment authorize ~200–400 ms, email provider ~100–300 ms, LLM
+     mocked-standard 250 ms).
+   - Record per-dependency `latency_ms` / optional jitter / error_rate in the
+     journey plan and `run-perf-tests.policy.md` → **Dependency modes**.
+4. **Never** treat “stubbed with 0 ms” as an acceptable default for load or
+   volume. Smoke may use lower latency only when the plan explicitly says so
+   and baselines for load/volume use the approved realistic profile.
+5. **Real external calls** (live Stripe, real SendGrid, real LLM, …) require
+   the same class of explicit approval as `llm_mode: real` — cost, rate-limit,
+   and data-safety bounds in the approved plan.
+
+### Comparison dimensions
+
+Baselines are comparable only when dependency mock inventory and latency
+profiles match (alongside environment / profile / dataset / LLM mode). Changing
+a stub from 50 ms → 300 ms is a **new** comparison key, not a silent win.
+
 ## Related selection artifacts
 
 `k6/scripts/select-related.sh` reads a JSON change description and journey
@@ -116,7 +160,7 @@ ignored. Execute selections with `k6/scripts/run-related.sh <artifact>`.
   `promote-perf-baseline`, `compare-perf-to-baseline`, and
   `list-related-perf-tests`. Installed MCP/CLI help is authoritative for
   schemas. Compare requires `envClass` (same as promote). Compare runs only
-  when environment/profile/dataset/LLM mode match.
+  when environment/profile/dataset/LLM mode/dependency mock profiles match.
   `compare-perf-to-baseline` prints JSON and the CLI exits nonzero when
   `comparison.regressed` is true; a missing baseline is an API error, not a
   pass. Rank perf gaps with `get-requirement-coverage --include-perf`.

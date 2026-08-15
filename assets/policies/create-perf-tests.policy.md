@@ -22,6 +22,11 @@ run. Ask before adding a journey to any composite.
 - real_llm_requires_explicit_approval: true
 - do_not_silently_install_aimock: true
 - isolated_environment_required_for_load_volume: true
+- external_dependencies_default: stubbed
+- zero_latency_stubs_allowed: false
+- real_external_requires_explicit_approval: true
+# On create: inventory every SUT outbound dep; mock in harness with realistic
+# latency (see references/perf-testing.md § External dependencies).
 
 ## Authoring defaults
 

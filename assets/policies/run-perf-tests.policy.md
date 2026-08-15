@@ -59,7 +59,18 @@ user/team supplies values. Do not derive values from production observations.
 - llm_mock_jitter_ms: 0
 - llm_mock_error_rate: 0
 - real_llm_requires_explicit_approval: true
-- external_dependencies: <!-- real | stubbed | mixed, with details -->
+- external_dependencies_default: stubbed
+- zero_latency_stubs_allowed: false
+- real_external_requires_explicit_approval: true
+- external_dependencies:
+  # - name: <!-- payment | email | idp | partner-api | … -->
+  #   mode: stubbed  # stubbed | real (real needs approval)
+  #   harness: <!-- env WireMock/stub service | k6/lib/mock-external.js -->
+  #   latency_ms: <!-- realistic p50-class; not 0 for load/volume -->
+  #   jitter_ms: 0
+  #   error_rate: 0
+  #   latency_evidence: <!-- REAL E2E timing | ops telemetry | documented typical -->
+  []
 
 ## Baseline and comparison
 
@@ -67,6 +78,7 @@ user/team supplies values. Do not derive values from production observations.
 - require_matching_profile: true
 - require_matching_dataset: true
 - require_matching_llm_mode: true
+- require_matching_dependency_mocks: true
 - threshold_changes_require_approval: true
 
 ## Composite membership

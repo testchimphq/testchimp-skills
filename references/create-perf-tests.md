@@ -63,6 +63,12 @@ resolved `create-perf-tests.policy.md`.
    deterministic `k6/lib/mock-llm.js` helper.
 7. Classify each candidate as load, volume, or both; define seed data,
    environment, mock/real dependencies, checks, thresholds, and rollback.
+   **External deps (blocking for load/volume):** for every outbound system the
+   SUT calls on the journey path, plan a harness mock/stub with **realistic**
+   latency (REAL E2E timing distributions when available; otherwise documented
+   typicals in policy). Prefer env-level stubs; use `k6/lib/mock-external.js`
+   for journey-side doubles. Zero-latency stubs are not an acceptable default
+   (false confidence). Real external calls need explicit approval.
    LLM calls default to the deterministic mock helper. Real LLM calls require
    explicit approval and a cost/rate-limit bound.
 
@@ -82,6 +88,8 @@ Include the canonical frontmatter from SKILL.md and a resumable checklist:
 - profile and dataset manifest for each journey;
 - seed/teardown contract and environment safety;
 - interaction fields retained after redaction;
+- external dependency inventory (name, mock location, latency_ms / jitter /
+  error_rate, evidence source for latency);
 - LLM mode and deterministic latency/error settings;
 - thresholds/baseline source (or explicitly `pending user capacity input`);
 - validation commands and expected artifacts;
@@ -108,6 +116,10 @@ Execute only approved checklist items:
 4. Use `smoke.js` while authoring. Adopt load/volume profiles only after their
    absolute settings are confirmed by policy/user.
 5. Use `k6/lib/mock-llm.js` for LLM-backed paths unless approved otherwise.
+   For all other SUT outbound deps, wire env-level stubs or
+   `k6/lib/mock-external.js` with the approved realistic latency profile —
+   never leave load/volume journeys calling live externals or 0 ms stubs
+   unless the plan explicitly approved that exception.
 6. Add/update a composite only when its membership prompt was approved.
 7. Produce/update related selection using
    `k6/scripts/select-related.sh`; do not hand-edit generated artifacts.
@@ -124,13 +136,15 @@ separately.
    environment via `run-journey.sh`; run changed composites via
    `run-composite.sh`. Seed first and teardown according to the manifest.
 4. Confirm checks/thresholds, deterministic rerun behavior, reporter metadata,
-   redaction, no secrets, and related-selection artifact schema.
+   redaction, no secrets, related-selection artifact schema, and that every
+   identified external dependency is mocked with the planned latency (not
+   live, not 0 ms unless explicitly approved).
 5. If a comparable baseline exists, call `compare-perf-to-baseline` with the
    same `envClass`; classify
    changes against the approved threshold. A missing/mismatched baseline is
    **incomparable**, never pass or improvement. Do not claim
    regression/improvement from incomparable environment/profile/dataset/LLM
-   modes.
+   modes / dependency mock profiles.
 
 ## Report
 

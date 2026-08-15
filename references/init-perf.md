@@ -22,10 +22,14 @@ testing, and stop without failing an enclosing workflow.
    `plans/knowledge/ai-test-instructions.md`: k6 folder, permitted environment,
    health check, seed/teardown command, profile ownership, dataset limits,
    durable `llm_mode` (default `mocked`), latency profile
-   (`none` / `mocked-standard` / `mocked-slow`), and explicit statement that
-   perf does not run inside `run-qa`.
+   (`none` / `mocked-standard` / `mocked-slow`), **external dependency mock
+   inventory** (what is stubbed, where, and realistic latency targets — see
+   [`perf-testing.md`](./perf-testing.md) § External dependencies), and
+   explicit statement that perf does not run inside `run-qa`.
 8. Do **not** silently install AIMock. k6 LLM paths use `k6/lib/mock-llm.js`.
-   If a journey needs a real LLM and AIMock is missing, block load/volume
-   unless the user explicitly approves `llm_mode: real`.
+   General external doubles use `k6/lib/mock-external.js` and/or env-level
+   stubs with realistic latency. If a journey needs a real LLM/external and
+   the harness is missing, block load/volume unless the user explicitly
+   approves `llm_mode: real` / live externals.
 9. Shell-check scripts and run `k6 inspect` on the example journey. Do not run
    load/volume until absolute settings are approved.

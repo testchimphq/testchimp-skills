@@ -1,6 +1,8 @@
 # Pinned @testchimp/k6 (downloaded by scripts/prepare.sh). Do not commit.
 *
 !.gitignore
+!mock-llm.js
+!mock-external.js
 handleSummary.js
 ingest.js
 testchimp-k6-handleSummary.js

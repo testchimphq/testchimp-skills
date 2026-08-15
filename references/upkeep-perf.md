@@ -17,8 +17,9 @@ resolved `upkeep-perf.policy.md`.
 - TrueCoverage demand and TestChimp history are **relative signals only**.
   Never derive absolute VUs, RPS, duration, dataset cardinality, SLOs, or
   thresholds from them.
-- Compare only matching environment, profile, dataset version, LLM mode, and
-  materially equivalent code/config. Label all other comparisons directional.
+- Compare only matching environment, profile, dataset version, LLM mode,
+  dependency mock/latency profile, and materially equivalent code/config.
+  Label all other comparisons directional.
 - REAL E2E interactions are schema evidence, never replay fixtures. Redact all
   values and use synthetic seeded data.
 
@@ -48,7 +49,7 @@ resolved `upkeep-perf.policy.md`.
 6. Use `list-perf-runs`, `get-perf-run`, and `list-perf-baselines` per
    selected test. Use `compare-perf-to-baseline` only for comparable runs
    with the same `envClass` used at promote (CLI exits nonzero when
-   (CLI exits nonzero when `comparison.regressed` is true). Diagnose threshold
+   `comparison.regressed` is true). Diagnose threshold
    failures, drift, missing runs, noisy baselines, and changed dataset/LLM
    modes. Do not “fix” regressions by weakening thresholds without explicit
    approval.
@@ -85,7 +86,10 @@ threshold weakening always need to appear explicitly in the approved plan.
 3. Refresh dataset manifests deliberately: volume cardinality independently
    from load identity-pool size.
 4. Keep LLM-backed journeys deterministic with `mock-llm.js`; changing to real
-   LLM is a separately approved cost/rate-limit decision.
+   LLM is a separately approved cost/rate-limit decision. Re-audit SUT outbound
+   externals on touched journeys: add/update env stubs or `mock-external.js`
+   with realistic latency when new deps appear; never “fix” flaky load by
+   dropping stub latency to 0 ms.
 5. Apply approved thresholds or composite membership only. Regenerate related
    selection artifacts with the script.
 6. Reuse the workflow ULID for mutation traceability.

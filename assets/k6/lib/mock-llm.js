@@ -18,6 +18,10 @@ const stableFraction = (text) => {
  * Deterministic LLM double. Defaults: 250 ms latency, no jitter/errors.
  * Configure with LLM_MOCK_LATENCY_MS, LLM_MOCK_JITTER_MS,
  * LLM_MOCK_ERROR_RATE, and LLM_MOCK_RESPONSE.
+ *
+ * LLMs are one case of external deps — see mock-external.js and
+ * references/perf-testing.md § External dependencies. Do not use 0 ms
+ * latency for load/volume (false confidence).
  */
 export function mockLlm(prompt, overrides = {}) {
   const key = String(overrides.key || prompt || '');

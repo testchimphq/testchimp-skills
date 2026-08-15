@@ -29,6 +29,9 @@ list.
 - real_llm_requires_explicit_approval: true
 - do_not_silently_install_aimock: true
 - isolated_environment_required_for_load_volume: true
+- require_matching_dependency_mocks: true
+- zero_latency_stubs_allowed: false
+# Re-audit outbound deps on touched journeys; keep realistic stub latencies.
 
 ## Composite membership
 
