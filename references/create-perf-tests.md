@@ -15,9 +15,20 @@ resolved `create-perf-tests.policy.md`.
   gated workflow **N/A**, explain how to enable it (Growth plan / free trial),
   and stop without scaffolding or failing an enclosing workflow.
 - Use platform-provisioned scenario ordinals only. Never invent `#TS-…`.
-- Model volume and load independently: **volume = data cardinality/shape**;
-  **load = concurrent arrival/VUs**. Never increase both merely to make a test
-  “heavier.”
+- Model volume and load independently: **volume = data cardinality/shape**
+  (few users); **load = N concurrent actors on the journey** (ramping VUs +
+  think time). Never increase both merely to make a test “heavier.”
+  Do not author a tight HTTP loop as a “load test.”
+- Decide and record what each load journey's VU represents (usually a
+  **user**; sometimes a tenant, session, or other actor) together with the
+  peak N. Do not copy peak N across journeys with different actor models.
+- Keep **TestChimp reporter** env (`TESTCHIMP_*`) separate from **SUT**
+  targets (`BASE_URL` / `BACKEND_URL` / other hosts from
+  `connect-to-test-env` and policy). Never fall back to reporter URLs for
+  the system under test. If the SUT exposes multiple hosts, name each one
+  on the plan.
+- When proposing volume, include a **staircase** (distinct dataset ids at
+  fractions of target cardinality), not a single all-or-nothing dump.
 - TestChimp and TrueCoverage observations choose **what** to test and provide
   relative weighting. They never authorize absolute VUs, RPS, duration,
   dataset size, SLOs, or thresholds. Those require user/policy capacity input.
@@ -65,16 +76,34 @@ resolved `create-perf-tests.policy.md`.
    existing thresholds. Missing history means “no baseline,” not permission to
    invent one. Do **not** silently install AIMock; default LLM mode is the
    deterministic `k6/lib/mock-llm.js` helper.
-7. Classify each candidate as load, volume, or both; define seed data,
-   environment, mock/real dependencies, checks, thresholds, and rollback.
-   **External deps (blocking for load/volume):** for every outbound system the
-   SUT calls on the journey path, plan a harness mock/stub with **realistic**
-   latency (REAL E2E timing distributions when available; otherwise documented
-   typicals in policy). Prefer env-level stubs; use `k6/lib/mock-external.js`
-   for journey-side doubles. Zero-latency stubs are not an acceptable default
-   (false confidence). Real external calls need explicit approval.
-   LLM calls default to the deterministic mock helper. Real LLM calls require
-   explicit approval and a cost/rate-limit bound.
+7. Define seed data, environment, mock/real dependencies, checks, thresholds,
+   and rollback. **External deps (blocking for load/volume):** for every
+   outbound system the SUT calls on the journey path, plan a harness mock/stub
+   with **realistic** latency (REAL E2E timing distributions when available;
+   otherwise documented typicals in policy). Prefer env-level stubs; use
+   `k6/lib/mock-external.js` for journey-side doubles. Zero-latency stubs are
+   not an acceptable default (false confidence). Real external calls need
+   explicit approval. LLM calls default to the deterministic mock helper. Real
+   LLM calls require explicit approval and a cost/rate-limit bound.
+8. **Volume vs load (planning — work with the user):** for every candidate
+   journey/scenario, decide load, volume, or both *with the user*, not silently.
+   - **Load (default for interactive journeys):** the question is whether the
+     stack can handle **N concurrent users** completing this path. Plan
+     ramping-vus to an approved peak N, think time, and a load identity pool.
+   - **Propose volume** when user-visible cost grows with **data size** more
+     than (or as well as) concurrency. Typical signals: list/search/filter/
+     paginate; dashboards, history, coverage, reports, exports; a tenant with
+     many records/files/users; large payloads or bulk ops; queries/joins that
+     degrade with table size. API-level volume is OK.
+   - Put the recommendation on the plan and **ask** before authoring:
+
+     > These scenarios look volume-sensitive because `<reason>`. A volume test
+     > uses 1 VU against a large seeded dataset (cardinality in the volume
+     > manifest), independent of the load ramp. Add volume journeys for
+     > `<ids>`? (yes / skip / only these: …)
+
+   - Do not skip volume for those paths without recording the user’s choice.
+     Do not add volume journeys the user declined.
 
 ## Plan and approval
 
@@ -88,8 +117,9 @@ Include the canonical frontmatter from SKILL.md and a resumable checklist:
 
 - capability outcomes and evidence sources;
 - scenario ordinals, priorities, semantic-coverage rationale;
-- journey files and test types;
-- profile and dataset manifest for each journey;
+- journey files, **test types** (load and/or volume), and the volume
+  recommendation + user decision;
+- profile (ramping peak N, think-time seconds) and dataset manifest;
 - seed/teardown contract and environment safety;
 - interaction fields retained after redaction;
 - external dependency inventory (name, mock location, latency_ms / jitter /
@@ -105,7 +135,7 @@ an existing or proposed composite, approval must include this prompt:
 
 > Add `<journey-id>` to composite `<composite-id>` with relative weight
 > `<weight>`? This changes only the mix; confirm the composite profile's
-> absolute VUs/RPS/duration separately.
+> peak concurrent users (`K6_LOAD_VUS`) separately.
 
 Never silently add composite membership.
 
@@ -133,15 +163,24 @@ Execute only approved checklist items:
 
 1. Run nested `init-perf` if approved.
 2. Add journey files with stable metadata and real scenario ordinals.
+   Each `default` function is **one user passing through the journey**:
+   sequential steps, `thinkTime()` between user-visible actions and at the
+   end (`k6/lib/think-time.js`). Do not omit think time on load/volume.
 3. Add separate dataset manifests for volume and load. Keep secrets outside
    manifests; generate data through `k6/scripts/seed.sh`.
-4. Use `smoke.js` while authoring. Adopt load/volume profiles only after their
-   absolute settings are confirmed by policy/user.
-5. Use `k6/lib/mock-llm.js` for LLM-backed paths unless approved otherwise.
+4. Use `smoke.js` while authoring. Adopt the **ramping** load profile (and
+   volume profile) only after peak N / cardinality are confirmed by
+   policy/user. `K6_LOAD_VUS` is **peak concurrent VUs** (actor meaning
+   recorded on the plan), not a constant VU plateau from t=0.
+5. Use `k6/lib/mock-llm.js` for LLM-backed **k6** paths unless approved
+   otherwise. That helper is not a SUT LLM stub — if the application would
+   call an LLM, fail closed in SUT config or keep those APIs off the journey.
    For all other SUT outbound deps, wire env-level stubs or
    `k6/lib/mock-external.js` with the approved realistic latency profile —
    never leave load/volume journeys calling live externals or 0 ms stubs
-   unless the plan explicitly approved that exception.
+   unless the plan explicitly approved that exception. When the path under
+   test is inbound event processing, stub outbound partner HTTP at realistic
+   latency rather than skipping the processing itself.
 6. Add/update a composite only when its membership prompt was approved.
 7. Produce/update related selection using
    `k6/scripts/select-related.sh`; do not hand-edit generated artifacts.

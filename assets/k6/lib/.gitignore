@@ -3,6 +3,7 @@
 !.gitignore
 !mock-llm.js
 !mock-external.js
+!think-time.js
 handleSummary.js
 ingest.js
 downsample.js

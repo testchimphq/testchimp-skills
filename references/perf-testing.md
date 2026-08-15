@@ -26,19 +26,30 @@ Each file is still **one `k6 run`**.
 
 ## Per-journey test types (industry names)
 
-- **Volume testing** — one user/tenant with lots of data (API-level is OK).
-- **Load testing** — many concurrent users.
+- **Load testing** — can the stack handle **N concurrent users going through
+  this journey**? Each VU is one user: it runs the journey steps, then
+  `thinkTime()` (not a tight request loop). Concurrency climbs with
+  **ramping-vus** from a low start to peak `K6_LOAD_VUS` so charts show
+  metric change as load increases.
+- **Volume testing** — can **one (or few) users** complete the journey when
+  the **dataset is large** (records/objects/bytes per tenant)? Independent of
+  the load ramp. Cardinality lives in the volume manifest.
 
-Keep those axes separate. A volume manifest controls records/objects/bytes per
-tenant; a load manifest controls a pool of synthetic identities and does not
-set concurrency. Profiles control VUs/arrival/duration. A test may use both,
-but each value needs an independent capacity rationale.
+Keep those axes separate. Never increase both merely to make a test
+“heavier.” A journey may have both types when the scenario is expensive in
+concurrency *and* data size; each value needs its own capacity rationale.
+
+Load answers **concurrent users**, not max RPS. Open-loop arrival (`ramping-arrival-rate`) is not the default.
 
 ## Profiles and absolute-load rule
 
-- `smoke.js` is the authoring/contract profile and is safe by default.
-- `load.js` and `volume.js` are practical conservative examples, not production
-  capacity claims. Override them only from an approved policy/user decision.
+- `smoke.js` is the authoring/contract profile (1 VU, 1 iteration) and is
+  safe by default. No think-time.
+- `load.js` uses **`ramping-vus`**: start near 0, step through ~10% / ~50% /
+  peak, hold at peak (`K6_LOAD_DURATION`), ramp down. Peak concurrent users =
+  `K6_LOAD_VUS`. Journeys **must** call `thinkTime()` from `k6/lib/think-time.js`
+  between user steps and at the end of `default`.
+- `volume.js` stays few VUs (default 1); scale the **dataset**, not VUs.
 - TrueCoverage, REAL E2E samples, request rates observed by TestChimp, and
   relative composite weights can identify important journeys. **Never**
   convert those observations directly into absolute VUs, RPS, duration,
@@ -71,12 +82,11 @@ Executions charts**.
 
 `k6/scripts/prepare.sh` (also invoked by every `run-journey.sh`) downloads
 **npm `latest`** `@testchimp/k6` into gitignored `k6/lib/` — a new publish
-reaches users on the next prepare/run. Override with
+reaches users on the next prepare/run. Timeseries attach needs
+`k6/lib/downsample.js` (shipped in **`@testchimp/k6` ≥ `0.2.1`**). Override with
 `K6_REPORTER_VERSION=<semver>` to pin, `K6_REPORTER_LOCAL_DIR` to dogfood a
 checkout, or `K6_REPORTER_SKIP_REFRESH=1` for offline reuse. Do **not** vendor
-the reporter into the app repo. Timeseries attach also needs `k6/lib/downsample.js`
-(Node-only). If prepare warns it is missing from CDN, pin
-`K6_REPORTER_LOCAL_DIR` until `@testchimp/k6@0.2.0+` is published.
+the reporter into the app repo.
 
 ### Timeseries (Executions charts)
 
@@ -91,7 +101,11 @@ k6 does **not** expose live p95 from JS `handleSummary`. Charts come from a
    (`TESTCHIMP_PERF_RUN_ID_FILE`) and prints `runId=…` on stdout.
 3. Downsamples the JSON dump in **Node** (`downsample.js`, default 5s buckets,
    cap ~500 points) and POSTs `/api/ingest_perf_run_timeseries` keyed by that
-   **run_id**. Never attach to “latest run by test id.”
+   **run_id**. Never attach to “latest run by test id.” Every k6 metric in the
+   dump is kept (trend stats, rates, counters, gauges, plus custom metrics).
+   `@testchimp/k6` **≥ 0.2.1** writes that full series for Executions charts.
+   **≥ 0.2.2** also keeps HTTP `tags.status` as `http_req_failed.{5xx,4xx,3xx,0xx}.rate`
+   so Executions can chart 5xx vs 4xx vs combined `http_req_failed.rate`.
 
 Override bucket size with `TESTCHIMP_PERF_TIMESERIES_INTERVAL_SEC` (default
 `5`). Attach is **non-fatal**: a failed chart upload must not change the k6
@@ -115,6 +129,41 @@ exit code.
 - LLM journeys use `k6/lib/mock-llm.js` by default. Defaults are deterministic
   (`250ms`, zero jitter, zero error rate) and configurable through env. Real
   LLM calls require explicit approval and cost/rate-limit bounds.
+- **SUT LLM vs k6 LLM mock:** `mock-llm.js` only delays the **k6 process**. It
+  never intercepts LLM HTTP from the application. If the SUT would call an LLM
+  on the journey path, fail closed in the **SUT** (env stub / disabled client
+  that errors instead of falling back to a live key) and/or keep those APIs
+  off the journey. Prefer seed helpers that skip expensive post-save pipelines
+  not under test.
+- Volume staircases use **distinct dataset ids** (e.g. 10% / 50% / 100% of
+  target cardinality). Do not compare runs that differ only in cardinality
+  unless the dataset id is part of the comparison key. Teardown must name
+  seeded tenant/account ids — a “delete all” without id is the wrong contract.
+- Seed namespaces should separate **load** tenants from **volume** tenants so
+  teardown cannot wipe the other axis.
+
+## Hosts, keys, and VU meaning
+
+Do not reuse TestChimp reporter env for the system under test.
+
+| Role | Typical env | Who uses it |
+|------|-------------|-------------|
+| **SUT** (app API / UI / extra product hosts) | `BASE_URL`, `BACKEND_URL`, plus any extra hosts the journeys hit | Journey HTTP |
+| **Perf reporter** (charts only) | `TESTCHIMP_INGRESS_URL` / `TESTCHIMP_API_KEY` | `@testchimp/k6` `handleSummary` |
+
+- **SUT auth** uses project seed credentials from policy /
+  `ai-test-instructions.md`. Do not send the reporter `TESTCHIMP_API_KEY` to
+  the SUT.
+- **VU meaning is per journey:** record what a VU represents (typically a
+  user). Different journeys may use different actor models; do not copy peak
+  N across them without stating that.
+- **Isolated vs mixed peak:** running each journey alone at peak is not the
+  same as a mixed-hour composite. Mixed peak needs its own approved membership
+  and profile. Downsampled local VUs are not prod-sized proof.
+- **Inbound processing with stubbed outbound HTTP:** when the journey needs
+  the SUT to *process* inbound events/webhooks, stub *outbound* partner calls
+  at realistic latency but keep processing enabled so capacity includes
+  parse/write, not only request accept.
 
 ## External dependencies (mock with realistic latency)
 

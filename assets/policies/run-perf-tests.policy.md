@@ -31,7 +31,11 @@ smoke:
   max_vus: 1
   max_duration: 30s
 load:
+  # Peak concurrent users (ramping-vus). Null until the team sets N.
   max_vus: null
+  think_time_sec: 1
+  ramp_step: 30s
+  hold_at_peak: null
   max_rps: null
   max_duration: null
 volume:
@@ -41,7 +45,8 @@ volume:
 ```
 
 `null` means **not configured**, not unlimited. Load/volume must stop until the
-user/team supplies values. Do not derive values from production observations.
+user/team supplies values. `max_vus` for load is the **peak** of the ramp.
+Do not derive values from production observations.
 
 ## Data lifecycle
 

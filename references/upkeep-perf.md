@@ -22,6 +22,10 @@ resolved `upkeep-perf.policy.md`.
   Label all other comparisons directional.
 - REAL E2E interactions are schema evidence, never replay fixtures. Redact all
   values and use synthetic seeded data.
+- Load profiles should be **ramping-vus** (low → peak N) with `thinkTime()` so
+  a run answers concurrent **users**, not max RPS. Flag constant-VU / no-sleep
+  journeys as drift. Propose missing **volume** tests for data-size-sensitive
+  paths using the same user prompt as [`create-perf-tests.md`](./create-perf-tests.md).
 
 ## Analyze
 

@@ -65,14 +65,15 @@ pin_from_cdn() {
       cp "$tmp/downsample.js" "$LIB/downsample.js"
     else
       echo "Warning: downsample.js is not on CDN for @testchimp/k6@${version}." >&2
-      echo "Timeseries charts need it — pin a local checkout: K6_REPORTER_LOCAL_DIR=/path/to/k6-testchimp-reporter" >&2
+      echo "Timeseries charts need @testchimp/k6 ≥ 0.2.2. Re-run with K6_REPORTER_VERSION=0.2.2," >&2
+      echo "or dogfood a checkout: K6_REPORTER_LOCAL_DIR=/path/to/k6-testchimp-reporter" >&2
     fi
     echo "$version" >"$LIB/.version"
   else
     echo "Failed to download @testchimp/k6@${version} from jsDelivr." >&2
-    echo "Until the package is published, pin a local checkout:" >&2
+    echo "Retry later, pin a published release, or dogfood a local checkout:" >&2
+    echo "  K6_REPORTER_VERSION=0.2.2 k6/scripts/prepare.sh" >&2
     echo "  K6_REPORTER_LOCAL_DIR=/path/to/k6-testchimp-reporter k6/scripts/prepare.sh" >&2
-    echo "To pin a specific release: K6_REPORTER_VERSION=0.1.0 k6/scripts/prepare.sh" >&2
     exit 1
   fi
   trap - EXIT

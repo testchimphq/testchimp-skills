@@ -21,15 +21,30 @@ stop without failing an enclosing workflow.
 
 Same as SKILL.md **#4**: export `TESTCHIMP_API_KEY`,
 `TESTCHIMP_PROJECT_ID`, `TESTCHIMP_INGRESS_URL` (when set),
-`TESTCHIMP_BRANCH_NAME` into the **k6 process** env. Resolve the approved perf
-target via `connect-to-test-env`; reject production unless policy and user
-explicitly authorize it.
+`TESTCHIMP_BRANCH_NAME` into the **k6 process** env **for reporter ingest**.
+Those values are not the SUT. Resolve the approved perf target via
+`connect-to-test-env`; reject production unless policy and user explicitly
+authorize it. Point journeys at SUT hosts from that resolution / policy
+(`BASE_URL`, `BACKEND_URL`, or other named product hosts) — do not fall
+back to `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` for the system
+under test. SUT calls use project seed credentials, not the reporter key.
 
 When targeting a release, also export **`TESTCHIMP_RELEASE=<label>`** so ingest
 stamps `perf_runs.release` (see [Targeting a release](#targeting-a-release)).
 
 Record `TESTCHIMP_ENV`, `K6_PROFILE`, `K6_DATASET`, `LLM_MODE`, and commit SHA.
+`K6_LOAD_VUS` is **peak concurrent VUs** on a ramp (not a constant-VU hammer).
+Each journey must state what a VU represents (typically a user).
 Baselines are meaningful only when these dimensions are comparable.
+Isolated journey peaks are not mixed-hour proof; local downsample is not a
+prod-sized claim. Volume staircases must keep distinct dataset ids.
+
+Load results answer: *did N concurrent actors (as recorded on the journey)
+complete this journey within thresholds?* Fail rate with low p95 usually means
+errors (auth, checks), not “the stack cannot handle N VUs.” Charts should show
+VU climb and metric change across ramp steps — if the script has no
+`thinkTime()`, the run is max-RPS-per-VU and is **not** a concurrent-actor
+test; flag that in the report.
 
 ## Run
 
@@ -76,10 +91,14 @@ external is stubbed with realistic latency (env stubs and/or
 live externals or 0 ms stubs unless the approved plan says so.
 
 `prepare.sh` downloads `@testchimp/k6` **latest** from jsDelivr (re-run on each
-journey). Pin with `K6_REPORTER_VERSION`, or dogfood with:
+journey; **≥ 0.2.1** includes full-metric `downsample.js`; **≥ 0.2.2** adds
+HTTP status-class fail rates for Executions charts). Pin with
+`K6_REPORTER_VERSION`, or dogfood an unpublished checkout with:
 
 ```bash
-K6_REPORTER_LOCAL_DIR=/path/to/k6-testchimp-reporter k6/scripts/prepare.sh
+K6_REPORTER_VERSION=0.2.2 k6/scripts/prepare.sh
+# optional unpublished dogfood:
+# K6_REPORTER_LOCAL_DIR=/path/to/k6-testchimp-reporter k6/scripts/prepare.sh
 ```
 
 Do **not** put k6 inside `/testchimp run QA`. Do not pass Playwright `--reporter`.

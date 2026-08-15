@@ -37,12 +37,20 @@ smoke:
 volume:
   max_vus: 1
 load:
+  # Peak concurrent users at the top of the ramping-vus stages (not a
+  # constant VU count from t=0).
   default_vus: 10
+  think_time_sec: 1
+  ramp_step: 30s
+  hold_at_peak: 1m
   min_identities_per_vu: 1
 ```
 
 Load/volume absolute settings stay `null` until the user/team fills
 `run-perf-tests.policy.md`. Do not derive values from production observations.
+
+At Plan, recommend **volume** tests for list/search/report/history/export
+and large-tenant paths; confirm with the user before authoring.
 
 ## Composite membership
 

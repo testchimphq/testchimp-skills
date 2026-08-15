@@ -1,6 +1,8 @@
 /**
- * Data-volume example (few VUs; dataset cardinality lives in its manifest).
- * Policy/user-owned settings override via env.
+ * Data-volume example: few concurrent users (default 1 VU) against a large
+ * seeded dataset. Cardinality lives in the volume manifest, not VUs.
+ * Journeys still call thinkTime() so this is one user working the data, not
+ * a tight request loop. Policy/user-owned settings override via env.
  */
 export const volumeOptions = {
   vus: 1,
