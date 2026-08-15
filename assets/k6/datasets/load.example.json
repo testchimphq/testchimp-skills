@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "load-synthetic-users-v1",
+  "kind": "load",
+  "description": "Synthetic identity pool; concurrency is controlled by the profile, not this manifest.",
+  "seed": {
+    "namespace": "perf-load-v1",
+    "identityCount": 25,
+    "fixture": "synthetic-users.example.json"
+  },
+  "teardownRequired": true
+}

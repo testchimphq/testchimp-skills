@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "volume-single-tenant-v1",
+  "kind": "volume",
+  "description": "One synthetic tenant with explicit data cardinality; this does not increase concurrency.",
+  "seed": {
+    "namespace": "perf-volume-v1",
+    "tenantCount": 1,
+    "recordsPerTenant": 10000,
+    "payloadBytes": 1024
+  },
+  "teardownRequired": true
+}

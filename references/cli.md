@@ -157,8 +157,9 @@ Answers: **which top N scenarios should we cover next?** Agents should expand **
 | `--environment <s>` | No | `environment` | |
 | `--branch-name <s>` | No | `branchName` | Optional Git branch; omit for cross-branch coverage (recommended for `/testchimp test` Analyze). |
 | `--platform <web\|ios\|android>` | No | `platform` | Optional filter: latest coverage for that platform only (`web`, `ios`, or `android`). |
-| `--record-types <csv>` | No | `recordTypes` | Coverage sources to include: `smart_test` (automated) and/or `manual`. Default (omit): `smart_test` only. |
+| `--record-types <csv>` | No | `recordTypes` | Coverage sources: `smart_test`, `manual`, and/or `perf_test`. Default (omit): `smart_test` only. |
 | `--include-manual` | No | `recordTypes` | Convenience: include manual **session** coverage in addition to automated (equivalent to `--record-types smart_test,manual`). Not the default. |
+| `--include-perf` | No | `recordTypes` | Convenience: include **PERF_TEST** journey coverage in addition to automated. Opt-in; does not replace SMART_TEST/MANUAL. |
 | `--manual-only` | No | `recordTypes` | Convenience: manual-only coverage (equivalent to `--record-types manual`). |
 | `--lifecycle-statuses <csv>` | No | `scenarioLifecycleStatuses` | Allowlist. Empty/omit = no status filter (UI Insights). Agent: policy **`ready`** → `ready`; policy **Draft+** / `lifecycle_status: draft` → `draft,ready`. Blank scenario status is treated as `ready`. |
 | `--limit <n>` | No | `limit` | After filter+rank, return only top N **gaps** in **`rankedScenarios`**. Server clamps to **200** (also the max when only `consider_*` is set without `--limit`). |
@@ -1267,6 +1268,33 @@ testchimp get-api-operation-detail \
 ```
 
 Returns request/query/response field trees and response codes with covering-test tags. The CLI rejects calls with no lookup identity.
+
+### `list-api-operation-interactions`
+
+**API:** `POST /api/mcp/list_api_operation_interactions` (CLI ≥ **0.1.31**)
+
+Bounded newest-first redacted exemplars. Requires `--test-id` and/or `--operation-id`. Default `--interaction-type REAL`. Limit max 100.
+
+```bash
+testchimp list-api-operation-interactions --operation-id 01XYZ --interaction-type REAL --limit 100
+```
+
+---
+
+## Performance testing (CLI ≥ 0.1.31)
+
+Soft-gate with `get-org-capabilities` → `PERFORMANCE_TESTING`. Compare prints JSON to stdout; the CLI sets exit code `1` when `comparison.regressed` is `true` (or a flat `regressed: true`). A missing/incompatible baseline is an API error, not a silent pass.
+
+```bash
+testchimp list-perf-runs --testchimp-id checkout-journey --kind JOURNEY --limit 20
+testchimp get-perf-run --run-id 01ABC --include-raw
+testchimp list-perf-baselines --testchimp-id checkout-journey
+testchimp promote-perf-baseline --run-id 01ABC --env-class CI
+testchimp compare-perf-to-baseline --run-id 01ABC --env-class CI --max-p95-regression-percent 10
+testchimp list-related-perf-tests --scenario-titles "Checkout,Refund"
+```
+
+`get-requirement-coverage --include-perf` (or `--record-types smart_test,perf_test`) opts into `PERF_TEST` journey coverage without changing SMART_TEST/MANUAL defaults.
 
 ---
 

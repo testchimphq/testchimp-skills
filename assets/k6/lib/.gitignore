@@ -1,0 +1,5 @@
+# Pinned @testchimp/k6 (downloaded by scripts/prepare.sh). Do not commit.
+handleSummary.js
+ingest.js
+testchimp-k6-handleSummary.js
+testchimp-k6-ingest.js

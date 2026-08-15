@@ -6,7 +6,8 @@
 
 **Synonyms:** `/testchimp provision test environment`
 
-Bring up or connect to the environment used for create-tests, smart smoke, ExploreChimp, DAST, etc.
+Bring up or connect to the environment used for create-tests, smart smoke,
+ExploreChimp, DAST, performance testing, etc.
 
 ## Policy (required)
 
@@ -34,3 +35,22 @@ See [`policies-and-traceability.md`](./policies-and-traceability.md) and deeper 
 3. Export or document **`BASE_URL`** / backend URLs for the runner (Preamble **#4** still required for Playwright/Mobilewright).
 4. Best-effort **`report-agent-action`** when provisioning creates/updates env artifacts worth tracing.
 5. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `connect-to-test-env` (nested: parent closes).
+
+## Performance-test guidance
+
+When nested under `init-perf`, `create-perf-tests`, `run-perf-tests`, or
+`upkeep-perf`, the resolved policy must additionally identify:
+
+- an isolated load-safe target and health check; **production is denied by
+  default**;
+- explicit authorization, owner, and maximum VUs/RPS/duration/data cardinality
+  for anything beyond smoke;
+- seed and teardown commands/endpoints and test-data namespace;
+- rate limits, autoscaling/cost protections, observability, and an abort path;
+- whether external dependencies are real, stubbed, or mocked (LLMs default to
+  deterministic mock mode).
+
+If these are missing, smoke/inspect may proceed when safe, but load/volume
+execution is **Missing Config** and must stop. TrueCoverage or observed REAL
+E2E traffic may rank journeys and suggest relative mix only; it must never be
+converted into absolute load.

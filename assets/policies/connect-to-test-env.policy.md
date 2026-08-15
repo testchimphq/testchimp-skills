@@ -28,3 +28,16 @@ Use the skill-wide rule (explicit scope → feature-branch changes → default b
 ## CI / Cloud
 
 <!-- How CI procures env: cloud spin-up | EaaS | shared (discouraged) -->
+
+## Performance testing (when enabled)
+
+<!--
+Required before load/volume (smoke may remain allowed):
+- isolated load-safe target + health check (production denied by default)
+- owner-approved max VUs/RPS/duration/data cardinality
+- seed + teardown contract and namespace
+- rate-limit/autoscaling/cost protections, observability, abort command
+- external dependency modes; LLM defaults to deterministic mock
+
+Do not derive absolute load from TestChimp/TrueCoverage observations.
+-->

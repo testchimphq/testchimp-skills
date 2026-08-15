@@ -1,0 +1,12 @@
+[
+  {
+    "id": "perf-user-0001",
+    "role": "buyer",
+    "credentialRef": "PERF_USER_0001_TOKEN"
+  },
+  {
+    "id": "perf-user-0002",
+    "role": "buyer",
+    "credentialRef": "PERF_USER_0002_TOKEN"
+  }
+]

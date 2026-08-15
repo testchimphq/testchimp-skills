@@ -70,7 +70,7 @@ export default defineConfig({
       name: 'chromium',
       dependencies: ['setup'],
       testDir: '.',
-      testIgnore: ['**/setup/**'],
+      testIgnore: ['**/setup/**', '**/k6/**'],
       testMatch: '**/*.spec.{js,ts}',
       use: { ...devices['Desktop Chrome'], actionTimeout: 15 * 1000 },
     },
