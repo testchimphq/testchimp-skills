@@ -15,9 +15,8 @@ if [ ! -f "$SCRIPT" ]; then
   echo "k6 script not found: $1" >&2
   exit 1
 fi
-if [ ! -f "$ROOT/lib/handleSummary.js" ]; then
-  "$ROOT/scripts/prepare.sh"
-fi
+# Always refresh @testchimp/k6 (defaults to npm latest) unless skip/local pin.
+"$ROOT/scripts/prepare.sh"
 ABS="$(cd "$(dirname "$SCRIPT")" && pwd)/$(basename "$SCRIPT")"
 DIR="$(cd "$(dirname "$ABS")" && pwd)"
 # folder path relative to SmartTests root (parent of k6/)

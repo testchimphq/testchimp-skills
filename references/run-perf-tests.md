@@ -49,7 +49,8 @@ before the run and perform its documented teardown afterward. LLM journeys
 default to `LLM_MODE=mock`; the mock has deterministic configurable latency.
 Real LLM mode requires explicit cost/rate-limit approval.
 
-`prepare.sh` downloads `@testchimp/k6` from jsDelivr. Until the package is published, pin a local checkout:
+`prepare.sh` downloads `@testchimp/k6` **latest** from jsDelivr (re-run on each
+journey). Pin with `K6_REPORTER_VERSION`, or dogfood with:
 
 ```bash
 K6_REPORTER_LOCAL_DIR=/path/to/k6-testchimp-reporter k6/scripts/prepare.sh

@@ -12,7 +12,7 @@ testing, and stop without failing an enclosing workflow.
 1. Resolve SmartTests root (`.testchimp-tests` marker).
 2. Copy skill assets from [`../assets/k6/`](../assets/k6/) into `<SmartTests root>/k6/` if missing (`journeys/`, `composites/`, `profiles/`, `datasets/`, `lib/`, `scripts/`). Do not overwrite existing journeys, manifests, or policy decisions.
 3. Patch Playwright config: `testIgnore` must include `'**/k6/**'` (in addition to `'**/setup/**'` / fixtures). Templates: [`../assets/template_playwright.config.js`](../assets/template_playwright.config.js).
-4. Run `k6/scripts/prepare.sh` so `@testchimp/k6` is pinned into gitignored `k6/lib/` (jsDelivr, or `K6_REPORTER_LOCAL_DIR` until the package is published). **Never** vendor a reporter copy into git.
+4. Run `k6/scripts/prepare.sh` so `@testchimp/k6` **latest** is downloaded into gitignored `k6/lib/` (re-fetched on each prepare/run). **Never** vendor a reporter copy into git.
 5. Confirm `k6` is installed (`k6 version`); if missing, tell the user to install [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/).
 6. Seed `plans/knowledge/policies/run-perf-tests.policy.md`,
    `create-perf-tests.policy.md`, and `upkeep-perf.policy.md` from

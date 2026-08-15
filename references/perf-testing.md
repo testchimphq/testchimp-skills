@@ -62,13 +62,12 @@ export const testchimp = {
 
 k6 cannot read sibling `export const testchimp` from `handleSummary`. Use `k6/scripts/run-journey.sh`, which extracts id/kind/scenarios/testTypes/members into env (`TESTCHIMP_PERF_META`). Direct `k6 run` without those env vars will not ingest.
 
-Until `@testchimp/k6` is published, pin a local checkout:
-
-```bash
-K6_REPORTER_LOCAL_DIR=/path/to/k6-testchimp-reporter k6/scripts/prepare.sh
-```
-
-Do **not** vendor `@testchimp/k6` into the repo. `k6/scripts/prepare.sh` pins `handleSummary.js` + `ingest.js` into gitignored `k6/lib/`.
+`k6/scripts/prepare.sh` (also invoked by every `run-journey.sh`) downloads
+**npm `latest`** `@testchimp/k6` into gitignored `k6/lib/` — a new publish
+reaches users on the next prepare/run. Override with
+`K6_REPORTER_VERSION=<semver>` to pin, `K6_REPORTER_LOCAL_DIR` to dogfood a
+checkout, or `K6_REPORTER_SKIP_REFRESH=1` for offline reuse. Do **not** vendor
+the reporter into the app repo.
 
 ## Data, LLMs, and seeding
 
