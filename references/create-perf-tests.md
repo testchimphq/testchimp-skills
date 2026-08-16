@@ -168,7 +168,8 @@ Execute only approved checklist items:
    (`lib/volume-size.js`, `lib/dataset.js`, `scripts/run.sh`,
    `scripts/suite-worklist.py`, `scripts/run-volume-staircase.sh`;
    update `profiles/volume.js` to honor `K6_VOLUME_STEPS` unless the project
-   customized that file—then merge the step-duration logic).
+   customized that file—then merge the step-duration logic) and **refresh**
+   `scripts/prepare.sh` (always npm `@testchimp/k6` latest).
 2. Add journey files with stable metadata and real scenario ordinals.
    Each `default` function is **one user passing through the journey**:
    sequential steps, `thinkTime()` between user-visible actions and at the

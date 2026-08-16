@@ -1,22 +1,18 @@
 #!/usr/bin/env bash
 # Refresh @testchimp/k6 into k6/lib (gitignored). Never vendor a copy in git.
-# Default: always download npm @latest so a new publish reaches users on the
-# next prepare / run. Override with K6_REPORTER_VERSION=<semver> to pin.
+# Always download npm @latest so a new publish reaches users on the next
+# prepare / run. Do not pin a semver — K6_REPORTER_VERSION is ignored.
 # Keep original filenames so handleSummary.js can import ./ingest.js.
 set -euo pipefail
 ROOT="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
 LIB="$ROOT/lib"
 mkdir -p "$LIB"
 
-# "latest" = whatever npm currently publishes as latest.
-REQUESTED="${K6_REPORTER_VERSION:-latest}"
+if [ -n "${K6_REPORTER_VERSION:-}" ] && [ "${K6_REPORTER_VERSION}" != "latest" ]; then
+  echo "warning: K6_REPORTER_VERSION=${K6_REPORTER_VERSION} is ignored; @testchimp/k6 always uses npm latest." >&2
+fi
 
-resolve_version() {
-  local requested="$1"
-  if [ "$requested" != "latest" ]; then
-    echo "$requested"
-    return 0
-  fi
+resolve_latest() {
   if command -v npm >/dev/null 2>&1; then
     local resolved
     resolved="$(npm view @testchimp/k6 version 2>/dev/null || true)"
@@ -29,7 +25,7 @@ resolve_version() {
   echo "latest"
 }
 
-VERSION="$(resolve_version "$REQUESTED")"
+VERSION="$(resolve_latest)"
 
 pin_from_dir() {
   local src="$1"
@@ -50,7 +46,7 @@ pin_from_dir() {
   fi
 }
 
-pin_from_cdn() {
+fetch_latest() {
   local version="$1"
   local base="https://cdn.jsdelivr.net/npm/@testchimp/k6@${version}"
   local tmp
@@ -65,14 +61,13 @@ pin_from_cdn() {
       cp "$tmp/downsample.js" "$LIB/downsample.js"
     else
       echo "Warning: downsample.js is not on CDN for @testchimp/k6@${version}." >&2
-      echo "Timeseries charts need @testchimp/k6 ≥ 0.2.2. Re-run with K6_REPORTER_VERSION=0.2.2," >&2
-      echo "or dogfood a checkout: K6_REPORTER_LOCAL_DIR=/path/to/k6-testchimp-reporter" >&2
+      echo "Re-run k6/scripts/prepare.sh (always fetches npm latest)." >&2
     fi
     echo "$version" >"$LIB/.version"
   else
     echo "Failed to download @testchimp/k6@${version} from jsDelivr." >&2
-    echo "Retry later, pin a published release, or dogfood a local checkout:" >&2
-    echo "  K6_REPORTER_VERSION=0.2.2 k6/scripts/prepare.sh" >&2
+    echo "Retry later, or dogfood an unpublished checkout:" >&2
+    echo "  k6/scripts/prepare.sh" >&2
     echo "  K6_REPORTER_LOCAL_DIR=/path/to/k6-testchimp-reporter k6/scripts/prepare.sh" >&2
     exit 1
   fi
@@ -87,6 +82,6 @@ elif [ "${K6_REPORTER_SKIP_REFRESH:-}" = "1" ] \
   echo "Skipped refresh (K6_REPORTER_SKIP_REFRESH=1); using $LIB ($(cat "$LIB/.version" 2>/dev/null || echo unknown))"
   exit 0
 else
-  pin_from_cdn "$VERSION"
+  fetch_latest "$VERSION"
 fi
-echo "Pinned @testchimp/k6@$(cat "$LIB/.version") -> $LIB"
+echo "Fetched @testchimp/k6@$(cat "$LIB/.version") (npm latest) -> $LIB"

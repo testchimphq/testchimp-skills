@@ -52,7 +52,7 @@ test; flag that in the report.
 From SmartTests root:
 
 ```bash
-# pin reporter (no git vendoring)
+# fetch @testchimp/k6 latest (no git vendoring)
 k6/scripts/prepare.sh
 
 # suite (all journeys; load then volume)
@@ -96,14 +96,14 @@ external is stubbed with realistic latency (env stubs and/or
 `k6/lib/mock-external.js` / `mock-llm.js`). Do not run load/volume against
 live externals or 0 ms stubs unless the approved plan says so.
 
-`prepare.sh` downloads `@testchimp/k6` **latest** from jsDelivr (re-run on each
-journey; **≥ 0.2.1** includes full-metric `downsample.js`; **≥ 0.2.2** adds
-HTTP status-class fail rates for Executions charts). Pin with
-`K6_REPORTER_VERSION`, or dogfood an unpublished checkout with:
+`prepare.sh` (and every `run-journey.sh`) always downloads npm `@testchimp/k6`
+**latest** into gitignored `k6/lib/`. Do **not** pin `K6_REPORTER_VERSION`.
+Dogfood an unpublished checkout with `K6_REPORTER_LOCAL_DIR`, or skip refresh
+offline with `K6_REPORTER_SKIP_REFRESH=1`.
 
 ```bash
-K6_REPORTER_VERSION=0.2.2 k6/scripts/prepare.sh
-# optional unpublished dogfood:
+k6/scripts/prepare.sh
+# unpublished dogfood only:
 # K6_REPORTER_LOCAL_DIR=/path/to/k6-testchimp-reporter k6/scripts/prepare.sh
 ```
 

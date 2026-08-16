@@ -82,13 +82,12 @@ env (`TESTCHIMP_PERF_META`) so ingest works.
 **no ingest**. Missing wrapper `--out json` + attach means ingest **without
 Executions charts**.
 
-`k6/scripts/prepare.sh` (also invoked by every `run-journey.sh`) downloads
-**npm `latest`** `@testchimp/k6` into gitignored `k6/lib/` — a new publish
-reaches users on the next prepare/run. Timeseries attach needs
-`k6/lib/downsample.js` (shipped in **`@testchimp/k6` ≥ `0.2.1`**). Override with
-`K6_REPORTER_VERSION=<semver>` to pin, `K6_REPORTER_LOCAL_DIR` to dogfood a
-checkout, or `K6_REPORTER_SKIP_REFRESH=1` for offline reuse. Do **not** vendor
-the reporter into the app repo.
+`k6/scripts/prepare.sh` (also invoked by every `run-journey.sh`) always
+downloads **npm `latest`** `@testchimp/k6` into gitignored `k6/lib/` — a new
+publish reaches users on the next prepare/run. Do **not** pin
+`K6_REPORTER_VERSION`. `K6_REPORTER_LOCAL_DIR` dogfoods an unpublished
+checkout; `K6_REPORTER_SKIP_REFRESH=1` reuses an already-downloaded lib
+offline. Do **not** vendor the reporter into the app repo.
 
 ### Timeseries (Executions charts)
 
@@ -104,14 +103,13 @@ k6 does **not** expose live p95 from JS `handleSummary`. Charts come from a
 3. Downsamples the JSON dump in **Node** (`downsample.js`, default 5s buckets,
    cap ~500 points) and POSTs `/api/ingest_perf_run_timeseries` keyed by that
    **run_id**. Never attach to “latest run by test id.” Every k6 metric in the
-   dump is kept (trend stats, rates, counters, gauges, plus custom metrics).
-   `@testchimp/k6` **≥ 0.2.1** writes that full series for Executions charts.
-   **≥ 0.2.2** also keeps HTTP `tags.status` as `http_req_failed.{5xx,4xx,3xx,0xx}.rate`
-   so Executions can chart 5xx vs 4xx vs combined `http_req_failed.rate`.
-   Volume journeys must emit a **`volume_size` gauge** (`k6/lib/volume-size.js`,
-   usually via `pickTenant` in `k6/lib/dataset.js`) so the detail page can
-   chart cardinality instead of VUs. **Execute the suite with
-   `k6/scripts/run.sh`** — it dispatches volume files to the staircase helper.
+   dump is kept (trend stats, rates, counters, gauges, plus custom metrics)
+   including HTTP `tags.status` as `http_req_failed.{5xx,4xx,3xx,0xx}.rate`
+   and `volume_size` as a gauge. Volume journeys must emit **`volume_size`**
+   (`k6/lib/volume-size.js`, usually via `pickTenant` in `k6/lib/dataset.js`)
+   so the detail page can chart cardinality instead of VUs. **Execute the suite
+   with `k6/scripts/run.sh`** — it dispatches volume files to the staircase
+   helper.
 
 Override bucket size with `TESTCHIMP_PERF_TIMESERIES_INTERVAL_SEC` (default
 `5`). Attach is **non-fatal**: a failed chart upload must not change the k6

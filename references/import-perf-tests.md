@@ -137,7 +137,7 @@ export const testchimp = {
 - **`kind: 'journey'`** — omit `members` or use `[]`.
 - **`kind: 'composite'`** — `members` is the list of **journey** `testchimp.id`s; `scenarios` usually `[]`.
 - One file = one `k6 run`. Use `run-journey.sh` / `run-composite.sh`.
-- Do **not** vendor `@testchimp/k6`; `prepare.sh` fetches it into gitignored `k6/lib/`.
+- Do **not** vendor `@testchimp/k6`; `prepare.sh` fetches npm **latest** into gitignored `k6/lib/` (never pin `K6_REPORTER_VERSION`).
 - LLM paths default to `k6/lib/mock-llm.js`. Other SUT outbound deps: env-level stubs or `k6/lib/mock-external.js` with **realistic** latency (never 0 ms as the load/volume default).
 
 ---

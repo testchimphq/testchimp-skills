@@ -134,7 +134,7 @@ if [ -n "$RUN_ID" ] && [ -f "$METRICS_JSON" ] && command -v node >/dev/null 2>&1
     DOWNSAMPLE_JS="${K6_REPORTER_LOCAL_DIR}/downsample.js"
   fi
   if [ -z "$DOWNSAMPLE_JS" ]; then
-    echo "TestChimp timeseries skipped: downsample.js not found. Re-run k6/scripts/prepare.sh (needs @testchimp/k6 ≥ 0.2.1)." >&2
+    echo "TestChimp timeseries skipped: downsample.js not found. Re-run k6/scripts/prepare.sh (npm latest @testchimp/k6)." >&2
   else
     node --input-type=module - "$DOWNSAMPLE_JS" "$METRICS_JSON" "$RUN_ID" "$INTERVAL_SEC" <<'NODE' || true
 import { pathToFileURL } from 'node:url';

@@ -28,7 +28,8 @@ resolved `upkeep-perf.policy.md`.
   paths using the same user prompt as [`create-perf-tests.md`](./create-perf-tests.md).
   Volume journeys run via **`k6/scripts/run.sh`** (staircase is an internal
   helper). Add missing scaffold (`volume-size.js`, `run.sh`, `suite-worklist.py`)
-  rather than inventing a product-only wrapper.
+  and **refresh** `scripts/prepare.sh` from skill assets so `@testchimp/k6`
+  stays npm latest. Do not invent a product-only wrapper.
 
 ## Analyze
 
