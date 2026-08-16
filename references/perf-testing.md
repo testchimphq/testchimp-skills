@@ -50,6 +50,7 @@ Load answers **concurrent users**, not max RPS. Open-loop arrival (`ramping-arri
   `K6_LOAD_VUS`. Journeys **must** call `thinkTime()` from `k6/lib/think-time.js`
   between user steps and at the end of `default`.
 - `volume.js` stays few VUs (default 1); scale the **dataset**, not VUs.
+  Staircases are **one k6 run** (see [Volume staircase](#volume-staircase-executions-charts)).
 - TrueCoverage, REAL E2E samples, request rates observed by TestChimp, and
   relative composite weights can identify important journeys. **Never**
   convert those observations directly into absolute VUs, RPS, duration,
@@ -67,6 +68,7 @@ export const testchimp = {
   kind: 'journey',                 // or 'composite'
   scenarios: ['#TS-101'],          // journey only; omit or [] on composites
   testTypes: ['load'],             // 'volume' and/or 'load'
+  volumeKind: 'invoices',          // volume only: binds k6/datasets/volume-<kind>-{10,50,100}.json
   members: ['checkout-journey'],   // composite only: member testchimp.ids
 };
 ```
@@ -106,6 +108,10 @@ k6 does **not** expose live p95 from JS `handleSummary`. Charts come from a
    `@testchimp/k6` **≥ 0.2.1** writes that full series for Executions charts.
    **≥ 0.2.2** also keeps HTTP `tags.status` as `http_req_failed.{5xx,4xx,3xx,0xx}.rate`
    so Executions can chart 5xx vs 4xx vs combined `http_req_failed.rate`.
+   Volume journeys must emit a **`volume_size` gauge** (`k6/lib/volume-size.js`,
+   usually via `pickTenant` in `k6/lib/dataset.js`) so the detail page can
+   chart cardinality instead of VUs. **Execute the suite with
+   `k6/scripts/run.sh`** — it dispatches volume files to the staircase helper.
 
 Override bucket size with `TESTCHIMP_PERF_TIMESERIES_INTERVAL_SEC` (default
 `5`). Attach is **non-fatal**: a failed chart upload must not change the k6
@@ -114,8 +120,54 @@ exit code.
 **Agents must not:**
 
 - Sample metrics in `handleSummary` / journey JS and POST that as timeseries
-- Teach CI `k6 run script.js --out json=…` instead of `run-journey.sh`
+- Teach CI `k6 run script.js --out json=…` instead of `k6/scripts/run.sh`
 - Invent a custom attach that looks up the latest run by `testchimp.id`
+
+## Volume staircase (Executions charts)
+
+k6 has **no** data-size executor. Load climbs with built-in `ramping-vus`;
+volume cannot. TestChimp’s convention (what Executions is built for) is the
+same shape on both axes:
+
+| Axis | Control during one `k6 run` | Second Executions chart |
+|------|-----------------------------|-------------------------|
+| Load | `ramping-vus` 10% → 50% → peak | VUs |
+| Volume | 1 VU held at 10% → 50% → 100% **seeded** cardinality | `volume_size` |
+
+Do **not** ingest three separate k6 runs at 10/50/100% — that is three
+plateaus with VUs=1, and the user cannot read p95 vs data size on one chart.
+Do **not** step the `volume_size` gauge while still hitting one unchanged
+dataset.
+
+**Portable recipe** (copied from this skill’s `assets/k6/`; agents must not
+invent a product-only wrapper):
+
+1. Manifests `k6/datasets/volume-<kind>-{10,50,100}.json` with isolated seed
+   namespaces and increasing cardinality. Comparison/ingest dataset id = **peak**
+   (`-100`).
+2. `SEED_COMMAND` honors `PERF_SEED_APPEND=1`: append tenants to
+   `PERF_TENANTS_FILE`; each tenant has numeric `volumeSize`.
+3. Journeys call `pickTenant()` from `k6/lib/dataset.js` (records
+   `volume_size` and switches tenant as elapsed time crosses each
+   `K6_VOLUME_STEP_DURATION` hold). Always `thinkTime()` on volume.
+4. Tag the journey `testTypes: ['volume']` and `volumeKind: '<kind>'`. Execute
+   with **`k6/scripts/run.sh`** (paths relative to `k6/`):
+
+```bash
+# from the tests root (parent of k6/)
+SEED_COMMAND=<project seed> k6/scripts/run.sh journeys/foo.js
+k6/scripts/run.sh --impacted
+k6/scripts/run.sh
+```
+
+`run.sh` runs load journeys first (`K6_PROFILE=load`), then volume staircases
+(one k6 run per volume file). Do not call `run-volume-staircase.sh` from CI
+or playbooks — it is an implementation helper. Composites are not in the
+no-arg suite; pass `composites/<file>.js` explicitly.
+
+If the project cannot seed multiple isolated tenants, run a **single** peak
+manifest and `recordVolumeSize(peak)` — the volume chart is an honest plateau.
+Do not fake stairs.
 
 ## Data, LLMs, and seeding
 
@@ -135,9 +187,11 @@ exit code.
   that errors instead of falling back to a live key) and/or keep those APIs
   off the journey. Prefer seed helpers that skip expensive post-save pipelines
   not under test.
-- Volume staircases use **distinct dataset ids** (e.g. 10% / 50% / 100% of
-  target cardinality). Do not compare runs that differ only in cardinality
-  unless the dataset id is part of the comparison key. Teardown must name
+- Volume staircases seed **distinct tenants** at fractions of target
+  cardinality (e.g. 10% / 50% / 100%) and run them as **holds in one k6
+  invocation**, emitting `volume_size`. Ingest the **peak** (100%) dataset
+  id. Do not compare a staircase run to a single-size plateau of a different
+  target. Teardown must name
   seeded tenant/account ids — a “delete all” without id is the wrong contract.
 - Seed namespaces should separate **load** tenants from **volume** tenants so
   teardown cannot wipe the other axis.
@@ -211,26 +265,27 @@ a stub from 50 ms → 300 ms is a **new** comparison key, not a silent win.
 
 ## Related selection artifacts
 
-`k6/scripts/select-related.sh` reads a JSON change description and journey
-metadata, then writes a stable, sorted execution artifact:
+`k6/scripts/select-related.sh <changes.json>` matches journeys under
+`k6/journeys/**` to changed scenarios / operations / paths and writes:
 
 ```text
-k6/artifacts/related/<branch-slug>/related-perf-tests.json
+plans/smart-smoke/<branch>/related-perf-tests.json
+```
+
+Sibling of Playwright `related-tests.json`. `file` paths are **k6-relative**
+(`journeys/foo.js`). `/testchimp run QA` and `/testchimp create-perf-tests`
+both write/update this file when `k6/journeys` exists. Execute with:
+
+```bash
+k6/scripts/run.sh --impacted
 ```
 
 Also query `list-related-perf-tests` for platform inventory (journeys plus
-parent composites by default). When policy wants a reviewable related-journey
-artifact, copy the selection to:
-
-```text
-plans/perf/<branch>/related-journeys.json
-```
-
-(`gitSha`, `journeys[]`, `composites[]`, `reasons`). The k6 artifact includes
-schema version, branch, input hash, selected journeys, and reasons (scenario,
-operation, or path). Commit the plans copy only when project policy uses
-related selection as a review artifact; otherwise keep `k6/artifacts/`
-ignored. Execute selections with `k6/scripts/run-related.sh <artifact>`.
+parent composites). `select-related.sh` only walks `k6/journeys/**` — composites
+go in the json only when listed by hand or by that platform query. They are not
+in the no-arg `run.sh` suite. Scenario ids `#TS-12` / `TS-12` / `12` are treated
+as the same. `--impacted` with `selected: []` runs nothing; a missing file warns
+and runs all journeys (`PERF_IMPACTED_STRICT=1` fails instead).
 
 ## Platform evidence
 

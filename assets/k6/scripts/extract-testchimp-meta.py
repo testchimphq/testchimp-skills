@@ -40,6 +40,7 @@ def main() -> int:
     emit("EXTRACTED_PERF_ID", quoted("id"))
     emit("EXTRACTED_PERF_KIND", quoted("kind"))
     emit("EXTRACTED_PERF_TEST_TYPES", csv("testTypes"))
+    emit("EXTRACTED_PERF_VOLUME_KIND", quoted("volumeKind"))
     emit("EXTRACTED_PERF_SCENARIOS", csv("scenarios"))
     emit("EXTRACTED_PERF_MEMBERS", csv("members"))
     return 0

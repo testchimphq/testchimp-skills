@@ -102,6 +102,24 @@ Example:
 
 ---
 
+## Related perf selection (run-qa / create-perf-tests)
+
+When the SmartTests root has **`k6/journeys`**, this workflow (and **run-qa Phase 5**, **create-perf-tests**) also writes:
+
+```text
+plans/smart-smoke/<branch>/related-perf-tests.json
+```
+
+Build `perf-changes.json` (`branch`, `scenarios`, `operations`, `paths`) from the same impact analysis as related SmartTests, then from the SmartTests root:
+
+```bash
+k6/scripts/select-related.sh <MAPPED_PLANS_ROOT>/smart-smoke/<branch>/perf-changes.json
+```
+
+**Do not** execute `k6/scripts/run.sh` here. CI or `/testchimp run-perf-tests` later uses `k6/scripts/run.sh --impacted`. Nested **create-perf-tests** under run-qa is **opt-in (default No)**. Details: [`run-qa.md`](./run-qa.md)#1b-write-related-perf-testsjson-when-k6journeys-exists-blocking.
+
+---
+
 ## 2) Collaborate on smoke config
 
 Before Execute, agree with the user (or record on the plan in non-interactive mode) which mode to use:
@@ -194,6 +212,7 @@ If a failure reveals a **missing** scenario for new behavior, add it to the plan
 - [ ] Affected scenarios identified from **plans + change set** (listed on plan).
 - [ ] Linked tests resolved via scenario **`annotation`** / deprecated `// @Scenario:` → TestLocators (no `tests/` prefix on `folderPath`).
 - [ ] **`plans/smart-smoke/<branch>/related-tests.json`** written.
+- [ ] **`plans/smart-smoke/<branch>/related-perf-tests.json`** written when `k6/journeys` exists (or **`N/A`**); k6 not executed.
 - [ ] Smoke mode agreed: **related-tests-only** (safe default) or budgeted; env set (`TESTCHIMP_SMART_SMOKE_ENABLED` + overrides).
 - [ ] Suite executed with real runner (**`TESTCHIMP_API_KEY`** on process) via normal `npx playwright test`.
 - [ ] Failures triaged; tests and/or product updated; suite re-run to green or explicit blockers recorded.

@@ -44,7 +44,7 @@ The objective of **`/testchimp run QA`** (synonym **`/testchimp test`**) is to *
 2. **Plan**
 3. **Execute**
 4. **Validate**
-5. **Smart smoke** — [Phase 5](#phase-5-smart-smoke-check): impact analysis → `plans/smart-smoke/<branch>/related-tests.json`, then related-tests-only or budgeted smoke (`TESTCHIMP_SMART_SMOKE_ENABLED`); fix failures in existing tests when needed.
+5. **Smart smoke** — [Phase 5](#phase-5-smart-smoke-check): impact analysis → `plans/smart-smoke/<branch>/related-tests.json`, then related-tests-only or budgeted smoke (`TESTCHIMP_SMART_SMOKE_ENABLED`); fix failures in existing tests when needed. When **`k6/journeys`** exists, also write sibling **`related-perf-tests.json`** for CI `k6/scripts/run.sh --impacted`. **Do not** execute load/volume k6 inside run-qa.
 6. **ExploreChimp** — [Phase 6](#phase-6-explorechimp): **default-on** for UI SmartTest deltas once **Phase 5** is green; branch plan **`yes`** or documented **`N/A`** ([Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)). Run on **new + materially changed + smoke-touched** UI specs (see Phase 6).
 7. **Cleanup** (see [Phase 7: Cleanup](#phase-7-cleanup-environment-teardown))
 
@@ -328,15 +328,17 @@ The Analyze phase must gather:
 - **Candidate tests and posture (high level; no implementation yet)**
   - A preliminary list of **which tests** might be needed. For each, jot **rough Arrange / Act / Assert** so Phase 2 is not cold-starting—the full three-section template is still required in **Plan**.
 - **Smart smoke (reconnaissance for Plan §6)** — From PR diff + existing **`plans/stories/`** and **`plans/scenarios/`** under `<MAPPED_PLANS_ROOT>`, note **likely affected** scenarios (same feature area, shared flows, touched APIs/screens). Record candidate **`#TS-…`** ids for the branch plan; Phase 5 resolves linked tests → TestLocators and writes **`plans/smart-smoke/<branch>/related-tests.json`**.
+- **Related perf journeys (reconnaissance for Plan §8)** — If the SmartTests root has **`k6/journeys/**/*.js`**, note which existing journeys may be implicated (journey `scenarios` / `operations` / `paths` vs the same PR scope). Phase 5 writes **`plans/smart-smoke/<branch>/related-perf-tests.json`**. **Do not** run k6 here. Nested **`create-perf-tests`** is **opt-in (default No)** — ask only when coverage is missing; unlike ExploreChimp, do **not** default it on.
 - **ExploreChimp (reconnaissance for Plan §7)** — For **UI** changes, note which SmartTests could serve **Phase 6** (**new**, **smoke-touched**, and **materially changed** UI specs; new screen-states). The **`yes`** vs **`N/A`** decision and target list are finalized in the branch plan under **[Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)** (default **`yes`** for UI SmartTest deltas unless an allowed exception applies); this Analyze bullet is reconnaissance only.
 - **Platform scope (mobile & multi-platform only)** — Read **`.testchimp-tests`** `project_type`. If **`mobile`** or **`multi-platform`**, apply [`platform-scope.md`](./platform-scope.md): draft **`## Platform scope (this run)`** on the branch plan (decision, confidence, rationale). **Inform** the user of the chosen platform(s) or **ask** when the PR diff does not clearly imply a single platform. Do not proceed to **Plan** user approval with **User confirmed: pending**.
 - **Platform evidence (via TestChimp CLI/MCP when available)**
   - Use **TestChimp CLI** (`testchimp ...`) when MCP tools are not available.
-  - **Org capabilities (soft gate):** Before using **TrueCoverage** analytics or **API operation coverage** insight below, call **`get-org-capabilities`** (CLI ≥ **0.1.29**; see [`cli.md`](./cli.md) § `get-org-capabilities`). If **`TRUE_COVERAGE`** is missing and `freeTrialActive` is `false`, skip TrueCoverage MCP/CLI analytics calls this run (note **`N/A`** + reason on the branch plan) — TrueCoverage **instrumentation** Plan work is unaffected (still soft-gated separately per [`instrument-truecoverage.md`](./instrument-truecoverage.md#capability-check-before-instrumenting--soft-gate)). If **`API_CONTRACT_COVERAGE`** is missing and `freeTrialActive` is `false`, skip the **Related API operation gaps** bullet below (note **`N/A`** + reason). Either gate only skips that one insight source — requirement coverage, execution history, and the rest of Analyze/Plan/Execute continue normally. If the capability call itself fails, proceed as normal (fail open) and note the check could not be confirmed.
+  - **Org capabilities (soft gate):** Before using **TrueCoverage** analytics or **API operation coverage** insight below, call **`get-org-capabilities`** (CLI ≥ **0.1.29**; see [`cli.md`](./cli.md) § `get-org-capabilities`). If **`TRUE_COVERAGE`** is missing and `freeTrialActive` is `false`, skip TrueCoverage MCP/CLI analytics calls this run (note **`N/A`** + reason on the branch plan) — TrueCoverage **instrumentation** Plan work is unaffected (still soft-gated separately per [`instrument-truecoverage.md`](./instrument-truecoverage.md#capability-check-before-instrumenting--soft-gate)). If **`API_CONTRACT_COVERAGE`** is missing and `freeTrialActive` is `false`, skip the **Related API operation gaps** bullet below (note **`N/A`** + reason). If **`PERFORMANCE_TESTING`** is missing and `freeTrialActive` is `false`, skip **`list-related-perf-tests`** / `--include-perf` (note **`N/A`**); still **write** `related-perf-tests.json` from local `k6/journeys` metadata when that tree exists. Any of these gates only skip that one insight source — requirement coverage, execution history, and the rest of Analyze/Plan/Execute continue normally. If the capability call itself fails, proceed as normal (fail open) and note the check could not be confirmed.
   - Suggested queries:
     - `testchimp get-requirement-coverage --folder-path <plans/... or tests/...>` (scoped to the affected area; **omit `--branch-name`** so coverage aggregates across branch copies). On **mobile** / **multi-platform** repos, interpret multiple **`platform`** rows per scenario; add `--platform ios` or `--platform android` when analyzing one stack **in scope** for this run ([`platform-scope.md`](./platform-scope.md)).
     - `testchimp get-execution-history --folder-path <tests/...>` (recent failures/flake; omit `--branch-name` unless you need one branch only). For a single scenario’s runs: `--scenario-id <platform-scenario-uuid>` with optional `--platform web|ios|android` (CLI **≥ 0.1.6**).
     - **Related API operation gaps** (skip if **`API_CONTRACT_COVERAGE`** is gated per above): When the PR/scope touches backend or client API surface and OpenAPI roots are configured, load [`api-testing.md`](./api-testing.md) and use `list-api-operation-services` / `list-api-operations` / `get-api-operation-detail` to note related coverage gaps for Plan (do not duplicate the full create-tests API-scope playbook — that lives in [`create-tests.md`](./create-tests.md) + [`api-testing.md`](./api-testing.md)).
+    - **Related perf tests** (skip the **platform** query if **`PERFORMANCE_TESTING`** is gated): When **`k6/journeys`** exists, optionally call **`list-related-perf-tests`** and **`get-requirement-coverage --include-perf`**. Local selection still uses journey `scenarios` / `operations` / `paths` vs this PR.
   - Record results (relevant summaries) in the branch plan file (high level; no giant dumps).
 
 ### Phase 1 completion gate (Analyze → Plan)
@@ -351,6 +353,7 @@ Before proceeding to **Plan**, the agent must record **done/blocked/`N/A`** for 
 - [ ] Coverage/execution history queried via CLI/MCP where applicable (or `N/A`).
 - [ ] **Org capabilities** checked via `get-org-capabilities` (or noted as failed/skipped); TrueCoverage analytics and API operation gap queries above reflect **`TRUE_COVERAGE`** / **`API_CONTRACT_COVERAGE`** gating when off (soft-skip that insight only, not the rest of Analyze).
 - [ ] **Smart smoke:** candidate affected scenarios noted for **Plan §6** (reconnaissance; final list refined in **Phase 5**).
+- [ ] **Related perf:** `k6/journeys` present/absent noted for **Plan §8**; candidate impacted journeys (or **`N/A`** — no k6 tree).
 - [ ] **ExploreChimp:** candidate UI specs noted for **Plan §7** (reconnaissance only; final **`yes`** / **`N/A`** belongs in **[Phase 2 §7](#7-explorechimp-branch-plan-yes-or-documented-na)** during **Plan**).
 - [ ] **Platform scope:** for **`mobile`** / **`multi-platform`**, branch plan **`## Platform scope (this run)`** drafted; user **informed** or **asked** per [`platform-scope.md`](./platform-scope.md) (`N/A` for **web-only** `project_type`).
 
@@ -388,10 +391,14 @@ The Plan MUST be written under the branch plan file. It MUST include the followi
    - **Default:** When the PR/plan scope includes **new or materially changed UI SmartTests** (real UI; **`markScreenState`** in use or planned once stable—especially **new screen-states** in authored tests), record **`yes`** in §7 and list **target UI SmartTest files** (paths or globs). **Phase 6** then runs after **Phase 5: Smart smoke** is green. Treat **§7 as `yes`** in those cases unless the user **explicitly opts out** before plan approval or the case is **`N/A`** with a **one-line rationale** (e.g. **API-only** change, **no UI journey**, **user declined cost**). **`N/A`** must appear on the branch plan (same approval window as the rest of the plan)—do **not** skip Phase 6 silently or treat ExploreChimp as “only if the user asks later.”
    - **ExploreChimp target list (when `yes`):** Include **all** of: (a) **new** UI specs from this PR, (b) **materially changed** UI specs from this PR, and (c) **smoke suite** UI specs that were **run or updated** in **Phase 5** (not only net-new tests). Refresh the list on the branch plan after Phase 5 completes.
    - If **`yes`**: confirm the user accepts **extra runtime / API cost** as part of the same plan approval. Execution: **[Phase 6: ExploreChimp](#phase-6-explorechimp)** and [`run-explorechimp.md`](./run-explorechimp.md).
-8. **Workflow checklists (phase hygiene)**
+8. **Related performance journeys (opt-in authoring; always write the artifact)**
+   - **When `k6/journeys` exists:** **Phase 5** will run `k6/scripts/select-related.sh` from the **same** impacted `#TS-…` / operations / paths as Smart smoke and write **`plans/smart-smoke/<branch>/related-perf-tests.json`** (k6-relative `file` paths such as `journeys/foo.js`). That file is what **`k6/scripts/run.sh --impacted`** (CI or `/testchimp run-perf-tests`) consumes. **Do not** execute load or volume k6 as part of run-qa.
+   - **Nested `create-perf-tests`:** **Ask**, default **No** (unlike ExploreChimp §7). Approve nested authoring only when the user wants **new** journeys for uncovered change-scope. If **No** (or no k6 tree), skip authoring; still write related-perf json from **existing** journeys when the tree exists.
+   - Record **`N/A`** when there is **no** `k6/journeys` tree (no perf artifact to write).
+9. **Workflow checklists (phase hygiene)**
    - An **Execute checklist** (Phase 3) that mirrors [Batched order (Execute phase)](#batched-order-execute-phase) (including **step 0** `@testchimp/playwright` upgrade) plus environment bring-up, test runs, and triage.
    - A **Validate checklist** (Phase 4): scenario-link comment audit + **`markScreenState`** / atlas remediation.
-   - A **Smart smoke checklist** (Phase 5): related-tests.json, smoke mode (related-tests-only vs budgeted), run results, fixes.
+   - A **Smart smoke checklist** (Phase 5): related-tests.json, related-perf-tests.json (or **`N/A`** — no k6 tree), smoke mode (related-tests-only vs budgeted), run results, fixes.
    - A **Cleanup checklist** (Phase 7): local env/process teardown and/or ephemeral environment destroy, aligned to the environment strategy used.
 
 The Plan MUST also include:
@@ -413,6 +420,7 @@ Before proceeding to **Execute**, the agent must record **done/blocked/`N/A`** f
 - [ ] **Platform scope:** **`User confirmed: yes`** on branch plan (or **`N/A`** — web-only project); platform list matches inventory and §6/§7.
 - [ ] **Smart smoke:** branch plan **§6** lists candidate affected scenarios (or **`N/A`** + rationale).
 - [ ] **ExploreChimp:** branch plan **§7** records **`yes`** vs **`N/A`** (+ target specs when **`yes`**, including new + changed + smoke-touched UI specs); default-on policy for UI deltas applied; matches what the user approved.
+- [ ] **Related perf:** branch plan **§8** records `k6/journeys` present/absent; nested create-perf **Yes/No** (default **No**); Phase 5 will write **`related-perf-tests.json`** when the tree exists.
 
 ---
 
@@ -528,11 +536,13 @@ For **prioritization during `/testchimp test` Analyze**, treat a scenario as in-
 
 > **Full guidance:** [`run-smart-smoke.md`](./run-smart-smoke.md) (`workflow-id: run-smart-smoke`) — scoping (explicit / feature branch / default + `get-last-run-workflow-detail` preferring `run-smart-smoke`, one fallback to legacy `run-smart-regression`), depends on connect-to-test-env, plan→approve when standalone, and `report-agent-action` on fixes. **Keep reading this section** so Phase 5 behavior is unchanged if the agent only has this file. Legacy prompt **`/testchimp run smart regression`** is a one-release synonym.
 
-Goal: after **new/changed** tests are **authored and validated** (Phase 4), **analyze impact**, write **related TestLocators**, collaborate on smoke config (**related-tests-only** safe default vs budgeted), enable **`TESTCHIMP_SMART_SMOKE_ENABLED`**, run via the **same** `npx playwright test` (no smart-smoke CLI flags), and **rectify** failures (test vs product per [Validation failure triage](#validation-failure-triage)).
+Goal: after **new/changed** tests are **authored and validated** (Phase 4), **analyze impact**, write **related TestLocators**, write **related-perf-tests.json** when **`k6/journeys`** exists (no k6 execution), collaborate on smoke config (**related-tests-only** safe default vs budgeted), enable **`TESTCHIMP_SMART_SMOKE_ENABLED`**, run via the **same** `npx playwright test` (no smart-smoke CLI flags), and **rectify** failures (test vs product per [Validation failure triage](#validation-failure-triage)).
 
 ### When to run
 
-**Always** after **Phase 4** is green, unless the branch plan **§6** records **`N/A`** with rationale (e.g. greenfield repo with no existing scenarios, docs-only PR). **Do not** skip silently when existing plans and linked tests exist.
+**Playwright smart smoke:** **Always** after **Phase 4** is green, unless the branch plan **§6** records **`N/A`** with rationale (e.g. greenfield repo with no existing scenarios, docs-only PR). **Do not** skip silently when existing plans and linked tests exist.
+
+**Related-perf json:** Still run **[§1b](#1b-write-related-perf-testsjson-when-k6journeys-exists-blocking)** whenever **`k6/journeys`** exists, even if §6 is **`N/A`** (docs-only PRs with no Playwright smoke can still impact k6 journeys).
 
 ### 1) Analyze impact → write `related-tests.json` (BLOCKING)
 
@@ -559,6 +569,39 @@ From the SmartTests root (directory containing **`.testchimp-tests`**):
 2. Build **TestLocators** for each matching test — paths **relative to the SmartTests / mapped tests root**; **`folderPath` must not** prefix `tests/` (e.g. `["auth"]`, not `["tests","auth"]`). Include `fileName`, `testSuite`, `testName`.
 3. **Also include** TestLocators for **every new or materially changed SmartTest** authored in this run (even if already covered by a scenario annotation). Nested **`create-tests`** should already have written/updated this file — **refine** it here (merge impact-related + new/changed), do not delete new-test locators.
 4. Write **`plans/smart-smoke/<branch>/related-tests.json`** (array or `{ "relatedTests": […] }`). Record the path on the branch plan under **Phase 5 completion**. Create parent dirs as needed.
+
+### 1b) Write `related-perf-tests.json` when `k6/journeys` exists (BLOCKING)
+
+**Do not** run k6 load/volume inside run-qa. This step only **authors the selection file** so a later CI job or `/testchimp run-perf-tests` can run `k6/scripts/run.sh --impacted`.
+
+Skip with **`N/A`** on the branch plan only when there is **no** `k6/journeys` directory (or it contains no `*.js`). Existence of the tree is enough — even if Phase 5 Smart smoke §6 is `N/A`.
+
+From the same impacted **`#TS-…`** list, PR-touched **operations**, and **path templates** (plus optional `list-related-perf-tests` when **`PERFORMANCE_TESTING`** is available):
+
+1. Write a change description next to the smoke artifacts:
+
+```json
+{
+  "branch": "<current-git-branch>",
+  "scenarios": ["#TS-12", "#TS-44"],
+  "operations": ["filesList"],
+  "paths": ["/files/list"]
+}
+```
+
+   Path: **`<MAPPED_PLANS_ROOT>/smart-smoke/<branch>/perf-changes.json`**. Use **`#TS-<n>`** strings that match journey `testchimp.scenarios`. Collect `operations` / `paths` from journey metadata that overlaps the PR (OpenAPI / proto / routes touched) and from the Smart smoke scenario set.
+
+2. From the SmartTests root (parent of `k6/`):
+
+```bash
+k6/scripts/select-related.sh <MAPPED_PLANS_ROOT>/smart-smoke/<branch>/perf-changes.json
+```
+
+   Default output: **`plans/smart-smoke/<branch>/related-perf-tests.json`**. `file` entries are **k6-relative** (`journeys/foo.js`, including nested dirs). Do **not** hand-edit the generated artifact.
+
+3. If **§8** approved nested **`create-perf-tests`**: load [`create-perf-tests.md`](./create-perf-tests.md), author **only** the approved new journeys, then **re-run** `select-related.sh` so the json includes them.
+
+4. **Commit** `related-perf-tests.json` with the PR (same as `related-tests.json`) so CI `--impacted` can see it. Empty `selected: []` still counts as written — `--impacted` **runs nothing** (the change scope hit no journeys). A **missing** file warns and runs all journeys unless `PERF_IMPACTED_STRICT=1`. Merge-gate CI should **skip** (or set `PERF_IMPACTED_STRICT=1`) when the file is missing — do not run the full k6 suite on every PR. Typical merge-gate invocation: `K6_PROFILE=smoke k6/scripts/run.sh --impacted` against the isolated SUT (not staging).
 
 ### 2) Collaborate on smoke config
 
@@ -588,6 +631,8 @@ If a failure reveals a **missing** scenario for new behavior, add it to the bran
 
 - [ ] Affected scenarios identified from **plans + PR** (listed on branch plan).
 - [ ] **`plans/smart-smoke/<branch>/related-tests.json`** written (TestLocators for **new/changed + impact-related**; no `tests/` prefix on `folderPath`).
+- [ ] **`plans/smart-smoke/<branch>/related-perf-tests.json`** written via `k6/scripts/select-related.sh` (or **`N/A`** — no `k6/journeys`). k6 **not** executed.
+- [ ] Nested create-perf executed only if **§8** was **Yes** (default **No**).
 - [ ] Smoke mode agreed: **related-tests-only** (safe default) or budgeted; `TESTCHIMP_SMART_SMOKE_ENABLED` (+ overrides) set.
 - [ ] Smoke suite executed with real runner (**`TESTCHIMP_API_KEY`** on process) via normal `npx playwright test`.
 - [ ] Failures triaged; tests and/or product updated; suite re-run to green or explicit blockers recorded.
@@ -599,6 +644,7 @@ If a failure reveals a **missing** scenario for new behavior, add it to the bran
 Record in branch plan file:
 
 - [ ] Affected scenarios + `related-tests.json` documented (or **`N/A`** + rationale per **§6**).
+- [ ] **`related-perf-tests.json`** written (or **`N/A`** — no `k6/journeys`). No k6 load/volume run in this workflow.
 - [ ] Smoke mode + run results recorded (pass / fail / blocked).
 - [ ] Any **materially changed** existing specs noted for **Phase 6** ExploreChimp scope.
 - [ ] **Handoff to Phase 6:** If **§7** is **`yes`**, confirm ExploreChimp target list = **union** of new UI specs, changed UI specs, and smoke-updated UI specs with **`markScreenState`** (add markers in Phase 4 or a quick Validate pass on touched smoke specs if UI flows changed).
@@ -670,6 +716,7 @@ At the end, report:
 - What changed in test infra (fixtures/mocks).
 - What tests were added/updated and their run results.
 - **Smart smoke (Phase 5):** related-tests.json path, smoke mode, run pass/fail, and any existing tests updated—or **`N/A`** with rationale.
+- **Related perf (Phase 5):** related-perf-tests.json path and selected journey files (or **`N/A`** — no k6 tree). Confirm k6 load/volume was **not** run here.
 - **ExploreChimp (Phase 6):** executed per branch plan **§7** (specs targeted: new + changed + smoke-touched) when **`yes`**, or **`N/A`** with rationale on the plan; whether **`## ExploreChimp`** in **`ai-test-instructions.md`** was updated.
 - Validate outcomes (scenario-link audit: pass/fail/anomalies fixed).
 - Any cleanup done (local env stop, ephemeral env destroy, temp artifacts removed, generated artifacts not committed).

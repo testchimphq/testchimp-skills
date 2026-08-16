@@ -40,6 +40,9 @@ load:
   max_duration: null
 volume:
   max_vus: 1
+  # 10/50/100 holds in one k6 run (volume_size chart). Null until approved.
+  staircase_pct: [10, 50, 100]
+  step_duration: null
   max_duration: null
   max_records_per_tenant: null
 ```

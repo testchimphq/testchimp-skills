@@ -27,8 +27,9 @@ resolved `create-perf-tests.policy.md`.
   `connect-to-test-env` and policy). Never fall back to reporter URLs for
   the system under test. If the SUT exposes multiple hosts, name each one
   on the plan.
-- When proposing volume, include a **staircase** (distinct dataset ids at
-  fractions of target cardinality), not a single all-or-nothing dump.
+- When proposing volume, include a **staircase** (10% / 50% / 100% of target
+  cardinality as holds in **one k6 run**, `volume_size` gauge, peak dataset
+  id), not a single all-or-nothing dump and not three unrelated ingest records.
 - TestChimp and TrueCoverage observations choose **what** to test and provide
   relative weighting. They never authorize absolute VUs, RPS, duration,
   dataset size, SLOs, or thresholds. Those require user/policy capacity input.
@@ -99,7 +100,8 @@ resolved `create-perf-tests.policy.md`.
 
      > These scenarios look volume-sensitive because `<reason>`. A volume test
      > uses 1 VU against a large seeded dataset (cardinality in the volume
-     > manifest), independent of the load ramp. Add volume journeys for
+     > manifest), independent of the load ramp, stepping 10/50/100% in one
+     > run so Executions can chart p95 against volume size. Add volume journeys for
      > `<ids>`? (yes / skip / only these: …)
 
    - Do not skip volume for those paths without recording the user’s choice.
@@ -161,17 +163,31 @@ Standalone `/testchimp create-perf-tests` still uses branch / last-run scope.
 
 Execute only approved checklist items:
 
-1. Run nested `init-perf` if approved.
+1. Run nested `init-perf` if approved. If `k6/` already exists, still **add
+   missing** scaffold files from [`../assets/k6/`](../assets/k6/)
+   (`lib/volume-size.js`, `lib/dataset.js`, `scripts/run.sh`,
+   `scripts/suite-worklist.py`, `scripts/run-volume-staircase.sh`;
+   update `profiles/volume.js` to honor `K6_VOLUME_STEPS` unless the project
+   customized that file—then merge the step-duration logic).
 2. Add journey files with stable metadata and real scenario ordinals.
    Each `default` function is **one user passing through the journey**:
    sequential steps, `thinkTime()` between user-visible actions and at the
-   end (`k6/lib/think-time.js`). Do not omit think time on load/volume.
+   end (`k6/lib/think-time.js`). Volume/load journeys call `pickTenant()` from
+   `k6/lib/dataset.js` so volume records `volume_size` against the tenant they
+   are about to hit. Volume journeys **must** set `volumeKind` (binds
+   `k6/datasets/volume-<kind>-{10,50,100}.json`). Do not omit think time on
+   load/volume.
 3. Add separate dataset manifests for volume and load. Keep secrets outside
-   manifests; generate data through `k6/scripts/seed.sh`.
-4. Use `smoke.js` while authoring. Adopt the **ramping** load profile (and
+   manifests; generate data through `k6/scripts/seed.sh`. Volume staircases:
+   `volume-<kind>-{10,50,100}.json`, `SEED_COMMAND` appends tenants with
+   `volumeSize`. Ingest the peak dataset id. Execute later via
+   `k6/scripts/run.sh` (see [`perf-testing.md`](./perf-testing.md) § Volume
+   staircase).
+4. Use `smoke.js` while authoring (`K6_PROFILE=smoke k6/scripts/run.sh journeys/foo.js`). Adopt the **ramping** load profile (and
    volume profile) only after peak N / cardinality are confirmed by
    policy/user. `K6_LOAD_VUS` is **peak concurrent VUs** (actor meaning
-   recorded on the plan), not a constant VU plateau from t=0.
+   recorded on the plan), not a constant VU plateau from t=0. Volume must
+   not use a VU ramp; cardinality stepping is `volume_size`.
 5. Use `k6/lib/mock-llm.js` for LLM-backed **k6** paths unless approved
    otherwise. That helper is not a SUT LLM stub — if the application would
    call an LLM, fail closed in SUT config or keep those APIs off the journey.
@@ -182,8 +198,19 @@ Execute only approved checklist items:
    test is inbound event processing, stub outbound partner HTTP at realistic
    latency rather than skipping the processing itself.
 6. Add/update a composite only when its membership prompt was approved.
-7. Produce/update related selection using
-   `k6/scripts/select-related.sh`; do not hand-edit generated artifacts.
+7. Produce/update **`plans/smart-smoke/<branch>/related-perf-tests.json`**
+   using `k6/scripts/select-related.sh` (blocking — same as run-qa Phase 5).
+   Build `<MAPPED_PLANS_ROOT>/smart-smoke/<branch>/perf-changes.json`
+   (`branch`, `scenarios`, `operations`, `paths`)
+   from authored journeys plus the change scope; then:
+
+   ```bash
+   k6/scripts/select-related.sh <MAPPED_PLANS_ROOT>/smart-smoke/<branch>/perf-changes.json
+   ```
+
+   Paths in the artifact are k6-relative (`journeys/foo.js`). Do not hand-edit
+   generated artifacts. `/testchimp run QA` also writes this file when
+   `k6/journeys` already exists.
 
 Every platform mutation/report uses the same workflow execution id and
 `agentTraceability`. Nested workflows reuse this plan and do not close
@@ -194,8 +221,9 @@ separately.
 1. Run shell syntax checks for all scripts.
 2. Run `k6 inspect` for each changed journey/composite.
 3. Run each changed journey with the smoke profile against the approved test
-   environment via `run-journey.sh`; run changed composites via
-   `run-composite.sh`. Seed first and teardown according to the manifest.
+   environment via `K6_PROFILE=smoke k6/scripts/run.sh journeys/<file>.js`; run
+   changed composites via `k6/scripts/run.sh composites/<file>.js`. Seed first
+   and teardown according to the manifest.
 4. Confirm checks/thresholds, deterministic rerun behavior, reporter metadata,
    redaction, no secrets, related-selection artifact schema, and that every
    identified external dependency is mocked with the planned latency (not

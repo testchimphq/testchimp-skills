@@ -3,6 +3,7 @@ import { check } from 'k6';
 import { profileOptions } from '../profiles/index.js';
 import { handleSummary } from '../lib/handleSummary.js';
 import { thinkTime } from '../lib/think-time.js';
+import { pickTenant } from '../lib/dataset.js';
 
 export const options = profileOptions;
 export { handleSummary };
@@ -17,7 +18,9 @@ export const testchimp = {
 };
 
 export default function () {
-  const base = __ENV.BASE_URL || __ENV.BACKEND_URL || 'http://127.0.0.1:8080';
+  const tenant = pickTenant();
+  const base =
+    tenant.baseUrl || __ENV.BASE_URL || __ENV.BACKEND_URL || 'http://127.0.0.1:8080';
   const res = http.get(`${base}/health`);
   check(res, { 'status is 2xx': (r) => r.status >= 200 && r.status < 300 });
   thinkTime();

@@ -37,7 +37,8 @@ Record `TESTCHIMP_ENV`, `K6_PROFILE`, `K6_DATASET`, `LLM_MODE`, and commit SHA.
 Each journey must state what a VU represents (typically a user).
 Baselines are meaningful only when these dimensions are comparable.
 Isolated journey peaks are not mixed-hour proof; local downsample is not a
-prod-sized claim. Volume staircases must keep distinct dataset ids.
+prod-sized claim. Volume staircases step `volume_size` in one k6 run and
+ingest the peak dataset id.
 
 Load results answer: *did N concurrent actors (as recorded on the journey)
 complete this journey within thresholds?* Fail rate with low p95 usually means
@@ -54,19 +55,22 @@ From SmartTests root:
 # pin reporter (no git vendoring)
 k6/scripts/prepare.sh
 
-# one journey
-K6_PROFILE=smoke K6_DATASET=k6/datasets/load.example.json \
-  k6/scripts/run-journey.sh k6/journeys/<file>.js
+# suite (all journeys; load then volume)
+SEED_COMMAND=<project seed> k6/scripts/run.sh
 
-# one composite
-k6/scripts/run-composite.sh k6/composites/<file>.js
+# named files — paths relative to k6/
+k6/scripts/run.sh journeys/foo.js journeys/nested/bar.js
 
-# a deterministic related selection
-k6/scripts/run-related.sh \
-  k6/artifacts/related/<branch>/related-perf-tests.json
+# PR / CI: related-perf-tests.json next to related-tests.json
+k6/scripts/run.sh --impacted
+# merge-gate: K6_PROFILE=smoke, skip when the json is missing (do not fall through to all)
+
+# authoring validate (skips volume staircase)
+K6_PROFILE=smoke k6/scripts/run.sh journeys/foo.js
 ```
 
-Each invocation is **one `k6 run` via the wrapper** — never bare `k6 run`.
+Each file is **one `k6 run` via the wrapper** (`run.sh` dispatches load vs
+volume) — never bare `k6 run`.
 The wrapper (see [`perf-testing.md`](./perf-testing.md) § Timeseries):
 
 - sets `TESTCHIMP_FOLDER_PATH` / `TESTCHIMP_FILE_NAME` / `TESTCHIMP_PERF_ID`
@@ -74,7 +78,9 @@ The wrapper (see [`perf-testing.md`](./perf-testing.md) § Timeseries):
 - adds `k6 run --out json=…`, then Node-downsamples and attaches timeseries
   by the ingest `runId` (sidecar / stdout). That is what populates Executions
   p95 / VU charts. Do not add another `--out json`. Do not sample from
-  `handleSummary`.
+  `handleSummary`. Volume-profile runs populate the **volume size** chart from
+  the `volume_size` gauge (`pickTenant`); `run.sh` runs the staircase so
+  that series actually steps.
 
 After a run, stderr should include `TestChimp perf ingest ok … runId=` and
 usually `TestChimp timeseries attach ok`. If attach is skipped (missing
@@ -150,8 +156,9 @@ example `/testchimp run performance tests for release <label>`:
      journeys plus any already-related existing ones.
    - **No:** run only the related existing tests (or stop if none). Record
      the gap on the plan.
-7. Execute via wrappers (`run-journey.sh` / `run-composite.sh` /
-   `run-related.sh`). Point the user back to the release detail
+7. Execute via `k6/scripts/run.sh --impacted` (or `k6/scripts/run.sh` for the
+   full journey suite). Paths in related-perf-tests.json and on the CLI are
+   relative to `k6/` (`journeys/foo.js`). Point the user back to the release detail
    **Performance Tests** section to review ingest.
 
 Do **not** use the working-tree/PR branch as the change set when a release

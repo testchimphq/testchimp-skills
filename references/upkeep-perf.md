@@ -26,6 +26,9 @@ resolved `upkeep-perf.policy.md`.
   a run answers concurrent **users**, not max RPS. Flag constant-VU / no-sleep
   journeys as drift. Propose missing **volume** tests for data-size-sensitive
   paths using the same user prompt as [`create-perf-tests.md`](./create-perf-tests.md).
+  Volume journeys run via **`k6/scripts/run.sh`** (staircase is an internal
+  helper). Add missing scaffold (`volume-size.js`, `run.sh`, `suite-worklist.py`)
+  rather than inventing a product-only wrapper.
 
 ## Analyze
 
@@ -57,8 +60,9 @@ resolved `upkeep-perf.policy.md`.
    failures, drift, missing runs, noisy baselines, and changed dataset/LLM
    modes. Do not “fix” regressions by weakening thresholds without explicit
    approval.
-7. Run `k6/scripts/select-related.sh` to produce the deterministic candidate
-   artifact. Review reasons and deduplicate by stable journey id.
+7. Run `k6/scripts/select-related.sh` to write
+   **`plans/smart-smoke/<branch>/related-perf-tests.json`**. Review reasons and
+   deduplicate by stable journey id.
 
 ## Plan and approval
 

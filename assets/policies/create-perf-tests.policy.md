@@ -36,6 +36,8 @@ smoke:
   max_duration: 30s
 volume:
   max_vus: 1
+  staircase_pct: [10, 50, 100]
+  step_duration: null
 load:
   # Peak concurrent users at the top of the ramping-vus stages (not a
   # constant VU count from t=0).

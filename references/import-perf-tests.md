@@ -188,12 +188,15 @@ If the source encodes a **traffic mix** (Locust user weights, JMeter thread-grou
 ## Phase 6 — CI migration
 
 1. Discover existing perf CI (Locust/k6/JMeter jobs in GitHub Actions, GitLab CI, etc.).
-2. **Ask:** create a **separate** job that runs `k6/scripts/run-journey.sh` / `run-related.sh` from the mapped SmartTests root, **leave** the legacy job, or **replace** it.
+2. **Ask:** create a **separate** job that runs `k6/scripts/run.sh` (or
+   `k6/scripts/run.sh --impacted` when `related-perf-tests.json` is committed)
+   from the mapped SmartTests root, **leave** the legacy job, or **replace** it.
 3. New/updated job should:
    - `cd` into the mapped SmartTests folder
-   - Use **`k6/scripts/run-journey.sh`** (or `run-related.sh`) — not bare
+   - Use **`k6/scripts/run.sh`** — not bare
      `k6 run` and not `k6 run --out json=…` by hand. The wrapper owns JSON-out
-     + run_id sidecar + timeseries attach.
+     + run_id sidecar + timeseries attach. Volume dispatch is via `testTypes`
+     / `volumeKind`; do not call `run-volume-staircase.sh` from CI.
    - Install k6 on the runner ([install k6](https://grafana.com/docs/k6/latest/set-up/install-k6/))
    - Default to **`K6_PROFILE=smoke`** until load/volume is approved in `run-perf-tests.policy.md`
    - Set **`TESTCHIMP_API_KEY`** (and **`TESTCHIMP_BACKEND_URL`** when enterprise/staging) as CI secrets — **guide the user**; never commit secrets
@@ -206,7 +209,7 @@ If the source encodes a **traffic mix** (Locust user weights, JMeter thread-grou
 Ask whether to run **smoke** on imported journeys now.
 
 1. **Gate:** needs a usable `connect-to-test-env` policy (or Environment Provision Strategy in `ai-test-instructions.md`) plus `run-perf-tests.policy.md` placeholders filled for the smoke environment. If missing: **skip this phase**, explain why, and point to [`connect-to-test-env.md`](./connect-to-test-env.md) / [`create-policy.md`](./create-policy.md). Do **not** block the rest of import.
-2. If proceeding: seed per manifest, run each **changed** journey with `k6 inspect` then `run-journey.sh` on the **smoke** profile only. Do not run load/volume during import.
+2. If proceeding: seed per manifest, run each **changed** journey with `k6 inspect` then `K6_PROFILE=smoke k6/scripts/run.sh journeys/<file>.js`. Do not run load/volume during import.
 3. Confirm checks, reporter ingest metadata, no secrets in scripts/datasets, and external stubs use the planned latency.
 
 ---
