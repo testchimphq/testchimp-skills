@@ -107,6 +107,8 @@ For Plan → approve → Execute workflows (`run-qa`, `upkeep`, standalone mutat
 3. Call **`upsert-plans-support-file`** with that relative path + full content (**BLOCKING** — do not Execute until it succeeds).
 4. Reuse the **same** ULID for every mutating MCP call and **`report-agent-action`** in that run — do **not** mint a new id per mutation.
 
+**Reading a named plan (platform first):** If the prompt already names a plan file (`plan file: …`, Continue Locally, `/testchimp implement <plan.md>`, or `workflow_plans/**/*.plan.md`), call **`get-plans-support-file`** first and write `content` locally when `found: true`. Fall back to the repo file only if the platform copy is missing. Reuse the existing ULID from the filename/prompt.
+
 ## Workflow Automations (platform cloud invoke)
 
 When TestChimp **Workflow Automations** trigger a cloud agent, the prompt always includes **`--workflow-execution-id`** (platform-minted). Mode mapping:
@@ -193,6 +195,8 @@ If neither prompt mode nor policy allows skipping, **always** require explicit u
 **Workflow Automation plan-only (cloud):** If the prompt **omits** `--mode` **and** explicitly says **stop after plan upsert — do not Execute**, write + upsert the plan and **halt** (do not wait for chat approval). A later platform Approve invoke will re-run with `--mode=non-interactive`, the same `--workflow-execution-id`, and the full approved plan body.
 
 **Platform upload:** `upsert-plans-support-file` (`filePath` relative to plans root, `content` = full markdown). Prefer MCP; CLI fallback after Preamble **#4**. Cloud agents rely on this — git commit/push is **not** a substitute for the blocking upsert.
+
+**Platform fetch:** `get-plans-support-file` (`filePath` relative to plans root). Use when a prompt names an existing plan (Continue Locally / implement a `.plan.md`) so UI-edited content is used even if git is stale. If `found` is false, read the local file.
 
 Legacy (read-only / migrate opportunistically): `knowledge/branch_test_plans/`, `knowledge/evolve_plans/`.
 

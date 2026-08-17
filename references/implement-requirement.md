@@ -3,7 +3,7 @@
 **Workflow id:** `implement`  
 **Canonical prompts:**
 - `/testchimp implement <story id / scenario id>`
-- `/testchimp implement <path-to-plan.md>` (or “implement this plan” with a plan file path / attachment)
+- `/testchimp implement <path-to-plan.md>` (or “implement this plan” with a plan file path / attachment). If the path is under **`workflow_plans/`** (or the prompt includes `plan file:`), **`get-plans-support-file` first** and write the platform copy locally before adopting it.
 
 **Policy:** `plans/knowledge/policies/implement.policy.md` (or `--policy` / matching frontmatter; fallback `ai-test-instructions.md`). Default seed: [`assets/policies/implement.policy.md`](../assets/policies/implement.policy.md).
 

@@ -1167,6 +1167,38 @@ testchimp upsert-policy \
   --content-file plans/knowledge/policies/connect-to-test-env.policy.md
 ```
 
+### `get-plans-support-file`
+
+**API:** `POST /api/mcp/get_plans_support_file`  
+**Requires:** CLI ≥ **0.1.32**
+
+Fetch a file under the mapped **plans** root from the platform by relative path. Primary use: load a workflow execution plan named in Continue Locally / implement prompts **before** falling back to the local git copy (UI edits may not be committed).
+
+| Flag | Required | Body field | Notes |
+|------|----------|------------|-------|
+| `--file-path <path>` | Yes* | `filePath` | Relative to mapped plans root (e.g. `knowledge/workflow_plans/run-qa/<ulid>.plan.md`). Leading `plans/` is stripped. |
+
+\*Or provide `filePath` via `--json-input`.
+
+**Coercion (under `knowledge/workflow_plans/`):** same as upsert (`*_plan.md` / bare `*.md` → **`*.plan.md`**).
+
+**Response (JSON camelCase):**
+
+| Field | Notes |
+|-------|-------|
+| `found` | `false` if no active file at that path |
+| `supportFileId` | Platform support file id when found |
+| `filePath` | Canonical relative path after coerce (no leading `plans/`) |
+| `filetype` | e.g. `WORKFLOW_EXECUTION_PLAN` |
+| `content` | Full file content when found |
+
+```bash
+testchimp get-plans-support-file \
+  --file-path knowledge/workflow_plans/run-qa/01KXYW2NVMQPN4HQMJFC92KQ8P.plan.md
+```
+
+**Agent rule:** When a prompt names a plan file, call this **before** reading the repo copy. If `found: true`, write `content` to the mapped local path and treat that as the plan of record. See [`policies-and-traceability.md`](./policies-and-traceability.md) and **SKILL.md** → Workflow execution plans.
+
 ### `upsert-plans-support-file`
 
 **API:** `POST /api/mcp/upsert_plans_support_file`  
@@ -1386,7 +1418,7 @@ testchimp mark-entity-distinct --json-input '{
 
 ## MCP parity (tool names)
 
-MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`upsert-policy`**, **`upsert-plans-support-file`**, **`create-user-story`**, **`list-rum-environments`**.
+MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`upsert-policy`**, **`upsert-plans-support-file`**, **`get-plans-support-file`**, **`create-user-story`**, **`list-rum-environments`**.
 
 ## Related
 
