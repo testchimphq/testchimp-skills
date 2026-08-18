@@ -182,7 +182,7 @@ Enable a given run with **`TESTCHIMP_SMART_SMOKE_ENABLED`**, not by flipping con
 ## 3) Execute the smoke suite
 
 - Ensure **connect-to-test-env** guidance was followed (`BASE_URL` / health).
-- **`cd`** SmartTests root; export **Preamble #4** env (`TESTCHIMP_API_KEY`, backend/ingress when configured) **and** smart-smoke env from §2.
+- **`cd`** SmartTests root; export **Preamble #4** env (`TESTCHIMP_API_KEY`, `TESTCHIMP_EXECUTION_SOURCE=LOCAL_AGENT|CLOUD_AGENT`, backend/ingress when configured) **and** smart-smoke env from §2.
 - Run the **same** runner as usual — e.g. `npx playwright test` (plus any existing `--project` / path args for the scaffold). **No** `--smart-smoke` or other smart-smoke CLI flags.
 - Prefer **headless** for smoke unless debugging (headed default remains for **authoring** per `SKILL.md`).
 - Non-selected tests are **skipped** with skip-reason **`smart-smoke`** (distinct from explicit `test.skip`).

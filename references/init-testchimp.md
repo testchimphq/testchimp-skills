@@ -621,7 +621,7 @@ Success check (Environment provision strategy):
 ### Action item H - CI behavior
 
 - If nested **import** already authored CI (import Phase 4): **verify** mapped-folder cwd, `TESTCHIMP_API_KEY` secrets guidance, and plan-sync exclusions—do **not** create a duplicate workflow. Mark done when verified.
-- Otherwise: run from tests root with required env vars; pass PR/stage URL via `BASE_URL`; if **AIMock** was enabled in action J, align CI with the documented AIMock approach; exclude TestChimp plan sync PRs titled `TestChimp Platform Sync [Plans]`.
+- Otherwise: run from tests root with required env vars (`TESTCHIMP_API_KEY`, **`TESTCHIMP_EXECUTION_SOURCE=CI`** on true pipelines); pass PR/stage URL via `BASE_URL`; if **AIMock** was enabled in action J, align CI with the documented AIMock approach; exclude TestChimp plan sync PRs titled `TestChimp Platform Sync [Plans]`.
 
 Success check (CI setup):
 - CI action authored **or** verified from nested import **or** **N/A** with justification (and wired to the selected environment strategy for `BASE_URL` / provisioning when present).

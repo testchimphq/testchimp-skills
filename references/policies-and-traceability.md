@@ -173,6 +173,7 @@ Still run **Plan first** — do **not** skip the plan file:
 6. **Raise a PR** when there are commits to review:
    - If on the repo **default** branch, create a feature branch before coding (name it from the workflow + short scope, e.g. `testchimp/upkeep-<short-ulid>`).
    - Commit changes on that branch, push, and open a PR (e.g. `gh pr create`) summarizing what the plan executed.
+   - After **create-tests** / nested run-qa **Validate**, upsert the authored-tests batch comment on that PR (see [Authored-tests PR comment](#authored-tests-pr-comment)).
    - If a PR already exists for the branch, push updates to it instead of opening a duplicate.
    - If Execute produced **no** code/plan-repo changes, skip PR creation and note that in the completion report.
 
@@ -286,3 +287,51 @@ Workflow catalog status may be **Active**, **Disabled**, or **Missing Config**.
 
 - **Disabled** — project intentionally turned the workflow off (e.g. TrueCoverage instrumentation). Do not run it; explain briefly and continue other subflows when in a composite.
 - **Missing Config** — required policy is absent. **Blocking only for `connect-to-test-env`**: stop provisioning/authoring that needs an env; discuss with the user and author/seed **`connect-to-test-env.policy.md`** (from ai-test-instructions or [`create-policy.md`](./create-policy.md)). Dependent workflows may also show Missing Config in the UI; agents should fix connect-to-test-env first, then retry.
+
+## Execution source (`LOCAL_AGENT` / `CLOUD_AGENT`)
+
+Every Playwright / Mobilewright spawn from this skill must export **`TESTCHIMP_EXECUTION_SOURCE`** in the **same shell** as Preamble **#4** (with the API key). The reporter stamps ingest with this value so `fix-test-execution` automations do **not** loop on agent debug batches.
+
+- Skill **never** exports `CI`. True pipelines / `testchimp-github-testrunner` set `TESTCHIMP_EXECUTION_SOURCE=CI`.
+- **`CLOUD_AGENT`** when any of these are set: `GITHUB_ACTIONS`, `CURSOR_AGENT`, `CLAUDE_CODE`, `CODEX`, `OPENHANDS`, Copilot coding-agent env (`COPILOT_USE_PLATFORM`, `COPILOT_WORKSPACE`, `COPILOT_AGENT`). Do **not** use `CI=true` as the cloud bit — cloud agents already sit in GitHub Actions.
+- Otherwise **`LOCAL_AGENT`**.
+
+```bash
+export TESTCHIMP_EXECUTION_SOURCE=LOCAL_AGENT   # or CLOUD_AGENT
+```
+
+Applies to create-tests, run-qa, fix-test-execution, execute-tests, explore, and every other runner spawn.
+
+## Authored-tests PR comment
+
+After **final green Validate** of **new/changed** specs (standalone **create-tests** or nested under **run-qa**), post **one** PR/MR comment with a link to that TestChimp batch. Reviewers click through for steps. Do **not** dump screenshots into the comment.
+
+### Pin the batch (Validate spawn only)
+
+1. Mint a UUID. `export TESTCHIMP_BATCH_INVOCATION_ID=<uuid>` for **that** Playwright spawn only (the final green Validate of authored/updated specs — not every debug spawn, not Phase 5 smoke, not Phase 6 ExploreChimp).
+2. After the run, scrape the **last** reporter line from **that** spawn:
+
+`[TestChimp] Batch invocation view: <url>`
+
+3. Keep that URL for the comment. If the line is missing (complete failed), **soft-fail** the comment — do **not** invent `prod.testchimp.io` / `app.testchimp.io`.
+4. **`unset TESTCHIMP_BATCH_INVOCATION_ID`** before any later runner spawn (Phase 5, Phase 6, debug re-runs). Leaving it set reuses the authored-tests batch id.
+
+### Upsert the comment
+
+Do this after a PR/MR exists (create with `gh pr create` / `glab mr create` when non-interactive if needed) and **before** run-qa **Phase 7** teardown.
+
+HTML marker (idempotent upsert): `<!-- testchimp-authored-tests:<workflow_execution_id> -->`
+
+Body:
+
+- Short intro: tests authored/updated in this workflow; open in TestChimp to review steps.
+- The `batch_view_url` from the reporter (only).
+- Optional one-line list of test titles/files (not step dumps).
+
+**GitHub:** `pr=$(gh pr view --json number,url --jq .number)`. List comments: `gh api "repos/{owner}/{repo}/issues/$pr/comments"`. If a comment body contains the marker, `gh api -X PATCH "repos/{owner}/{repo}/issues/comments/{id}" -f body='...'`. Else `gh pr comment "$pr" --body '...'`.
+
+**GitLab:** `glab mr note` (or equivalent) when `glab` is present; upsert by searching notes for the marker.
+
+**Soft-fail:** no open PR/MR, no `gh`/`glab` token, or missing batch URL → note on the workflow plan; do **not** fail the workflow.
+
+Do **not** comment from true CI pipeline runs. This is a skill/agent step after authoring Validate.

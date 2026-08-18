@@ -67,6 +67,8 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
 
 - **`TESTCHIMP_API_KEY` (P0 — required on the runner process):** Any command that runs Playwright/Mobilewright with **`@testchimp/playwright`** must execute with **`TESTCHIMP_API_KEY`** set in **that process’s environment** (Execute, Validate, Phase 5, Phase 6, CI). **IDE/MCP-only** config does **not** satisfy the runner. **Resolution order:** SmartTests-root walk-up → host MCP config → read **`mcpServers.*.env.TESTCHIMP_API_KEY`** (never print) → **export** or **inject** into the shell / CI **`env:`** / wrapper used to spawn tests. If missing, blank, or placeholder, **STOP** with a blocker + fix steps (including: if only MCP was updated, reload MCP **and** ensure the **next** runner spawn inherits the key). **Reporter disabled**, **401**, and “missing key” logs → **same** remediation. If the agent **cannot verify** the key is on the test process env **before** spawning the runner, **halt** — do **not** run tests speculatively. See **`SKILL.md`** Preamble **#4** and [`run-explorechimp.md`](./run-explorechimp.md).
 
+- **`TESTCHIMP_EXECUTION_SOURCE` (P0):** Export **`LOCAL_AGENT`** or **`CLOUD_AGENT`** on **every** runner spawn in this flow (never `CI`). See [`policies-and-traceability.md`](./policies-and-traceability.md)#execution-source-local_agent--cloud_agent.
+
 - **Honor config reporters (P0 — never CLI `--reporter`):** Every Playwright / Mobilewright spawn **MUST** use the project’s SmartTests config as written (`playwright.config.*` / `mobilewright.config.ts`), including **`@testchimp/playwright/reporter`**. **Never** pass CLI **`--reporter`** / **`-r`** (e.g. `--reporter=list`). Playwright **replaces** config `reporter` when that flag is set, which drops TestChimp ingest, SmartTest execution history, and ExploreChimp **`exploration_end` / `journey_execution_end`** — platform explorations stay **In progress** even when specs are green. Use config + `--project` / file filters only; list/html output already comes from the config when configured. See [`run-explorechimp.md`](./run-explorechimp.md)#honor-playwright-config-reporters-p0.
 
 - **Runner / config:** Use the config and `--project` from [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) (`playwright.config.js` vs `mobilewright.config.ts`, `web` / `api` / `ios` / `android`). Mobile UI projects need **`projects[].use.platform`** (`ios` | `android`) for `@testchimp/playwright` TrueCoverage ([`instrument-truecoverage.md`](./instrument-truecoverage.md)).
@@ -523,6 +525,11 @@ Record in branch plan file:
 - [ ] Meaningful UI transitions in touched SmartTests have **`markScreenState`** at the right step, or **`N/A`** with reason (no meaningful transitions in scope).
 - [ ] Any remaining anomalies explicitly listed with next steps (only if blocked).
 - [ ] **Handoff to Phase 5:** Confirm **`TESTCHIMP_API_KEY`** on the runner and correct config/`--project` per scaffold (see non-negotiables). If branch plan **§6** is **`N/A`**, record that scenario identification still runs from PR + plans but no linked specs are expected—or skip Phase 5 per plan rationale.
+- [ ] **Authored-tests batch URL captured** from the final green Validate spawn (`[TestChimp] Batch invocation view:`) — or **`N/A`** (no new/changed specs). Do **not** reuse Phase 5/6 batch ids.
+
+### Authored-tests PR comment (after Validate, before Phase 7)
+
+When new/changed specs were validated green: upsert one PR/MR comment with the captured batch URL per [`policies-and-traceability.md`](./policies-and-traceability.md)#authored-tests-pr-comment. If the PR is created later (non-interactive `gh pr create`), comment immediately after the PR exists and **before Phase 7**. Soft-fail if no PR or no URL. **`unset TESTCHIMP_BATCH_INVOCATION_ID`** after capturing the Validate URL so Phase 5/6 mint a new batch.
 
 ### Mark plan items implementation-done (human-gated, after Validate is green)
 

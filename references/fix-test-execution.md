@@ -14,6 +14,8 @@
 
 Fetch structured failure reports for recently failing SmartTests via TestChimp MCP/CLI, analyze common causes and historical flake patterns, triage test-incorrect vs product-broken, then either apply root-cause fixes (and re-run) or file issues on approval.
 
+**P0:** Every Playwright/Mobilewright re-run must export **`TESTCHIMP_EXECUTION_SOURCE=LOCAL_AGENT`** or **`CLOUD_AGENT`** (never `CI`) so this workflow cannot re-trigger itself via batch automations. See [`policies-and-traceability.md`](./policies-and-traceability.md)#execution-source-local_agent--cloud_agent.
+
 ## Inputs
 
 Provide **one** of:

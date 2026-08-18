@@ -32,7 +32,7 @@ The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.
    - **`TESTCHIMP_BACKEND_URL`** when present — **must** be exported for CLI/MCP; do **not** fall back to the package default prod host when this is set (staging / enterprise / self-hosted). Keys are environment-scoped; calling prod with a non-prod key yields **401**.
    - **`TESTCHIMP_INGRESS_URL`** when present — **must** be exported into Playwright/Mobilewright runner shells (CI ingest host; parallel to backend URL in mcp.json)
    - **`TESTCHIMP_PROJECT_ID`** when present (TrueCoverage RUM wiring; not required for CLI auth)
-4. **`export`** those variables in the **same shell** that will run `testchimp` or Playwright (e.g. one block: `export TESTCHIMP_API_KEY=... TESTCHIMP_BACKEND_URL=... TESTCHIMP_INGRESS_URL=...` then the command).
+4. **`export`** those variables in the **same shell** that will run `testchimp` or Playwright (e.g. one block: `export TESTCHIMP_API_KEY=... TESTCHIMP_BACKEND_URL=... TESTCHIMP_INGRESS_URL=... TESTCHIMP_EXECUTION_SOURCE=LOCAL_AGENT` then the command). For Playwright/Mobilewright also export **`TESTCHIMP_EXECUTION_SOURCE=LOCAL_AGENT`** or **`CLOUD_AGENT`** (never `CI` from the skill) — see [`policies-and-traceability.md`](./policies-and-traceability.md)#execution-source-local_agent--cloud_agent.
 5. **Never print the key** in chat, logs, or echoed commands.
 
 **`TESTCHIMP_BACKEND_URL`:** When set in MCP `env`, it overrides the default API host (see `testchimp --help` footer). When **absent**, the CLI default (SaaS prod) is correct. On **401**, re-check that a configured backend URL was exported before assuming a bad key.

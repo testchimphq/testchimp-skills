@@ -50,7 +50,7 @@ Parse from the user prompt:
 1. **`cd`** to the SmartTests root.
 2. Resolve the scope to Playwright/Mobilewright paths per [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) (web vs mobile vs multi-platform).
 3. Prefer **headless** for this workflow unless the user asks to debug headed.
-4. Ensure Preamble **#4** (`TESTCHIMP_API_KEY` on the runner process) before spawn.
+4. Ensure Preamble **#4** (`TESTCHIMP_API_KEY` and `TESTCHIMP_EXECUTION_SOURCE=LOCAL_AGENT|CLOUD_AGENT` on the runner process) before spawn.
 5. Execute only the given folder/file scope (e.g. `npx playwright test <path>` or the Mobilewright equivalent for the project type).
 
 ### 3) Report and triage
