@@ -293,7 +293,7 @@ Workflow catalog status may be **Active**, **Disabled**, or **Missing Config**.
 Every Playwright / Mobilewright spawn from this skill must export **`TESTCHIMP_EXECUTION_SOURCE`** in the **same shell** as Preamble **#4** (with the API key). The reporter stamps ingest with this value so `fix-test-execution` automations do **not** loop on agent debug batches.
 
 - Skill **never** exports `CI`. True pipelines / `testchimp-github-testrunner` set `TESTCHIMP_EXECUTION_SOURCE=CI`.
-- **`CLOUD_AGENT`** when any of these are set: `GITHUB_ACTIONS`, `CURSOR_AGENT`, `CLAUDE_CODE`, `CODEX`, `OPENHANDS`, Copilot coding-agent env (`COPILOT_USE_PLATFORM`, `COPILOT_WORKSPACE`, `COPILOT_AGENT`). Do **not** use `CI=true` as the cloud bit — cloud agents already sit in GitHub Actions.
+- **`CLOUD_AGENT`** only when this skill is running on a **remote** host: `GITHUB_ACTIONS`, `CURSOR_AGENT_WORKER_ID` (Cursor cloud worker), or Copilot platform (`COPILOT_USE_PLATFORM` / `COPILOT_WORKSPACE`). Do **not** treat `CURSOR_AGENT`, `CLAUDE_CODE`, `CODEX`, or `OPENHANDS` as cloud — those are set for **local** IDE/CLI agents. Do **not** use `CI=true` as the cloud bit.
 - Otherwise **`LOCAL_AGENT`**.
 
 ```bash
