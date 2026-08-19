@@ -85,6 +85,16 @@ if [ -z "$WORKLIST" ]; then
   exit 0
 fi
 
+if [ -z "${TESTCHIMP_BATCH_INVOCATION_ID:-}" ]; then
+  if command -v uuidgen >/dev/null 2>&1; then
+    TESTCHIMP_BATCH_INVOCATION_ID="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+  else
+    TESTCHIMP_BATCH_INVOCATION_ID="$(python3 -c 'import uuid; print(uuid.uuid4())')"
+  fi
+  export TESTCHIMP_BATCH_INVOCATION_ID
+  echo "k6/scripts/run.sh: TESTCHIMP_BATCH_INVOCATION_ID=$TESTCHIMP_BATCH_INVOCATION_ID"
+fi
+
 echo "=== k6/scripts/run.sh prepare ==="
 if ! "$ROOT/scripts/prepare.sh"; then
   echo "k6/scripts/run.sh: prepare.sh failed" >&2
