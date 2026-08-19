@@ -147,6 +147,7 @@ Prefer deterministic selectors when the UI is stable and the failure is straight
 ### 5) Finish + Report
 
 - Ensure the previously failing **test-incorrect** cases pass.
+- After **test-incorrect** patches (not product-broken issue filing), call **`mark-tests-for-review`** for every patched existing SmartTest. Always send a per-test **`confidence`** 0–100 (higher = you believe a human does not need to re-inspect). Pass **`workflowExecutionId`**. Do **not** read project config — the platform decides whether to mark `VERIFIED_STALE`. Skip this call for product-broken cases and for tests you did not change.
 - Summarize any **product-broken** findings and created issue ids (if any).
 - If fixes required seed/fixture/backend changes, ensure the environment was restarted/reprovisioned per the environment strategy before re-running.
 - Cleanup:

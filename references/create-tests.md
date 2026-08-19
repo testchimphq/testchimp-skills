@@ -4,6 +4,8 @@
 
 Authors or updates SmartTests (UI and/or API) and related fixtures for a **scope**. Traceability and reporting follow [`policies-and-traceability.md`](./policies-and-traceability.md).
 
+**Do not call `mark-tests-for-review`.** That tool is only for [`fix-test-execution.md`](./fix-test-execution.md) after patches to **existing** failing tests. New tests authored here do not need it.
+
 ---
 
 ## Prompts

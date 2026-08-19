@@ -1369,6 +1369,27 @@ testchimp mark-semantic-tests-distinct --json-input '{
 }'
 ```
 
+### `mark-tests-for-review`
+
+Report existing SmartTests that an agent patched so humans can re-verify. **Only** from [`fix-test-execution.md`](./fix-test-execution.md) after **test-incorrect** patches — never from `run-qa` / `create-tests`, and never for product-broken cases. Always send per-test `confidence` 0–100 (higher = less need for human review). Do not read project config. Requires `@testchimp/cli` ≥ **0.1.33**.
+
+```bash
+testchimp mark-tests-for-review --json-input '{
+  "tests": [
+    {
+      "test": {
+        "folderPath": ["e2e", "auth"],
+        "fileName": "login.spec.ts",
+        "testName": "user can log in"
+      },
+      "confidence": 72
+    }
+  ],
+  "workflowExecutionId": "<ulid>",
+  "branchName": "feat/login"
+}'
+```
+
 ---
 
 ## Semantic nearby across entity types (QA Brain)
