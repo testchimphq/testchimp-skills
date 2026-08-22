@@ -2,8 +2,8 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — policy-backed workflows, SmartTests, plans, coverage, TrueCoverage, ExploreChimp, and k6 performance testing (init/create/run/upkeep/import perf). Use for /testchimp commands, SmartTests, policies, performance testing, k6, import-perf-tests, scenario-linked journeys, perf baselines/comparisons, or skill updates.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). Playwright plugin: **#8** (`@testchimp/playwright` — bump on create-tests / run-qa / upkeep). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.28** for API operation coverage tools (`list-api-operation-services`, `list-api-operations`, `get-api-operation-detail`), semantic nearby tools, workflow/policy tools, `get-execution-history --test-id`, and `get-test-scenarios --external-ids`. CLI ≥ **0.1.29** for `get-org-capabilities` (org capability soft-gating for TrueCoverage / API contract coverage). CLI ≥ **0.1.30** for `get-spec-lifecycle-details` (scenario `verification_strategy` before authoring SmartTests) and skill/CLI version on `report-agent-action` / `agentTraceability`. CLI ≥ **0.1.32** for `get-plans-support-file` (platform-first read of a named workflow plan). CLI ≥ **0.1.33** for `mark-tests-for-review` (report existing-test fixes after fix-test-execution).
-version: 1.0.31
-required_cli_version: "0.1.33"
+version: 1.0.32
+required_cli_version: "0.1.34"
 ---
 
 # TestChimp
@@ -241,7 +241,9 @@ Use the repo, plans, policies, and those tools to decide what to test and how to
 
 | User says | Read |
 |-----------|------|
-| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — opening message → phased workflow (requirement gather → plan → execute). Seed **`plans/knowledge/policies/`** composites when missing; gate **`connect-to-test-env`**. After workstation-gate **`get-eaas-config`** succeeds, best-effort **`report-agent-action`** (`workflowId: init`). Nested **import** only when mapped tests look unmigrated (≤ 3 specs + other E2E elsewhere). **Between phases:** complete each **phase completion gate**; every line **done** or **`N/A`** + justification. |
+| `/testchimp project init` | [`references/project-init-testchimp.md`](references/project-init-testchimp.md) — **one-time per project**: platform comms, folder mapping (`get-git-folder-mapping` / scaffold PR + `update-git-folder-mapping`), **`connect-to-test-env`**, CI wiring, optional import plans/tests/smoke. Track progress via **`get-project-init-status`** / **`update-project-init-status`**. TrueCoverage removed from init → **`/testchimp setup truecoverage`**. Phased plan → approve → execute; PR prefix **`testchimp-`**. |
+| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — **per developer**: workstation MCP, **`get-eaas-config`** gate, local test env. Continues even if project init incomplete; offer **`/testchimp project init`** for gaps. Best-effort **`report-agent-action`** (`workflowId: init`). |
+| `/testchimp import plans` / `/testchimp import plans <folder>` | [`references/import-plans.md`](references/import-plans.md) — import existing plan markdown into mapped **`plans/`**; nested under project init with one approval when agreed. |
 | `/testchimp import` / `/testchimp import existing tests <folder>` | [`references/import-existing-tests.md`](references/import-existing-tests.md) — workflow **`import`** (One-Off); Playwright as-is or best-effort translate other frameworks; CI; scenario links; optional `markScreenState`. Nested under init with **one approval**. |
 | `/testchimp import-perf-tests` / `/testchimp import perf tests <folder>` | [`references/import-perf-tests.md`](references/import-perf-tests.md) — workflow **`import-perf-tests`** (One-Off); bring existing Locust/k6/JMeter/Gatling/Artillery suites into `<SmartTests root>/k6/` with journeys/composites, scenario links, and tagging. Nested under `init-perf` with **one approval**. |
 | `/testchimp run QA` / `/testchimp test` | [`references/run-qa.md`](references/run-qa.md) — workflow **`run-qa`**; **Preamble #4**; scaffolds + **`ai-test-instructions.md`** / policies; **Analyze → Plan → Execute → Validate → Phase 5 (smart smoke + `related-perf-tests.json` when `k6/journeys` exists) → Phase 6 → Phase 7**. Platform scope: [`platform-scope.md`](references/platform-scope.md). |
@@ -411,7 +413,9 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 
 | Path | Purpose |
 |------|---------|
-| [`references/init-testchimp.md`](references/init-testchimp.md) | Phased init: requirement gather, collaborative plan, action-item execution; seed policies; connect-to-test-env gate; best-effort `report-agent-action` for `init` after connectivity |
+| [`references/project-init-testchimp.md`](references/project-init-testchimp.md) | One-time project init: folder mapping, CI, test env, optional imports; **`get-project-init-status`** / **`update-project-init-status`** |
+| [`references/init-testchimp.md`](references/init-testchimp.md) | Per-developer thin init: workstation MCP, local test env, connectivity gate |
+| [`references/import-plans.md`](references/import-plans.md) | `/testchimp import plans` — migrate existing plan markdown into mapped **`plans/`** |
 | [`references/policies-and-traceability.md`](references/policies-and-traceability.md) | Policy frontmatter, resolution, ULID, closed `report-agent-action` vocabulary, Report workflow execution, Disabled/Missing Config |
 | [`references/implement-requirement.md`](references/implement-requirement.md) | `/testchimp implement` (`implement`): story/scenario/plan file → Analyze → design-first Plan (Product plan + workflow envelope) → Execute (task issues) → Report |
 | [`assets/policies/implement.policy.md`](assets/policies/implement.policy.md) | Default policy for **`implement`** |
