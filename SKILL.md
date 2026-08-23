@@ -278,9 +278,9 @@ When the user runs **`/testchimp init`**, the **first substantive message to the
 
 **Include the following substance** (adapt wording slightly for tone; keep meaning):
 
-- **During init**, TestChimp sets up **complete QA infrastructure** for the project: seeding endpoints, test environment management (including **`connect-to-test-env`** policy under `plans/knowledge/policies/`), CI setup, fixtures maintainance, mocks, TrueCoverage enablement lock (instrument via **`/testchimp instrument`**), and test scaffolds with proper TestChimp integration.
-- **After init**, the user mainly runs **`/testchimp run QA`** (synonym **`/testchimp test`**) when they finish a PR and want it tested.
-- **Ongoing**, the agent runs the full QA workflow (say in first person when addressing the user: *I will run the complete QA workflow* — author tests for relevant scenarios, author missing test plans for the PR, adjust QA infrastructure as needed - adding seed endpoints, TrueCoverage instrumentations, fixture updates, find coverage gaps and address them).
+- **During `/testchimp init`** (this machine), TestChimp registers **local MCP**, verifies API connectivity, and wires **your local test environment** for authoring. **One-time project setup** (folder mapping, shared env strategy, CI) is **`/testchimp project init`** — see [`references/project-init-testchimp.md`](references/project-init-testchimp.md).
+- **After setup**, the user mainly runs **`/testchimp run QA`** (synonym **`/testchimp test`**) when they finish a PR and want it tested.
+- **Ongoing**, the agent runs the full QA workflow (say in first person when addressing the user: *I will run the complete QA workflow* — author tests for relevant scenarios, author missing test plans for the PR, adjust QA infrastructure as needed — seed endpoints, TrueCoverage instrumentation via **`/testchimp instrument`**, fixture updates, find coverage gaps and address them).
 - **Periodically**, run **`/testchimp upkeep`** (synonym **`/testchimp evolve`**) — "I will" (similar to above say in first-person) analyze requirement coverage gaps, **recently failing tests**, and TrueCoverage insights—by communicating with the TestChimp platform—and address them systematically: fix failing SmartTests, tests and infra to cover under-tested slices, and when planned, **ExploreChimp** runs on **TrueCoverage-prioritized** UI journeys (drop-offs, duration/demand hotspots) to surface UX issues in those critical areas ([`references/upkeep.md`](references/upkeep.md)).
 
 **Always** share this doc link for a short overview of what TestChimp enables: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
@@ -292,7 +292,7 @@ If the user asks semantically similar requests ("Setup TestChimp", "Write Tests 
 TrueCoverage planning source of truth:
 
 - **Opt-in policy:** TrueCoverage is **in scope by default**. Only skip or omit RUM / reporter / event-doc work when `plans/knowledge/ai-test-instructions.md` **explicitly** records an **opt-out** (see [`references/instrument-truecoverage.md`](references/instrument-truecoverage.md)). Absence of a TrueCoverage section, “deferred,” or incomplete init does **not** imply opt-out.
-- `plans/knowledge/truecoverage-instrument-progress.md` tracks **planned vs done** TrueCoverage instrumentation. Agents should consult it during `/testchimp init`, `/testchimp instrument`, and `/testchimp upkeep` / `/testchimp evolve`.
+- `plans/knowledge/truecoverage-instrument-progress.md` tracks **planned vs done** TrueCoverage instrumentation. Agents should consult it during **`/testchimp setup truecoverage`**, **`/testchimp instrument`**, and **`/testchimp upkeep`** / **`/testchimp evolve`** (not during **`/testchimp project init`**).
 - **Do not mis-diagnose under-coverage:** when SmartTests are wired through `fixtures/index.js` with `installTestChimp()` (default scaffold), test-identity linking for emits is already handled by `@testchimp/playwright/runtime`. Under-covered events usually mean tests are not traversing those business paths/slices yet; fix with scenario-driven test authoring (and scenario creation when missing), not synthetic "event tick" tests.
 
 ## Updating this skill from Git

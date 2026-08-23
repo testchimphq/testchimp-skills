@@ -11,7 +11,7 @@ Reuse init guidance — do **not** invent a parallel CI story.
 ## What to do
 
 1. **Discover** existing CI (e.g. `.github/workflows/`, other CI configs) for Playwright / Mobilewright / TestChimp runs. Report what you find first.
-2. If CI is **missing or incomplete**, follow **Key Area 6 — CI setup** and **Action item H — CI behavior** in [`init-testchimp.md`](./init-testchimp.md):
+2. If CI is **missing or incomplete**, follow **Key Area 4 — CI setup** and Phase 3 § **CI setup** in [`project-init-testchimp.md`](./project-init-testchimp.md):
    - Author or adjust a workflow that **`cd`**s into the **mapped SmartTests folder** (directory with **`.testchimp-tests`**).
    - Pass **`BASE_URL`** (and env strategy) per [`environment-management.md`](./environment-management.md) / project policy.
    - Require **`TESTCHIMP_API_KEY`** (and related reporter env) on the job so `@testchimp/playwright` reports executions.

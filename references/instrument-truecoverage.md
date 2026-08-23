@@ -296,15 +296,15 @@ TrueCoverage decisions are project-level and must be persisted in `plans/knowled
 
 **Unless** `ai-test-instructions.md` **explicitly** states that TrueCoverage is **opted out** (e.g. a clear `### TrueCoverage Plan` entry such as “opted out,” “disabled for this repo,” “not applicable,” or equivalent team decision the file names as permanent opt-out), agents MUST treat TrueCoverage as **opted in**:
 
-- Plan **platform RUM install** (see **Web / iOS / Android** sections above), **init** / emit helper, **documented RUM `environment` tag mapping** (see **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**), **`@testchimp/playwright`** reporter + correct fixture barrels / **`use.platform`**, and **`plans/events/*.event.md`** for new or changed journeys as part of normal **`/testchimp init`**, **`/testchimp test`**, and **`/testchimp evolve`** work.
+- Plan **platform RUM install** (see **Web / iOS / Android** sections above), **init** / emit helper, **documented RUM `environment` tag mapping** (see **[RUM environment tag](#rum-environment-tag-truecoverage-analytics-alignment)**), **`@testchimp/playwright`** reporter + correct fixture barrels / **`use.platform`**, and **`plans/events/*.event.md`** for new or changed journeys as part of normal **`/testchimp test`**, **`/testchimp setup truecoverage`**, **`/testchimp instrument`**, and **`/testchimp evolve`** work.
 - Do **not** skip TrueCoverage because the TrueCoverage section is missing, empty, or says only “deferred,” and do **not** treat silence as “user declined.”
 
 **Explicit opt-out only:** When the file **explicitly** records opt-out, skip new TrueCoverage instrumentation unless the user runs **`/testchimp setup truecoverage`** or otherwise asks to re-enable.
 
-**Deferred during init:** “Deferred” is a **schedule snooze** (which emits land later), **not** an opt-out.
+**Deferred during setup:** “Deferred” is a **schedule snooze** (which emits land later), **not** an opt-out.
 
 - During **`/testchimp test`**, treat TrueCoverage as **in-scope** for the PR: wire missing framework pieces, define/document the **event slice** for changed journeys, and update `plans/knowledge/truecoverage-instrument-progress.md` as appropriate.
-- During **`/testchimp init`**, “deferred” means not finishing every planned emit in that init pass; the agent must not later assume TrueCoverage is unavailable or out of scope.
+- During **`/testchimp setup truecoverage`** / **`/testchimp instrument`**, “deferred” means not finishing every planned emit in that pass; the agent must not later assume TrueCoverage is unavailable or out of scope.
 
 ---
 
@@ -330,11 +330,11 @@ Purpose:
 - Track **planned vs done** event instrumentation with a route/page-based breakdown (web) or **screen / flow** breakdown (mobile—adapt the grouping to how the product is structured).
 - Let agents resume instrumentation consistently during `/testchimp instrument` and opportunistically during `/testchimp evolve`.
 
-Init policy:
+Init policy ( **`/testchimp project init`** does **not** include TrueCoverage — use dedicated setup/instrument flows):
 
-- `/testchimp init` should wire **basic TrueCoverage infra** and a **small initial event slice**.
-- `/testchimp init` should also scan the app’s primary navigation surfaces (routes/pages on web; main screens/flows on mobile) and write the progress tracker for the **full planned event list**.
-- Init should create `plans/events/*.event.md` files **only** for events actually instrumented in init; planned-but-not-yet-instrumented events remain tracked only in the progress doc until `/testchimp instrument` lands them.
+- **`/testchimp setup truecoverage`** should wire **basic TrueCoverage infra** and a **small initial event slice**.
+- That flow should also scan the app’s primary navigation surfaces (routes/pages on web; main screens/flows on mobile) and write the progress tracker for the **full planned event list**.
+- Create `plans/events/*.event.md` files **only** for events actually instrumented in that pass; planned-but-not-yet-instrumented events remain tracked only in the progress doc until **`/testchimp instrument`** lands them.
 
 Suggested format:
 
