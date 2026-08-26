@@ -147,7 +147,7 @@ Mobile UI runs need **`projects[].use.platform`** in **`mobilewright.config.ts`*
 
 ## Related
 
-- **`/testchimp init`** — follow the phased flow (optional quick smoke -> collaborative plan -> execute), and capture environment strategy plus per-item progress into `plans/knowledge/ai-test-instructions.md` (see [`init-testchimp.md`](./init-testchimp.md)).
+- **`/testchimp init`** — workstation MCP + local env wiring; capture authoring env notes in `plans/knowledge/ai-test-instructions.md` (see [`init-testchimp.md`](./init-testchimp.md)). **Project** setup (folder mapping, shared env, CI, optional imports/smoke) is **`/testchimp project init`** — [`project-init-testchimp.md`](./project-init-testchimp.md).
 - **`/testchimp test`** — [`run-qa.md`](./run-qa.md) for phased workflow and when to load this doc.
 - **Fixtures** — [`fixture-usage.md`](./fixture-usage.md) for deterministic data after the environment URL is known.
 - **DAST release checks** — when `dastCheckConfig.useEphemeralSandbox` is true, provision/teardown ephemeral envs using this EaaS workflow ([`security/dast.md`](./security/dast.md)).

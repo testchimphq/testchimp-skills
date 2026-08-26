@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — policy-backed workflows, SmartTests, plans, coverage, TrueCoverage, ExploreChimp, and k6 performance testing (init/create/run/upkeep/import perf). Use for /testchimp commands, SmartTests, policies, performance testing, k6, import-perf-tests, scenario-linked journeys, perf baselines/comparisons, or skill updates.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). Playwright plugin: **#8** (`@testchimp/playwright` — bump on create-tests / run-qa / upkeep). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.28** for API operation coverage tools (`list-api-operation-services`, `list-api-operations`, `get-api-operation-detail`), semantic nearby tools, workflow/policy tools, `get-execution-history --test-id`, and `get-test-scenarios --external-ids`. CLI ≥ **0.1.29** for `get-org-capabilities` (org capability soft-gating for TrueCoverage / API contract coverage). CLI ≥ **0.1.30** for `get-spec-lifecycle-details` (scenario `verification_strategy` before authoring SmartTests) and skill/CLI version on `report-agent-action` / `agentTraceability`. CLI ≥ **0.1.32** for `get-plans-support-file` (platform-first read of a named workflow plan). CLI ≥ **0.1.33** for `mark-tests-for-review` (report existing-test fixes after fix-test-execution).
-version: 1.0.34
+version: 1.0.35
 required_cli_version: "0.1.35"
 ---
 
@@ -243,7 +243,7 @@ Use the repo, plans, policies, and those tools to decide what to test and how to
 
 | User says | Read |
 |-----------|------|
-| `/testchimp project init` | [`references/project-init-testchimp.md`](references/project-init-testchimp.md) — **one-time per project**: platform comms, folder mapping (`get-git-folder-mapping` / scaffold PR + `update-git-folder-mapping`), **`connect-to-test-env`**, CI wiring, optional import plans/tests/smoke. Track progress via **`get-project-init-status`** / **`update-project-init-status`**. TrueCoverage removed from init → **`/testchimp setup truecoverage`**. Phased plan → approve → execute; PR prefix **`testchimp-`**. |
+| `/testchimp project init` | [`references/project-init-testchimp.md`](references/project-init-testchimp.md) — **one-time per project**: platform comms, folder mapping (`get-git-folder-mapping` / scaffold PR + `update-git-folder-mapping`), **`connect-to-test-env`**, CI wiring, then optional import plans/tests/smoke (smoke **after** required setup — never first). Track progress via **`get-project-init-status`** / **`update-project-init-status`**. TrueCoverage removed from init → **`/testchimp setup truecoverage`**. Phased plan → approve → execute; PR prefix **`testchimp-`**. |
 | `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — **per developer**: workstation MCP, **`get-eaas-config`** gate, local test env. Continues even if project init incomplete; offer **`/testchimp project init`** for gaps. Best-effort **`report-agent-action`** (`workflowId: init`). |
 | `/testchimp import plans` / `/testchimp import plans <folder>` | [`references/import-plans.md`](references/import-plans.md) — import existing plan markdown into mapped **`plans/`**; nested under project init with one approval when agreed. |
 | `/testchimp import` / `/testchimp import existing tests <folder>` | [`references/import-existing-tests.md`](references/import-existing-tests.md) — workflow **`import`** (One-Off); Playwright as-is or best-effort translate other frameworks; CI; scenario links; optional `markScreenState`. Nested under init with **one approval**. |
@@ -415,7 +415,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 
 | Path | Purpose |
 |------|---------|
-| [`references/project-init-testchimp.md`](references/project-init-testchimp.md) | One-time project init: folder mapping, CI, test env, optional imports; **`get-project-init-status`** / **`update-project-init-status`** |
+| [`references/project-init-testchimp.md`](references/project-init-testchimp.md) | One-time project init: folder mapping, CI, test env, then optional imports/smoke; **`get-project-init-status`** / **`update-project-init-status`** |
 | [`references/init-testchimp.md`](references/init-testchimp.md) | Per-developer thin init: workstation MCP, local test env, connectivity gate |
 | [`references/import-plans.md`](references/import-plans.md) | `/testchimp import plans` — migrate existing plan markdown into mapped **`plans/`** |
 | [`references/policies-and-traceability.md`](references/policies-and-traceability.md) | Policy frontmatter, resolution, ULID, closed `report-agent-action` vocabulary, Report workflow execution, Disabled/Missing Config |

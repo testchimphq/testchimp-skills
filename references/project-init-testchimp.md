@@ -87,7 +87,7 @@ A teammate may clone after project init is **`overall_complete`** and still need
 
 When **`/testchimp project init`** starts, set expectations before deep work:
 
-- **During project init**, TestChimp wires **one-time project infrastructure**: Git **plans/tests folder mapping** (agent-driven via CLI), **test environment strategy** (`connect-to-test-env`), **CI execution**, and optional **import** of existing plans/tests. Basic SmartTests scaffold (markers, Playwright/Mobilewright harness) lands with folder mapping — not a full test-authoring campaign.
+- **During project init**, TestChimp wires **one-time project infrastructure**: Git **plans/tests folder mapping** (agent-driven via CLI), **test environment strategy** (`connect-to-test-env`), **CI execution**, then optional **import** of existing plans/tests and optional **smoke** authoring. Basic SmartTests scaffold (markers, Playwright/Mobilewright harness) lands with folder mapping — not a full test-authoring campaign.
 - **Per developer**, each teammate runs **`/testchimp init`** once to register local MCP and verify their machine can run tests.
 - **After setup**, the user mainly runs **`/testchimp test`** when a PR is ready; the agent runs the full QA workflow on demand.
 - **Ongoing**, run **`/testchimp upkeep`** / **`/testchimp evolve`** for coverage gaps; **`/testchimp setup truecoverage`** when the team wants RUM analytics (not part of project init).
@@ -96,22 +96,7 @@ When **`/testchimp project init`** starts, set expectations before deep work:
 
 Then call **`get-project-init-status`** and report what is already **DONE** vs missing.
 
----
-
-## Phase 0 — Quick smoke (optional)
-
-Ask first whether the user wants a quick smoke pass before full project setup.
-
-- If **yes**: follow [`init-testchimp.md`](./init-testchimp.md) local-env guidance; author 2–3 SmartTests when markers exist. If markers are missing, complete **folder mapping** first (Phase 3).
-- If **no**: record deferral; continue to Phase 1.
-
-Quick smoke alone does **not** complete project init. Update optional `smoke_validation` on the platform when smoke finishes successfully.
-
-### Phase 0 gate
-
-- [ ] Quick smoke offered; choice recorded.
-- [ ] If accepted, smoke done or **`N/A`** + justification.
-- [ ] User chose to continue to full project init (or run stops with deferrals recorded).
+**Do not** ask about smoke validation (or author smoke tests) at the start. Critical setup first (`platform_comms` → `folder_mapping` → `connect_to_test_env` → `ci_wiring`); offer smoke only as an optional step with imports (Phase 1 optionals / Phase 3).
 
 ---
 
@@ -208,13 +193,24 @@ When the mapped SmartTests root looks **scaffold-only** (≤ 3 real `*.spec.{js,
 - If the mapped root already has a real suite: **N/A** or lightweight align-in-place (reporter/fixtures-first only) — do not re-ask full migration every run.
 - Defer optional **`markScreenState`** until **Key Area 3** / connect-to-test-env is done.
 
+### Optional — Smoke validation (author smoke tests)
+
+**After** the four required areas are planned — never before `connect-to-test-env` / folder mapping. Same posture as imports: offer once, skip freely, does not block `overall_complete`.
+
+When offering:
+
+- Author **2–3** critical-path SmartTests under the mapped SmartTests root (tag `@smoke` per `global.policy.md` when tags are defined).
+- Requires markers + a usable local-up / env contract from **Key Area 3** — if those are still missing in Phase 1 discovery, plan smoke for Phase 3 **after** connect-to-test-env executes; do not block on smoke now.
+- Follow [`write-smarttests.md`](./write-smarttests.md); local run guidance in [`init-testchimp.md`](./init-testchimp.md).
+- Or skip; user can author later via **`/testchimp create tests`** / **`/testchimp test`**.
+
 ### Phase 1 completion gate
 
 - [ ] **Key Area 1** — platform comms verified (`get-eaas-config` not 401); init status baseline read.
 - [ ] **Key Area 2** — mapping state discovered; agent CLI path or fallback documented.
 - [ ] **Key Area 3** — env strategy decided enough for Phase 2; connect-to-test-env policy gate satisfied or authoring planned.
 - [ ] **Key Area 4** — CI discovery + intended direction recorded.
-- [ ] **Optional imports** — nested / skipped / **N/A** with one-line justification each.
+- [ ] **Optional imports / smoke** — nested / skipped / **N/A** with one-line justification each (smoke offered only alongside optionals, not before required areas).
 
 ---
 
@@ -260,6 +256,11 @@ Optional (when planned): **Import plans**, **Import tests**, **Smoke validation*
 **Optional imports**
 
 - Per [`import-plans.md`](./import-plans.md) / [`import-existing-tests.md`](./import-existing-tests.md); set `import_plans` / `import_tests` on platform when done.
+
+**Optional smoke validation**
+
+- 2–3 `@smoke` SmartTests authored and runnable against the documented local/test env, **or** skipped / **N/A** with justification.
+- `update-project-init-status` with `smoke_validation: DONE` when smoke finishes successfully (optional — does not affect `overall_complete`).
 
 After the plan is written, get **explicit user approval** before Phase 3.
 
@@ -323,7 +324,7 @@ Follow [`configure-ci-test-execution.md`](./configure-ci-test-execution.md):
 - Run from SmartTests root; `TESTCHIMP_API_KEY` in CI secrets; `TESTCHIMP_EXECUTION_SOURCE=CI` on pipeline jobs.
 - Pass `BASE_URL` per env strategy; exclude plan-sync PRs titled `TestChimp Platform Sync [Plans]`.
 - If nested import already authored CI — **verify only**, do not duplicate.
-- **ChimpHands:** Pushing `.github/workflows/*` requires the ChimpHands workflow token to include `permissions.workflows: write`. If push is rejected for missing workflows permission, tell the user to **Install / refresh** the ChimpHands workflow from the TestChimp UI (or merge an updated `chimphands.yml`), then retry the push — do not ask them to reconfigure the TestChimp GitHub App for this specific failure (that is the Actions `GITHUB_TOKEN` scope).
+- **ChimpHands:** Pushing `.github/workflows/*` requires the TestChimp GitHub App **Workflows: Read & write** permission (Actions `GITHUB_TOKEN` cannot modify workflow files). If push is rejected for missing workflows permission, tell the user to grant that App permission, accept the install update, then **Install / refresh** the ChimpHands workflow and retry — do not suggest adding `permissions.workflows` to the workflow YAML (that key is invalid).
 
 Mark `ci_wiring: DONE` when workflow exists or N/A is justified.
 
@@ -334,6 +335,16 @@ When approved in Phase 2:
 - **Plans:** [`import-plans.md`](./import-plans.md) → `import_plans: DONE`.
 - **Tests:** [`import-existing-tests.md`](./import-existing-tests.md) → `import_tests: DONE`; run `markScreenState` only after connect-to-test-env is ready.
 
+### 6. Optional — Smoke validation
+
+When approved in Phase 2 — **only after** steps 2–3 (folder mapping + connect-to-test-env) are **DONE**:
+
+- Author 2–3 critical-path SmartTests (`@smoke` when suite tags exist); run them against the documented local/test env when feasible.
+- Record learnings in **`## Past learnings — authoring & validation (FAQ)`** if useful.
+- Mark `smoke_validation: DONE` on success, or record skip / **N/A**.
+
+Do **not** reorder smoke ahead of required areas.
+
 ### Phase 3 completion gate
 
 Walk all required areas (+ optionals if planned):
@@ -342,7 +353,7 @@ Walk all required areas (+ optionals if planned):
 - [ ] **Folder mapping** — markers, mapping, scaffold done.
 - [ ] **Connect to test env** — policy/strategy documented.
 - [ ] **CI** — workflow authored/verified or N/A.
-- [ ] **Optional imports** — done / skipped / N/A.
+- [ ] **Optional imports / smoke** — done / skipped / N/A.
 
 Call **`get-project-init-status`** — when `overall_complete` is true, project init is done.
 
