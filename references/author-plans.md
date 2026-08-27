@@ -14,6 +14,8 @@ This document explains how to **read and author** TestChimp **markdown test plan
 - **Never create** (even temporarily) story/scenario markdown files with a **blank `id:`**, and **never omit `id:`** from frontmatter. Omitting `id` is the same class of bug as inventing one.
 - **Always provision first via MCP / CLI** (`create-user-story` / `create-test-scenario`) to get the real **`ordinalId`**, **then** write the markdown file with **`id: US-…`** / **`id: TS-…` already populated** in the **first** on-disk version.
 - **Do not** treat “I linked `story: US-…`” as sufficient for a new scenario — scenarios still need a platform-issued **`id: TS-…`**.
+- **Sequential creates only:** Never parallelize **`create-user-story`** / **`create-test-scenario`**. One create → await response → next create. Parallel tool calls can race and return the **same** `ordinalId`.
+- **Duplicate ordinal self-check:** After multiple creates in one Execute turn, confirm every returned **`ordinalId`** is unique. On duplicates: do **not** write files; stop and report **`ACTION_FAILED`** (platform allocation error) with the colliding ids.
 
 ### Forbidden patterns (agents fail these often)
 
@@ -25,6 +27,7 @@ This document explains how to **read and author** TestChimp **markdown test plan
 | “I’ll add the id after the user reviews the draft file” | Draft titles/paths in the **Plan**; provision + write with id only in **Execute** after approval |
 | Create **new** stories/scenarios during Plan (before approval) | Plan lists proposed titles/paths only; MCP create + local write happen in **Execute** |
 | Meta-plan gate when the prompt already names `US-<n>` / `TS-<n>` | Skip meta plan; write up that existing file directly ([scoped write-up](#scoped-write-up-named-ordinal)) |
+| Parallel `create-test-scenario` / `create-user-story` tool calls | Sequential: create → await → write (optional) → next create; then duplicate-`ordinalId` self-check |
 
 **Why this matters:** Git → platform sync **rejects** story/scenario imports that lack canonical `id:` frontmatter, so id-less files reappear forever as “incoming” diffs and never apply. Creating **new** entities before approval also commits ordinals the user may reject.
 
@@ -112,13 +115,15 @@ Creating a file **only on disk** is **not** enough — and is **wrong** if done 
 ### Scenarios
 
 1. Ensure the **parent story** exists and you know its **`US-<n>`** (create the story first if needed).
-2. **`create-test-scenario`** — **`platformFilePath`** under `plans/scenarios/...`, **`title`**, **`userStoryOrdinalId`** = **`n`**. Response includes **`ordinalId`** and **`content`** (stub already has **`id: TS-<ordinalId>`** and **`story: US-<n>`**). **Do not skip this call.**
+2. **`create-test-scenario`** — **`platformFilePath`** under `plans/scenarios/...`, **`title`**, **`userStoryOrdinalId`** = **`n`**. Response includes **`ordinalId`** and **`content`** (stub already has **`id: TS-<ordinalId>`** and **`story: US-<n>`**). **Do not skip this call.** **Do not** fire multiple creates in parallel — await each response before the next.
 3. **Write** that **`content`** locally (edit body; **keep `id:` and `story:`**).
 4. **`update-test-scenario`** with **full markdown**. **Rejects** missing **`id: TS-<n>`** or **`story: US-<n>`** with an actionable error (tells you to call create first).
+5. After several creates: confirm **`ordinalId`**s are unique before writing remaining files; on collision, fail the workflow (do not write).
 
 ### Pre-write checklist (run before every `Write` to stories/scenarios)
 
 - [ ] `create-user-story` / `create-test-scenario` already returned **`ordinalId`** in this session (or the file already exists with a valid `id:` from platform).
+- [ ] Creates in this turn were **sequential** (not parallel), and all returned **`ordinalId`**s in the batch are **unique**.
 - [ ] Frontmatter includes **`id: US-<ordinalId>`** or **`id: TS-<ordinalId>`** (non-empty).
 - [ ] Scenario frontmatter includes **`story: US-<n>`** for the parent.
 - [ ] Immediately after write: call **`update-*-*`** with full content (or schedule it in the same turn before finishing).
