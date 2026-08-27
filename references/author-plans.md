@@ -1,7 +1,7 @@
 # /testchimp author plans
 
 
-> **Plan → approve → execute → report:** When this workflow runs **standalone**, write `knowledge/workflow_plans/author-plans/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). Story/scenario create/update carry **inline `agentTraceability`**. Before finishing standalone, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `author-plans`). Nested under a composite: reuse the parent plan (parent closes). See [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Plan → approve → execute → report:** When this workflow runs **standalone**, write `knowledge/workflow_plans/author-plans/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). **Plan** drafts the stories/scenarios to author (titles, paths, brief intent) — do **not** create platform entities or write story/scenario files until **Execute**. Story/scenario create/update carry **inline `agentTraceability`**. Before finishing standalone, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `author-plans`). Nested under a composite: reuse the parent plan (parent closes). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 **Synonym:** `/testchimp plan` (same workflow **`author-plans`**).
 
 This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and scenario **`annotation`** links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
@@ -20,8 +20,11 @@ This document explains how to **read and author** TestChimp **markdown test plan
 | `Write` a new `plans/stories/**/*.md` without `id: US-…` | `create-user-story` → write with `id: US-<ordinalId>` → `update-user-story` |
 | Invent `TS-999` / copy an id from an unrelated file | Use only the **`ordinalId`** returned by create (or an id already present from platform sync) |
 | “I’ll add the id after the user reviews the draft file” | Draft titles/paths in the **Plan**; provision + write with id only in **Execute** after approval |
+| Create stories/scenarios during Plan (before approval) | Plan lists proposed titles/paths only; MCP create + local write happen in **Execute** |
 
-**Why this matters:** Git → platform sync **rejects** story/scenario imports that lack canonical `id:` frontmatter, so id-less files reappear forever as “incoming” diffs and never apply.
+**Why this matters:** Git → platform sync **rejects** story/scenario imports that lack canonical `id:` frontmatter, so id-less files reappear forever as “incoming” diffs and never apply. Creating entities before approval also commits ordinals the user may reject.
+
+**ChimpHands Files changed:** Always **write the workflow plan file on disk** under the mapped plans tree (then upsert) so the session **Files changed** pane shows it while awaiting approval. During Execute, write each story/scenario file locally too (not upsert-only).
 
 Further reading: [Test planning as code](https://docs.testchimp.io/test-planning/intro) (philosophy, Git export, default-branch scope for plans).
 
@@ -131,10 +134,11 @@ When the user asks for **`/testchimp plan`** (or equivalent: fill gaps in the te
 
 1. Call **`get-requirement-coverage`** with a **`scope.folderPath`** under **`plans`** (e.g. `["plans","stories","checkout"]` or `["plans","scenarios"]`) and set **`includeNonCoveredUserStories`** / **`includeNonCoveredTestScenarios`** as needed.
 2. From the response and the recent changes made in the current working branch, decide **missing or thin** stories and scenarios.
-3. **Create parent stories before scenarios.** For each new artifact: **MCP create → write file with `id:` already set → MCP update**. Never write story/scenario markdown that omits `id:`.
-4. Keep edits **reviewable**: minimal frontmatter, clear titles, consistent folder placement.
-5. Make sure that created stories and scenarios are created under sub-folders for better organization. Not directly under the `plans/stories` or `plans/scenarios` but in a sub-folder within those - based on the the relevant area the story / scenario affects.
-6. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `author-plans` (nested under run-qa / upkeep: parent closes).
+3. **Plan (before any create):** Write `knowledge/workflow_plans/author-plans/<workflow_execution_id>.plan.md` listing proposed titles/paths (and brief intent). **Write on disk**, then **`upsert-plans-support-file`** (blocking). Seek approval. Do **not** call `create-user-story` / `create-test-scenario` or write story/scenario markdown until approved.
+4. **Execute (after approval):** **Create parent stories before scenarios.** For each new artifact: **MCP create → write file with `id:` already set → MCP update**. Never write story/scenario markdown that omits `id:`. Write on disk under the mapped plans root so ChimpHands **Files changed** / branch CI can show the file.
+5. Keep edits **reviewable**: minimal frontmatter, clear titles, consistent folder placement.
+6. Make sure that created stories and scenarios are created under sub-folders for better organization. Not directly under the `plans/stories` or `plans/scenarios` but in a sub-folder within those - based on the the relevant area the story / scenario affects.
+7. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `author-plans` (nested under run-qa / upkeep: parent closes).
 
 ---
 
