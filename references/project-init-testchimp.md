@@ -22,7 +22,7 @@ Also persist durable decisions in **`plans/knowledge/ai-test-instructions.md`**.
 
 ---
 
-> **Plan → approve → execute:** Mint a **ULID** `workflow_execution_id`, write **`knowledge/workflow_plans/init/<workflow_execution_id>.plan.md`** (checklist of init action items), call **`upsert-plans-support-file`** (blocking), then seek **explicit user approval** before Phase 3 Execute — unless `--mode=non-interactive` or policy `allow-execute-without-approval`. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Plan → approve → execute:** Mint a **ULID** `workflow_execution_id`, **write on disk** **`knowledge/workflow_plans/init/<workflow_execution_id>.plan.md`** (checklist of init action items), call **`upsert-plans-support-file`** with the **same** content (blocking), then seek **explicit user approval** before Phase 3 Execute — unless `--mode=non-interactive` or policy `allow-execute-without-approval`. Do not upsert-only: ChimpHands Files changed needs the local file. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 ### Phase gating (required)
 
