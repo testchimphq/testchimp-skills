@@ -101,7 +101,7 @@ For Plan → approve → Execute workflows (`run-qa`, `upkeep`, standalone mutat
 
 1. During **Plan**, resolve **`workflow_execution_id`**:
    - If the invoking prompt already includes **`--workflow-execution-id <ulid>`** (also `--workflow-execution-id=<ulid>` / embedded `workflow-execution-id: <ulid>`), **reuse it** — **never mint a second ULID** for the same run (Workflow Automations mint the id on the platform before the cloud invoke).
-   - Otherwise generate one **ULID**.
+   - Otherwise mint one **ULID** with **`npx --yes ulid`** (trim stdout). Do not invent ids or write ad-hoc scripts — see [`agent-quick-answers.md`](./agent-quick-answers.md#mint-workflow_execution_id-ulid).
 2. Persist it in the plan file frontmatter (required) at:
    **`<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/<workflow-id>/<workflow_execution_id>.plan.md`**
    **Always write this file on disk** (create directories as needed) before upserting. Platform upsert alone is insufficient — local agents, ChimpHands **Files changed**, and git diffs need the worktree copy.

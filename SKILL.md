@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — policy-backed workflows, SmartTests, plans, coverage, TrueCoverage, ExploreChimp, and k6 performance testing (init/create/run/upkeep/import perf). Use for /testchimp commands, SmartTests, policies, performance testing, k6, import-perf-tests, scenario-linked journeys, perf baselines/comparisons, or skill updates.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). Playwright plugin: **#8** (`@testchimp/playwright` — bump on create-tests / run-qa / upkeep). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.28** for API operation coverage tools (`list-api-operation-services`, `list-api-operations`, `get-api-operation-detail`), semantic nearby tools, workflow/policy tools, `get-execution-history --test-id`, and `get-test-scenarios --external-ids`. CLI ≥ **0.1.29** for `get-org-capabilities` (org capability soft-gating for TrueCoverage / API contract coverage). CLI ≥ **0.1.30** for `get-spec-lifecycle-details` (scenario `verification_strategy` before authoring SmartTests) and skill/CLI version on `report-agent-action` / `agentTraceability`. CLI ≥ **0.1.32** for `get-plans-support-file` (platform-first read of a named workflow plan). CLI ≥ **0.1.33** for `mark-tests-for-review` (report existing-test fixes after fix-test-execution).
-version: 1.0.38
+version: 1.0.39
 required_cli_version: "0.1.35"
 ---
 
@@ -17,6 +17,8 @@ TestChimp runs **pre-defined QA workflows**. **`references/`** details how each 
 **Prompt args — `--mode`:** If the user/trigger prompt includes **`--mode=non-interactive`** (also accept `--mode non-interactive` / `mode=non-interactive`), treat approval as automatic: still write + upsert the plan first, set `PlanApproved: yes` and **`ApprovedBy: auto`**, **do not** wait for chat approval, Execute immediately, then **open a PR** with the changes. Details: [`references/policies-and-traceability.md`](references/policies-and-traceability.md)#execution-mode--mode-prompt-arg.
 
 **ChimpHands (interactive chat):** Sessions started from the TestChimp ChimpHands UI are **interactive by default** — ask clarifying questions and wait for plan approval the same as a local Cursor agent. Running on GitHub Actions / `CLOUD_AGENT` does **not** imply `--mode=non-interactive`; only the explicit mode flag (or policy `allow-execute-without-approval`) skips pauses.
+
+**Routine decisions:** Before Plan/Execute, check [`references/agent-quick-answers.md`](references/agent-quick-answers.md). When a step matches (ULID mint, plan path, branch/PR, MCP vs CLI, runner env, git SHA for plans, workflow-id mapping), **use the listed answer** — do not re-derive the mechanics.
 
 **Scoping (all workflows):** If the prompt has **`Working branch: <name>`** (cloud/automation), check out that branch first. Then: explicit scope if given → else **feature/PR branch** = changes on the branch → else **default branch** = changes since last run of the same workflow (`get-last-run-workflow-detail`), or ask the user how far back to look (non-interactive: use last-run / recent commits without asking). For **`implement`** on the default branch, create a new feature branch before coding. Full rule: [`references/policies-and-traceability.md`](references/policies-and-traceability.md)#scoping-overarching--all-workflows.
 
@@ -364,7 +366,7 @@ Platform filetype: **`WORKFLOW_EXECUTION_PLAN`** (extension **`.plan.md`**). Emb
 
 **Hard sequence (blocking):**
 
-1. **Plan (local file — required)** — Resolve **`workflow_execution_id`**: if the invoking prompt already includes **`--workflow-execution-id <ulid>`** (also accept `--workflow-execution-id=<ulid>` / `workflow-execution-id: <ulid>`), **reuse that id — do not mint a second ULID**. Otherwise mint one **ULID**. **Write** the plan markdown to disk at the path above (create parent dirs). Do **not** skip the local write even when upserting to the platform — ChimpHands **Files changed**, PR review, and teammates need the worktree file.
+1. **Plan (local file — required)** — Resolve **`workflow_execution_id`**: if the invoking prompt already includes **`--workflow-execution-id <ulid>`** (also accept `--workflow-execution-id=<ulid>` / `workflow-execution-id: <ulid>`), **reuse that id — do not mint a second ULID**. Otherwise mint one **ULID** with **`npx --yes ulid`** ([`agent-quick-answers.md`](references/agent-quick-answers.md)). **Write** the plan markdown to disk at the path above (create parent dirs). Do **not** skip the local write even when upserting to the platform — ChimpHands **Files changed**, PR review, and teammates need the worktree file.
 2. **Upsert to platform (BLOCKING)** — Call MCP/CLI **`upsert-plans-support-file`** with:
    - `filePath`: path **relative to the mapped plans root** (e.g. `knowledge/workflow_plans/run-qa/<ulid>.plan.md`)
    - `content`: full markdown (including frontmatter; non-empty) — **same bytes as the local file**
