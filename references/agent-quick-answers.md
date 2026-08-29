@@ -49,6 +49,16 @@ Leading `plans/` in CLI paths is stripped automatically — pass path relative t
 
 `GITHUB_ACTIONS` / “running in CI” does **not** mean skip approval by itself.
 
+### UI attached vs async (no live browser)
+
+| Signal | Meaning |
+| --- | --- |
+| `CHIMPHANDS_UI_ATTACHED=true` (env) or bootstrap `ui_attached: true` | A browser tab has the ChimpHands session open — live streaming + worktree VCS diffs work |
+| `CHIMPHANDS_UI_ATTACHED=false` | **Async** — runner is up but nobody is watching live. **Commit and push before ending every turn** so the user can review later via PR / **Files changed** |
+| `GITHUB_ACTIONS` / `TESTCHIMP_EXECUTION_SOURCE=CLOUD_AGENT` | Where you execute — **not** the same as UI attached |
+
+The host also commits any remaining dirty worktree after each async turn and before idle shutdown. Prefer descriptive commit messages when you commit yourself; the host fallback message is generic.
+
 ---
 
 ## Working branch and PR (ChimpHands)
