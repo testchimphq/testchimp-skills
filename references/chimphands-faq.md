@@ -2,7 +2,9 @@
 
 Common issues when ChimpHands runs on GitHub Actions. **Self-fix first** — do not ask the user to paste secrets or “reconnect a GitHub token” in chat.
 
-See also: [`agent-quick-answers.md`](./agent-quick-answers.md) (branch/PR, interactive mode, UI attached).
+**Mandatory branch + commit contract (load first):** [`chimphands.md`](./chimphands.md) — separate `testchimp-*` / `chimphands-*` branch before edits; commit + push at the end of every dirty turn. This FAQ is troubleshooting only.
+
+See also: [`agent-quick-answers.md`](./agent-quick-answers.md) (interactive mode, UI attached, short remap).
 
 ---
 
@@ -159,7 +161,25 @@ Do not ask the user to paste cloud credentials, service-account keys, or WIF con
 
 ## Async UI (`CHIMPHANDS_UI_ATTACHED=false`)
 
-No live browser on the session: **commit and push before ending each turn** so the user can review via PR / Files changed. Host also commits dirty worktree after async turns and before idle teardown.
+No live browser on the session: end-of-turn **commit + push** is critical for PR / Files changed. On ChimpHands, commit+push after **every** dirty turn (UI attached or not) — full rules in [`chimphands.md`](./chimphands.md). Host fallback commit exists; do not rely on it.
+
+---
+
+## Mid-turn chat messages (course-correct / steer)
+
+### Symptom
+
+You send a chat message while the agent is in a long tool (e.g. `bash` watch). GHA shows `queued user message (turnActive=true)` but the agent keeps going and never reacts.
+
+### Cause (CLI before 0.1.66)
+
+OpenCode cannot inject into an active turn. Older hosts only queued the message until the turn finished — so a long watch blocked the interjection forever.
+
+### Fix (CLI ≥ 0.1.66)
+
+The host **aborts** the active OpenCode turn when a user message arrives mid-turn, then immediately starts a new turn with that message (steering prefix tells the agent to drop obsolete watches and course-correct). Chat UI: type a message while the agent is working and Send / Ctrl+Enter — empty composer still shows Stop.
+
+Requires `@testchimp/cli@latest` on the runner (`npm install -g @testchimp/cli@latest` in `chimphands.yml`).
 
 ---
 
@@ -189,6 +209,7 @@ Wrong host or missing key — not GitHub App token expiry.
 | Put in this FAQ | Put elsewhere |
 | --- | --- |
 | ChimpHands GHA git/auth, workflow install, env anti-pattern (`gh workflow run` loops) | Product test strategy → normal planning |
-| `refresh-git-auth`, branch/PR mechanics for cloud sessions | ULID / plan path → [`agent-quick-answers.md`](./agent-quick-answers.md) |
-| Self-heal rules agents must follow without user secrets | **Test env bring-up** → [`connect-to-test-env.md`](./connect-to-test-env.md) + project `connect-to-test-env.policy.md` |
-| Narrow WIF/OIDC dispatch when policy requires it | Repo env FAQ → `plans/knowledge/ai-test-instructions.md` |
+| `refresh-git-auth`, stuck dispatch, WIF | **Branch + end-of-turn commit** → [`chimphands.md`](./chimphands.md) |
+| Self-heal rules agents must follow without user secrets | ULID / plan path → [`agent-quick-answers.md`](./agent-quick-answers.md) |
+| Narrow WIF/OIDC dispatch when policy requires it | **Test env bring-up** → [`connect-to-test-env.md`](./connect-to-test-env.md) + project `connect-to-test-env.policy.md` |
+| | Repo env FAQ → `plans/knowledge/ai-test-instructions.md` |

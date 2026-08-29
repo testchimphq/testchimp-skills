@@ -1454,7 +1454,7 @@ testchimp chimphands refresh-git-auth
 # then retry git push / gh …
 ```
 
-Requires `TESTCHIMP_API_KEY` (+ `TESTCHIMP_BACKEND_URL` when configured). Full troubleshooting: [`chimphands-faq.md`](./chimphands-faq.md).
+Requires `TESTCHIMP_API_KEY` (+ `TESTCHIMP_BACKEND_URL` when configured). Branch/commit contract: [`chimphands.md`](./chimphands.md). Troubleshooting: [`chimphands-faq.md`](./chimphands-faq.md).
 
 ---
 
@@ -1466,4 +1466,5 @@ MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requireme
 
 - [init-testchimp.md](./init-testchimp.md) — workstation gate and MCP registration.
 - [write-smarttests.md](./write-smarttests.md) — tool shapes and coverage calls.
+- [chimphands.md](./chimphands.md) — ChimpHands on CI: session branch + end-of-turn commit.
 - [chimphands-faq.md](./chimphands-faq.md) — ChimpHands CI auth and self-heal.

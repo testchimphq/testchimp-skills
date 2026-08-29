@@ -4,6 +4,8 @@ Short answers for recurring workflow mechanics. When a step below applies, **use
 
 See also [`SKILL.md`](../SKILL.md) and workflow playbooks under `references/`.
 
+**ChimpHands on CI:** For branch creation + end-of-turn commit (mandatory), load [`chimphands.md`](./chimphands.md) — do not rely on the short tables below alone.
+
 ---
 
 ## Mint `workflow_execution_id` (ULID)
@@ -54,29 +56,36 @@ Leading `plans/` in CLI paths is stripped automatically — pass path relative t
 | Signal | Meaning |
 | --- | --- |
 | `CHIMPHANDS_UI_ATTACHED=true` (env) or bootstrap `ui_attached: true` | A browser tab has the ChimpHands session open — live streaming + worktree VCS diffs work |
-| `CHIMPHANDS_UI_ATTACHED=false` | **Async** — runner is up but nobody is watching live. **Commit and push before ending every turn** so the user can review later via PR / **Files changed** |
+| `CHIMPHANDS_UI_ATTACHED=false` | **Async** — runner is up but nobody is watching live. End-of-turn commit+push is critical for PR / **Files changed** |
 | `GITHUB_ACTIONS` / `TESTCHIMP_EXECUTION_SOURCE=CLOUD_AGENT` | Where you execute — **not** the same as UI attached |
 
-The host also commits any remaining dirty worktree after each async turn and before idle shutdown. Prefer descriptive commit messages when you commit yourself; the host fallback message is generic.
+**Always** commit + push at end of any ChimpHands turn with a dirty worktree (UI attached or not). Full contract: [`chimphands.md`](./chimphands.md). Host fallback commit exists — do **not** rely on it.
 
 ---
 
 ## Working branch and PR (ChimpHands)
 
+**Canonical:** [`chimphands.md`](./chimphands.md) (blocking). Quick remap:
+
 | If | Then |
 | --- | --- |
-| Prompt has `Working branch: <name>` or bootstrap lists a branch | `git fetch && git checkout <name>` — reuse for all turns in the session |
-| No working branch yet | Create `testchimp-*` or `chimphands-*`, **`git push -u origin <branch>`** before `testchimp chimphands report-branch` |
+| About to edit and on default branch | **Stop** — create/checkout `testchimp-*` / `chimphands-*` first |
+| Prompt has `Working branch: <name>` or bootstrap lists a branch | `git fetch && git checkout <name>` — reuse for all turns |
+| No working branch yet | Create `testchimp-*` or `chimphands-*`, **`git push -u origin <branch>`**, then `report-branch` |
+| End of turn with dirty worktree | **Commit + push** on the session branch (plan files included) |
 | After push / PR open | `testchimp chimphands report-branch --branch <name> [--pr-url <url>]` |
-| `git` / `gh` auth failure (401/403, Authentication failed, long-lived session) | **`testchimp chimphands refresh-git-auth`** then retry — never ask the user for a GitHub token ([`chimphands-faq.md`](./chimphands-faq.md)) |
+| `git` / `gh` auth failure | **`testchimp chimphands refresh-git-auth`** then retry — never ask the user for a token ([`chimphands-faq.md`](./chimphands-faq.md)) |
 
-Never commit to default branch. One branch + one PR per ChimpHands conversation unless the prior PR was merged/closed.
+Never commit to default branch. One branch + one PR per conversation unless the prior PR was merged/closed.
 
 ---
 
-## ChimpHands FAQ (CI / cloud)
+## ChimpHands playbook + FAQ (CI / cloud)
 
-For expired App installation tokens, workflow-file pushes, stuck dispatch, and related CI self-heals: **[`chimphands-faq.md`](./chimphands-faq.md)**.
+| Doc | Use |
+| --- | --- |
+| **[`chimphands.md`](./chimphands.md)** | Mandatory branch + end-of-turn commit/push |
+| [`chimphands-faq.md`](./chimphands-faq.md) | Auth expiry, workflow-file pushes, stuck dispatch, self-heal |
 
 **Need a test env on ChimpHands** (author / run / fix tests): follow [`connect-to-test-env.md`](./connect-to-test-env.md) and the project’s **`## CI / Cloud`** policy section — bring the stack up **on this runner**. Do **not** loop on `gh workflow run` against merge-gate E2E workflows. Persist bring-up learnings back into that policy section.
 
@@ -150,6 +159,7 @@ Plan path pattern: `knowledge/workflow_plans/<workflow-id>/<ulid>.plan.md`.
 | --- | --- |
 | Product design, test strategy, scope tradeoffs | ULID mint, plan path, branch checkout, MCP vs CLI, runner env |
 | Ambiguous user intent | Preamble checks in [`SKILL.md`](../SKILL.md) |
+| ChimpHands branch / end-of-turn commit | [`chimphands.md`](./chimphands.md) |
 | ChimpHands GHA auth / CI self-heal | [`chimphands-faq.md`](./chimphands-faq.md) |
 | Test env bring-up (local or ChimpHands) | [`connect-to-test-env.md`](./connect-to-test-env.md) + `plans/knowledge/policies/connect-to-test-env.policy.md` |
 | Repo-specific env / bring-up blockers | `plans/knowledge/ai-test-instructions.md` FAQ (see [`run-qa.md`](./run-qa.md#binding-ai-test-instructions-environment-and-faq-playbook)) |
