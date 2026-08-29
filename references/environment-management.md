@@ -65,6 +65,10 @@ CI should default to running tests against an ephemeral PR environment provision
 - If `bunnyshell.yaml` exists, use it as the basis for provisioning.
 - If it does not exist, ask whether the team wants it created; if yes, follow the EaaS setup workflow.
 
+### ChimpHands / cloud agent vs merge-gate jobs
+
+**ChimpHands** sessions already run on GitHub Actions. Env for authoring, executing, and fixing tests comes from **`connect-to-test-env.policy.md` → `## CI / Cloud`** (on-runner spin-up or EaaS MCP) — see [`connect-to-test-env.md`](./connect-to-test-env.md). Do **not** treat merge-gate workflows as a remote “stack service” via `gh workflow run`. Document agent bring-up and merge-gate behavior as **separate** subsections in the policy.
+
 ### Discouraged fallback: persistent environment URL
 
 If the team explicitly chooses to run E2E only post-merge (discouraged, but allowed for “get going quickly” - as a stop gap until EaaS is setup):

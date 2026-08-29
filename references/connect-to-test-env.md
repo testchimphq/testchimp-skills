@@ -24,17 +24,31 @@ See [`policies-and-traceability.md`](./policies-and-traceability.md) and deeper 
 
 ## Scoping (defaults; policy overrides)
 
-- **Feature branch** — prefer PR-scoped ephemeral / preview stack per policy.
+- **Feature branch** — prefer PR-scoped ephemeral / preview stack per policy (**Local Agent** section).
 - **Default branch** — ephemeral or shared (e.g. staging) per policy; ask when ambiguous.
-- **CI / cloud** — follow policy’s CI section (spin-up on runner vs EaaS vs shared).
+- **CI / cloud / ChimpHands** — follow policy’s **`## CI / Cloud`** section (spin-up **on this runner**, EaaS MCP, or documented connect). See below.
+
+## ChimpHands / GitHub Actions (critical)
+
+When `GITHUB_ACTIONS` / `CLOUD_AGENT` / ChimpHands is set, you are **already** on a cloud runner. Env bring-up for authoring, executing, and fixing tests is **`connect-to-test-env`**, not “dispatch another Actions workflow and hope a stack appears.”
+
+1. **Read** `plans/knowledge/policies/connect-to-test-env.policy.md` → **`## CI / Cloud`** (fallback: ai-test-instructions Environment Provision Strategy).
+2. **Execute those instructions on this runner** (compose / `local-up` scripts / EaaS MCP / documented URLs). Wait until healthy; export **`BASE_URL`** / backend URLs.
+3. **Reuse** that stack for nested work: create-tests, execute-tests, fix-test-execution, smart smoke, ExploreChimp, etc. Do **not** tear down between subflows of the same approved plan.
+4. **Do not** substitute bring-up by repeatedly running `gh workflow run` / `gh run watch` on existing merge-gate or E2E workflows (e.g. “E2E PR”, compose CI jobs). Those jobs run **their own** ephemeral stack for a check; they do not hand you a live env for this session unless the policy **explicitly** says otherwise (rare — e.g. attach to a documented preview URL).
+5. **WIF / OIDC-only cloud jobs** are separate: only dispatch them when the policy (or user) requires that specific cloud-side work — see [`chimphands-faq.md`](./chimphands-faq.md). That is **not** the default path to get a test env for SmartTests.
+6. **Update the policy with learnings** when bring-up steps, health checks, ports, or pitfalls differ from what’s written (or were missing). Patch **`## CI / Cloud`** (and Local Agent if the same contract applies), bump `version`, commit, and call **`upsert-policy`**. Also add short FAQ bullets to `ai-test-instructions.md` when useful. Future ChimpHands sessions should succeed without rediscovery.
+
+If **`## CI / Cloud`** only documents “how PR checks run Playwright” and has **no** agent bring-up steps, treat that as incomplete: derive a working on-runner (or EaaS) procedure from Local Agent / repo scripts, verify it, then **write it into the policy** before continuing dependent workflows.
 
 ## Agent steps (thin)
 
-1. Read resolved policy (or ai-test-instructions fallback).
+1. Read resolved policy (or ai-test-instructions fallback). Choose **Local Agent** vs **CI / Cloud** by where you are running.
 2. Run documented provision / local-up / connect steps; wait for **healthy**.
 3. Export or document **`BASE_URL`** / backend URLs for the runner (Preamble **#4** still required for Playwright/Mobilewright).
-4. Best-effort **`report-agent-action`** when provisioning creates/updates env artifacts worth tracing.
-5. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `connect-to-test-env` (nested: parent closes).
+4. Persist learnings into the policy / ai-test-instructions when steps changed or were discovered (see above).
+5. Best-effort **`report-agent-action`** when provisioning creates/updates env artifacts worth tracing.
+6. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `connect-to-test-env` (nested: parent closes).
 
 ## Performance-test guidance
 

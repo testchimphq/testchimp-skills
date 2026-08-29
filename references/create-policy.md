@@ -73,13 +73,20 @@ If the team usually tests on the **default branch** after deploying to a shared 
 - How to **connect** to that test env (base URL and any auth/headers)
 - Ensure **`.env-<env>`** is created/updated with **`BASE_URL`** populated for the runner
 
-### 3. CI test executions
+### 3. CI / ChimpHands test executions
 
-If the team wants test executions in **CI**, how are test environments procured on CI?
+If the team wants test executions in **CI** or via **ChimpHands** (agent already on GitHub Actions), document **two distinct things**:
 
-- Spin up on cloud / runner?
-- Use EaaS?
+1. **Agent bring-up (required for ChimpHands):** How **this** cloud agent procures a live env **on the runner** (or via EaaS MCP) — commands, health checks, `BASE_URL` / backend URLs, teardown. Same contract agents use for create-tests / execute / fix failures. **Do not** describe only “trigger workflow X.”
+2. **Merge-gate / PR checks (optional context):** How automated PR workflows procure env for their own jobs — informational; agents must **not** `gh workflow run` those jobs as a substitute for (1).
+
+Options for (1):
+
+- Spin up on the runner (compose / local-up scripts — often the same as Local Agent)
+- Use EaaS (e.g. Bunnyshell MCP)
 - Connect to a shared test env (**discouraged** — prefer ephemeral or dedicated CI envs)
+
+Persist learnings into **`## CI / Cloud`** whenever bring-up steps are discovered or corrected.
 
 ### Recommended headings for `connect-to-test-env`
 

@@ -1437,6 +1437,27 @@ testchimp mark-entity-distinct --json-input '{
 
 ---
 
+## ChimpHands (CLI ≥ **0.1.66** for `refresh-git-auth`)
+
+GitHub Actions agent bridge. Subcommands under **`testchimp chimphands`**:
+
+| Subcommand | Purpose |
+| --- | --- |
+| `run` / `serve` | Session bridge (used by the ChimpHands workflow; agents rarely invoke directly) |
+| `report-branch --branch <name> [--pr-url <url>]` | Persist working branch / PR for the UI |
+| **`refresh-git-auth`** | Remint ~1h GitHub App installation token and apply for `git`/`gh` — **never prints the token** |
+
+```bash
+# After auth failures on a long-lived ChimpHands job:
+testchimp chimphands refresh-git-auth
+# stdout: {"ok":true,"repositoryFullName":"org/repo","expiresAtMillis":...}
+# then retry git push / gh …
+```
+
+Requires `TESTCHIMP_API_KEY` (+ `TESTCHIMP_BACKEND_URL` when configured). Full troubleshooting: [`chimphands-faq.md`](./chimphands-faq.md).
+
+---
+
 ## MCP parity (tool names)
 
 MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`upsert-policy`**, **`upsert-plans-support-file`**, **`get-plans-support-file`**, **`create-user-story`**, **`list-rum-environments`**.
@@ -1445,3 +1466,4 @@ MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requireme
 
 - [init-testchimp.md](./init-testchimp.md) — workstation gate and MCP registration.
 - [write-smarttests.md](./write-smarttests.md) — tool shapes and coverage calls.
+- [chimphands-faq.md](./chimphands-faq.md) — ChimpHands CI auth and self-heal.

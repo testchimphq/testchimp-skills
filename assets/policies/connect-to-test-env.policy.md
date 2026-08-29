@@ -27,7 +27,19 @@ Use the skill-wide rule (explicit scope → feature-branch changes → default b
 
 ## CI / Cloud
 
-<!-- How CI procures env: cloud spin-up | EaaS | shared (discouraged) -->
+<!--
+REQUIRED for ChimpHands / GITHUB_ACTIONS agents — concrete on-runner (or EaaS MCP) bring-up:
+
+1. Commands to start the stack ON THIS RUNNER (or provision via EaaS), health checks, BASE_URL / backend URLs
+2. Env vars for Playwright/Mobilewright (same contract as Local Agent when applicable)
+3. Teardown notes if needed
+
+ALSO document (separately) how merge-gate / PR check workflows procure env — do NOT tell agents to
+`gh workflow run` those checks as a substitute for (1). ChimpHands is already on a runner; it must
+follow (1) then use that stack for create-tests / execute / fix failures.
+
+Update this section when bring-up learnings change; bump version + upsert-policy.
+-->
 
 ## Performance testing (when enabled)
 
