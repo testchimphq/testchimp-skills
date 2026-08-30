@@ -121,6 +121,29 @@ If the model asks the user to refresh a GitHub token for this session: **that is
 
 ---
 
+## Runner out of disk / “No space left on device”
+
+### Symptom
+
+- GitHub Actions annotation: `You are running out of disk space`
+- Build/docker/npm fails with `ENOSPC`, `no space left on device`, or cryptic write errors
+- Agent retries the same full build loop without reclaiming
+
+### Cause
+
+Hosted runners have a fixed disk budget (~14 GiB on `ubuntu-latest`). Heavy phases (language builds, container images, dependency installs, browser binaries, test reports) **stack** unless you reclaim between phases. A blanket `git fetch origin` or `fetch-depth: 0` checkout also wastes gigabytes before any product work starts.
+
+### Fix (mandatory — agent self-heal)
+
+1. Load [`chimphands-ci-runner.md`](./chimphands-ci-runner.md) and run the **Between phases** reclaim steps appropriate to what you already built (Docker builder prune, stop compile daemons, remove temp/test artifacts).
+2. Check `df -h /` — need several GiB free before the next heavy step.
+3. Retry **once** with a slimmer sequence (sequential container builds, no parallel compile+webpack, no duplicate host `npm ci` if UI is already in an image).
+4. Do **not** run `git fetch origin` to “fix” git — use single-branch shallow fetch from [`chimphands-ci-runner.md`](./chimphands-ci-runner.md).
+
+If still blocked after one reclaim+retry, report available GiB and the last successful phase — do not spin indefinitely.
+
+---
+
 ## Need a test environment on ChimpHands (stack for authoring / running / fixing tests)
 
 **Do not** loop on `gh workflow run` / `gh run watch` against existing merge-gate or E2E workflows to “get a stack up.” Those jobs provision their **own** ephemeral env for a check; they do not give this session a usable `BASE_URL`.
@@ -177,7 +200,11 @@ OpenCode cannot inject into an active turn. Older hosts only queued the message 
 
 ### Fix (CLI ≥ 0.1.67)
 
-The host delivers mid-turn user messages to the active OpenCode session via `prompt_async` — **without aborting** the running turn. The agent sees the new message and decides whether to course-correct, stop a watch/poll, or keep going. Chat UI: type a message while the agent is working and Send / Ctrl+Enter — empty composer still shows Stop.
+The host delivers mid-turn user messages to the active OpenCode session via `prompt_async` — **without aborting** the running turn. OpenCode also gets a **parallel child-session turn** (same agent/model) so the user gets an immediate answer while a **blocking** bash/gradlew is still running. The main session still receives the message for course-correction when the long step finishes.
+
+**Limitation:** OpenCode’s main agent loop cannot run while it is blocked on a synchronous tool (e.g. long `./gradlew`). `prompt_async` alone only queues the message in that case — the sidecar is what makes mid-turn Q&A feel live. Watch/poll-style tools may still get an in-session reply from the main loop.
+
+Chat UI: type a message while the agent is working and Send / Ctrl+Enter — empty composer still shows Stop.
 
 Requires `@testchimp/cli@latest` on the runner (`npm install -g @testchimp/cli@latest` in `chimphands.yml`).
 

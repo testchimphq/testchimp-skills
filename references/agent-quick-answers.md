@@ -70,7 +70,7 @@ Leading `plans/` in CLI paths is stripped automatically — pass path relative t
 | If | Then |
 | --- | --- |
 | About to edit and on default branch | **Stop** — create/checkout `testchimp-*` / `chimphands-*` first |
-| Prompt has `Working branch: <name>` or bootstrap lists a branch | `git fetch && git checkout <name>` — reuse for all turns |
+| Prompt has `Working branch: <name>` or bootstrap lists a branch | On CI: shallow fetch that branch only (`chimphands-ci-runner.md`); if already on it (`CHIMPHANDS_WORK_BRANCH`), stay |
 | No working branch yet | Create `testchimp-*` or `chimphands-*`, **`git push -u origin <branch>`**, then `report-branch` |
 | End of turn with dirty worktree | **Commit + push** on the session branch (plan files included) |
 | After push / PR open | `testchimp chimphands report-branch --branch <name> [--pr-url <url>]` |
@@ -85,7 +85,8 @@ Never commit to default branch. One branch + one PR per conversation unless the 
 | Doc | Use |
 | --- | --- |
 | **[`chimphands.md`](./chimphands.md)** | Mandatory branch + end-of-turn commit/push |
-| [`chimphands-faq.md`](./chimphands-faq.md) | Auth expiry, workflow-file pushes, stuck dispatch, self-heal |
+| [`chimphands-ci-runner.md`](./chimphands-ci-runner.md) | Scoped git fetch, disk/Docker/build hygiene on GHA |
+| [`chimphands-faq.md`](./chimphands-faq.md) | Auth expiry, disk full, workflow-file pushes, self-heal |
 
 **Need a test env on ChimpHands** (author / run / fix tests): follow [`connect-to-test-env.md`](./connect-to-test-env.md) and the project’s **`## CI / Cloud`** policy section — bring the stack up **on this runner**. Do **not** loop on `gh workflow run` against merge-gate E2E workflows. Persist bring-up learnings back into that policy section.
 

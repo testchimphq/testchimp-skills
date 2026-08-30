@@ -34,11 +34,11 @@ Treat yourself as **ChimpHands on CI** when **any** of these is true:
 
 1. If the prompt or bootstrap has **`Working branch: <name>`** (or bootstrap lists a branch):
    ```bash
-   git fetch origin
-   git checkout <name>
-   # if branch only exists remotely:
-   # git checkout -B <name> origin/<name>
+   # Shallow fetch of this branch only — never `git fetch origin` on CI (see chimphands-ci-runner.md).
+   git fetch origin "refs/heads/<name>:refs/remotes/origin/<name>" --depth=1
+   git checkout -B <name> "origin/<name>"
    ```
+   If the workflow already checked out that branch (`CHIMPHANDS_WORK_BRANCH`), stay on it.
 2. Else if already on a non-default `testchimp-*` / `chimphands-*` branch for this conversation: **stay on it**.
 3. Else (**no session branch yet**): create one, publish immediately, report it:
    ```bash
@@ -124,6 +124,14 @@ Details: [`agent-quick-answers.md`](./agent-quick-answers.md#chimphands--cloud-r
 
 Bring the stack up **on this runner** per [`connect-to-test-env.md`](./connect-to-test-env.md) and the project’s `connect-to-test-env.policy.md` → **`## CI / Cloud`**. Do **not** loop on `gh workflow run` against merge-gate E2E workflows to “get a BASE_URL.”
 
+## CI runner disk, git, and Docker hygiene (P0)
+
+On GitHub Actions / ChimpHands hosts, **load and follow** [`chimphands-ci-runner.md`](./chimphands-ci-runner.md) before compile, container builds, or test installs:
+
+- Shallow / single-branch git fetch only.
+- Reclaim disk between heavy phases (`docker builder prune`, stop build daemons, drop temp artifacts).
+- Sequential Docker builds when RAM/disk is tight; teardown when the plan completes.
+
 ---
 
 ## Related
@@ -131,6 +139,7 @@ Bring the stack up **on this runner** per [`connect-to-test-env.md`](./connect-t
 | Doc | Use for |
 | --- | --- |
 | [`chimphands-faq.md`](./chimphands-faq.md) | Auth expiry, workflow-file pushes, WIF, stuck dispatch |
+| [`chimphands-ci-runner.md`](./chimphands-ci-runner.md) | Disk/git/Docker hygiene on hosted runners |
 | [`agent-quick-answers.md`](./agent-quick-answers.md) | ULID, plan paths, runner env |
 | [`connect-to-test-env.md`](./connect-to-test-env.md) | On-runner env bring-up |
 | [`policies-and-traceability.md`](./policies-and-traceability.md) | Scoping, plan upsert, report-agent-action |

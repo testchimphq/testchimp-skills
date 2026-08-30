@@ -232,6 +232,40 @@ testchimp fetch-execution-report --batch-invocation-id "<id>"
 testchimp fetch-execution-report --job-id "<id>"
 ```
 
+### `get-batch-view-url`
+
+**API:** `POST /api/mcp/get_batch_view_url`
+
+Resolve the TestChimp batch execution viewer deeplink for the authenticated project (includes `project_id` from the API key). Prefer this over hand-building URLs so route changes stay server-side.
+
+| Flag | Maps to JSON field | Notes |
+|------|-------------------|--------|
+| `--batch-invocation-id <id>` | `batchInvocationId` | Batch invocation id from a test run. |
+
+**Response:** `batchViewUrl` — open in chat when reporting run results to the user.
+
+```bash
+testchimp get-batch-view-url --batch-invocation-id "<batch-invocation-id>"
+```
+
+### `upload-attachment`
+
+**API:** `POST /api/mcp/upload_attachment`
+
+Upload a local file (e.g. agent screenshot evidence) to explore-snaps. Returns a stable **`viewUrl`** (`{app.url}/artifact?gcs_path=...`) to paste in chat; users open it in the app (ChimpHands shows an in-app preview modal).
+
+| Flag | Maps to JSON field | Notes |
+|------|-------------------|--------|
+| `--file <path>` | `file` (CLI reads disk → `fileBase64` in API body) | Required. |
+| `--filename <name>` | `filename` | Optional; defaults to basename of `--file`. |
+| `--content-type <type>` | `contentType` | Optional MIME type. |
+
+**Response:** `gcpPath`, `viewUrl`.
+
+```bash
+testchimp upload-attachment --file /tmp/evidence.png
+```
+
 ### Platform execution reporting
 
 **Ingest:** `@testchimp/playwright` reporter attaches **`executionContext`** on each test end (platform from Mobilewright **`projects[].use.platform`** or web project config; device fields from viewport or mobile device annotations). TestChimp stores this on the execution job and denormalized columns for queries.
