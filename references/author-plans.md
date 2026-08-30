@@ -3,9 +3,9 @@
 
 > **Plan → approve → execute → report (gap / multi-artifact runs):** When this workflow runs **standalone** and the prompt does **not** name a specific existing story/scenario ordinal, write `knowledge/workflow_plans/author-plans/<workflow_execution_id>.plan.md`, call **`upsert-plans-support-file`** (blocking), then require explicit user approval before Execute (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). **Plan** drafts the stories/scenarios to author (titles, paths, brief intent) — do **not** create platform entities or write story/scenario files until **Execute**. Story/scenario create/update carry **inline `agentTraceability`**. Before finishing standalone, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `author-plans`). Nested under a composite: reuse the parent plan (parent closes). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
-> **Exception — scoped to an existing ordinal:** If the prompt names a specific **`US-<n>`** or **`TS-<n>`** (e.g. `/testchimp author plans for US-118`, `author plan TS-107`, “flesh out US-42”), the work is **scoping / writing up that existing file** — **skip** the meta `workflow_plans/author-plans/*.plan.md` gate. Load the story/scenario, clarify with the user as needed, use repo code context, then update the file + platform. Still mint/reuse a ULID for traceability and **report** completion. See [Scoped write-up (named ordinal)](#scoped-write-up-named-ordinal).
+> **Exception — scoped to an existing ordinal:** If the prompt names a specific **`US-<n>`** or **`TS-<n>`** (e.g. `/testchimp author plans for US-118`, `author plan TS-107`, **`scope out US-212`**, “flesh out US-42”), the work is **scoping / writing up that existing file** — **skip** the meta `workflow_plans/author-plans/*.plan.md` gate. Load the story/scenario, clarify with the user as needed, use repo code context, then update the file + platform. Still mint/reuse a ULID for traceability and **report** completion. See [Scoped write-up (named ordinal)](#scoped-write-up-named-ordinal).
 
-**Synonym:** `/testchimp plan` (same workflow **`author-plans`**).
+**Synonym:** `/testchimp plan` and **`/testchimp scope out`** (same workflow **`author-plans`**). Use **`scope out US-<n>`** / **`scope out TS-<n>`** when the story or scenario already exists and the user wants to flesh out details (acceptance criteria, edge cases, open questions) — typical when handing off from the Plans viewer.
 
 This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and scenario **`annotation`** links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
 
@@ -145,7 +145,7 @@ If **`story:`** (or the parent link) changes on a scenario, call **`update-test-
 | Objective / area / “fill gaps” / no ordinal (or only a folder scope) | **[Gap-driven planning](#testchimp-plan-playbook-gap-driven-planning)** — Plan → approve → Execute |
 | Nested under run-qa / upkeep | Reuse parent plan; do not start a second meta-plan cycle |
 
-Recognize ordinals in any common form: `US-118`, `us-118`, `#US-118`, `story US-118`, `TS-107`, `#TS-107`. If both a story and scenario are named, prefer writing the scenario (and keep the parent story consistent if needed). If the named ordinal **does not exist** on the platform / in the mapped tree, say so and either fall back to gap-driven planning (propose creating it) or ask the user — do **not** invent the id.
+Recognize ordinals in any common form: `US-118`, `us-118`, `#US-118`, `story US-118`, `TS-107`, `#TS-107`, **`scope out US-118`**, **`scope out TS-107`**. If both a story and scenario are named, prefer writing the scenario (and keep the parent story consistent if needed). If the named ordinal **does not exist** on the platform / in the mapped tree, say so and either fall back to gap-driven planning (propose creating it) or ask the user — do **not** invent the id.
 
 ---
 
