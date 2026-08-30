@@ -324,7 +324,7 @@ Follow [`configure-ci-test-execution.md`](./configure-ci-test-execution.md):
 - Run from SmartTests root; `TESTCHIMP_API_KEY` in CI secrets; `TESTCHIMP_EXECUTION_SOURCE=CI` on pipeline jobs.
 - Pass `BASE_URL` per env strategy; exclude plan-sync PRs titled `TestChimp Platform Sync [Plans]`.
 - If nested import already authored CI — **verify only**, do not duplicate.
-- **ChimpHands:** Pushing `.github/workflows/*` requires the TestChimp GitHub App **Workflows: Read & write** permission (Actions `GITHUB_TOKEN` cannot modify workflow files). If push is rejected for missing workflows permission, tell the user to grant that App permission, accept the install update, then **Install / refresh** the ChimpHands workflow and retry — do not suggest adding `permissions.workflows` to the workflow YAML (that key is invalid).
+- **ChimpHands:** Pushing `.github/workflows/*` requires the TestChimp GitHub App **Workflows: Read & write** permission (Actions `GITHUB_TOKEN` cannot modify workflow files). If push is rejected for missing workflows permission, tell the user to grant that App permission, accept the install update, then run `testchimp chimphands refresh-git-auth` and retry — do not suggest adding `permissions.workflows` to the workflow YAML (that key is invalid). If `chimphands.yml` is missing, install it from the TestChimp UI; do not overwrite a customized workflow.
 
 Mark `ci_wiring: DONE` when workflow exists or N/A is justified.
 

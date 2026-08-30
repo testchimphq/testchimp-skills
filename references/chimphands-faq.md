@@ -101,7 +101,7 @@ Actions’ built-in `GITHUB_TOKEN` **cannot** create/update workflow files. Chim
 
 1. Confirm the App has **Workflows: Read & write**; org admin must **accept** pending permission updates.
 2. Run `testchimp chimphands refresh-git-auth` so the runner is not on the Actions fallback token.
-3. In TestChimp UI, refresh/install the ChimpHands workflow from the GitHub integration panel if the on-disk template is stale.
+3. If `chimphands.yml` is missing on the default branch, install it from the TestChimp UI. Do **not** overwrite a customized workflow (e.g. WIF) — edit the repo file directly when you need local changes.
 
 ---
 
@@ -175,9 +175,9 @@ You send a chat message while the agent is in a long tool (e.g. `bash` watch). G
 
 OpenCode cannot inject into an active turn. Older hosts only queued the message until the turn finished — so a long watch blocked the interjection forever.
 
-### Fix (CLI ≥ 0.1.66)
+### Fix (CLI ≥ 0.1.67)
 
-The host **aborts** the active OpenCode turn when a user message arrives mid-turn, then immediately starts a new turn with that message (steering prefix tells the agent to drop obsolete watches and course-correct). Chat UI: type a message while the agent is working and Send / Ctrl+Enter — empty composer still shows Stop.
+The host delivers mid-turn user messages to the active OpenCode session via `prompt_async` — **without aborting** the running turn. The agent sees the new message and decides whether to course-correct, stop a watch/poll, or keep going. Chat UI: type a message while the agent is working and Send / Ctrl+Enter — empty composer still shows Stop.
 
 Requires `@testchimp/cli@latest` on the runner (`npm install -g @testchimp/cli@latest` in `chimphands.yml`).
 
@@ -198,7 +198,7 @@ Wrong host or missing key — not GitHub App token expiry.
 | Check | Action |
 | --- | --- |
 | GitHub App + repo linked | TestChimp → Integrations → GitHub |
-| `chimphands.yml` on default branch | Install/refresh workflow from UI; merge install PR if branch protection blocked direct commit |
+| `chimphands.yml` on default branch | Install from UI only when missing; merge install PR if branch protection blocked direct commit. Customized workflows are not auto-overwritten. |
 | Actions disabled for first App workflow | In GitHub Actions UI, **Enable workflows** once if prompted |
 | `TESTCHIMP_API_KEY` secret on the repo | Required for mint + bootstrap |
 
