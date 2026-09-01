@@ -16,7 +16,7 @@ Treat yourself as **ChimpHands on CI** when **any** of these is true:
 | `GITHUB_ACTIONS=true` **and** ChimpHands session / bootstrap / `testchimp chimphands` context | Runner is the ChimpHands job |
 | `TESTCHIMP_EXECUTION_SOURCE=CLOUD_AGENT` on a ChimpHands session | Cloud agent host for this chat |
 | Env `CHIMPHANDS_UI_ATTACHED` is set (`true` or `false`) | Host injects this on ChimpHands runners |
-| Prompt / bootstrap has `Working branch:` or ChimpHands session metadata | Platform-managed conversation |
+| Prompt / bootstrap has `Base branch:` (or legacy `Working branch:`) or ChimpHands session metadata | Platform-managed conversation |
 
 **Local Cursor / Claude Code on a developer machine is not ChimpHands** — still avoid committing to `main`/`master` for workflow PRs, but the hard end-of-turn commit/push contract below is **ChimpHands-only**.
 
@@ -26,41 +26,60 @@ Treat yourself as **ChimpHands on CI** when **any** of these is true:
 
 ## Non-negotiables (P0)
 
-### 1. Separate working branch — before any edits
+### 1. Agent branch from base branch — before any edits
 
-**Never** commit or push to the repo **default** branch (`main` / `master` / whatever `git symbolic-ref refs/remotes/origin/HEAD` resolves to).
+**Never** commit or push to the repo **default** branch (`main` / `master`) or directly to a user **base branch**.
+
+Two concepts:
+
+| Term | Meaning |
+| --- | --- |
+| **Base branch** | Parent branch from the prompt (`Base branch: <name>`) or `CHIMPHANDS_WORK_BRANCH` — where the PR merges back |
+| **Agent branch** | Your session branch — **`testchimp-*` only** — where all commits land |
 
 **Before the first file write / edit / plan-file write in the session:**
 
-1. If the prompt or bootstrap has **`Working branch: <name>`** (or bootstrap lists a branch):
+1. If the prompt has **`Base branch: <name>`** (legacy: `Working branch:`):
+   - The workflow may already have checked out that branch (`CHIMPHANDS_WORK_BRANCH`). Use it as the parent.
+   - If not checked out yet, shallow-fetch it only ([`chimphands-ci-runner.md`](./chimphands-ci-runner.md)):
+     ```bash
+     git fetch origin "refs/heads/<name>:refs/remotes/origin/<name>" --depth=1
+     git checkout -B <name> "origin/<name>"
+     ```
+   - **Do not commit on the base branch.** Create an agent branch from it:
+     ```bash
+     git checkout -b testchimp-<short-scope>
+     git push -u origin HEAD
+     testchimp chimphands report-branch --branch "$(git branch --show-current)"
+     ```
+2. Else if bootstrap lists an existing **`testchimp-*`** agent branch: **checkout and stay on it**.
+3. Else (**no agent branch yet**): create `testchimp-<short-scope>`, publish, report:
    ```bash
-   # Shallow fetch of this branch only — never `git fetch origin` on CI (see chimphands-ci-runner.md).
-   git fetch origin "refs/heads/<name>:refs/remotes/origin/<name>" --depth=1
-   git checkout -B <name> "origin/<name>"
-   ```
-   If the workflow already checked out that branch (`CHIMPHANDS_WORK_BRANCH`), stay on it.
-2. Else if already on a non-default `testchimp-*` / `chimphands-*` branch for this conversation: **stay on it**.
-3. Else (**no session branch yet**): create one, publish immediately, report it:
-   ```bash
-   git checkout -b chimphands-<short-scope>   # or testchimp-<short-scope>
+   git checkout -b testchimp-<short-scope>
    git push -u origin HEAD
    testchimp chimphands report-branch --branch "$(git branch --show-current)"
    ```
-   Branch names **MUST** start with `testchimp-` or `chimphands-`.
 
-**Self-check (blocking):** `git branch --show-current` must **not** be the default branch before you edit. If it is, create/checkout the session branch first — then edit.
+**Self-check (blocking):** `git branch --show-current` must start with `testchimp-` before you edit. If you are on the default or base branch, create the agent branch first.
 
-One conversation → **one** working branch + **one** PR. Reuse them for all follow-up turns. Only create a new branch/PR when (a) none exists yet, or (b) the prior PR was merged/closed (`gh pr view`).
+One conversation → **one** `testchimp-*` agent branch + **one** PR (base = the parent branch). Reuse them for all follow-up turns. Only create a new branch/PR when (a) none exists yet, or (b) the prior PR was merged/closed (`gh pr view`).
+
+Open PRs with the base branch as merge target:
+
+```bash
+gh pr create --base <base-branch> --head <testchimp-branch> --title "..." --body "..."
+testchimp chimphands report-branch --branch "<testchimp-branch>" --pr-url <url>
+```
 
 ### 2. Commit + push after every agent turn that changed files
 
 If the worktree is **dirty** at the end of your turn (any staged/unstaged/untracked files you intend to keep), you **MUST**:
 
-1. Confirm you are still on the session feature branch (not default).
+1. Confirm you are on a **`testchimp-*`** agent branch (not default, not base branch).
 2. Stage relevant files (never secrets, never `playwright-report/` / `test-results/` / etc.).
 3. **Commit** with a descriptive message (what/why for this turn).
 4. **Push** to `origin` (`git push` or `git push -u origin HEAD` on first publish).
-5. If a PR does not exist yet and there are commits to review: open one (`gh pr create`), then:
+5. If a PR does not exist yet and there are commits to review: open one targeting the **base branch** (`gh pr create --base …`), then:
    ```bash
    testchimp chimphands report-branch --branch "$(git branch --show-current)" --pr-url <url>
    ```
@@ -68,9 +87,9 @@ If the worktree is **dirty** at the end of your turn (any staged/unstaged/untrac
 
 **When `CHIMPHANDS_UI_ATTACHED=false` (async):** this end-of-turn commit+push is especially critical — the user reviews via PR / **Files changed**, not a live worktree. Do not end the turn with a dirty tree.
 
-**When `CHIMPHANDS_UI_ATTACHED=true`:** still commit+push after turns that changed files. Live streaming does **not** replace git history; Files changed / PR review / EaaS builds from remote tip need commits. Do **not** rely on the host’s fallback commit — you own the commit.
+**When `CHIMPHANDS_UI_ATTACHED=true`:** still commit+push after turns that changed files. Live streaming does **not** replace git history; Files changed / PR review need commits on the remote `testchimp-*` branch.
 
-**Plan-file turns:** Writing `plans/knowledge/workflow_plans/...plan.md` (and upsert) still counts as a file change — commit + push that plan file on the session branch the same turn (local file **and** platform upsert are both required; upsert is not a substitute for git).
+**Plan-file turns:** Writing `plans/knowledge/workflow_plans/...plan.md` (and upsert) still counts as a file change — commit + push that plan file on the agent branch the same turn.
 
 **Empty turn** (questions only, no file changes): no commit needed.
 
@@ -78,15 +97,15 @@ If the worktree is **dirty** at the end of your turn (any staged/unstaged/untrac
 
 ### 3. Report branch to the platform
 
-After the branch exists on the remote (and after opening/updating a PR):
+After the **`testchimp-*`** branch exists on the remote (and after opening/updating a PR):
 
 ```bash
-testchimp chimphands report-branch --branch <name> [--pr-url <url>]
+testchimp chimphands report-branch --branch <testchimp-branch> [--pr-url <url>]
 ```
 
-Push **before** `report-branch` — reporting a local-only branch causes GitHub 404 in the UI.
+Push **before** `report-branch` — reporting a local-only branch causes GitHub 404 in the UI. Only report `testchimp-*` branches (not the base branch name).
 
-Tell the user which branch you are on and include the PR URL when available.
+Tell the user which agent branch you are on and include the PR URL when available.
 
 ---
 
@@ -97,13 +116,13 @@ Use this at the **start** and **end** of every turn:
 **Start**
 
 - [ ] Am I ChimpHands on CI? → follow this doc
-- [ ] On session `testchimp-*` / `chimphands-*` branch? If on default → create/checkout first
+- [ ] On a session **`testchimp-*`** agent branch? If on default or base branch → create agent branch first
 - [ ] Interactive unless `--mode=non-interactive` / policy auto-approve
 
 **End (before stopping for user / idle)**
 
-- [ ] `git status` — if dirty with keepable changes → commit + push on session branch
-- [ ] PR open or updated when there are commits to review
+- [ ] `git status` — if dirty with keepable changes → commit + push on **`testchimp-*`** branch
+- [ ] PR open or updated (merge target = base branch) when there are commits to review
 - [ ] `report-branch` if branch/PR is new or URL changed
 - [ ] Do not leave uncommitted workflow/plan/code edits “for next turn”
 
@@ -114,7 +133,7 @@ Use this at the **start** and **end** of every turn:
 | Signal | Behavior |
 | --- | --- |
 | Default | Interactive — ask, show plan, **stop** for approval |
-| `--mode=non-interactive` or policy `allow-execute-without-approval` | Auto-approve after plan upsert; Execute; still use session branch + commit/push |
+| `--mode=non-interactive` or policy `allow-execute-without-approval` | Auto-approve after plan upsert; Execute; still use agent branch + commit/push |
 
 Details: [`agent-quick-answers.md`](./agent-quick-answers.md#chimphands--cloud-runner-interactive-vs-non-interactive).
 

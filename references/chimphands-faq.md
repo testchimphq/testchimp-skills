@@ -2,7 +2,7 @@
 
 Common issues when ChimpHands runs on GitHub Actions. **Self-fix first** — do not ask the user to paste secrets or “reconnect a GitHub token” in chat.
 
-**Mandatory branch + commit contract (load first):** [`chimphands.md`](./chimphands.md) — separate `testchimp-*` / `chimphands-*` branch before edits; commit + push at the end of every dirty turn. This FAQ is troubleshooting only.
+**Mandatory branch + commit contract (load first):** [`chimphands.md`](./chimphands.md) — create a **`testchimp-*` agent branch** from the base branch before edits; commit + push at the end of every dirty turn. This FAQ is troubleshooting only.
 
 See also: [`agent-quick-answers.md`](./agent-quick-answers.md) (interactive mode, UI attached, short remap).
 
@@ -115,7 +115,7 @@ If the model asks the user to refresh a GitHub token for this session: **that is
 
 | Symptom | Fix |
 | --- | --- |
-| Branch rejected by rulesets | Use `testchimp-*` or `chimphands-*` only; allow those prefixes in GitHub rulesets |
+| Branch rejected by rulesets | Use `testchimp-*` only for agent branches; allow that prefix in GitHub rulesets |
 | Cannot push to `main` / `master` | Never commit to default — create/reuse session feature branch |
 | `report-branch` but GitHub 404 | Push with `git push -u origin <branch>` **before** `testchimp chimphands report-branch` |
 

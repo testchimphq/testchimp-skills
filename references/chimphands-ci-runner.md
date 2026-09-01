@@ -12,9 +12,9 @@ Hosted runners have limited disk (~14 GiB usable on `ubuntu-latest`). **Never** 
 
 ### What the workflow already did
 
-- Shallow checkout (`fetch-depth: 1`) of the **session branch** (`inputs.branch`, prompt `Working branch:`, or the repo default).
+- Shallow checkout (`fetch-depth: 1`) of the **base branch** (`inputs.branch`, prompt `Base branch:` / legacy `Working branch:`, or the repo default).
 - Remote **branch names only** (no objects) in `.chimphands/remote-branch-names.txt`.
-- `CHIMPHANDS_WORK_BRANCH` in the job environment when the workflow sets it.
+- `CHIMPHANDS_WORK_BRANCH` in the job environment when the workflow sets it (parent branch — create a **`testchimp-*`** agent branch from it before editing; see [`chimphands.md`](./chimphands.md)).
 
 ### When you need another branch
 

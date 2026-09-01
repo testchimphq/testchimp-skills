@@ -63,20 +63,21 @@ Leading `plans/` in CLI paths is stripped automatically — pass path relative t
 
 ---
 
-## Working branch and PR (ChimpHands)
+## Agent branch and PR (ChimpHands)
 
 **Canonical:** [`chimphands.md`](./chimphands.md) (blocking). Quick remap:
 
 | If | Then |
 | --- | --- |
-| About to edit and on default branch | **Stop** — create/checkout `testchimp-*` / `chimphands-*` first |
-| Prompt has `Working branch: <name>` or bootstrap lists a branch | On CI: shallow fetch that branch only (`chimphands-ci-runner.md`); if already on it (`CHIMPHANDS_WORK_BRANCH`), stay |
-| No working branch yet | Create `testchimp-*` or `chimphands-*`, **`git push -u origin <branch>`**, then `report-branch` |
-| End of turn with dirty worktree | **Commit + push** on the session branch (plan files included) |
-| After push / PR open | `testchimp chimphands report-branch --branch <name> [--pr-url <url>]` |
+| About to edit and on default or base branch | **Stop** — create/checkout a **`testchimp-*` agent branch** first |
+| Prompt has `Base branch: <name>` (legacy `Working branch:`) | Parent branch only — shallow fetch if needed (`chimphands-ci-runner.md`); create **`testchimp-*`** from it; do **not** commit on the base branch |
+| Bootstrap lists a **`testchimp-*`** agent branch | Checkout and stay on it |
+| No agent branch yet | `git checkout -b testchimp-<scope>`, **`git push -u origin HEAD`**, then `report-branch` |
+| End of turn with dirty worktree | **Commit + push** on the **`testchimp-*`** agent branch (plan files included) |
+| After push / PR open | `testchimp chimphands report-branch --branch <testchimp-branch> [--pr-url <url>]` — PR targets the **base branch** |
 | `git` / `gh` auth failure | **`testchimp chimphands refresh-git-auth`** then retry — never ask the user for a token ([`chimphands-faq.md`](./chimphands-faq.md)) |
 
-Never commit to default branch. One branch + one PR per conversation unless the prior PR was merged/closed.
+Never commit to default or base branch. One **`testchimp-*`** agent branch + one PR per conversation unless the prior PR was merged/closed.
 
 ---
 
