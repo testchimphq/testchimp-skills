@@ -22,7 +22,7 @@ Also persist durable decisions in **`plans/knowledge/ai-test-instructions.md`**.
 
 ---
 
-> **Plan → approve → execute:** Mint a **ULID** `workflow_execution_id`, **write on disk** **`knowledge/workflow_plans/init/<workflow_execution_id>.plan.md`** (checklist of init action items), call **`upsert-plans-support-file`** with the **same** content (blocking), then seek **explicit user approval** before Phase 3 Execute — unless `--mode=non-interactive` or policy `allow-execute-without-approval`. Do not upsert-only: ChimpHands Files changed needs the local file. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Workflow overlay:** **Workflow id:** `project-init` (canonical prompt **`/testchimp project init`**). **Plan path:** `knowledge/workflow_plans/project-init/<workflow_execution_id>.plan.md`. Mint a **ULID** `workflow_execution_id`, **write on disk** that plan file (checklist of init action items), call **`upsert-plans-support-file`** with the **same** content (blocking), then seek **explicit user approval** before Phase 3 Execute — unless `--mode=non-interactive` or policy `allow-execute-without-approval`. Do not upsert-only: ChimpHands Files changed needs the local file. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 ### Phase gating (required)
 
@@ -114,9 +114,8 @@ Verify the **project** can talk to TestChimp APIs from this agent session (not e
 
 1. **`get-eaas-config`** `{}` — must **not** return **401** (empty config is OK).
 2. **`get-project-init-status`** — baseline current progress.
-3. Best-effort **`report-agent-action`** after connectivity succeeds:
-   - `workflowId`: **`init`**, `workflowExecutionId`: fresh ULID, `actorType`: **`LOCAL_AGENT`**, `entityType`: **`WORKFLOW`**, `entityIdentity`: **`init`**, `actionType`: **`ACTION_COMPLETED`**
-   - Omit secrets; failure must not block init.
+
+Do **not** emit an early `ACTION_COMPLETED` here — that would close the run before Plan/Execute. Mint the plan ULID and first **`report-agent-action`** under workflow id **`project-init`** when writing the plan (and close with `ACTION_COMPLETED` / `ACTION_FAILED` at end of Execute). In ChimpHands, omit `userId` / prefer `actorType: CLOUD_AGENT` — MCP stamps `SESSION_ID` and the responsible user.
 
 If **401**: the API key is missing or invalid — ask the user to complete **`/testchimp init`** workstation MCP setup ([`init-testchimp.md`](./init-testchimp.md)) before continuing project init.
 
@@ -280,8 +279,8 @@ Execute in order; after each area, verify acceptance criteria, call **`update-pr
 ### 1. Platform comms
 
 - Re-verify **`get-eaas-config`**.
-- Best-effort **`report-agent-action`** (see Key Area 1).
 - Mark `platform_comms: DONE`.
+- Ensure the plan ULID run already exists (first **`report-agent-action`** / mutating call with `workflowId: project-init`) — do not close with `ACTION_COMPLETED` until End state.
 
 ### 2. Folder mapping (+ scaffold / harness)
 
@@ -367,6 +366,8 @@ Project init is **complete** when:
 - `plans/knowledge/ai-test-instructions.md` records env strategy, CI trigger guidance, and any deferred optional items.
 
 **Not required for completion:** TrueCoverage, mocking plans, full seed endpoints, domain fixtures, ExploreChimp defaults — those land in later workflows.
+
+Before treating the run as done, **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** with `workflowId` / `entityIdentity` **`project-init`** and the plan ULID (`ACTION_COMPLETED` / `ACTION_FAILED`).
 
 ---
 

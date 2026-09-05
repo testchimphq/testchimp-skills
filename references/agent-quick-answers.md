@@ -141,7 +141,7 @@ For branch scope vs default branch, use merge-base / `git log` as in [`policies-
 
 | User command (after `/testchimp`) | `workflow-id` |
 | --- | --- |
-| `project init` | `init` |
+| `project init` | `project-init` |
 | `author plan` | `author-plans` |
 | `run qa` / `test` | `run-qa` |
 | `upkeep` / `evolve` | `upkeep` |

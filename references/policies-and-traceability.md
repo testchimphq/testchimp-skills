@@ -222,12 +222,13 @@ Still use for analyze/completion and non-CRUD entities (SmartTest locator action
 
 | Field | Notes |
 |-------|--------|
-| `workflow_id` | Catalog id (`run-qa`, `create-tests`, …) or bootstrap id **`init`** (not a catalog card; see below) |
+| `workflow_id` | Catalog id (`project-init`, `run-qa`, `create-tests`, …) or bootstrap id **`init`** (workstation `/testchimp init` only — not project init) |
 | `workflow_execution_id` | Stable ULID for the whole run |
 | `policy_file` / `policy_version` | From resolved policy frontmatter |
 | `git_sha` | Current HEAD |
-| `actor_type` | `local-agent` or `cloud-agent` |
-| `user_id` | Optional; from MCP env when present |
+| `actor_type` | `local-agent` or `cloud-agent`. ChimpHands MCP forces `cloud-agent` when `SESSION_ID` is set. |
+| `user_id` | Optional; from MCP env when present. ChimpHands: omit — server uses the session’s responsible user. |
+| `chimphands_session_id` | Optional; ChimpHands MCP injects `SESSION_ID` so credits / Invoked-by resolve. |
 | `branch_name` | Current git branch |
 | `agent_model` / nested `traceability` | Optional; agent/CLI only |
 | `skill_version` | Skill `SKILL.md` frontmatter `version` (`--skill-version` / `TESTCHIMP_SKILL_VERSION`) |
