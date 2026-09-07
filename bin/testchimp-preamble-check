@@ -131,6 +131,7 @@ _search_dirs="$_search_dirs . $PWD"
 for base in $_search_dirs; do
   [ -n "$base" ] || continue
   for candidate in \
+    "$base/.testchimp/mcp.json" \
     "$base/.cursor/mcp.json" \
     "$base/.mcp.json" \
     "$base/mcp.json" \
@@ -157,10 +158,12 @@ fi
 # Fallback: first existing common path (even without TestChimp yet)
 if [ -z "${MCP_JSON:-}" ]; then
   for candidate in \
+    "${TOP:+$TOP/.testchimp/mcp.json}" \
     "${TOP:+$TOP/ui/.cursor/mcp.json}" \
     "${TOP:+$TOP/.cursor/mcp.json}" \
     "${TOP:+$TOP/.mcp.json}" \
     "${TOP:+$TOP/mcp.json}" \
+    ".testchimp/mcp.json" \
     ".cursor/mcp.json" \
     ".mcp.json" \
     "mcp.json"

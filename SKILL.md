@@ -2,7 +2,7 @@
 name: testchimp
 description: Integrate repositories with TestChimp for QA orchestration — policy-backed workflows, SmartTests, plans, coverage, TrueCoverage, ExploreChimp, and k6 performance testing (init/create/run/upkeep/import perf). Use for /testchimp commands, SmartTests, policies, performance testing, k6, import-perf-tests, scenario-linked journeys, perf baselines/comparisons, or skill updates.
 compatibility: Requires Node.js; web projects need @playwright/test and playwright >= 1.59.0 (see Preamble checks #6). Mobile projects need mobilewright + @mobilewright/test (see references/mobilewright-smarttests.md). TrueCoverage RUM clients: **#7** (`@testchimp/rum-js`, SwiftPM **testchimp-rum-ios**, JitPack **testchimp-rum-android**). Playwright plugin: **#8** (`@testchimp/playwright` — bump on create-tests / run-qa / upkeep). **`TESTCHIMP_API_KEY`:** Preamble checks **#4** (runner process, not only MCP/IDE). Network access for TestChimp APIs when using MCP, CLI, or AI steps. CLI ≥ **0.1.28** for API operation coverage tools (`list-api-operation-services`, `list-api-operations`, `get-api-operation-detail`), semantic nearby tools, workflow/policy tools, `get-execution-history --test-id`, and `get-test-scenarios --external-ids`. CLI ≥ **0.1.29** for `get-org-capabilities` (org capability soft-gating for TrueCoverage / API contract coverage). CLI ≥ **0.1.30** for `get-spec-lifecycle-details` (scenario `verification_strategy` before authoring SmartTests) and skill/CLI version on `report-agent-action` / `agentTraceability`. CLI ≥ **0.1.32** for `get-plans-support-file` (platform-first read of a named workflow plan). CLI ≥ **0.1.33** for `mark-tests-for-review` (report existing-test fixes after fix-test-execution). CLI ≥ **0.1.66** for `testchimp chimphands refresh-git-auth` (remint GitHub App installation token on long-lived ChimpHands jobs).
-version: 1.0.42
+version: 1.0.43
 required_cli_version: "0.1.65"
 ---
 
@@ -15,6 +15,7 @@ TestChimp runs **pre-defined QA workflows**. **`references/`** details how each 
 | If you are… | Load first (blocking) |
 | --- | --- |
 | **ChimpHands on CI** (GHA / ChimpHands host prompt / `CHIMPHANDS_UI_ATTACHED` set / session bootstrap) | [`references/chimphands.md`](references/chimphands.md) — **separate branch before edits**; **commit + push before ending every turn** that changed files; then the workflow playbook below |
+| **TestChimp Studio / LOCAL_DESKTOP** (`.testchimp/mcp.json` present, or Studio host) | [`references/local-desktop-studio.md`](references/local-desktop-studio.md) — shared worktree; prefer Playwright CLI; no GHA ChimpHands install for local runs; then the workflow playbook below |
 | A normal `/testchimp …` workflow (local or cloud) | Matching row in [Command routing](#command-routing) |
 | Stuck on ChimpHands git/auth / workflow install | [`references/chimphands-faq.md`](references/chimphands-faq.md) |
 | ULID / plan path / MCP vs CLI mechanics | [`references/agent-quick-answers.md`](references/agent-quick-answers.md) |
@@ -142,17 +143,20 @@ Locate a JSON file that registers the TestChimp MCP server. **Do not assume a si
 
 **Example candidate paths (check in order from SmartTests root upward, then repo root):**
 
-1. `<project dir>/.cursor/mcp.json`
-2. `<project dir>/.mcp.json`
-3. `<project dir>/mcp.json`
-4. `<project dir>/.vscode/mcp.json` (when present)
-5. `<project dir>/.github/mcp.json` (when present)
+1. `<project dir>/.testchimp/mcp.json` (**TestChimp Studio** / LOCAL_DESKTOP — prefer this when present; gitignored credentials)
+2. `<project dir>/.cursor/mcp.json`
+3. `<project dir>/.mcp.json`
+4. `<project dir>/mcp.json`
+5. `<project dir>/.vscode/mcp.json` (when present)
+6. `<project dir>/.github/mcp.json` (when present)
 
 At each ancestor directory from **`.testchimp-tests`** up to the git root, check for mcp.json. Accept the first file whose JSON has **`mcpServers.testchimp`** **or** any `mcpServers` entry whose **`args`** array includes a string containing **`@testchimp/cli`**.
 
-**If walk-up finds nothing:** from the git root, search for files named `mcp.json` or `.mcp.json` (limit to a shallow find; skip `node_modules`, `.git`). Prefer a hit that contains TestChimp as above.
+**If walk-up finds nothing:** from the git root, search for files named `mcp.json` or `.mcp.json` (limit to a shallow find; skip `node_modules`, `.git`). Prefer a hit that contains TestChimp as above. Also accept **`.testchimp/mcp.json`** in that search.
 
 **Cloud / CI:** The committed file may use `${TESTCHIMP_API_KEY}` (or `$TESTCHIMP_API_KEY`) as the `env` value — see [`assets/sample-mcp.cloud.json`](assets/sample-mcp.cloud.json). Treat that as “read from process env / host secrets,” not as a missing key—if the process env already has a non-placeholder `TESTCHIMP_API_KEY`, export that for runners. Hosts such as Cursor Cloud dashboard MCP, Copilot `COPILOT_MCP_*` secrets, Claude Code Action inline `--mcp-config`, and OpenHands MCP settings may inject the real key without rewriting the file.
+
+**TestChimp Studio (LOCAL_DESKTOP):** When running in Studio or against a Studio-mapped folder, follow [`references/local-desktop-studio.md`](references/local-desktop-studio.md) — shared worktree across threads, prefer Playwright CLI (not Playwright MCP by default), do not install GHA ChimpHands workflows for local runs.
 
 ## How TestChimp works
 
@@ -477,6 +481,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`references/cli.md`](references/cli.md) | `@testchimp/cli`: shell usage, `--json-input`, screen-state atlas, ChimpHands `refresh-git-auth` |
 | [`references/agent-quick-answers.md`](references/agent-quick-answers.md) | Short answers for ULID, plan paths, runner env; points to ChimpHands playbook for branch/commit |
 | [`references/chimphands.md`](references/chimphands.md) | **ChimpHands on CI (mandatory):** session branch before edits; commit+push end of every dirty turn; `report-branch` |
+| [`references/local-desktop-studio.md`](references/local-desktop-studio.md) | **TestChimp Studio / LOCAL_DESKTOP:** shared worktree, `.testchimp/mcp.json`, prefer Playwright CLI |
 | [`references/chimphands-ci-runner.md`](references/chimphands-ci-runner.md) | **ChimpHands on CI:** scoped git fetch, disk/Docker/build hygiene on hosted runners (project-agnostic) |
 | [`references/chimphands-faq.md`](references/chimphands-faq.md) | ChimpHands CI FAQ: expired App token, workflow pushes, disk full, env bring-up anti-patterns, `refresh-git-auth` |
 | [`references/mocking_strategy.md`](references/mocking_strategy.md) | `page.route` vs optional AIMock |
