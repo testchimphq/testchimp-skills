@@ -22,8 +22,15 @@ Do **not** treat `CLOUD_AGENT` / GHA / `CHIMPHANDS_UI_ATTACHED` as Studio. Those
 ## MCP config
 
 1. Prefer **`<workspace>/.testchimp/mcp.json`** first when `TESTCHIMP_EXECUTION_SOURCE=LOCAL_DESKTOP` or the host is Studio (see **Finding project MCP config** in `SKILL.md`).
-2. Export `TESTCHIMP_API_KEY` / `TESTCHIMP_PROJECT_ID` / optional `TESTCHIMP_USER_ID` / backend / ingress from that file’s `env` for runners.
-3. Do **not** commit `.testchimp/` — it holds credentials. If it appears tracked or staged, stop and tell the user to unstage and keep `.testchimp/` in `.gitignore`.
+2. Studio Settings → MCP: edit **global** `~/.testchimp/mcp.json` (Cursor-like). Per-project MCP is `<workspace>/.testchimp/mcp.json` (edit in Code).
+3. Export `TESTCHIMP_API_KEY` / `TESTCHIMP_PROJECT_ID` / optional `TESTCHIMP_USER_ID` / backend / ingress from that file’s `env` for runners.
+4. Do **not** commit `.testchimp/` — it holds credentials. If it appears tracked or staged, stop and tell the user to unstage and keep `.testchimp/` in `.gitignore`.
+
+## Skills
+
+- Managed TestChimp skill is synced into **`.opencode/skills/testchimp`**.
+- Settings → Skills → **Add from git**: paste a skill repo URL; Studio clones into **`~/.testchimp/skills/`** and materializes into **`.opencode/skills/<name>/`** for OpenCode.
+- Refresh updates managed + user-registered skill repos.
 
 ## Playwright
 
