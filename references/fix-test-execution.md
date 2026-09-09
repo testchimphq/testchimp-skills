@@ -140,7 +140,7 @@ Prefer deterministic selectors when the UI is stable and the failure is straight
 ### 4) Re-run the failing tests
 
 - Locate and follow the repo’s canonical environment strategy in:
-  - `plans/knowledge/ai-test-instructions.md` — read **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`** before changing bring-up or URLs; use the FAQ as the first playbook when triaging env-related failures ([`run-qa.md`](./run-qa.md#binding-ai-test-instructions-environment-and-faq-playbook)).
+  - `plans/knowledge/policies/connect-to-test-env.policy.md` — read Local Agent / CI Cloud before changing bring-up or URLs; patch the policy with learnings. Legacy: existing `ai-test-instructions.md` Environment Provision Strategy / FAQ only when that file already exists ([`run-qa.md`](./run-qa.md#binding-test-env-contract-policy-and-legacy-faq)).
 - Bring the environment up (or reprovision) **only** as specified there (no ad hoc alternate targets).
 - Re-run only the tests that were supposed to be fixed (or the smallest scope that proves the fix). **Skip** product-broken cases that were filed as issues instead of patched.
 

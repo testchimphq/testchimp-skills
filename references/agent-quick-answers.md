@@ -164,4 +164,4 @@ Plan path pattern: `knowledge/workflow_plans/<workflow-id>/<ulid>.plan.md`.
 | ChimpHands branch / end-of-turn commit | [`chimphands.md`](./chimphands.md) |
 | ChimpHands GHA auth / CI self-heal | [`chimphands-faq.md`](./chimphands-faq.md) |
 | Test env bring-up (local or ChimpHands) | [`connect-to-test-env.md`](./connect-to-test-env.md) + `plans/knowledge/policies/connect-to-test-env.policy.md` |
-| Repo-specific env / bring-up blockers | `plans/knowledge/ai-test-instructions.md` FAQ (see [`run-qa.md`](./run-qa.md#binding-ai-test-instructions-environment-and-faq-playbook)) |
+| Repo-specific env / bring-up blockers | Prefer the connect-to-test-env policy; legacy FAQ only if `ai-test-instructions.md` already exists ([`run-qa.md`](./run-qa.md#binding-test-env-contract-policy-and-legacy-faq)) |

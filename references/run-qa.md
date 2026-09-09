@@ -76,7 +76,7 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
 - **Runner / config:** Use the config and `--project` from [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) (`playwright.config.js` vs `mobilewright.config.ts`, `web` / `api` / `ios` / `android`). Mobile UI projects need **`projects[].use.platform`** (`ios` | `android`) for `@testchimp/playwright` TrueCoverage ([`instrument-truecoverage.md`](./instrument-truecoverage.md)).
 
 - **Hard prerequisite before Analyze/Plan (decision memory):**
-  - Before starting **Analyze** or drafting the branch plan, read `plans/knowledge/ai-test-instructions.md` and extract pre-agreed environment decisions from **`## Environment Provision Strategy`** (for example local spin-up vs Bunnyshell/EaaS vs staging/branch environment path, URL resolution, and health gates).
+  - Before starting **Analyze** or drafting the branch plan, read **`plans/knowledge/policies/connect-to-test-env.policy.md`** (Local Agent / CI Cloud) for environment decisions (local spin-up vs Bunnyshell/EaaS vs staging/branch path, URL resolution, health gates). **Legacy fallback only:** if that policy is missing and **`plans/knowledge/ai-test-instructions.md` already exists**, read **`## Environment Provision Strategy`** there. Do **not** create `ai-test-instructions.md` for this.
   - Also read **`plans/knowledge/policies/global.policy.md`** when present (or **`get-policy --policy-file-name global.policy.md`**): honor the **coverage target** (percent / lifecycle / verification strategy) and **Test suite management → tags** when planning and authoring tests. For each tag (`value`, **`instructions`**), decide which Playwright `tag: '@…'` values each planned test will get, and **add those tags when authoring**. Keep scenario links as `{ type: 'scenario' }` annotations only. Default seed: `@smoke` | `@regression` per instructions. Full rules: [`policies-and-traceability.md`](./policies-and-traceability.md)#global-policy--suite-tags-required-when-authoring-tests and [`write-smarttests.md`](./write-smarttests.md) §6b.
   - The Plan must reflect and preserve those decisions. Do not defer this read until Execute.
 
@@ -112,9 +112,9 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
     2) **Create/update fixtures** (per-test, retry-safe; `testInfo` scoped) that call seed/probe endpoints (see [`references/fixture-usage.md`](./fixture-usage.md)).
     3) **Create/update seed/probe/teardown endpoints** to support the fixture; document under **Arrange → Fixtures plan → Seed endpoint updates** and batch-implement in Execute per [Batched order (Execute phase)](#batched-order-execute-phase).
   - If seed/probe endpoints or fixtures are missing, that is a **Plan output** and a **hard Execute blocker** until addressed in Execute.
-- **Environment and provisioning:** non‑negotiable rules live under **[Binding: ai-test-instructions (environment and FAQ playbook)](#binding-ai-test-instructions-environment-and-faq-playbook)**—read that subsection before **Execute** and whenever provisioning or validation misbehaves.
+- **Environment and provisioning:** non‑negotiable rules live under **[Binding: test-env contract (policy and legacy FAQ)](#binding-test-env-contract-policy-and-legacy-faq)**—read that subsection before **Execute** and whenever provisioning or validation misbehaves.
 - **Environment before test authoring (strict):**
-  - In both first-pass execution and reruns, confirm environment provisioning and target URL decisions from `ai-test-instructions.md` **before authoring or executing tests** (including fixture-driven test setup). Tests are authored by executing real steps, so environment provisioning must be settled first.
+  - In both first-pass execution and reruns, confirm environment provisioning and target URL decisions from **`connect-to-test-env.policy.md`** (legacy: existing `ai-test-instructions.md` Environment Provision Strategy) **before authoring or executing tests** (including fixture-driven test setup). Tests are authored by executing real steps, so environment provisioning must be settled first.
 - **TrueCoverage belongs in the Plan** (default **opted-in** per [`instrument-truecoverage.md`](./instrument-truecoverage.md)) **for web and native mobile** when the PR touches user-facing journeys — this instrumentation work is **independent** of the org **`TRUE_COVERAGE`** capability check above (that gate only soft-skips **analytics queries**, not instrumentation groundwork; see [`instrument-truecoverage.md`](./instrument-truecoverage.md#capability-check-before-instrumenting--soft-gate)):
   - **Web:** `@testchimp/rum-js` in the app bundle, `installTestChimp` on **`fixtures/`** or **`web/fixtures/`**, `plans/events/`, etc.
   - **Mobile native** (**`project_type=mobile`** or legacy **`ios`/`android`**): native RUM SDK ([`instrument-truecoverage.md`](./instrument-truecoverage.md)), URL scheme / intent filter + SDK handlers, `installTestChimp` on **`mobile/fixtures/index.js`** with `{ uiFixture: 'screen' }`, Mobilewright **`device`** for automation URLs—same opt-in / opt-out policy via **`### TrueCoverage Plan`**.
@@ -143,22 +143,24 @@ Before running **any** Playwright / Mobilewright test command (headed or headles
   - Any environment created or started during Execute (local stack, dev server, ephemeral/EaaS env) MUST be torn down in **Phase 7**, and the plan must record what was stopped/destroyed (or `N/A` with reason).
 - **Blockers must be called out in the Plan**: list every known blocker with (a) owner (agent vs user), (b) the exact action required, and (c) the earliest phase it blocks.
 
-### Binding: ai-test-instructions (environment and FAQ playbook)
+### Binding: test-env contract (policy and legacy FAQ)
 
-`plans/knowledge/ai-test-instructions.md` is the **only authoritative contract** for how this repo provisions environments for **test authoring** and **validation**. Agents routinely break runs by ignoring it or improvising (wrong compose profile, ad hoc staging URL, skipping health wait). Treat the file as **law** unless the user explicitly agrees to change it (then **update the file** so the next run stays deterministic).
+**`plans/knowledge/policies/connect-to-test-env.policy.md`** is the **authoritative contract** for how this repo provisions environments for **test authoring** and **validation**. Agents routinely break runs by ignoring it or improvising (wrong compose profile, ad hoc staging URL, skipping health wait). Treat the policy as **law** unless the user explicitly agrees to change it (then **update the policy**, bump `version`, **`upsert-policy`**).
+
+**Legacy:** If **`plans/knowledge/ai-test-instructions.md` already exists**, its **`## Environment Provision Strategy`** and FAQ remain a **read fallback** (and optional FAQ playbook) until migrated — do **not** create that file solely for env connectivity.
 
 **Strict rules**
 
-1. **Read before you provision** — At the start of **Analyze** (env-relevant context) and again at the start of **Execute**, read `ai-test-instructions.md` in full enough to apply **`## Environment Provision Strategy`** (and subsections such as **Local - Test Authoring**, EaaS/Bunnyshell, Branch Management, CI) exactly as written: commands, profiles, env vars, **`BASE_URL` / `BACKEND_URL`** resolution, MCP provision steps, and “healthy” criteria.
+1. **Read before you provision** — At the start of **Analyze** (env-relevant context) and again at the start of **Execute**, read **`connect-to-test-env.policy.md`** (`## Local Agent` / **`## CI / Cloud`**) enough to apply commands, profiles, env vars, **`BASE_URL` / `BACKEND_URL`** resolution, MCP provision steps, and “healthy” criteria. If the policy is missing and a legacy `ai-test-instructions.md` Environment Provision Strategy exists, use that; otherwise stop and author the policy ([`create-policy.md`](./create-policy.md)).
 2. **No freelance environments** — Do **not** switch to a different stack (e.g. “I’ll just use staging”) because it is convenient. If the documented path fails, **fix the path or document a blocker**—do not silently pick another target.
-3. **FAQ first on blockers** — The file MUST include a **FAQ-style** section for recurring pitfalls (recommended heading: **`## Past learnings — authoring & validation (FAQ)`**; see [`init-testchimp.md`](./init-testchimp.md) template). **Whenever** you hit provisioning, health-check, auth, URL, port, volume, or seed-order friction: **search that FAQ next** after re-reading **`## Environment Provision Strategy`**. Treat matching entries as the **preferred playbook** before experimenting.
-4. **Update after novel resolutions** — If the current issue is **not** already in the FAQ and you **resolve** it in this cycle, you MUST append a new entry: **`### Q:`** short symptom / error / situation; **`**A:**`** concrete fix (exact commands, file paths, env values to set, order of operations, MCP tool used). Keep entries project-specific and actionable. Same rule applies after **successful** workarounds the team would want again (not only failed attempts).
-5. **Restart/reprovision** — After seed/probe/backend changes, ensure the running environment includes those changes per the **same** file (restart order, reprovision, push-before-EaaS, etc.—see [Batched order (Execute phase)](#batched-order-execute-phase)).
+3. **FAQ / learnings on blockers** — Prefer patching **`connect-to-test-env.policy.md`** when bring-up steps were wrong or incomplete. **Only if** `ai-test-instructions.md` already exists: also search **`## Past learnings — authoring & validation (FAQ)`** and append **`### Q:`** / **`**A:**`** entries for novel resolutions.
+4. **Update after novel resolutions** — Durable startup/health/`BASE_URL` fixes go into the **policy** (version bump + upsert). Do not create `ai-test-instructions.md` just to store them.
+5. **Restart/reprovision** — After seed/probe/backend changes, ensure the running environment includes those changes per the **same** env contract (restart order, reprovision, push-before-EaaS, etc.—see [Batched order (Execute phase)](#batched-order-execute-phase)).
 
 **PR-scoped environment (critical)**
 
-- If the branch/PR includes **backend changes** (business logic, seed/probe endpoints, auth changes, or anything the tests depend on), validation MUST run against a **PR-scoped** environment that includes that code: **local** stack from the current branch **or** **ephemeral/EaaS** from the branch—**as `ai-test-instructions.md` prescribes**.
-- **Super critical:** Running against a **stable/staging** URL that does **not** include the PR’s backend changes is **not** validating the change. Do **not** use stable backends for that unless the file explicitly allows it **and** you have verified the change is deployed there. If tests use `.env-*` with a fixed `BASE_URL`, that choice must still match the contract in `ai-test-instructions.md`.
+- If the branch/PR includes **backend changes** (business logic, seed/probe endpoints, auth changes, or anything the tests depend on), validation MUST run against a **PR-scoped** environment that includes that code: **local** stack from the current branch **or** **ephemeral/EaaS** from the branch—**as the connect-to-test-env policy (or legacy strategy) prescribes**.
+- **Super critical:** Running against a **stable/staging** URL that does **not** include the PR’s backend changes is **not** validating the change. Do **not** use stable backends for that unless the contract explicitly allows it **and** you have verified the change is deployed there. If tests use `.env-*` with a fixed `BASE_URL`, that choice must still match the resolved env contract.
 
 ### World-state → seed/fixture traceability (required)
 
@@ -280,7 +282,7 @@ After the user approves the Plan, during **Execute** implement work in this orde
    Add or change **all** test-only **read/probe** endpoints required by **any** test’s **Assert → Backend validations** (and any read helpers fixtures need).
 
 3. **(Re)start or reprovision the backend**  
-   If **any** seed or probe endpoint (or other backend test-only code) was added or changed, bring up the app-under-test **once** with those changes loaded (per `ai-test-instructions.md`). **Do not** start the stack before step 1–2 if those steps had work—avoid stale code.
+   If **any** seed or probe endpoint (or other backend test-only code) was added or changed, bring up the app-under-test **once** with those changes loaded (per `connect-to-test-env.policy.md`, or legacy Environment Provision Strategy if that is still the only contract). **Do not** start the stack before step 1–2 if those steps had work—avoid stale code.
 
 4. **Fixture implementation**  
    Create or update **all** Playwright fixtures (and related helpers) needed so each test can obtain the **Arrange** world state.
@@ -305,7 +307,7 @@ After the user approves the Plan, during **Execute** implement work in this orde
 
 Goal: gather evidence and inputs needed to produce a high-signal Plan. This phase is *read-only* (no production code changes; no tests authored yet).
 
-**Mandatory pre-step (first action):** Before any Analyze work, open `plans/knowledge/ai-test-instructions.md` and read **`## Environment Provision Strategy`** plus **`## Past learnings — authoring & validation (FAQ)`**. Use those pre-agreed decisions as constraints for planning and later execution; do not postpone this read to Execute.
+**Mandatory pre-step (first action):** Before any Analyze work, open **`plans/knowledge/policies/connect-to-test-env.policy.md`** (and, only if present, `plans/knowledge/ai-test-instructions.md` Environment Provision Strategy / FAQ). Use those pre-agreed decisions as constraints for planning and later execution; do not postpone this read to Execute.
 
 ### Locate the workflow plan file (always first)
 
@@ -353,7 +355,7 @@ Before proceeding to **Plan**, the agent must record **done/blocked/`N/A`** for 
 - [ ] Change context captured (diff vs base or explicit fallback).
 - [ ] Relevant existing plan docs identified (stories/scenarios/events/knowledge).
 - [ ] **Fixture/seed discovery:** scanned the correct **`fixtures/`** barrel(s) and **`shared/`** per scaffold type ([`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md)); noted existing seed/read routes (or `N/A` + reason).
-- [ ] **`ai-test-instructions.md`:** re-read (or created stub via user direction) **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`** (or `N/A` + reason if plans root missing—then stop and recommend `/testchimp init`).
+- [ ] **`connect-to-test-env.policy.md`:** re-read Local Agent / CI Cloud (or legacy `ai-test-instructions.md` Environment Provision Strategy **only if** that file already exists and policy is missing). Do not create `ai-test-instructions.md` for this — if env contract is missing, stop and recommend `/testchimp create policy connect-to-test-env` / project init.
 - [ ] Coverage/execution history queried via CLI/MCP where applicable (or `N/A`).
 - [ ] **Org capabilities** checked via `get-org-capabilities` (or noted as failed/skipped); TrueCoverage analytics and API operation gap queries above reflect **`TRUE_COVERAGE`** / **`API_CONTRACT_COVERAGE`** gating when off (soft-skip that insight only, not the rest of Analyze).
 - [ ] **Smart smoke:** candidate affected scenarios noted for **Plan §6** (reconnaissance; final list refined in **Phase 5**).
@@ -432,7 +434,7 @@ Before proceeding to **Execute**, the agent must record **done/blocked/`N/A`** f
 
 Preamble before execution: Verify that the plan doc created above is present **and** was upserted to the platform. Verify that it indicates the user has approved (`PlanApproved: yes`), `--mode=non-interactive` auto-approval (`ApprovedBy: auto`), or policy-non-interactive. If not—**PAUSE** and do **not** continue.
 
-**Execute preamble — environment (mandatory):** Immediately after approval, re-open `plans/knowledge/ai-test-instructions.md` and confirm how this run will provision and target the app (**commands**, **URLs**, **MCP flows**, **health gates**). If anything is ambiguous, resolve it **before** seed/probe work—**do not** guess `BASE_URL`. If you hit a blocker, apply **[Binding: ai-test-instructions (environment and FAQ playbook)](#binding-ai-test-instructions-environment-and-faq-playbook)** step 3 (FAQ first); after a **novel** fix, apply step 4 (append FAQ entry).
+**Execute preamble — environment (mandatory):** Immediately after approval, re-open **`plans/knowledge/policies/connect-to-test-env.policy.md`** (legacy: existing `ai-test-instructions.md` Environment Provision Strategy only if the policy is missing) and confirm how this run will provision and target the app (**commands**, **URLs**, **MCP flows**, **health gates**). If anything is ambiguous, resolve it **before** seed/probe work—**do not** guess `BASE_URL`. If you hit a blocker, apply **[Binding: test-env contract](#binding-test-env-contract-policy-and-legacy-faq)** (patch the policy; FAQ only when the legacy file already exists).
 
 **Execute preamble — `TESTCHIMP_API_KEY` (P0):** Before the first **`npx playwright test`** / Mobilewright invocation, confirm the **runner** process will have **`TESTCHIMP_API_KEY`** set (non-blank); resolve via **`SKILL.md`** walk-up + export if needed. If you cannot verify, **halt**—do not run tests to “see what happens.”
 

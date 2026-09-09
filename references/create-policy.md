@@ -47,7 +47,7 @@ MCP tool: **`upsert-policy`** with `policyFileName` + `content`. Requires CLI �
 - `### Pre-Execute Workflows` / `### Post-Execute Workflows` — optional workflow-id lines (and optional `--policy`).
 - `### Scoping Rules` — optional **project overrides** of the skill-wide scoping rule (explicit → feature branch → default/last-run). Do not contradict [`policies-and-traceability.md`](./policies-and-traceability.md#scoping-overarching--all-workflows); only narrow (e.g. always ignore certain paths).
 
-Pull known answers from **`plans/knowledge/ai-test-instructions.md`** when present (especially Environment Provision Strategy) so the first policy is not blank.
+Pull known answers from **`plans/knowledge/ai-test-instructions.md`** **only when that file already exists** (especially a legacy Environment Provision Strategy) so the first policy is not blank. For new projects, discover from CI / compose / README and write directly into the policy — do not create `ai-test-instructions.md` as a staging ground.
 
 ---
 

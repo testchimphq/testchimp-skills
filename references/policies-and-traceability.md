@@ -288,7 +288,7 @@ testchimp report-agent-action \
 Workflow catalog status may be **Active**, **Disabled**, or **Missing Config**.
 
 - **Disabled** — project intentionally turned the workflow off (e.g. TrueCoverage instrumentation). Do not run it; explain briefly and continue other subflows when in a composite.
-- **Missing Config** — required policy is absent. **Blocking only for `connect-to-test-env`**: stop provisioning/authoring that needs an env; discuss with the user and author/seed **`connect-to-test-env.policy.md`** (from ai-test-instructions or [`create-policy.md`](./create-policy.md)). Dependent workflows may also show Missing Config in the UI; agents should fix connect-to-test-env first, then retry.
+- **Missing Config** — required policy is absent. **Blocking only for `connect-to-test-env`**: stop provisioning/authoring that needs an env; discuss with the user and author/seed **`connect-to-test-env.policy.md`** ([`create-policy.md`](./create-policy.md); migrate from an existing `ai-test-instructions.md` Environment Provision Strategy only when that file already exists). Dependent workflows may also show Missing Config in the UI; agents should fix connect-to-test-env first, then retry.
 
 ## Execution source (`LOCAL_AGENT` / `CLOUD_AGENT`)
 

@@ -150,7 +150,7 @@ If still blocked after one reclaim+retry, report available GiB and the last succ
 
 **Do this instead:**
 
-1. Load [`connect-to-test-env.md`](./connect-to-test-env.md) and read **`plans/knowledge/policies/connect-to-test-env.policy.md` → `## CI / Cloud`** (fallback: ai-test-instructions Environment Provision Strategy).
+1. Load [`connect-to-test-env.md`](./connect-to-test-env.md) and read **`plans/knowledge/policies/connect-to-test-env.policy.md` → `## CI / Cloud`** (legacy fallback only: existing ai-test-instructions Environment Provision Strategy).
 2. Follow those steps **on this runner** (compose, local-up scripts, EaaS MCP, etc.). Wait for healthy; export `BASE_URL` / backend URLs.
 3. Use that same stack for create-tests, execute-tests, fix failures, smart smoke, ExploreChimp under the approved plan.
 4. When you discover better commands, health checks, or pitfalls, **update the policy’s CI section** (and upsert) so the next session does not rediscover them.
@@ -239,4 +239,4 @@ Wrong host or missing key — not GitHub App token expiry.
 | `refresh-git-auth`, stuck dispatch, WIF | **Branch + end-of-turn commit** → [`chimphands.md`](./chimphands.md) |
 | Self-heal rules agents must follow without user secrets | ULID / plan path → [`agent-quick-answers.md`](./agent-quick-answers.md) |
 | Narrow WIF/OIDC dispatch when policy requires it | **Test env bring-up** → [`connect-to-test-env.md`](./connect-to-test-env.md) + project `connect-to-test-env.policy.md` |
-| | Repo env FAQ → `plans/knowledge/ai-test-instructions.md` |
+| | Repo env FAQ → existing `plans/knowledge/ai-test-instructions.md` only (prefer patching `connect-to-test-env.policy.md`) |

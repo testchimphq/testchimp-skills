@@ -18,7 +18,7 @@ Use MCP tools (CLI ≥ **0.1.35**):
 
 **Out of init scope** (separate workflows): TrueCoverage → **`/testchimp setup truecoverage`** / **`/testchimp instrument`**; mocking lock-down → during **`/testchimp test`** / create-tests per [`mocking_strategy.md`](./mocking_strategy.md); seed endpoint authoring → during test authoring per [`seeding-endpoints.md`](./seeding-endpoints.md).
 
-Also persist durable decisions in **`plans/knowledge/ai-test-instructions.md`**.
+Also persist durable **non-env** decisions (deferred optionals, ExploreChimp notes when using the legacy file) carefully: **test-env connectivity always goes in `connect-to-test-env.policy.md`**. Do **not** create `ai-test-instructions.md` solely for env strategy.
 
 ---
 
@@ -26,7 +26,7 @@ Also persist durable decisions in **`plans/knowledge/ai-test-instructions.md`**.
 
 ### Phase gating (required)
 
-Between phases, **stop and complete the phase’s completion gate** before continuing. For **every** gate line: mark **done** (one-line evidence) or **`N/A`** + one-line justification. Record outcomes in **`plans/knowledge/ai-test-instructions.md`** and/or chat.
+Between phases, **stop and complete the phase’s completion gate** before continuing. For **every** gate line: mark **done** (one-line evidence) or **`N/A`** + one-line justification. Record outcomes in the workflow plan / chat (and update **`connect-to-test-env.policy.md`** for env decisions).
 
 ---
 
@@ -38,15 +38,23 @@ Agents must:
 
 1. collaborate on a concrete action plan first,
 2. track progress via **`get-project-init-status`** / **`update-project-init-status`**,
-3. persist decisions in `plans/knowledge/ai-test-instructions.md`,
+3. persist **test-env connectivity** in **`plans/knowledge/policies/connect-to-test-env.policy.md`** (upsert-policy); use existing `ai-test-instructions.md` only as a legacy fallback — do not create it for env,
 4. execute each item methodically and update status after each completion.
 
-### Source of truth: `plans/knowledge/ai-test-instructions.md`
+### Source of truth: env policy (+ optional legacy file)
 
-Project-level decisions live here so teammates and agents share the same choices. At minimum, ensure:
+**Test-env connectivity** (local up, wait-for-healthy, CI/Cloud bring-up, `BASE_URL`) lives in:
+
+`plans/knowledge/policies/connect-to-test-env.policy.md`
+
+Skeleton: [`../assets/policies/connect-to-test-env.policy.md`](../assets/policies/connect-to-test-env.policy.md).
+
+**Legacy:** If **`plans/knowledge/ai-test-instructions.md` already exists**, you may still maintain optional sections there (TrueCoverage Plan, ExploreChimp, FAQ). Prefer migrating Environment Provision Strategy content into the connect-to-test-env policy. **Do not** create `ai-test-instructions.md` on greenfield projects just to hold env strategy.
+
+Optional legacy template (only when the file already exists or the team explicitly wants it for non-env notes):
 
 ```md
-# TestChimp Init Progress
+# TestChimp project notes (legacy)
 
 ## Completed Items
 
@@ -55,22 +63,16 @@ Project-level decisions live here so teammates and agents share the same choices
 ## Deferred Items
 
 ---
-## Environment Provision Strategy
-
-### Local - Test Authoring
-
-### CI - Test Execution
-
 ## ExploreChimp
 
-<!-- Optional: default sources / PR explore scope, product quirks. See references/run-explorechimp.md. -->
+<!-- Optional: default sources / PR explore scope. See references/run-explorechimp.md. -->
 
 ## Past learnings — authoring & validation (FAQ)
 
-<!-- Q/A playbook for env blockers. See references/run-qa.md. -->
+<!-- Q/A playbook for env blockers — prefer updating connect-to-test-env.policy.md for bring-up steps. -->
 ```
 
-Keep this file **project-level only** (no per-laptop MCP progress — that belongs in `/testchimp init`).
+Keep decision files **project-level only** (no per-laptop MCP progress — that belongs in `/testchimp init`).
 
 ### Two scopes: workstation vs project
 
@@ -104,7 +106,7 @@ Then call **`get-project-init-status`** and report what is already **DONE** vs m
 
 Discover from repo + platform first; ask targeted questions only when discovery is ambiguous.
 
-**Do not** write substantive `ai-test-instructions.md` sections until the user confirms defaults — except reading existing content when re-running init.
+**Do not** write substantive env-strategy content into `ai-test-instructions.md` — put it in **`connect-to-test-env.policy.md`**. Do not create `ai-test-instructions.md` until the user confirms they want that legacy file for non-env notes.
 
 If **`get-project-init-status`** shows required items already **DONE**, treat Key Areas as **read-and-confirm** unless the user wants changes.
 
@@ -157,12 +159,14 @@ Agent discovery:
 - Check for **`plans/knowledge/policies/connect-to-test-env.policy.md`** (or frontmatter `workflow-id: connect-to-test-env`).
 - Read **`## Environment Provision Strategy`** in `ai-test-instructions.md` if present.
 
-Decide and record:
+Decide and record **in `connect-to-test-env.policy.md`** (then **`upsert-policy`**):
 
-- **Local — Test Authoring:** single agent-runnable **local up** command + **wait-for-healthy** criteria + URL mapping (`BASE_URL`, backends).
-- **CI — Test Execution:** persistent vs ephemeral (EaaS/Bunnyshell, Branch Management preview URLs, etc.) per [`environment-management.md`](./environment-management.md).
+- **Local — Test Authoring** (`## Local Agent`): single agent-runnable **local up** command + **wait-for-healthy** criteria + URL mapping (`BASE_URL`, backends).
+- **CI — Test Execution** (`## CI / Cloud`): persistent vs ephemeral (EaaS/Bunnyshell, Branch Management preview URLs, on-runner spin-up) per [`environment-management.md`](./environment-management.md).
 
-If no usable policy or env strategy exists, mark **Missing Config**, discuss with the user, and author/seed policy ([`create-policy.md`](./create-policy.md)) — **blocking** for env-dependent optional work (e.g. import `markScreenState`).
+If a legacy **`## Environment Provision Strategy`** exists in `ai-test-instructions.md`, migrate usable content into the policy rather than duplicating forever.
+
+If no usable policy exists (and no legacy strategy to migrate), mark **Missing Config**, discuss with the user, and author/seed policy ([`create-policy.md`](./create-policy.md)) — **blocking** for env-dependent optional work (e.g. import `markScreenState`).
 
 Full playbook when executing: [`connect-to-test-env.md`](./connect-to-test-env.md).
 
@@ -215,7 +219,7 @@ When offering:
 
 ## Phase 2 — Plan phase (four required areas + optionals)
 
-Create **`## Init action items`** in `plans/knowledge/ai-test-instructions.md` (or the init `.plan.md` checklist) with **`status`**: `pending | in_progress | done | skipped | deferred`.
+Create **`## Init action items`** in the project-init **`.plan.md`** checklist (preferred) — or in an **existing** `ai-test-instructions.md` if the team already uses that file — with **`status`**: `pending | in_progress | done | skipped | deferred`. Do not create `ai-test-instructions.md` just for this checklist.
 
 Your plan **must** include exactly these **four required** areas in order, plus optional items when applicable:
 
@@ -242,8 +246,7 @@ Optional (when planned): **Import plans**, **Import tests**, **Smoke validation*
 
 **Connect to test environment**
 
-- `connect-to-test-env` policy exists **or** substantive **`## Environment Provision Strategy`** in `ai-test-instructions.md`.
-- Local-up command + health criteria documented for authoring.
+- **`connect-to-test-env.policy.md`** exists with local-up + health criteria (and CI/Cloud when applicable). Legacy Environment Provision Strategy in an **existing** `ai-test-instructions.md` may temporarily satisfy Missing Config until migrated — prefer the policy.
 - `update-project-init-status` with `connect_to_test_env: DONE` when complete.
 
 **CI setup**
@@ -272,7 +275,7 @@ After the plan is written, get **explicit user approval** before Phase 3.
 
 ## Phase 3 — Execution phase
 
-Execute in order; after each area, verify acceptance criteria, call **`update-project-init-status`**, and update `ai-test-instructions.md`.
+Execute in order; after each area, verify acceptance criteria, call **`update-project-init-status`**, and update **`connect-to-test-env.policy.md`** for env decisions (upsert-policy). Update an existing `ai-test-instructions.md` only for legacy non-env notes / FAQ — do not create it for env.
 
 **PR strategy:** Ask whether the user wants **one combined PR** or **separate PRs** (mapping/scaffold, env docs, CI). Default to separate PRs when slices are large. Branch prefix **`testchimp-`**.
 
@@ -310,8 +313,8 @@ Mark `folder_mapping: DONE` when markers + platform mapping align.
 
 Follow [`connect-to-test-env.md`](./connect-to-test-env.md) / [`environment-management.md`](./environment-management.md):
 
-- Author or confirm **`connect-to-test-env.policy.md`** when missing.
-- Persist **`## Environment Provision Strategy`** (Local + CI subsections).
+- Author or confirm **`connect-to-test-env.policy.md`** with Local Agent + CI / Cloud sections (local-up, wait-for-healthy, URL mapping). Call **`upsert-policy`**.
+- Do **not** also invent **`## Environment Provision Strategy`** in a new `ai-test-instructions.md`. If that legacy file already has strategy content, migrate it into the policy.
 - For ephemeral EaaS: confirm `get-eaas-config` payload; Bunnyshell / Branch Management as applicable.
 
 Mark `connect_to_test_env: DONE` when strategy is documented and verified (or policy + local-up contract exists for later provisioning).
@@ -339,7 +342,7 @@ When approved in Phase 2:
 When approved in Phase 2 — **only after** steps 2–3 (folder mapping + connect-to-test-env) are **DONE**:
 
 - Author 2–3 critical-path SmartTests (`@smoke` when suite tags exist); run them against the documented local/test env when feasible.
-- Record learnings in **`## Past learnings — authoring & validation (FAQ)`** if useful.
+- Record bring-up learnings in **`connect-to-test-env.policy.md`**; FAQ Q/A only if **`ai-test-instructions.md` already exists**.
 - Mark `smoke_validation: DONE` on success, or record skip / **N/A**.
 
 Do **not** reorder smoke ahead of required areas.
@@ -363,9 +366,9 @@ Call **`get-project-init-status`** — when `overall_complete` is true, project 
 Project init is **complete** when:
 
 - **`get-project-init-status`** reports `overall_complete: true` (all four required items **DONE**), **and**
-- `plans/knowledge/ai-test-instructions.md` records env strategy, CI trigger guidance, and any deferred optional items.
+- **`plans/knowledge/policies/connect-to-test-env.policy.md`** documents the env strategy (local-up / health / URLs; CI/Cloud as applicable) and has been upserted.
 
-**Not required for completion:** TrueCoverage, mocking plans, full seed endpoints, domain fixtures, ExploreChimp defaults — those land in later workflows.
+**Not required for completion:** `ai-test-instructions.md`, TrueCoverage, mocking plans, full seed endpoints, domain fixtures, ExploreChimp defaults — those land in later workflows (or remain optional legacy notes).
 
 Before treating the run as done, **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** with `workflowId` / `entityIdentity` **`project-init`** and the plan ULID (`ACTION_COMPLETED` / `ACTION_FAILED`).
 

@@ -30,11 +30,11 @@ Do **not** infer workstation setup from git — check local config every time.
 
 ## Local test environment
 
-Follow **`connect-to-test-env`** policy when present; else read **`plans/knowledge/ai-test-instructions.md` → Environment Provision Strategy → Local - Test Authoring**.
+Follow **`connect-to-test-env.policy.md`** when present; else (legacy only) read **`plans/knowledge/ai-test-instructions.md` → Environment Provision Strategy → Local - Test Authoring** if that file already exists.
 
 - Bring up the documented local stack (compose script, wait-for-healthy).
 - Export **`BASE_URL`** / **`BACKEND_URL`** as documented.
-- Run a minimal smoke (existing `@smoke` or one SmartTest) when feasible; record learnings in **`## Past learnings — authoring & validation (FAQ)`**.
+- Run a minimal smoke (existing `@smoke` or one SmartTest) when feasible; record durable bring-up learnings in **`connect-to-test-env.policy.md`** (upsert-policy). Append FAQ Q/A only if **`ai-test-instructions.md` already exists**.
 
 TrueCoverage is **not** part of thin init — use **`/testchimp setup truecoverage`** or **`/testchimp instrument`** when needed ([`instrument-truecoverage.md`](./instrument-truecoverage.md)).
 

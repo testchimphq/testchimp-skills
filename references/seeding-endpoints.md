@@ -24,7 +24,7 @@ Skipping seed (or mocks) work “to save time” while Arrange assumes non-defau
 
 When you add or modify **seed/teardown/read** routes, **config or flags** that gate those test-only surfaces (non-production guards, env vars, etc.), or **any backend** your fixtures or tests call (using whatever **base URLs** the project documents—often `BASE_URL`, API host vars, or similar), the **running** app-under-test must pick up those changes before you execute Playwright or validate behavior.
 
-1. **Read** `plans/knowledge/ai-test-instructions.md` → **`## Environment Provision Strategy`** and follow the project’s chosen approach (local stack vs cloud EaaS vs staging).
+1. **Read** **`plans/knowledge/policies/connect-to-test-env.policy.md`** (or legacy Environment Provision Strategy in an **existing** `ai-test-instructions.md`) and follow the project’s chosen approach (local stack vs cloud EaaS vs staging).
 2. **Local** — Restart or recreate the stack (or the affected containers/processes) using the documented **up** / **healthy** flow. Stopping the old env and starting a new one is fine when that matches repo practice.
 3. **Cloud / EaaS / branch-provisioned SaaS** — Environments often deploy from **Git `HEAD`**. **Commit** (and **push** if provision pulls from remote) so the provisioned environment includes your seed-endpoint changes; then **reprovision** or wait for deploy if required.
 

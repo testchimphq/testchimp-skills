@@ -16,9 +16,11 @@ This is the **only** workflow that **blocks** when policy is missing (**Missing 
 1. `--policy` if provided
 2. `plans/knowledge/policies/connect-to-test-env.policy.md`
 3. Any `*.policy.md` with frontmatter `workflow-id: connect-to-test-env`
-4. Fallback: **`plans/knowledge/ai-test-instructions.md`** → **`## Environment Provision Strategy`** (and FAQ)
+4. **Legacy fallback only** (file already exists): **`plans/knowledge/ai-test-instructions.md`** → **`## Environment Provision Strategy`** (and FAQ)
 
-If no policy and ai-test-instructions lack a usable provision strategy, **stop**, discuss with the user, and author a policy ([`create-policy.md`](./create-policy.md)) before continuing dependent workflows. For authoring, follow the **strict connect-to-test-env checklist** in create-policy (feature branch / default branch / CI) and prefer [`../assets/policies/connect-to-test-env.policy.md`](../assets/policies/connect-to-test-env.policy.md) as a skeleton. After writing the file, call **`upsert-policy`** so the platform clears Missing Config immediately.
+**Write target:** Persist startup / health / `BASE_URL` contracts in **`connect-to-test-env.policy.md`**. **Do not** create `ai-test-instructions.md` solely for env connectivity. If that legacy file already exists, you may still **read** it and optionally migrate bring-up steps into the policy.
+
+If no policy and (when present) ai-test-instructions lack a usable provision strategy, **stop**, discuss with the user, and author a policy ([`create-policy.md`](./create-policy.md)) before continuing dependent workflows. For authoring, follow the **strict connect-to-test-env checklist** in create-policy (feature branch / default branch / CI) and prefer [`../assets/policies/connect-to-test-env.policy.md`](../assets/policies/connect-to-test-env.policy.md) as a skeleton. After writing the file, call **`upsert-policy`** so the platform clears Missing Config immediately.
 
 See [`policies-and-traceability.md`](./policies-and-traceability.md) and deeper env patterns in [`environment-management.md`](./environment-management.md).
 
@@ -32,21 +34,21 @@ See [`policies-and-traceability.md`](./policies-and-traceability.md) and deeper 
 
 When `GITHUB_ACTIONS` / `CLOUD_AGENT` / ChimpHands is set, you are **already** on a cloud runner. Env bring-up for authoring, executing, and fixing tests is **`connect-to-test-env`**, not “dispatch another Actions workflow and hope a stack appears.”
 
-1. **Read** `plans/knowledge/policies/connect-to-test-env.policy.md` → **`## CI / Cloud`** (fallback: ai-test-instructions Environment Provision Strategy).
+1. **Read** `plans/knowledge/policies/connect-to-test-env.policy.md` → **`## CI / Cloud`** (legacy fallback only: ai-test-instructions Environment Provision Strategy when that file already exists and policy is missing).
 2. **Execute those instructions on this runner** (compose / `local-up` scripts / EaaS MCP / documented URLs). Wait until healthy; export **`BASE_URL`** / backend URLs.
 3. **Reuse** that stack for nested work: create-tests, execute-tests, fix-test-execution, smart smoke, ExploreChimp, etc. Do **not** tear down between subflows of the same approved plan.
 4. **Do not** substitute bring-up by repeatedly running `gh workflow run` / `gh run watch` on existing merge-gate or E2E workflows (e.g. “E2E PR”, compose CI jobs). Those jobs run **their own** ephemeral stack for a check; they do not hand you a live env for this session unless the policy **explicitly** says otherwise (rare — e.g. attach to a documented preview URL).
 5. **WIF / OIDC-only cloud jobs** are separate: only dispatch them when the policy (or user) requires that specific cloud-side work — see [`chimphands-faq.md`](./chimphands-faq.md). That is **not** the default path to get a test env for SmartTests.
-6. **Update the policy with learnings** when bring-up steps, health checks, ports, or pitfalls differ from what’s written (or were missing). Patch **`## CI / Cloud`** (and Local Agent if the same contract applies), bump `version`, commit, and call **`upsert-policy`**. Also add short FAQ bullets to `ai-test-instructions.md` when useful. Future ChimpHands sessions should succeed without rediscovery.
+6. **Update the policy with learnings** when bring-up steps, health checks, ports, or pitfalls differ from what’s written (or were missing). Patch **`## CI / Cloud`** (and Local Agent if the same contract applies), bump `version`, commit, and call **`upsert-policy`**. **Only if** `ai-test-instructions.md` already exists, you may also add short FAQ bullets there. Future ChimpHands sessions should succeed without rediscovery.
 
 If **`## CI / Cloud`** only documents “how PR checks run Playwright” and has **no** agent bring-up steps, treat that as incomplete: derive a working on-runner (or EaaS) procedure from Local Agent / repo scripts, verify it, then **write it into the policy** before continuing dependent workflows.
 
 ## Agent steps (thin)
 
-1. Read resolved policy (or ai-test-instructions fallback). Choose **Local Agent** vs **CI / Cloud** by where you are running.
+1. Read resolved policy (legacy fallback: existing ai-test-instructions only). Choose **Local Agent** vs **CI / Cloud** by where you are running.
 2. Run documented provision / local-up / connect steps; wait for **healthy**.
 3. Export or document **`BASE_URL`** / backend URLs for the runner (Preamble **#4** still required for Playwright/Mobilewright).
-4. Persist learnings into the policy / ai-test-instructions when steps changed or were discovered (see above).
+4. Persist learnings into **`connect-to-test-env.policy.md`** when steps changed or were discovered (upsert-policy). Do **not** create `ai-test-instructions.md` for this.
 5. Best-effort **`report-agent-action`** when provisioning creates/updates env artifacts worth tracing.
 6. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `connect-to-test-env` (nested: parent closes).
 

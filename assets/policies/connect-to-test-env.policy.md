@@ -19,11 +19,20 @@ Use the skill-wide rule (explicit scope → feature-branch changes → default b
 
 ### When on a feature branch
 
-<!-- Pick one: local spin-up | EaaS (e.g. Bunnyshell) | custom instructions | SKIP (do not attempt feature-scoped QA env procurement; tell the user it was skipped) -->
+<!--
+REQUIRED: concrete local (or EaaS) bring-up for authoring SmartTests on a feature branch:
+
+1. Single local-up command/script (or EaaS provision steps)
+2. Explicit wait-for-healthy criteria
+3. BASE_URL / backend URL mapping for the runner
+4. Teardown notes if needed
+
+Pick one: local spin-up | EaaS (e.g. Bunnyshell) | custom instructions | SKIP (do not attempt feature-scoped QA env procurement; tell the user it was skipped)
+-->
 
 ### When on default branch
 
-<!-- Shared env (e.g. staging): how to connect; ensure .env-<env> has BASE_URL -->
+<!-- Shared env (e.g. staging): how to connect; ensure .env-<env> has BASE_URL; or same local-up contract as feature branch -->
 
 ## CI / Cloud
 

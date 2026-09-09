@@ -2,7 +2,7 @@
 
 Use this reference when deciding **where tests run** and **how environments are provisioned** for **per‑PR testing-before-merge**.
 
-**Project contract first:** The repo’s **`plans/knowledge/ai-test-instructions.md`** (especially **`## Environment Provision Strategy`** and **`## Past learnings — authoring & validation (FAQ)`**) is **authoritative**. Follow that file **exactly** for commands, URLs, and health gates during `/testchimp test` and related flows. This document **supplements** it with general patterns; it does **not** override a persisted project decision. If you hit env blockers, read the FAQ there before improvising—see **[Binding: ai-test-instructions](run-qa.md#binding-ai-test-instructions-environment-and-faq-playbook)** in [`run-qa.md`](./run-qa.md).
+**Project contract first:** **`plans/knowledge/policies/connect-to-test-env.policy.md`** (`## Local Agent`, **`## CI / Cloud`**) is the **authoritative** write/read target for startup, health, and `BASE_URL` / backend URL resolution. Follow that policy **exactly** during `/testchimp test` and related flows. **Legacy only:** if **`plans/knowledge/ai-test-instructions.md` already exists**, you may still read **`## Environment Provision Strategy`** / the FAQ as a fallback — do **not** create that file solely for env connectivity. This document **supplements** the policy with general patterns; it does **not** override a persisted project decision. If you hit env blockers, re-read the policy (and the legacy FAQ only when present) before improvising—see **[Binding: test-env contract](run-qa.md#binding-test-env-contract-policy-and-legacy-faq)** in [`run-qa.md`](./run-qa.md).
 
 This doc intentionally focuses on two workflows only:
 
@@ -44,7 +44,7 @@ export COMPOSE_DOCKER_CLI_BUILD=1
 Some stacks require pre-steps (examples): cloud auth, local secrets access, env files, DB migrations, service emulators.
 
 - Identify these by reading repo docs, compose header comments, `.env.example` files, and any `scripts/` setup docs.
-- Persist the project-level prerequisites and the single recommended “local up” command in `plans/knowledge/ai-test-instructions.md` under:\n  - `## Environment Provision Strategy` → `### Local - Test Authoring`
+- Persist the project-level prerequisites and the single recommended “local up” command (+ wait-for-healthy + URL mapping) in **`plans/knowledge/policies/connect-to-test-env.policy.md`** under **`## Local Agent`**. Call **`upsert-policy`**. Do **not** create `ai-test-instructions.md` for this; only update a legacy Environment Provision Strategy section if that file already exists.
 
 **Ergonomics requirement (recommended):**
 
@@ -74,7 +74,7 @@ CI should default to running tests against an ephemeral PR environment provision
 If the team explicitly chooses to run E2E only post-merge (discouraged, but allowed for “get going quickly” - as a stop gap until EaaS is setup):
 
 - Configure a persistent target URL via `.env-QA` under the tests root (or equivalent), e.g. `BASE_URL=...`.
-- Make it explicit in `plans/knowledge/ai-test-instructions.md` that this is a fallback and why it was chosen.
+- Make it explicit in **`connect-to-test-env.policy.md`** (Local Agent / CI sections) that this is a fallback and why it was chosen.
 
 ## EaaS (Bunnyshell) workflow
 
@@ -117,7 +117,7 @@ When EaaS is **not** used, teams may configure a **URL template** and optional *
 
 ## Authoring time: refresh when the app-under-test changes
 
-If you modify **seed/teardown/read** routes, **config or flags** that gate test-only surfaces, **fixture-facing APIs**, or any backend your tests use (see the project’s documented base URLs in `ai-test-instructions.md`) while authoring SmartTests, **restart or reprovision** the environment per `plans/knowledge/ai-test-instructions.md` → **Environment Provision Strategy**:
+If you modify **seed/teardown/read** routes, **config or flags** that gate test-only surfaces, **fixture-facing APIs**, or any backend your tests use (see the project’s documented base URLs in `connect-to-test-env.policy.md`) while authoring SmartTests, **restart or reprovision** the environment per that policy (legacy fallback: existing `ai-test-instructions.md` → Environment Provision Strategy):
 
 - **Local stack** — tear down and bring the stack up again (or restart affected services) so processes load the new bytecode/config.
 - **Cloud / EaaS / branch previews** — provisioning usually tracks **Git `HEAD`**; **commit** (and **push** if the provisioner pulls from remote) **before** reprovisioning so the deployment includes your changes.
@@ -130,13 +130,13 @@ Use this subsection when **`.testchimp-tests`** indicates **`mobile`** or **`mul
 
 ### Backend / API environments
 
-Spinning up **servers** (local compose, Bunnyshell/EaaS, branch previews) for APIs the app calls can follow the **same** patterns as web projects — record commands and URLs in **`plans/knowledge/ai-test-instructions.md`** as usual. Mobile-specific work is on the **device + app install** side.
+Spinning up **servers** (local compose, Bunnyshell/EaaS, branch previews) for APIs the app calls can follow the **same** patterns as web projects — record commands and URLs in **`connect-to-test-env.policy.md`**. Mobile-specific work is on the **device + app install** side.
 
 ### Local runs (author time)
 
 - **Emulators / simulators:** The user (or agent) must have a working Android emulator, iOS Simulator, or physical device path per [Mobilewright](https://github.com/mobile-next/mobilewright) expectations.
-- **Doctor:** Run **`npx mobilewright doctor`** from the SmartTests/install root and fix reported gaps. If something cannot be automated (e.g. Xcode license, SDK install), **tell the user exactly** what to install or enable and **record** a short FAQ entry in **`ai-test-instructions.md`**.
-- **App binary:** Ensure **`mobilewright.config.ts`** **`installApps`** points at a real **APK** / **IPA** / **`.app`** build the user can produce; document the build command in **`ai-test-instructions.md`** if non-obvious.
+- **Doctor:** Run **`npx mobilewright doctor`** from the SmartTests/install root and fix reported gaps. If something cannot be automated (e.g. Xcode license, SDK install), **tell the user exactly** what to install or enable and **record** it in **`connect-to-test-env.policy.md`** (or the legacy FAQ only if `ai-test-instructions.md` already exists).
+- **App binary:** Ensure **`mobilewright.config.ts`** **`installApps`** points at a real **APK** / **IPA** / **`.app`** build the user can produce; document the build command in the **connect-to-test-env** policy if non-obvious.
 
 ### CI / cloud devices (mobile-use)
 
@@ -151,7 +151,7 @@ Mobile UI runs need **`projects[].use.platform`** in **`mobilewright.config.ts`*
 
 ## Related
 
-- **`/testchimp init`** — workstation MCP + local env wiring; capture authoring env notes in `plans/knowledge/ai-test-instructions.md` (see [`init-testchimp.md`](./init-testchimp.md)). **Project** setup (folder mapping, shared env, CI, optional imports/smoke) is **`/testchimp project init`** — [`project-init-testchimp.md`](./project-init-testchimp.md).
+- **`/testchimp init`** — workstation MCP + local env wiring; follow **`connect-to-test-env.policy.md`** when present (see [`init-testchimp.md`](./init-testchimp.md)). **Project** setup (folder mapping, shared env policy, CI, optional imports/smoke) is **`/testchimp project init`** — [`project-init-testchimp.md`](./project-init-testchimp.md).
 - **`/testchimp test`** — [`run-qa.md`](./run-qa.md) for phased workflow and when to load this doc.
 - **Fixtures** — [`fixture-usage.md`](./fixture-usage.md) for deterministic data after the environment URL is known.
 - **DAST release checks** — when `dastCheckConfig.useEphemeralSandbox` is true, provision/teardown ephemeral envs using this EaaS workflow ([`security/dast.md`](./security/dast.md)).
