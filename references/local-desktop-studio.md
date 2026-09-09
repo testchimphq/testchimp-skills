@@ -41,6 +41,7 @@ Do **not** treat `CLOUD_AGENT` / GHA / `CHIMPHANDS_UI_ATTACHED` as Studio. Those
 
 - Do **not** install or require GitHub Actions **ChimpHands** workflow files for local Studio runs.
 - Do **not** follow the CI end-of-turn commit/push contract from [`chimphands.md`](./chimphands.md) unless the user explicitly asks for that CI flow.
+- Do **not** launch Task/subagents for skill/doc lookup — read `.opencode/skills/testchimp/references/…` (or use the skill tool) in-thread. Studio denies Task and out-of-workspace path scans.
 - Interactive approval still applies for catalog workflows unless `--mode=non-interactive` or policy allows otherwise.
 
 ## Init / keys
