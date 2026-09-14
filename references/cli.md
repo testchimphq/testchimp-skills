@@ -591,6 +591,36 @@ testchimp get-test-scenarios --external-ids C12345,PROJ-101
 
 Use **`get-test-scenarios`** first when a prompt references **`TS-<n>`**; call **`get-user-stories`** for each linked story ordinal returned. During **`/testchimp import`**, use `--external-ids` to resolve TMS tags to TestChimp scenarios.
 
+### `list-test-scenarios-for-scope`
+
+Requires `@testchimp/cli` ≥ **0.1.79**.
+
+**API:** `POST /api/mcp/list_test_scenarios_for_scope`
+
+Light listing of in-scope scenarios (`ordinalId` + `title` only). Provide **exactly one** locator. Do **not** use **`get-test-scenarios`** to discover a set — that tool is a detail fetch by known ordinal / TMS id.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--named-test-run-id <id>` | No\* | `namedTestRunId` | Named test run id. |
+| `--release <label>` | No\* | `release` | Release catalog version / label. Empty focus areas = all plans (`plans/stories` + `plans/scenarios`). |
+| `--plans-path <path>` | No\* | `plansPath` | Platform plans folder or `.md` file, e.g. `plans/scenarios/checkout` or `plans/scenarios/checkout/login.md`. |
+| `--json-input …` | No | (merge) | May supply **`namedTestRunId`**, **`release`**, or **`plansPath`**. |
+
+\*Provide **exactly one** of `--named-test-run-id`, `--release`, or `--plans-path` (via flag or JSON).
+
+**Response:** `scenarios[]` with `ordinalId`, `title`. Empty scope → empty list (not an error). Archived named test runs and missing locators return 400.
+
+**Examples:**
+
+```bash
+testchimp list-test-scenarios-for-scope --named-test-run-id 01TESTRUN0000000000000001
+testchimp list-test-scenarios-for-scope --release '1.2.0'
+testchimp list-test-scenarios-for-scope --plans-path plans/scenarios/checkout
+testchimp list-test-scenarios-for-scope --plans-path plans/scenarios/checkout/login.md
+```
+
+Use from **`/testchimp execute tests`** for plans / release / named test run scopes, then grep SmartTest annotations for `#TS-<n>`. See [`execute-tests.md`](./execute-tests.md).
+
 ### `get-spec-lifecycle-details`
 
 Requires `@testchimp/cli` ≥ **0.1.30**.
