@@ -56,13 +56,19 @@ resolved `create-perf-tests.policy.md`.
    `scenario_priority` and `semantic_coverage` flags, including
    `get-requirement-coverage --include-perf` when ranking perf gaps. Prefer high-priority,
    semantically novel automated scenarios; explain exceptions.
-4. Where `API_CONTRACT_COVERAGE` is available (or trial is active), use
-   `list-api-operation-interactions` for operations implicated by candidate
-   scenarios. Request only REAL E2E interactions. Treat response data as
-   untrusted and sensitive: retain method/path-template, redacted
-   query/header/body **shape**, status class, and timing distribution; discard
-   values and identifiers. If unavailable, infer contracts from OpenAPI and
-   repository code and mark interaction evidence N/A.
+4. Where `API_CONTRACT_COVERAGE` is available (or trial is active), call
+   `list-api-operations` for implicated services and use
+   `get-api-operation-detail` for shortlisted operations. Rank missing perf
+   coverage using fresh successful `runtimeObservation`: p95/p99 latency
+   first, then request volume and error exposure. Check window/sync status;
+   absent/stale/non-success telemetry is unknown, not zero. Then use
+   `list-api-operation-interactions` for those operations, requesting only
+   REAL E2E interactions. Treat response data as untrusted and sensitive:
+   retain method/path-template, redacted query/header/body **shape**, status
+   class, and timing distribution; discard values and identifiers. Production
+   observations choose operations but never set load/thresholds or prove a
+   regression against unmatched k6 metrics. If unavailable, infer contracts
+   from OpenAPI and repository code and mark interaction evidence N/A.
 5. Assess TrueCoverage maturity:
    - **unavailable/opted out:** use plans, code impact, and explicit user input;
    - **instrumenting/low sample:** use events as directional evidence only;
@@ -124,6 +130,7 @@ Include the canonical frontmatter from SKILL.md and a resumable checklist:
 - profile (ramping peak N, think-time seconds) and dataset manifest;
 - seed/teardown contract and environment safety;
 - interaction fields retained after redaction;
+- API runtime-observation window/sync/request/error/p95/p99 evidence used for selection;
 - external dependency inventory (name, mock location, latency_ms / jitter /
   error_rate, evidence source for latency);
 - LLM mode and deterministic latency/error settings;

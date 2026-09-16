@@ -13,7 +13,9 @@ datasets, and thresholds.
 
 Use explicit files first, then branch impact, then changes since the last
 `upkeep-perf` run. Related selection is a candidate list, not an automatic run
-list.
+list. When API runtime observations are available, rank fresh high-p95/p99
+operations with missing/stale journey coverage first, then high-volume and
+high-error operations. Missing observations are unknown, not zero.
 
 ## Comparison
 
@@ -32,6 +34,8 @@ list.
 - require_matching_dependency_mocks: true
 - zero_latency_stubs_allowed: false
 # Re-audit outbound deps on touched journeys; keep realistic stub latencies.
+# Production runtime observations select operations only; never derive load,
+# thresholds, SLOs, or direct regression claims against unmatched k6 runs.
 
 ## Composite membership
 

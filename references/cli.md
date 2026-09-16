@@ -1307,9 +1307,16 @@ Also related (flags vary): **`report-agent-action`**, **`get-last-run-workflow-d
 
 ---
 
-## API operations coverage (CLI ≥ **0.1.28**)
+## API operations coverage (CLI ≥ **0.1.28**; observability-aware guidance ≥ **0.1.80**)
 
 OpenAPI-backed API operation coverage (same payloads as the Operations UI). Prefer **`rootFilePath`** (repo-relative OpenAPI root) as the service resource id. **TestChimp operation id** = platform ULID (`id`), distinct from OAS `operationId`.
+
+When observability ingress is configured, operation list/detail records also expose:
+
+- `obsMappingState`: `API_OBS_NOT_CONFIGURED`, `API_OBS_MAPPED`, or `API_OBS_UNMAPPED_OBSERVED`.
+- `runtimeObservation`: latest finalized production daily summary (latest-hour fallback), with `windowStartMillis`, `windowEndMillis`, `requestCount`, `rpm`, `errorCount`, `errorRate`, `p50LatencyMs`, `p95LatencyMs`, `p99LatencyMs`, `status2xxCount` through `status5xxCount`, and `syncStatus`.
+
+Use fresh successful volume/error metrics to rank uncovered API operations. Use p95/p99 latency to prioritize performance-test creation/upkeep. Missing, stale, partial, no-data, or query-failed observations are unknown—not zero. These production signals select work; they do not define k6 load or thresholds.
 
 Playbooks: [`api-testing.md`](./api-testing.md), [`create-tests.md`](./create-tests.md), [`upkeep.md`](./upkeep.md).
 
@@ -1338,7 +1345,7 @@ Returns `services[]` with `rootFilePath`, `serviceKey`, `infoTitle`, `operationC
 testchimp list-api-operations --root-file-path services/featureservice/openapi/featureservice.json
 ```
 
-Each operation includes `id` (TestChimp ULID), method/path, `coveringTestsPreview`, `coverageSummary` (scores).
+Each operation includes `id` (TestChimp ULID), method/path, `coveringTestsPreview`, `coverageSummary` (scores), and observability fields above when available.
 
 Omit `--root-file-path` / `--service-key` only when intentionally listing **all** services; prefer a root when more than one service is configured.
 
@@ -1363,7 +1370,7 @@ testchimp get-api-operation-detail \
   --http-method POST --path-template /api/mcp/list_api_operations
 ```
 
-Returns request/query/response field trees and response codes with covering-test tags. The CLI rejects calls with no lookup identity.
+Returns request/query/response field trees and response codes with covering-test tags. `operation.runtimeObservation` carries the same latest daily summary when available. The CLI rejects calls with no lookup identity.
 
 ### `list-api-operation-interactions`
 

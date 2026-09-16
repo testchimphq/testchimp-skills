@@ -128,7 +128,7 @@ When the prompt is `/testchimp create tests for …` with an **API operation** i
 
 1. **Immediately** load [`api-testing.md`](./api-testing.md) → *API operation coverage scopes* (and *Prompt → CLI mapping*).
 2. Treat any `Hint: …` line after the prompt as human-readable context only — scope identity is the `for …` clause.
-3. Fetch coverage with CLI/MCP: `list-api-operation-services`, `list-api-operations`, `get-api-operation-detail` (CLI ≥ **0.1.28**). Do not invent coverage without those tools.
+3. Fetch coverage with CLI/MCP: `list-api-operation-services`, `list-api-operations`, `get-api-operation-detail` (CLI ≥ **0.1.80** for observability-aware guidance). Read available `runtimeObservation` daily summaries and prioritize uncovered high-volume/high-error operations; route elevated p95/p99 latency to performance-test creation/upkeep. Check the observation window/sync status and treat missing telemetry as unknown, not zero. Do not invent coverage without these tools.
 4. **Check existing plan items first (required):** search mapped `plans/`, `get-test-scenarios` / `get-requirement-coverage` / semantic-nearby if useful for a scenario (or story) that already matches the signal (same journey, operation, field, or response path). Prefer **linking an existing scenario** when one fits.
 5. Only when **no suitable scenario exists**, propose new scenario(s) — and a parent **story** only if no relevant story exists (link an existing story when one fits). Record titles, rationale, linked signal, and that the existence check found none.
 6. **Explicit user approval** (Plan → approve) before creating any new story/scenario. Do not create plan entities on a silent path.

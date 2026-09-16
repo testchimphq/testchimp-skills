@@ -14,7 +14,7 @@ resolved `upkeep-perf.policy.md`.
   trial means this workflow is **N/A**, not a failure of a parent workflow.
 - Do not treat branch copies as distinct tests. Identity is the platform
   logical key plus stable `testchimp.id`; preserve IDs across moves/renames.
-- TrueCoverage demand and TestChimp history are **relative signals only**.
+- TrueCoverage demand, API runtime observations, and TestChimp history are **selection/ranking signals only**.
   Never derive absolute VUs, RPS, duration, dataset cardinality, SLOs, or
   thresholds from them.
 - Compare only matching environment, profile, dataset version, LLM mode,
@@ -44,8 +44,17 @@ resolved `upkeep-perf.policy.md`.
 3. Query scenario coverage using global-policy priority and semantic-coverage
    settings. Flag missing/stale scenario links and high-priority novel
    journeys that have no perf representation.
-4. For affected operations, capability-gate API insights and call
-   `list-api-operation-interactions` for **REAL E2E** records. Retain only
+4. For affected services, capability-gate API insights and call
+   `list-api-operations`; use `get-api-operation-detail` for shortlisted
+   operations. Read `runtimeObservation` window/sync status, request volume,
+   error rate/count, status classes, and p95/p99 latency. Prioritize:
+   - high-latency operations with no journey or stale performance coverage;
+   - high-volume operations whose journey/baseline is missing or old;
+   - high-error operations where performance behavior may contribute.
+   Missing/stale/non-success telemetry is unknown, not zero. Keep production
+   observations distinct from k6 run metrics; do not claim regression by
+   directly comparing unmatched production and test p95 values. Then call
+   `list-api-operation-interactions` for **REAL E2E** records and retain only
    redacted request/response shape, status class, and timing distribution.
    Never persist raw interaction values.
 5. Assess TrueCoverage maturity separately:
@@ -75,7 +84,8 @@ Write and upsert:
 
 The checklist must record capability outcomes; selected journeys/reasons;
 scenario priority and semantic evidence; TrueCoverage maturity; interaction
-redaction; history/baseline/compare ids; proposed code, profile, dataset,
+redaction; runtime-observation window/sync/volume/error/p95/p99 evidence;
+history/baseline/compare ids; proposed code, profile, dataset,
 threshold, and composite changes; validation commands; and rollback.
 
 For every composite membership change, ask:

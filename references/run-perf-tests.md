@@ -120,8 +120,14 @@ Do **not** put k6 inside `/testchimp run QA`. Do not pass Playwright `--reporter
 - Else ask which journeys/composites to run.
 
 Selection may use changed scenarios, semantic-nearby scenarios, operations,
-path templates, composite membership, mature TrueCoverage relative demand, and
-prior failures. No selection signal defines absolute load.
+path templates, composite membership, mature TrueCoverage relative demand,
+prior failures, and fresh API-operation `runtimeObservation` summaries. When
+choosing among otherwise related journeys, prioritize operations with elevated
+p95/p99 latency, then high request volume/error exposure—especially when the
+journey or baseline is missing/stale. Check observation window and sync status;
+missing telemetry is unknown, not zero. Do not compare production and k6 p95
+directly unless all comparison dimensions genuinely match. No selection signal
+defines absolute load or thresholds.
 
 ## Targeting a release
 

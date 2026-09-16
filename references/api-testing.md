@@ -47,8 +47,15 @@ Also accepted (resolve via CLI): `rootFilePath` + OAS `operationId`, or `rootFil
 ### Fetch coverage (required before authoring)
 
 1. **`list-api-operation-services`** — configured roots; empty → OAS not configured (`N/A` / ask user).
-2. **`list-api-operations --root-file-path <path>`** — same list payload as the Operations UI (`coverageSummary`, covering-test previews). Prefer low `coverageScore` / zero covering tests. **Ignored gaps score as covered** (`gapIgnored` / score 100) — skip them when picking work. Always pass **`--root-file-path`** when more than one service exists (omitting it returns all services’ ops mixed together).
-3. **`get-api-operation-detail --id <ULID>`** (or root + oas / method+path) — request/query/response fields and response codes with covering tests.
+2. **`list-api-operations --root-file-path <path>`** — same list payload as the Operations UI: `coverageSummary`, covering-test previews, and—when mapped—`obsMappingState` plus `runtimeObservation`. The runtime observation is the latest finalized **production daily summary**, with latest-hour fallback, and may include `windowStartMillis`, `windowEndMillis`, `requestCount`, `rpm`, `errorCount`, `errorRate`, `p50LatencyMs`, `p95LatencyMs`, `p99LatencyMs`, status-class counts, and `syncStatus`. Prefer low coverage / zero covering tests with high observed request volume or error rate. **Ignored gaps score as covered** (`gapIgnored` / score 100) — skip them when picking work. Always pass **`--root-file-path`** when more than one service exists.
+3. **`get-api-operation-detail --id <ULID>`** (or root + oas / method+path) — request/query/response fields and response codes with covering tests; `operation.runtimeObservation` carries the same observability summary.
+
+### Observability-aware prioritization
+
+- Missing coverage remains the eligibility gate. Among uncovered gaps, rank operations with fresh `OBSERVABILITY_SYNC_SUCCESS` data by **request volume** (`requestCount`, with `rpm` as a rate view) and **error exposure** (`errorRate`, `errorCount`, especially 5xx). This puts coverage effort where regressions affect the most traffic or where failures are already concentrated.
+- Use `p95LatencyMs` / `p99LatencyMs` as a signal to add or maintain **performance** coverage for that operation. Latency is not, by itself, proof that an extra functional assertion is valuable.
+- Inspect `windowStartMillis` / `windowEndMillis` and `syncStatus` before ranking. Stale, partial, no-data, query-failed, or absent telemetry is **unknown**, never zero. Keep business criticality and backend branch complexity in the decision when telemetry is unavailable.
+- Do not sum `requestCount` with `rpm`, compare different windows as equivalent, or turn observed production volume/latency/error rates into k6 VUs, RPS, duration, SLOs, or thresholds. Production observations select what to test; policy/user capacity goals define how to load it.
 
 ### Prompt → CLI mapping
 
@@ -64,7 +71,7 @@ Also accepted (resolve via CLI): `rootFilePath` + OAS `operationId`, or `rootFil
 
 Alternate identities (when ULID absent): `--root-file-path` + `--oas-operation-id`, or `--root-file-path` + `--http-method` + `--path-template` (method+path **requires** root or serviceKey).
 
-Prioritize gaps by: **missing coverage** + **business criticality** + **likely distinct backend branch complexity**. Examples of high-ROI shapes (not only filters): auth/role gates, pagination vs full page, idempotency keys, status-transition enums, error-code paths, optional nested resources that trigger secondary loads, feature-flagged payloads, soft-delete / include-archived toggles.
+Prioritize gaps by: **missing coverage** + **observed request volume/error exposure** + **business criticality** + **likely distinct backend branch complexity**. Examples of high-ROI shapes (not only filters): auth/role gates, pagination vs full page, idempotency keys, status-transition enums, error-code paths, optional nested resources that trigger secondary loads, feature-flagged payloads, soft-delete / include-archived toggles. Use observed p95/p99 latency to nominate operations for performance-test coverage/upkeep.
 
 ### Check existing scenarios/stories before authoring (required)
 

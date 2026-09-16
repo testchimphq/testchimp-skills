@@ -8,7 +8,9 @@ allow-execute-without-approval: false
 
 Project-specific authoring rules for new k6 journeys and composites.
 This policy supplies defaults; TestChimp/TrueCoverage signals only select and
-relatively weight candidates.
+relatively weight candidates. API runtime observations rank fresh high-p95/p99
+operations first, then high-volume/high-error operations; missing telemetry is
+unknown, not zero.
 
 ### Scoping Rules
 

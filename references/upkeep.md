@@ -11,7 +11,7 @@ Systematically improve **requirement coverage**, **execution health**, **TrueCov
 ## Purpose and outcomes
 
 - **Bridge signals:** (1) what the product *should* do (requirements / scenarios), (2) what tests *actually* test (execution history), (3) what users *really* do (TrueCoverage event emits in Production), (4) optional **UX risk** on the same slices via **ExploreChimp** (DOM, screenshot, console, network, metrics) along **SmartTest pathways** that reach those areas—see [ExploreChimp in evolve](#explorechimp-in-evolve-truecoverage-to-targeted-ux-runs).
-- **Optimize for business impact:** Prefer gaps where analytics show **high frequency**, meaningful **drop-off**, **depth** in funnels (top-of-funnel being higher priority), or **duration** / **high-demand** events (where users engage a lot or paths are hot). When the platform exposes histograms or time series, use **percentile-style** reading (e.g. p90) alongside averages—wording should match what the API returns; do not invent metrics. Prefer percentiles over averages. Use those same signals to **prioritize which UI tests** to run with **`EXPLORECHIMP_ENABLED`** so UX bugs surface where real usage and risk concentrate.
+- **Optimize for business impact:** Prefer gaps where analytics show **high frequency**, meaningful **drop-off**, **depth** in funnels (top-of-funnel being higher priority), or **duration** / **high-demand** events. For API operations, also prioritize uncovered operations with fresh high `requestCount`/`rpm`, high `errorRate`/error count, or elevated p95/p99 latency; latency primarily nominates performance-test work. When the platform exposes histograms or time series, use percentile-style reading alongside averages—wording should match what the API returns; do not invent metrics. Use those same signals to prioritize which UI tests to run with `EXPLORECHIMP_ENABLED`.
 - **Coverage semantics (strict):** Treat TrueCoverage gaps as "tests are not traversing those emitted business paths/slices yet." Do not misstate this as a missing test-link instrumentation issue when `installTestChimp()` is already wired in `fixtures/index.js` (default scaffold path).
 
 ---
@@ -169,9 +169,9 @@ Skip this subsection (mark **`N/A`**) when the org **`API_CONTRACT_COVERAGE`** c
 When OpenAPI roots are configured for the project (Operations / API coverage):
 
 1. **`list-api-operation-services`** — if empty, record **`N/A`** (OAS not configured).
-2. **`list-api-operations --root-file-path <path>`** — prioritize low `coverageSummary.coverageScore`, zero covering tests, business-critical paths.
-3. **`get-api-operation-detail`** on top gaps — pick high-ROI uncovered request/query/response fields and response codes.
-4. Prioritize: **missing coverage** + **business criticality** + **likely distinct backend branch complexity** (auth/role gates, pagination, status enums, error paths, nested secondary loads — not only filters). See [`api-testing.md`](./api-testing.md).
+2. **`list-api-operations --root-file-path <path>`** — read both coverage and `runtimeObservation`; prioritize low `coverageSummary.coverageScore` / zero covering tests with high observed volume or error exposure.
+3. **`get-api-operation-detail`** on top gaps — pick high-ROI uncovered request/query/response fields and response codes, retaining the operation's observability context.
+4. Prioritize: **missing coverage** + fresh successful **request volume/error exposure** + **business criticality** + **likely distinct backend branch complexity**. Use high p95/p99 observations to nominate missing/stale performance journeys for `create-perf-tests` / `upkeep-perf`. Check observation window and sync status; absent/stale/failed telemetry is unknown, not zero. See [`api-testing.md`](./api-testing.md).
 5. Close gaps by **updating existing tests** and/or **authoring new ones** (UI SmartTests that hit the API count). Prefer extending an existing journey; a dedicated `api/` test is one option, not the default. Invoke create-tests patterns via [`create-tests.md`](./create-tests.md) / [`api-testing.md`](./api-testing.md).
 
 ### ExploreChimp in evolve: Targeted UX bug checks
@@ -196,7 +196,7 @@ Do **not** open Phase 2 until **all** are satisfied. Same bar as [`init-testchim
 - [ ] Requirement coverage pulled with gap-friendly flags **or** scoped intentionally narrow with user direction.
 - [ ] Execution history reviewed for the same scope/time mental model.
 - [ ] **Recently failing tests:** `get-execution-history` (folder/file scope) → latest-failing filter → `fetch-execution-report` for failure reasons → per-`testId` history for clusters — **or** **`N/A`** (no recent failures in scope).
-- [ ] API operation coverage reviewed via `list-api-operation-services` / `list-api-operations` (or **`N/A`** — OAS not configured, **or** `API_CONTRACT_COVERAGE` capability off) and top gaps noted for New tests / `fix-coverage-gaps`.
+- [ ] API operation coverage reviewed via `list-api-operation-services` / `list-api-operations` (or **`N/A`** — OAS not configured, **or** `API_CONTRACT_COVERAGE` capability off); top gaps include available runtime-observation window/sync/volume/error/latency evidence and any performance-workflow nominations.
 - [ ] Short list of **top gaps** and **signals** (what data justified priority) , and an executive summary of the targets, is ready to paste into the plan file.
 - [ ] **ExploreChimp targeting:** candidate UI specs (or **`N/A`**) mapped from TrueCoverage / execution signals per [ExploreChimp in evolve](#explorechimp-in-evolve-truecoverage-to-targeted-ux-runs)—final yes/no and scope still belong in **Phase 2** with user approval.
 

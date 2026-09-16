@@ -51,8 +51,9 @@ Load answers **concurrent users**, not max RPS. Open-loop arrival (`ramping-arri
   between user steps and at the end of `default`.
 - `volume.js` stays few VUs (default 1); scale the **dataset**, not VUs.
   Staircases are **one k6 run** (see [Volume staircase](#volume-staircase-executions-charts)).
-- TrueCoverage, REAL E2E samples, request rates observed by TestChimp, and
-  relative composite weights can identify important journeys. **Never**
+- TrueCoverage, REAL E2E samples, API-operation daily runtime summaries
+  (`requestCount`/`rpm`, errors, p95/p99 latency), and relative composite
+  weights can identify important journeys. **Never**
   convert those observations directly into absolute VUs, RPS, duration,
   dataset cardinality, thresholds, or SLOs.
 - Store the approved profile name and dataset manifest in run metadata so
@@ -292,6 +293,15 @@ and runs all journeys (`PERF_IMPACTED_STRICT=1` fails instead).
 - `list-api-operation-interactions` may provide **REAL E2E** interaction
   shapes. Preserve only redacted method/path-template/schema/status/timing
   evidence; never copy raw values into tests or datasets.
+- `list-api-operations` and `get-api-operation-detail` may provide
+  `runtimeObservation` from the latest finalized production daily summary
+  (latest-hour fallback). Check `windowStartMillis` / `windowEndMillis` and
+  `syncStatus`; missing or non-success data is unknown, not zero. Rank
+  high-latency operations with missing/stale perf journeys first, then
+  high-volume and high-error exposure. Production p95/p99 and k6 p95 are
+  separate evidence sets unless environment, workload, window, and all
+  comparison dimensions are demonstrably equivalent; never label a direct
+  unmatched comparison a regression or improvement.
 - Use `list-perf-runs`, `get-perf-run`, `list-perf-baselines`,
   `promote-perf-baseline`, `compare-perf-to-baseline`, and
   `list-related-perf-tests`. Installed MCP/CLI help is authoritative for
@@ -300,7 +310,8 @@ and runs all journeys (`PERF_IMPACTED_STRICT=1` fails instead).
   `compare-perf-to-baseline` prints JSON and the CLI exits nonzero when
   `comparison.regressed` is true; a missing baseline is an API error, not a
   pass. Rank perf gaps with `get-requirement-coverage --include-perf`.
-- Scenario priority and semantic coverage choose a diverse high-value queue.
+- Scenario priority, semantic coverage, and fresh API runtime observations
+  choose a diverse high-value queue.
   TrueCoverage maturity controls how strongly real-demand insights influence
   relative ordering: unavailable → none, sparse → directional, stable/mature
   → relative weighting.
