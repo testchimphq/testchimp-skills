@@ -119,7 +119,14 @@ Before spawning the test runner on ChimpHands / GHA:
 ```bash
 export TESTCHIMP_EXECUTION_SOURCE=CLOUD_AGENT
 # Plus TESTCHIMP_API_KEY, TESTCHIMP_BACKEND_URL, TESTCHIMP_INGRESS_URL from project MCP env
+# execute-tests release scope: export TESTCHIMP_RELEASE=<label>
+# execute-tests named test-run scope: export TESTCHIMP_TEST_RUN_ID=<id>
 ```
+
+Forward release and test-run scope tags independently. A unique `TESTCHIMP_TEST_RUN_ID`
+does not require a release lookup by the agent; the backend resolves and applies the
+run's release to the automation batch. `TESTCHIMP_BATCH_INVOCATION_ID` is a different
+identifier and must not be used as the named test-run ID.
 
 Never pass CLI `--reporter` (drops `@testchimp/playwright` reporter). See `SKILL.md` Preamble **#4** and **#8**.
 
