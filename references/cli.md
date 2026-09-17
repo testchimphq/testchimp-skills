@@ -601,7 +601,7 @@ Light listing of in-scope scenarios (`ordinalId` + `title` only). Provide **exac
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
-| `--named-test-run-id <id>` | No\* | `namedTestRunId` | Named test run id. |
+| `--named-test-run-id <id>` | No\* | `namedTestRunId` | Unique named test-run id. For execution, forward the same value as `TESTCHIMP_TEST_RUN_ID`; do not use the generated batch invocation id. |
 | `--release <label>` | No\* | `release` | Release catalog version / label. Empty focus areas = all plans (`plans/stories` + `plans/scenarios`). |
 | `--plans-path <path>` | No\* | `plansPath` | Platform plans folder or `.md` file, e.g. `plans/scenarios/checkout` or `plans/scenarios/checkout/login.md`. |
 | `--json-input …` | No | (merge) | May supply **`namedTestRunId`**, **`release`**, or **`plansPath`**. |
@@ -619,7 +619,7 @@ testchimp list-test-scenarios-for-scope --plans-path plans/scenarios/checkout
 testchimp list-test-scenarios-for-scope --plans-path plans/scenarios/checkout/login.md
 ```
 
-Use from **`/testchimp execute tests`** for plans / release / named test run scopes, then grep SmartTest annotations for `#TS-<n>`. See [`execute-tests.md`](./execute-tests.md).
+Use from **`/testchimp execute tests`** for plans / release / named test run scopes, then grep SmartTest annotations for `#TS-<n>`. Release scope sets `TESTCHIMP_RELEASE`; named test-run scope sets `TESTCHIMP_TEST_RUN_ID` without looking up the release (the backend resolves it from the unique run id). See [`execute-tests.md`](./execute-tests.md).
 
 ### `get-spec-lifecycle-details`
 

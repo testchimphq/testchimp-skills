@@ -40,8 +40,8 @@ Parse from the user prompt:
    |--------|-------------------|
    | `tests/auth`, `tests/checkout/cart.spec.ts` | Path **is** the suite. Do **not** call `list-test-scenarios-for-scope`. |
    | `plans/scenarios/checkout`, `plans/scenarios/foo.md` | `list-test-scenarios-for-scope --plans-path …` → `#TS-n` → one-pass annotation search (same as [Resolve linked SmartTests](./run-smart-smoke.md#resolve-linked-smarttests--testlocators)). |
-   | `for release <label>` | `--release '<label>'` → same grep. **Not** git prior→cut / smart-smoke related-test selection. |
-   | `for test run <id>` | `--named-test-run-id <id>` → same grep. |
+   | `for release <label>` | `--release '<label>'` → same grep, then export `TESTCHIMP_RELEASE=<label>` on the runner. **Not** git prior→cut / smart-smoke related-test selection. |
+   | `for test run <id>` | `--named-test-run-id <id>` → same grep, then export `TESTCHIMP_TEST_RUN_ID=<id>` on the runner. The backend resolves that run's release; do not look it up in the skill. |
 
    If scope is omitted, **ask** which tests path, plans path, release, or test run to execute. Do **not** invent a smart-smoke selection.
 
@@ -87,7 +87,12 @@ If the list is empty (no scenarios, or none linked), tell the user and stop.
 2. Resolve the execute set to Playwright/Mobilewright paths per [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) (web vs mobile vs multi-platform).
 3. Prefer **headless** for this workflow unless the user asks to debug headed.
 4. Ensure Preamble **#4** (`TESTCHIMP_API_KEY` and `TESTCHIMP_EXECUTION_SOURCE=LOCAL_AGENT|CLOUD_AGENT` on the runner process) before spawn.
-5. Execute:
+5. Forward scope tags independently on the runner process:
+   - Release scope: `TESTCHIMP_RELEASE=<label>`.
+   - Named test-run scope: `TESTCHIMP_TEST_RUN_ID=<id>`. Do not substitute `TESTCHIMP_BATCH_INVOCATION_ID`; that identifies the newly executed batch.
+   - If the prompt explicitly supplies both, export both. Otherwise do not derive one from the other: the backend resolves the release from a unique test-run ID.
+   - Tests/plans path scope: leave both unset unless the prompt explicitly supplied them.
+6. Execute:
    - **Tests path:** `npx playwright test <path>` (or the Mobilewright equivalent).
    - **Scenario-based scope:** `npx playwright test` on the grepped spec files (or the Mobilewright equivalent). Do **not** run smart-smoke / `related-tests.json` selection.
 
@@ -105,6 +110,7 @@ If the list is empty (no scenarios, or none linked), tell the user and stop.
 - [ ] Scope classified (tests path vs plans path vs release vs named test run); asked if omitted
 - [ ] Scenario-based scopes used `list-test-scenarios-for-scope` + one-pass annotation search; unlinked `#TS-n` reported (no `create-tests`)
 - [ ] `connect-to-test-env` followed for the named env (reuse-if-healthy respected)
+- [ ] Scope tags forwarded on the runner (`TESTCHIMP_RELEASE` for release scope; `TESTCHIMP_TEST_RUN_ID` for named test-run scope; both only when explicitly supplied)
 - [ ] Scoped tests executed from SmartTests root with runner API key present
 - [ ] Results reported to the user; blockers called out with next steps
 - [ ] Standalone: workflow execution reported (`ACTION_COMPLETED` / `ACTION_FAILED`)
