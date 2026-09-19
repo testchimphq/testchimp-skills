@@ -16,9 +16,13 @@ Authors or updates SmartTests (UI and/or API) and related fixtures for a **scope
 /testchimp create tests for password reset
 /testchimp create tests for TestChimp operation id 01HXYZ...
 /testchimp create tests for service OpenAPI root services/foo/openapi.yaml
+/testchimp create a smarttest for scenario: 2300
+/testchimp create a smarttest for scenario: 2300. for additional context - you can refer the recorded manual test session: /path/to/session
 ```
 
 Platform Copy Test prompts from the Operations UI use the **`for <operation scope>`** form — treat that as explicit scope for this workflow.
+
+**Studio Record handoff** (`create a smarttest for scenario: <ordinal>` + optional local session folder) is **this workflow** with optional manual-session evidence — see **Manual session evidence** below (same authoring playbook as cloud **`get-manual-session-details`**, different read source).
 
 ---
 
@@ -26,12 +30,21 @@ Platform Copy Test prompts from the Operations UI use the **`for <operation scop
 
 Use the skill-wide rule ([`policies-and-traceability.md`](./policies-and-traceability.md)#scoping-overarching--all-workflows), then specialize:
 
-1. **Explicit scope** — plans paths, story/scenario ordinals, plain-English focus, **or API operation scope** (see [`api-testing.md`](./api-testing.md) → *API operation coverage scopes*).
+1. **Explicit scope** — plans paths, story/scenario ordinals (including **`create a smarttest for scenario: <n>`**), plain-English focus, **or API operation scope** (see [`api-testing.md`](./api-testing.md) → *API operation coverage scopes*).
 2. **Feature / PR branch** — requirements and surface area tied to the branch diff.
 3. **Default branch** — since last `create-tests` via `get-last-run-workflow-detail`, or ask the user (non-interactive: last-run / recent commits).
 4. **Release** — when the prompt names a release, use that git commit range / release catalog entry.
 
 When nested under run-qa / upkeep, inherit the **parent** scope and plan.
+
+### Manual session evidence (optional)
+
+When the prompt includes a recorded manual session for additional context:
+
+- **Local folder** — `for additional context - you can refer the recorded manual test session: <path>` → read that folder on disk (see [`author-test-from-manual-session.md`](./author-test-from-manual-session.md) § **Local session folder**). Do **not** call **`get-manual-session-details`**.
+- **Cloud session id** — pasted **Copy test generate prompt** / **`author test for manual session: <id>`** → fetch with **`get-manual-session-details`**, then the same authoring steps.
+
+In both cases: scenario ordinal from the prompt (when present) is the authoring scope; the session is reference evidence only. Follow [`author-test-from-manual-session.md`](./author-test-from-manual-session.md) for how to consume steps/notes/screenshots, then continue create-tests Execute authoring ([`write-smarttests.md`](./write-smarttests.md)).
 
 ---
 

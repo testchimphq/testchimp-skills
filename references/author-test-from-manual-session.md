@@ -1,12 +1,17 @@
-# `/testchimp author test for manual session` — SmartTest from a recorded manual session
+# SmartTest from a recorded manual session
 
 ## Goal
 
-Given a manual test session id (from the TestChimp manual session viewer **Copy test generate prompt** / **Copy prompt** / legacy **Copy script generate prompt**), fetch the session details and linked scenario business context, then author **one SmartTest** that covers all linked scenarios. Use the manual session steps, screenshots, and notes as a **reference guide** while autonomously navigating the app — not as a script to paste verbatim.
+Author **one SmartTest** using a recorded manual session as a **reference guide** (steps, screenshots, notes) while autonomously navigating the app — not as a script to paste verbatim. This is the **same create-tests authoring playbook**; only the **session evidence source** differs:
+
+| Source | When | How to load evidence |
+| --- | --- | --- |
+| **Cloud** | Pasted **Copy test generate prompt** / **`/testchimp author test for manual session: <id>`** | MCP/CLI **`get-manual-session-details`** |
+| **Local folder** | Studio handoff: **`/testchimp create a smarttest for scenario: <ordinal>. for additional context - you can refer the recorded manual test session: <path>.`** | Read `<path>/job_detail.json` (and sibling screenshot files) on disk — **do not** call **`get-manual-session-details`** |
 
 This flow is **authoring-only**. Do **not** run the full `/testchimp test` chain (Analyze, Plan, Validate, ExploreChimp) unless the user explicitly asks.
 
-Product guide (capture + prompt): [Creating SmartTests — from manual session capture](https://docs.testchimp.io/smart-tests/creating#2-from-manual-session-capture-chrome-extension).
+Product guide (cloud capture + prompt): [Creating SmartTests — from manual session capture](https://docs.testchimp.io/smart-tests/creating#2-from-manual-session-capture-chrome-extension).
 
 ## When agents should suggest this flow (fallback)
 
@@ -15,17 +20,42 @@ Use this as a **fallback**, not the default authoring path.
 1. Agent is asked to create a SmartTest for a scenario (e.g. `/testchimp test`, create-tests, or “author test for `TS-<n>`”).
 2. Scenario text alone is too thin (e.g. one-line description).
 3. Agent **first** tries to infer enough Arrange/Act/Assert from the **codebase**, PR/branch changes, and existing harness (POMs, fixtures, seeds, sibling specs).
-4. If that still fails — not enough to author without inventing the journey — **stop** and ask the user to capture a **manual test session** with the Chrome extension (scenario selected), then paste **Copy test generate prompt** from the manual session view page.
+4. If that still fails — not enough to author without inventing the journey — **stop** and ask the user to capture a **manual test session** (Chrome extension or Studio Record), then paste the generate prompt / Studio handoff.
 
 Do **not** suggest capture when a clarifying question, headed takeover, or further repo reading would unblock you. Full user-facing steps: [`write-smarttests.md`](./write-smarttests.md) § **Insufficient scenario context → suggest manual session capture**.
 
 ## Inputs
 
-- **Manual session id** — parse from the pasted prompt (`/testchimp author test for manual session: <id>…`) or from the viewer URL (`job_id` on `/smart-test-execution?job_id=…&test_type=manual`).
+- **Scenario ordinal** (preferred when present) — from Studio / create-tests prompts such as `/testchimp create a smarttest for scenario: <n>`. Treat as the primary authoring scope (`TS-<n>`). Fetch with `get-test-scenarios --scenario-ordinal-ids <n>` when not already loaded from plans.
+- **Cloud manual session id** — from `/testchimp author test for manual session: <id>…` or the viewer URL (`job_id` on `/smart-test-execution?job_id=…&test_type=manual`).
+- **Local session folder path** — from `for additional context - you can refer the recorded manual test session: <path>` (Studio CREATE_TEST handoff). Absolute path to a folder under `~/.testchimp/data/sessions/…`.
 
 ## Workflow
 
-### 1) Fetch manual session details (MCP preferred)
+### 1) Load manual session evidence
+
+Choose **exactly one** source:
+
+#### A) Local session folder (Studio)
+
+When the prompt names a recorded manual test session **folder path**:
+
+1. **Do not** call MCP/`get-manual-session-details`.
+2. Read **`<path>/job_detail.json`** first (viewer-shaped detail: `testName`, `status`, `steps[]` with `stepId`, `description`/`code`, `notes`, `bugs`, and screenshot fields as **relative filenames** in the same folder).
+3. Optionally read **`<path>/meta.json`** for `id`, `projectId`, `scenarioIds`, `environment`, `release`, `purpose`.
+4. Screenshot refs are files in the **same directory** (not GCS). Prefer `steps[].code` and `steps[].notes`; open an image **only when needed** (ambiguous selector, unclear UI state, area note with a bounding box, or a stuck assertion).
+
+Typical layout:
+
+| File | Role |
+|---|---|
+| `meta.json` | Session metadata |
+| `job_detail.json` | Steps / notes / relative screenshot refs |
+| `screenshot-*.jpg` (etc.) | Images referenced by steps |
+
+Then continue from step 2. If the prompt also names a **scenario ordinal**, that ordinal is authoritative for business context and annotations (prefer it over `meta.json` alone).
+
+#### B) Cloud session id (platform Copy prompt)
 
 Use MCP **`get-manual-session-details`**:
 
@@ -52,7 +82,9 @@ When **`branchName`** is present, resolve **`BASE_URL`** per [`environment-manag
 
 ### 2) Load business context from linked scenarios
 
-If **`linkedScenarioOrdinalIds`** is **empty**, the session has no mapped scenarios — derive test intent from session title/steps/notes and ask the user to link scenarios in the platform if scenario **`annotation`** linkage is required.
+Prefer the **scenario ordinal from the prompt** when present (Studio create-smarttest handoff). Otherwise use **`linkedScenarioOrdinalIds`** / `meta.json` `scenarioIds` from the session.
+
+If there is **no** scenario ordinal and **`linkedScenarioOrdinalIds`** is **empty**, derive test intent from session title/steps/notes and ask the user to link scenarios in the platform if scenario **`annotation`** linkage is required.
 
 Otherwise:
 
@@ -78,6 +110,7 @@ Before writing code, for the combined scope of all linked scenarios:
 
 Load these references as needed during authoring:
 
+- [`create-tests.md`](./create-tests.md) — create-tests workflow (this flow is Execute-style authoring for the named scenario)
 - [`run-qa.md`](./run-qa.md) — Execute-phase batched order (seeds → probes → env → fixtures → tests); use the **Execute** sections only (not full Analyze/Plan/Validate chain)
 - [`seeding-endpoints.md`](./seeding-endpoints.md), [`fixture-usage.md`](./fixture-usage.md), [`mocking_strategy.md`](./mocking_strategy.md)
 - [`write-smarttests.md`](./write-smarttests.md) for UI SmartTest patterns and scenario **`annotation`** rules
@@ -89,8 +122,8 @@ Load these references as needed during authoring:
 Autonomously navigate the app (headed) the same way you would for scenario-only authoring. When blocked or uncertain:
 
 - Consult **`steps[].code`** for recorded Playwright commands and selector hints
-- Open **`steps[].screenshotUrl`** when present to see UI state at each step
-- Read **`steps[].notes[]`** for any additional comments the user have left in the session steps.
+- Read **`steps[].notes[]`** for any additional comments the user left on session steps
+- Open **`steps[].screenshotUrl`** / local screenshot files **only when needed** (do not preload every image — LLM cost)
 
 Do **not** copy the recorded script line-for-line. Translate into maintainable SmartTest code with proper fixtures, seeds, and assertions aligned to the linked scenarios - following the rest of the test suite.
 
@@ -100,7 +133,7 @@ Implement:
 
 - Reuse or author **seed endpoints** and **probes** as needed
 - Reuse or author **fixtures** (test-run scoped per [`fixture-usage.md`](./fixture-usage.md))
-- Add scenario **`annotation`** entries (`{ type: 'scenario', description: '#TS-<n>' }`) using ordinals from **`linkedScenarios`** (never invent `#TS-*` ids; `description` is **only** the id — no title)
+- Add scenario **`annotation`** entries (`{ type: 'scenario', description: '#TS-<n>' }`) using ordinals from the prompt / **`linkedScenarios`** (never invent `#TS-*` ids; `description` is **only** the id — no title)
 - Run the test until it passes or report a clear blocker after multiple attempts fail.
 
 ### 5) Finish
@@ -112,7 +145,7 @@ Implement:
 
 ## Difference from scenario-only authoring
 
-| Scenario-only (`/testchimp test - author test for scenario: TS-<n>`) | Manual session flow |
+| Scenario-only (`/testchimp create a smarttest for scenario: <n>`) | Manual session evidence |
 | --- | --- |
 | Business context from scenario + user stories only | Same, **plus** manual session steps/screenshots/notes as an unblock reference |
 | Agent discovers UI entirely by exploration | Agent may consult what the human did when stuck on values, selectors, or flow order |
