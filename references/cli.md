@@ -719,6 +719,29 @@ testchimp get-manual-session-details --manual-session-id 01JABCDEF123456789
 
 Use when the user pastes a **Copy test generate prompt** / **Copy prompt** (or legacy **Copy script generate prompt**) from the manual session viewer. Then load linked scenarios from the mapped **`plans/scenarios/`** tree or call **`get-test-scenarios --scenario-ordinal-ids`** once with all values from **`linkedScenarioOrdinalIds`**. See [`author-test-from-manual-session.md`](./author-test-from-manual-session.md).
 
+### `get-meeting-transcript`
+
+Requires `@testchimp/cli` ≥ **0.1.81**.
+
+**API:** `POST /api/mcp/get_meeting_transcript`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--meeting-id <id>` | **Yes**\* | `meetingId` | Calendar event id, or URL hash for ad-hoc meetings (same id as the Studio folder name under `~/.testchimp/data/meetings/`). |
+| `--json-input …` | No | (merge) | May supply **`meetingId`** instead of flag. |
+
+\*Meeting id is required (via flag or JSON).
+
+**Response:** Cloud-synced meeting transcript (and any metadata the platform returns). Use for Meeting Bots context when a local `~/.testchimp/data/meetings/<meeting-id>/transcript.md` is not available.
+
+**Example:**
+
+```bash
+testchimp get-meeting-transcript --meeting-id "<meeting-id>"
+```
+
+Prefer the **local** `transcript.md` on Studio / the recording machine when present. Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
+
 ### `get-issue-details`
 
 Requires `@testchimp/cli` ≥ **0.1.16**.

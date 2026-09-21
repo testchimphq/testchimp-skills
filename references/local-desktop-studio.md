@@ -44,6 +44,10 @@ Do **not** treat `CLOUD_AGENT` / GHA / `CHIMPHANDS_UI_ATTACHED` as Studio. Those
 - Do **not** launch Task/subagents for skill/doc lookup — read `.opencode/skills/testchimp/references/…` (or use the skill tool) in-thread. Studio denies Task and out-of-workspace path scans.
 - Interactive approval still applies for catalog workflows unless `--mode=non-interactive` or policy allows otherwise.
 
+## Meeting transcripts
+
+Studio stores Meeting Bots transcripts under **`~/.testchimp/data/meetings/<meeting-id>/transcript.md`**. When a prompt says **`referring the meeting <meeting-id> as context`**, prefer that local file over cloud MCP. Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
+
 ## Init / keys
 
 If `.testchimp/mcp.json` is missing, ask the user to **Map local folder** in Studio (or Project Settings → Key management → **Map local folder…**), or create/merge MCP config from [`../assets/sample-mcp.json`](../assets/sample-mcp.json) into `.testchimp/mcp.json` with real key + project id.
