@@ -728,19 +728,44 @@ Requires `@testchimp/cli` ≥ **0.1.81**.
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
 | `--meeting-id <id>` | **Yes**\* | `meetingId` | Calendar event id, or URL hash for ad-hoc meetings (same id as the Studio folder name under `~/.testchimp/data/meetings/`). |
-| `--json-input …` | No | (merge) | May supply **`meetingId`** instead of flag. |
+| `--summary-only` | No | `summaryOnly` | CLI ≥ **0.1.82**. Return only the post-meeting summary (`transcriptMd` empty). Use first; fetch the full transcript only when the summary is insufficient or not ready. |
+| `--json-input …` | No | (merge) | May supply **`meetingId`** / **`summaryOnly`** instead of flags. |
 
 \*Meeting id is required (via flag or JSON).
 
-**Response:** Cloud-synced meeting transcript (and any metadata the platform returns). Use for Meeting Bots context when a local `~/.testchimp/data/meetings/<meeting-id>/transcript.md` is not available.
+**Response:** `meetingId`, `title`, `startMillis`, `summaryMd`, `summaryStatus`, `transcriptMd`.
 
 **Example:**
 
 ```bash
+testchimp get-meeting-transcript --meeting-id "<meeting-id>" --summary-only
 testchimp get-meeting-transcript --meeting-id "<meeting-id>"
 ```
 
-Prefer the **local** `transcript.md` on Studio / the recording machine when present. Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
+Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
+
+### `get-meeting-set`
+
+Requires `@testchimp/cli` ≥ **0.1.82**.
+
+**API:** `POST /api/mcp/get_meeting_set`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--meeting-set-id <id>` | **Yes**\* | `meetingSetId` | ULID from `/testchimp using meeting-set context <id>` (Meetings page → **Start Chat**). |
+| `--json-input …` | No | (merge) | May supply **`meetingSetId`** instead of flag. |
+
+\*Meeting-set id is required (via flag or JSON).
+
+**Response:** `meetingSet` with `filters` (labels, date range, participants, participant domains, search text), `meetings[]` (`meetingId`, `title`, `startMillis`, newest first), `truncated`, `createdAtMillis`, `expiresAtMillis`. Sets expire after 7 days (HTTP 410; ask the user to create a new one).
+
+**Example:**
+
+```bash
+testchimp get-meeting-set --meeting-set-id "01J9Z3X5V4ABCDEF0123456789"
+```
+
+Then fetch each relevant meeting with `get-meeting-transcript --summary-only`, and the full transcript only when needed. Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
 
 ### `get-issue-details`
 

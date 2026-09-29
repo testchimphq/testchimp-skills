@@ -46,7 +46,7 @@ Do **not** treat `CLOUD_AGENT` / GHA / `CHIMPHANDS_UI_ATTACHED` as Studio. Those
 
 ## Meeting transcripts
 
-Studio stores Meeting Bots transcripts under **`~/.testchimp/data/meetings/<meeting-id>/transcript.md`**. When a prompt says **`referring the meeting <meeting-id> as context`**, prefer that local file over cloud MCP. Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
+Studio stores Meeting Bots transcripts under **`~/.testchimp/data/meetings/<meeting-id>/transcript.md`**. When a prompt says **`referring the meeting <meeting-id> as context`**, prefer that local file over cloud MCP. For **`using meeting-set context <id>`**, use cloud **`get-meeting-set`** (sets are cloud-only). Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
 
 ## Init / keys
 
