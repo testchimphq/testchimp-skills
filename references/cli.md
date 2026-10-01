@@ -767,6 +767,49 @@ testchimp get-meeting-set --meeting-set-id "01J9Z3X5V4ABCDEF0123456789"
 
 Then fetch each relevant meeting with `get-meeting-transcript --summary-only`, and the full transcript only when needed. Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
 
+### `list-meetings`
+
+Requires `@testchimp/cli` ≥ **0.1.83**.
+
+**API:** `POST /api/mcp/list_meetings`
+
+Lists and searches **team-wide** Meeting Bots meetings (visibility: all team members), newest first. It uses the same filters as the Meetings page. Filters combine with AND; values within one filter combine with OR.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--from <date>` | No | `startDateMillis` | Inclusive. `YYYY-MM-DD` (local start of day), ISO datetime, or epoch millis. JSON may pass `from` or raw `startDateMillis`. |
+| `--to <date>` | No | `endDateMillis` | Inclusive. `YYYY-MM-DD` (local end of day), ISO datetime, or epoch millis. JSON may pass `to` or raw `endDateMillis`. |
+| `--label <label>` | No | `labels[]` | Repeatable or comma-separated; case-insensitive. |
+| `--participant <emailOrUserId>` | No | `participantKeys[]` | Repeatable or comma-separated. Participant `key` from `list-meeting-filter-options`, or an email. |
+| `--domain <domain>` | No | `participantDomains[]` | Repeatable or comma-separated (e.g. `acme.com`). |
+| `--search <text>` | No | `searchText` | Full-text over title + transcript (web-search syntax). |
+| `--page-size <n>` | No | `pageSize` | Default 50, max 200 (max 25 with `--search`). |
+| `--page-token <token>` | No | `pageToken` | `nextPageToken` from the previous page. |
+| `--json-input …` | No | (merge) | May supply any field above. |
+
+**Response:** `meetings[]` with `meetingId`, `title`, `startMillis`, `labels`, `participants[]`, `summaryStatus`, `searchSnippet` (search results only; matches wrapped in `⟦ ⟧`), plus `nextPageToken` when more results exist.
+
+**Example:**
+
+```bash
+testchimp list-meetings --from 2026-09-01 --to 2026-09-30 --domain acme.com
+testchimp list-meetings --label Sales --search "pricing" --page-size 25
+```
+
+Then call `get-meeting-transcript --summary-only` per relevant hit. Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md) § Search meetings.
+
+### `list-meeting-filter-options`
+
+Requires `@testchimp/cli` ≥ **0.1.83**.
+
+**API:** `POST /api/mcp/list_meeting_filter_options`
+
+No flags. Returns the filter values seen on team-wide meetings: `labels[]`, `participants[]` (`key`, `userId`, `email`, `displayName`; pass `key` to `list-meetings --participant`), and `domains[]`.
+
+```bash
+testchimp list-meeting-filter-options
+```
+
 ### `get-issue-details`
 
 Requires `@testchimp/cli` ≥ **0.1.16**.
