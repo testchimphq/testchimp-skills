@@ -39,6 +39,8 @@ The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.
 
 **`TESTCHIMP_INGRESS_URL`:** When set, `@testchimp/playwright` uses it for CI ingest. When absent, the reporter defaults to `https://ingress.testchimp.io` or rewrites SaaS `featureservice*` → `ingress*`.
 
+**OAuth + bot identity (CLI ≥ 0.1.85):** `TESTCHIMP_OAUTH_TOKEN` (an OAuth access token issued by featureservice) is sent as `Authorization: Bearer`; when set, `TESTCHIMP_API_KEY` is optional (both are sent when both exist; the backend prefers the bearer). `TESTCHIMP_BOT_ID` (1–64 printable ASCII, no spaces) is sent as the `bot-id` header for QA-bot attribution; invalid values are ignored with a single stderr warning. Never print either value.
+
 **401 remediation order:** (1) export `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` from MCP if configured → (2) export `TESTCHIMP_API_KEY` from the same entry → (3) retry.
 
 ## Quick invoke
@@ -81,7 +83,9 @@ Use when nested fields are not exposed as flags (e.g. coverage **`includeNonCove
 
 ## `mcp`
 
-Start the TestChimp MCP server (stdio transport). **No flags.** Typically invoked as `npx -y @testchimp/cli@latest mcp` from MCP config.
+Start the TestChimp MCP server (stdio transport). Typically invoked as `npx -y @testchimp/cli@latest mcp` from MCP config.
+
+**Remote (CLI ≥ 0.1.85):** `testchimp mcp --http [--port <n>] [--host <h>]` serves stateless Streamable HTTP at `POST /mcp` (default port `PORT` env or 8080, host `0.0.0.0`). Every request needs `Authorization: Bearer <OAuth access token>`; the caller's token is forwarded to TestChimp per tool call (the server's own API key is never used). Also serves `GET /.well-known/oauth-protected-resource` and `GET /healthz`. Env: `TESTCHIMP_MCP_PUBLIC_URL`, `TESTCHIMP_OAUTH_ISSUER`, `TESTCHIMP_BACKEND_URL`, `TESTCHIMP_INGRESS_URL`. The CLI repo's `Dockerfile` packages this for Cloud Run.
 
 ---
 
@@ -718,6 +722,97 @@ testchimp get-manual-session-details --manual-session-id 01JABCDEF123456789
 ```
 
 Use when the user pastes a **Copy test generate prompt** / **Copy prompt** (or legacy **Copy script generate prompt**) from the manual session viewer. Then load linked scenarios from the mapped **`plans/scenarios/`** tree or call **`get-test-scenarios --scenario-ordinal-ids`** once with all values from **`linkedScenarioOrdinalIds`**. See [`author-test-from-manual-session.md`](./author-test-from-manual-session.md).
+
+### `get-meeting-transcript`
+
+Requires `@testchimp/cli` ≥ **0.1.81**.
+
+**API:** `POST /api/mcp/get_meeting_transcript`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--meeting-id <id>` | **Yes**\* | `meetingId` | Calendar event id, or URL hash for ad-hoc meetings (same id as the Studio folder name under `~/.testchimp/data/meetings/`). |
+| `--summary-only` | No | `summaryOnly` | CLI ≥ **0.1.82**. Return only the post-meeting summary (`transcriptMd` empty). Use first; fetch the full transcript only when the summary is insufficient or not ready. |
+| `--json-input …` | No | (merge) | May supply **`meetingId`** / **`summaryOnly`** instead of flags. |
+
+\*Meeting id is required (via flag or JSON).
+
+**Response:** `meetingId`, `title`, `startMillis`, `summaryMd`, `summaryStatus`, `transcriptMd`.
+
+**Example:**
+
+```bash
+testchimp get-meeting-transcript --meeting-id "<meeting-id>" --summary-only
+testchimp get-meeting-transcript --meeting-id "<meeting-id>"
+```
+
+Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
+
+### `get-meeting-set`
+
+Requires `@testchimp/cli` ≥ **0.1.82**.
+
+**API:** `POST /api/mcp/get_meeting_set`
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--meeting-set-id <id>` | **Yes**\* | `meetingSetId` | ULID from `/testchimp using meeting-set context <id>` (Meetings page → **Start Chat**). |
+| `--json-input …` | No | (merge) | May supply **`meetingSetId`** instead of flag. |
+
+\*Meeting-set id is required (via flag or JSON).
+
+**Response:** `meetingSet` with `filters` (labels, date range, participants, participant domains, search text), `meetings[]` (`meetingId`, `title`, `startMillis`, newest first), `truncated`, `createdAtMillis`, `expiresAtMillis`. Sets expire after 7 days (HTTP 410; ask the user to create a new one).
+
+**Example:**
+
+```bash
+testchimp get-meeting-set --meeting-set-id "01J9Z3X5V4ABCDEF0123456789"
+```
+
+Then fetch each relevant meeting with `get-meeting-transcript --summary-only`, and the full transcript only when needed. Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
+
+### `list-meetings`
+
+Requires `@testchimp/cli` ≥ **0.1.83**.
+
+**API:** `POST /api/mcp/list_meetings`
+
+Lists and searches **team-wide** Meeting Bots meetings (visibility: all team members), newest first. It uses the same filters as the Meetings page. Filters combine with AND; values within one filter combine with OR.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--from <date>` | No | `startDateMillis` | Inclusive. `YYYY-MM-DD` (local start of day), ISO datetime, or epoch millis. JSON may pass `from` or raw `startDateMillis`. |
+| `--to <date>` | No | `endDateMillis` | Inclusive. `YYYY-MM-DD` (local end of day), ISO datetime, or epoch millis. JSON may pass `to` or raw `endDateMillis`. |
+| `--label <label>` | No | `labels[]` | Repeatable or comma-separated; case-insensitive. |
+| `--participant <emailOrUserId>` | No | `participantKeys[]` | Repeatable or comma-separated. Participant `key` from `list-meeting-filter-options`, or an email. |
+| `--domain <domain>` | No | `participantDomains[]` | Repeatable or comma-separated (e.g. `acme.com`). |
+| `--search <text>` | No | `searchText` | Full-text over title + transcript (web-search syntax). |
+| `--page-size <n>` | No | `pageSize` | Default 50, max 200 (max 25 with `--search`). |
+| `--page-token <token>` | No | `pageToken` | `nextPageToken` from the previous page. |
+| `--json-input …` | No | (merge) | May supply any field above. |
+
+**Response:** `meetings[]` with `meetingId`, `title`, `startMillis`, `labels`, `participants[]`, `summaryStatus`, `searchSnippet` (search results only; matches wrapped in `⟦ ⟧`), plus `nextPageToken` when more results exist.
+
+**Example:**
+
+```bash
+testchimp list-meetings --from 2026-09-01 --to 2026-09-30 --domain acme.com
+testchimp list-meetings --label Sales --search "pricing" --page-size 25
+```
+
+Then call `get-meeting-transcript --summary-only` per relevant hit. Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md) § Search meetings.
+
+### `list-meeting-filter-options`
+
+Requires `@testchimp/cli` ≥ **0.1.83**.
+
+**API:** `POST /api/mcp/list_meeting_filter_options`
+
+No flags. Returns the filter values seen on team-wide meetings: `labels[]`, `participants[]` (`key`, `userId`, `email`, `displayName`; pass `key` to `list-meetings --participant`), and `domains[]`.
+
+```bash
+testchimp list-meeting-filter-options
+```
 
 ### `get-issue-details`
 
@@ -1526,6 +1621,61 @@ testchimp chimphands refresh-git-auth
 ```
 
 Requires `TESTCHIMP_API_KEY` (+ `TESTCHIMP_BACKEND_URL` when configured). Branch/commit contract: [`chimphands.md`](./chimphands.md). Troubleshooting: [`chimphands-faq.md`](./chimphands-faq.md).
+
+---
+
+## QA bots (CLI ≥ **0.1.85**)
+
+Used by QA-bot mode ([`bot-playbook.md`](./bot-playbook.md), [`bot-onboarding.md`](./bot-onboarding.md), [`bot-self-update.md`](./bot-self-update.md)). MCP tool names match the top-level commands; `register-bot-profile` / `ack-bot-events` are exposed on the CLI as `testchimp bot register-profile` / `testchimp bot ack`.
+
+| Command / tool | Route | Notes |
+| --- | --- | --- |
+| `get-my-tasks [--user-id <id>]` | `/api/mcp/get_my_tasks` | `assignedScenarios`, `assignedIssues`, `testsAwaitingVerification`. OAuth → token's user; API key → `--user-id` required |
+| `list-tests-awaiting-verification [--user-id] [--limit]` | `/api/mcp/list_tests_awaiting_verification` | Tests whose executions need human verification for the verified badge |
+| `get-qa-posture` | `/api/mcp/get_qa_posture` | Releases, issue counts by status/severity, active test runs, tests awaiting verification count |
+| `get-bot-compat` / `testchimp bot compat [--skill-version <v>]` | `/api/mcp/get_bot_compat` | `minSkillVersion`, `minCliVersion`, `eventSchemaVersion`; `bot compat` adds `cliUpgradeRequired` / `skillUpgradeRequired` |
+| `get-bot-profile` / `testchimp bot get-profile [--bot-id]` | `/api/mcp/get_bot_profile` | Identity, role, capabilities, subscriptions, paused, webhook health |
+| `register-bot-profile` / `testchimp bot register-profile` | `/bots/register_profile` | **Mutating** — replaces profile + subscriptions atomically |
+| `ack-bot-events` / `testchimp bot ack <eventIds...> [--ack-url]` | ingress `/bot/events/ack` | 1–100 ids; prints `eventId<TAB>status`; non-zero exit on `BOT_ACK_UNKNOWN_EVENT` / `BOT_ACK_NOT_A_TARGET` / `BOT_ACK_MISSING_BOT_ID` |
+
+```bash
+testchimp bot register-profile --role DEVELOPER --responsibilities "Payments API" \
+  --capability ISSUE_FIX --capability E2E_AUTHORING \
+  --subscriptions-json @subscriptions.json        # or inline JSON array
+testchimp bot ack 01JEVT1 01JEVT2 --ack-url https://ingress.testchimp.io/bot/events/ack
+# 01JEVT1	BOT_ACK_ACKED
+# 01JEVT2	BOT_ACK_ALREADY_ACKED
+```
+
+`--ack-url` must be https (http only for localhost) and on a TestChimp host or the `TESTCHIMP_INGRESS_URL` host. A 404 from ingress means the deployment does not support bot acks yet.
+
+### AgentWatch credentials (`testchimp bot connect`)
+
+Headless AgentWatch (`npx -y @testchimp/agentwatch …`) acts as the user, so it needs their user id, PAT and the project API key. `bot connect` gets them through OAuth (PKCE, loopback redirect, opt-in `agentwatch` scope shown on the consent page) and one call to `/bots/get_agentwatch_credentials`, then stores them in `~/.testchimp/agentwatch/credentials.json` (0600, keyed by project, `$TESTCHIMP_HOME` overrides) with the backend / ingress URLs. The OAuth refresh token is revoked immediately. No TestChimp Studio install or sign-in is needed.
+
+| Command | Notes |
+| --- | --- |
+| `testchimp bot connect [--project-id <id>] [--no-browser] [--port <n>] [--timeout-ms <n>]` | **Mutating (local file)**. Prints the approval URL to stderr and opens the browser. Prints `{projectId, userId, email?, botId?, credentialsPath}` (never the keys). `--project-id` fails unless that project was approved. Uses `TESTCHIMP_BACKEND_URL` (ingress from `TESTCHIMP_INGRESS_URL`, else the matching SaaS ingress). Errors: `The user denied access`, `does not match --project-id`, `did not grant the agentwatch scope` (deployment too old), timeout (exit 1) |
+| `testchimp bot disconnect --project-id <id>` | **Mutating (local file)**. Removes that project's entry; prints `{projectId, removed, credentialsPath}` |
+
+```bash
+testchimp bot connect --project-id "$PROJECT_ID"
+npx -y @testchimp/agentwatch query --project-id "$PROJECT_ID"
+```
+
+### Workspace folder mapping (local, no API route)
+
+Per-user mapping of a local repo folder to a TestChimp project, stored in `~/.testchimp/projects.json` (`$TESTCHIMP_HOME` overrides). This is the same file TestChimp Studio and the headless AgentWatch daemon (`npx -y @testchimp/agentwatch …` or `testchimp-studio agentwatch …`) read. Used by bot onboarding step 6 ([`bot-onboarding.md`](./bot-onboarding.md)).
+
+| Command | Notes |
+| --- | --- |
+| `testchimp workspace map --project-id <id> --folder <path> [--project-name <name>] [--reassign] [--skip-repo-check]` | **Mutating (local file)**. The folder must be a git work tree. When a credential is set and the project has a connected repo (`get-git-folder-mapping`), the folder must be the repository root and one of its remotes must match. A folder belongs to one project, so pass `--reassign` to move it. Prints the mapping JSON. Errors: `NOT_FOUND`, `NOT_A_GIT_REPO`, `NOT_REPO_ROOT`, `REPO_MISMATCH`, `INVALID_PAYLOAD: folder already mapped to project <id>` (exit 1) |
+| `testchimp workspace get --project-id <id>` | Prints `{id, projectId, projectName?, folders:[{id, path, name}], createdAtMillis, lastOpenedAtMillis, browserStartUrl?}`. Exit 1 when unmapped. Read-only |
+
+```bash
+testchimp workspace map --project-id "$PROJECT_ID" --folder ~/code/shop --project-name "Shop"
+testchimp workspace get --project-id "$PROJECT_ID" | jq -r '.folders[0].path'
+```
 
 ---
 

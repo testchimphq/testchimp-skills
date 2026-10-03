@@ -52,7 +52,7 @@ plans/
 
 When user syncs the plans folder from TestChimp platform to Git repo, a `.testchimp-plans` file is created in the mapped folder. This can be used to identify the mapped folder correctly. Note that glob might not find files starting with dot, so use find / ls tools instead.
 
-**Branch scope:** Test planning is **project-level**, not tied to a Git branch. SmartTests and runs are branch-aware; **stories and scenarios are a single product-level plan** (default branch source of truth).
+**Branch scope:** Test planning is **project-level**, not tied to a Git branch. SmartTests and runs are branch-aware; **stories and scenarios are a single product-level plan**. The source of truth is the project's **plans branch**: the repository default branch unless the team configured another long-lived branch in the GitHub/GitLab integration (`get-git-folder-mapping` → `plansBranch`; empty = default). Plans sync PRs target that branch.
 
 ---
 
