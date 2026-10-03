@@ -1,0 +1,41 @@
+# Grok build report
+
+- Date: 2026-10-03
+- Template link: not available yet. Version 1 is staged as an unpublished draft; the link appears once Nuwan confirms it on the review card in the TestChimp QA bot chat.
+- Published to: not published yet. Staged as Public (see Deviations: Team is not offered on this account).
+
+## Built
+- Instructions: exact match? Yes. The bot's instructions are byte-identical to assets/bot/instructions.md except for one trailing newline. The share tool has no separate instructions field (see Open questions).
+- Skill: how installed: copied from the main branch of https://github.com/testchimphq/testchimp-skills (HEAD f3f05c2, skill version 1.0.53) into the bot's skill library as a local folder, all 112 files (SKILL.md, references/, assets/, bin/, README, LICENSE). Enabled: yes, it is in the bot's skill list. Carried by the template: NO, not in this draft. The share tool packs only the prose text of SKILL.md (111,784 bytes), not references/ or assets/, and the SKILL.md text must be passed inline as a tool argument, which I did not attempt (see Deviations). The template carries a short getting-started skill instead, and both the instructions and getting-started make the imported bot install the full skill from main on first run. Note: user skills are a global library, so the testchimp skill is now visible to the user's other agents too.
+- Routines (all carried by the template as prose; the share tool reads only the job text):
+  - Daily self-update: created, cron 0 8 * * * (daily 08:00), exact prompt.
+  - Weekday reminder: created, cron 0 9 * * 1-5 (Mon-Fri 09:00), exact prompt.
+  - Weekly QA posture digest: created, cron 30 9 * * 1 (Monday 09:30), exact prompt.
+  - Timezone handling: Grok Bot stored them as CRON_TZ=Australia/Sydney (the builder's timezone), not UTC. Cron times follow the owner's local time by default, so no UTC fallback was needed. The getting-started skill asks each new owner to confirm their timezone and times. I did not verify how the importer's timezone is applied on import; check View Details.
+  - The routines have not run and will fail until a user connects TestChimp. Expected.
+- Webhook routine ("TestChimp deliveries"): supported: yes, trigger type webhook. Created with the exact prompt. Receives the body: yes (the wake carries the event in a webhook_event block), per Nuwan's earlier test the full body is delivered. Key / auth: a per-routine sender key, sent as a bearer key in the Authorization header; the routine panel shows the URL, key and header (fields: Webhook URL, Webhook key, Authorization header). No body signature. The bot cannot read its own URL or key; the owner copies them from the routine panel into TestChimp (Project Settings, My QA Bot). Limits: no body size or rate limit is documented to the bot; earlier test showed a response in about 12 s (well inside TestChimp's 30 s window). Response status: 2xx on accept (as observed in the earlier test; I did not re-send a delivery). Carried by the template: the prose is included; whether the webhook trigger itself (and a fresh URL and key per importer) is carried must be confirmed in View Details. I did not copy any URL or key.
+
+## Grok Bot behaviour we need to know
+- Can a Bot add a custom MCP server from chat? Yes, with the AddMcpServer tool (name plus a remote https url, or a local command and args, optional headers or OAuth client settings). It changes the user's Cursor account configuration and the server then also appears in the user's other agents, so the bot first asks the user to confirm with a question widget. Newly added tools become usable on the bot's next message. For OAuth servers like https://mcp.testchimp.io/mcp the bot then calls AuthenticateMcpServer, which shows a connect card; the user clicks Authorize and approves their project on the TestChimp consent page. So the user steps are: confirm the add, click Authorize, pick the project. (The instructions say "click Add"; in practice the confirmation is the bot's own widget, not a separate Add button.) Templates cannot carry custom MCP servers, so each importer repeats this once. Unverified by me: I did not add the server (guide step 6).
+- How does a Bot run commands on the user's computer? Through a Shell call that targets the user's registered computer. Each command needs the user's approval (an Auto-review check, then an approval card if blocked); I saw the command run on Nuwan's Mac after approval. On Nuwan's Mac: Node v22.22.1, npm 10.9.4, npx available, macOS Darwin, and /usr/bin/open exists, so the bot can open a URL in the default browser with `open <url>`. Files are read through a separate Read tool, also targeted at that computer. The bot's own cloud computer is separate and has a browser desktop, but that is not the user's browser.
+- Anything in instructions.md or the skill that Grok Bot couldn't follow or represent: (1) Templates carry only the prose of SKILL.md, not references/ or assets/, so the bot references are not packaged; (2) Public vs Team: this account can only publish Public templates; (3) the skill size cap is unknown (never reached, see Deviations); (4) instructions are stored in the bot's profile description field, and the share tool's profile.description is described as a short storefront label. Please check View Details to see whether the imported bot gets the full instructions text.
+
+## Deviations from GROK-BUILD.md
+- Step 3: installed from main with Nuwan's approval via TC-COO, but as a local copy in the bot's skill library rather than a template-carried skill. The share tool needs the SKILL.md text passed inline (about 111 KB, around 30k tokens) and drops references/ and assets/ anyway, so a faithful carried copy is not possible. Staged without it; the instructions already self-install from main on first run. If you want me to attempt inlining the full SKILL.md, say so; the size cap is unknown and it may be rejected.
+- Step 8: Team audience is not available (this account can only create Public templates). Nuwan confirmed in chat to stage as Public. It is staged but not published; publishing needs his confirmation on the review card.
+- Step 8: I did not see "View Details"; the staged draft is a card in the chat and I cannot read it. Nuwan should compare it with this report.
+- Added a getting-started skill (not in the guide) because the share flow asks for one; it mirrors the instructions' first-run setup.
+- Added one log memory to the template naming the TestChimp MCP service URL (no secrets), as the share flow requires for custom MCP servers. It contains nothing about the maintainer. Bot has no other memories, connectors or secrets attached to the template (plugins list is empty).
+- Title set to "QA counterpart". Avatar left default.
+- Step 9: template link not shown because the draft is not published.
+
+## Open questions for Nuwan
+- instructions.md has no way for a user to override the backend URL (enterprise self-hosted deployments, or staging). Should the bot support a user-provided backend/MCP URL?
+- Publish as Public now, or wait? Also decide whether to attempt inlining the full SKILL.md.
+
+## Update (2026-10-03, after Nuwan's decisions)
+- Nuwan decided the template does not need to carry the testchimp skill: the instructions install and update it from main on first run. That deviation is now intended.
+- instructions.md, grok-template.json (templateVersion 1.0.1) and CHANGELOG.md were updated: the bot tells the user it will connect to TestChimp cloud and lets them enter a different MCP URL; for a custom URL it reads the backend from /.well-known/oauth-protected-resource and derives ingress by replacing featureservice with ingress in the hostname (naming convention); it installs @testchimp/cli on both its cloud computer and the user's computer as the MCP fallback.
+- The bot's own instructions were updated to match the new instructions.md. The getting-started skill in the template was updated the same way.
+- Template restaged as unpublished version 2 (Public audience, not published). Nuwan will test it first, using a staging MCP URL, before anything is published.
+- Open: ask TestChimp to expose the ingress URL (for example in the oauth-protected-resource metadata or a tool) so the naming convention is not needed.

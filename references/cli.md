@@ -1656,7 +1656,12 @@ Headless AgentWatch (`npx -y @testchimp/agentwatch …`) acts as the user, so it
 | Command | Notes |
 | --- | --- |
 | `testchimp bot connect [--project-id <id>] [--no-browser] [--port <n>] [--timeout-ms <n>]` | **Mutating (local file)**. Prints the approval URL to stderr and opens the browser. Prints `{projectId, userId, email?, botId?, credentialsPath}` (never the keys). `--project-id` fails unless that project was approved. Uses `TESTCHIMP_BACKEND_URL` (ingress from `TESTCHIMP_INGRESS_URL`, else the matching SaaS ingress). Errors: `The user denied access`, `does not match --project-id`, `did not grant the agentwatch scope` (deployment too old), timeout (exit 1) |
+| `testchimp bot connect --pair [--project-id <id>]` | **Mutating (local file)**. No browser. Keeps a random verifier in `~/.testchimp/agentwatch/pairing.json` (0600, replaces any earlier one) and prints `{pairingCode, expiresAtMillis}` for the QA bot to approve. Run on the user's computer |
+| `testchimp bot approve-pairing <pairingCode>` | **Bot side** (same as MCP `approve-agentwatch-pairing`). Approves the code with the bot's OAuth token; needs the `agentwatch_pair` scope (consent-page **Let this bot set up AgentWatch** opt-in), else 403. Prints `{projectId, expiresAtMillis}`. The bot never receives the keys |
+| `testchimp bot connect --finish-pair [--timeout-ms <n>]` | **Mutating (local file)**. Redeems the pending pairing with its verifier (polls up to 60 s by default), stores the credentials like browser `connect`, deletes `pairing.json`. Errors: `has not been approved yet`, `expired` / `No pending AgentWatch pairing` (start again), `approved project … not …` (nothing stored), 404 (deployment too old) |
 | `testchimp bot disconnect --project-id <id>` | **Mutating (local file)**. Removes that project's entry; prints `{projectId, removed, credentialsPath}` |
+
+Pairings are single use and expire after 10 minutes. The pairing code is SHA-256(verifier), so it is useless without the verifier on the user's computer.
 
 ```bash
 testchimp bot connect --project-id "$PROJECT_ID"

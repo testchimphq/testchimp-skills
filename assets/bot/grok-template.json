@@ -1,6 +1,6 @@
 {
   "templateId": "testchimp-qa-bot-grok",
-  "templateVersion": "1.0.0",
+  "templateVersion": "1.0.1",
   "platform": "GROK_BOT",
   "displayName": "TestChimp QA bot",
   "description": "Your QA counterpart for one TestChimp project: receives TestChimp events, proposes QA work, and runs testchimp skill workflows after your approval.",
@@ -10,12 +10,12 @@
     "auth": "oauth",
     "notes": "OAuth consent picks the TestChimp project and issues a bot-scoped token; the bot id travels with the token.",
     "stagingUrl": "https://mcp-staging.testchimp.io/mcp",
-    "setup": "The bot adds this custom MCP server itself on first run (Grok templates don't carry custom connectors); the user only clicks Add, then Authorize."
+    "setup": "The bot adds this custom MCP server itself on first run (Grok templates don't carry custom connectors). Before connecting it tells the user it will use TestChimp cloud and lets them enter a different MCP URL (enterprise or self-hosted); for a custom URL it reads the backend from /.well-known/oauth-protected-resource and derives ingress by replacing featureservice with ingress. The user then clicks Authorize."
   },
   "cli": {
     "package": "@testchimp/cli",
-    "minVersion": "0.1.85",
-    "install": "npm i -g @testchimp/cli@latest"
+    "minVersion": "0.1.86",
+    "install": "npm i -g @testchimp/cli@latest (on both the bot's cloud computer and the user's computer; fallback when the MCP is flaky)"
   },
   "skill": {
     "name": "testchimp",
@@ -28,7 +28,7 @@
     "agentwatch": {
       "package": "@testchimp/agentwatch",
       "run": "npx -y @testchimp/agentwatch query --project-id <projectId>",
-      "setup": "testchimp bot connect --project-id <projectId>",
+      "setup": "testchimp bot connect --pair --project-id <projectId>, bot approves with approve-agentwatch-pairing, then testchimp bot connect --finish-pair (browser fallback: testchimp bot connect --project-id <projectId>)",
       "purpose": "Headless AgentWatch daemon for requirement updates from git pushes; no TestChimp Studio needed",
       "runsOn": "userMachine"
     }
@@ -37,7 +37,7 @@
     "required": "Access to the user's own computer, granted by the user in the bot host",
     "requirements": [
       "Node.js >= 20",
-      "@testchimp/cli >= 0.1.85",
+      "@testchimp/cli >= 0.1.86",
       "local clone of the project's repo"
     ],
     "commands": [
@@ -51,10 +51,10 @@
   },
   "instructionsFile": "assets/bot/instructions.md",
   "webhook": {
-    "settingsPath": "/project-config?tab=user-bots",
+    "settingsPath": "/user-settings?tab=my-bots",
     "eventSchemaVersion": 1,
     "method": "POST",
-    "auth": "Authorization: Bearer <webhook key the user pastes into My QA Bot>",
+    "auth": "Authorization: Bearer <webhook key the user pastes into My Bots>",
     "successStatus": "any 2xx within 30 s",
     "maxEventsPerDelivery": 50,
     "maxPayloadBytes": 262144,
