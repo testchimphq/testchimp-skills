@@ -1,6 +1,6 @@
 {
   "templateId": "testchimp-qa-bot-grok",
-  "templateVersion": "1.0.1",
+  "templateVersion": "1.0.2",
   "platform": "GROK_BOT",
   "displayName": "TestChimp QA bot",
   "description": "Your QA counterpart for one TestChimp project: receives TestChimp events, proposes QA work, and runs testchimp skill workflows after your approval.",
@@ -14,15 +14,15 @@
   },
   "cli": {
     "package": "@testchimp/cli",
-    "minVersion": "0.1.86",
-    "install": "npm i -g @testchimp/cli@latest (on both the bot's cloud computer and the user's computer; fallback when the MCP is flaky)"
+    "minVersion": "0.1.87",
+    "install": "npm i -g @testchimp/cli@latest (on both the bot's cloud computer and the user's computer; fallback when the MCP is flaky). The daily self-update routine keeps the bot's copy on the latest version automatically and asks before updating the user's."
   },
   "skill": {
     "name": "testchimp",
     "repo": "https://github.com/testchimphq/testchimp-skills",
-    "version": "1.0.54",
+    "version": "1.0.56",
     "branch": "main",
-    "setup": "Installed with the template; the bot instructions also self-install it from the repo on first run if missing."
+    "setup": "Installed with the template; the bot instructions also self-install it from the repo on first run if missing. The daily self-update routine replaces it with the latest main automatically."
   },
   "optionalTools": {
     "agentwatch": {
@@ -37,7 +37,7 @@
     "required": "Access to the user's own computer, granted by the user in the bot host",
     "requirements": [
       "Node.js >= 20",
-      "@testchimp/cli >= 0.1.86",
+      "@testchimp/cli >= 0.1.87",
       "local clone of the project's repo"
     ],
     "commands": [
@@ -68,7 +68,7 @@
         "time": "08:00",
         "timezone": "user"
       },
-      "prompt": "Run the testchimp skill's references/bot-self-update.md compatibility check. Report only if the CLI or skill is outdated.",
+      "prompt": "Run the testchimp skill's references/bot-self-update.md: look up the latest published skill and CLI versions, compare them with what's installed, and update anything older on your cloud computer without asking (ask me before updating the CLI on my computer). Tell me only what was updated or what failed.",
       "reference": "references/bot-self-update.md"
     },
     {

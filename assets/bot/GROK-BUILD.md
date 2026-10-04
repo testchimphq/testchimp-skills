@@ -39,7 +39,7 @@ Create these three scheduled routines. Use the prompt text exactly (from `grok-t
 
 | Routine | Schedule | Prompt |
 |---|---|---|
-| Daily self-update | Daily 08:00 | Run the testchimp skill's references/bot-self-update.md compatibility check. Report only if the CLI or skill is outdated. |
+| Daily self-update | Daily 08:00 | Run the testchimp skill's references/bot-self-update.md: look up the latest published skill and CLI versions, compare them with what's installed, and update anything older on your cloud computer without asking (ask me before updating the CLI on my computer). Tell me only what was updated or what failed. |
 | Weekday reminder | Mon–Fri 09:00 | Run the weekday reminder from the testchimp skill's references/bot-playbook.md (get-my-tasks). Skip the message when nothing is pending. |
 | Weekly QA posture digest | Monday 09:30 | If QA_POSTURE is among my bot capabilities, send the weekly QA posture digest from the testchimp skill's references/bot-playbook.md (get-qa-posture), personalised to my role and responsibilities. |
 
