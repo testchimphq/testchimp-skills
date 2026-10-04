@@ -1686,6 +1686,30 @@ testchimp workspace get --project-id "$PROJECT_ID" | jq -r '.folders[0].path'
 
 ---
 
+## Feedback to TestChimp (CLI ≥ **0.1.87**)
+
+### `send-feedback`
+
+**API:** `POST /api/mcp/send_feedback`. "Contact us" for agents: the message goes to the TestChimp team's support inbox with the project, organisation, user / bot id (when known) attached. Works with a project API key or OAuth token. When to use it: [`SKILL.md` § Feedback to TestChimp](../SKILL.md#feedback-to-testchimp).
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--message <text>` | Yes | `message` | What happened, in plain words (≤ 10,000 chars) |
+| `--category <c>` | No | `category` | `BUG` \| `USER_STRUGGLE` \| `FEATURE_REQUEST` \| `DOCS_GAP` \| `OTHER` (default) |
+| `--context <text>` | No | `context` | What you were doing: workflow, command, error text, CLI / skill versions (≤ 20,000 chars) |
+| `--agent-name <name>` | No | `agentName` | Your host, e.g. `Cursor`, `Claude Code`, `Grok QA bot` |
+| `--json-input …` | No | (merge) | |
+
+Prints `{"delivered": true}`. Limited to 30 messages per project per hour (HTTP 429 beyond that). Never include secrets, API keys or tokens.
+
+```bash
+testchimp send-feedback --category USER_STRUGGLE --agent-name "Cursor" \
+  --message "User couldn't tell which env var holds the API key during /testchimp init" \
+  --context "init-testchimp.md step 2; CLI 0.1.87; error: 401 Unauthorized"
+```
+
+---
+
 ## MCP parity (tool names)
 
 MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`upsert-policy`**, **`upsert-plans-support-file`**, **`get-plans-support-file`**, **`create-user-story`**, **`list-rum-environments`**.
