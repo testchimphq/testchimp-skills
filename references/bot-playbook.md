@@ -22,7 +22,7 @@ Your bot host runs you on its own (cloud) computer. Your user's computer is a di
 
 | Run on | Commands | Why |
 |---|---|---|
-| **Your user's computer, always** | `testchimp workspace map` / `get`, `testchimp bot connect` / `disconnect`, `npx -y @testchimp/agentwatch …`, `git log` / `git diff` in the mapped folder, local test runs, installing the CLI for these | AgentWatch reads the coding-agent chats (Cursor, Claude Code, …) and the repo clone on that machine. `~/.testchimp/projects.json` and `~/.testchimp/agentwatch/credentials.json` must live there. `bot connect --pair` / `--finish-pair` keep the pairing verifier there (`bot connect` without `--pair` opens their browser). |
+| **Your user's computer, always** | `testchimp workspace map` / `get`, `testchimp bot connect` / `disconnect`, `npx -y @testchimp/agentwatch …`, `git log` / `git diff` in the mapped folder, local test runs, installing the CLI for these | AgentWatch reads the coding-agent chats (Cursor, Claude Code, …) and the repo clone on that machine. `~/.testchimp/projects.json` and `~/.testchimp/agentwatch/credentials.json` must live there. `bot connect --pair` / `--finish-pair` keep the pairing verifier there. Never run `bot connect` without `--pair`: it opens a second browser consent the user doesn't need. |
 | Either | TestChimp API calls (MCP connector tools, or `testchimp <tool>` with the bot's OAuth token), acks, reminders, digests | They only talk to TestChimp. |
 
 - **Never run the local commands on your own computer.** A folder mapped there is not the user's repo, keys stored there are on the wrong machine, and AgentWatch there sees none of the user's chats, so its "no decisions" answer would be wrong rather than empty.

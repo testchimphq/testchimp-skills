@@ -28,7 +28,7 @@
     "agentwatch": {
       "package": "@testchimp/agentwatch",
       "run": "npx -y @testchimp/agentwatch query --project-id <projectId>",
-      "setup": "testchimp bot connect --pair --project-id <projectId>, bot approves with approve-agentwatch-pairing, then testchimp bot connect --finish-pair (browser fallback: testchimp bot connect --project-id <projectId>)",
+      "setup": "testchimp bot connect --pair --project-id <projectId>, bot approves with approve-agentwatch-pairing, then testchimp bot connect --finish-pair (never plain bot connect: no second browser consent)",
       "purpose": "Headless AgentWatch daemon for requirement updates from git pushes; no TestChimp Studio needed",
       "runsOn": "userMachine"
     }
