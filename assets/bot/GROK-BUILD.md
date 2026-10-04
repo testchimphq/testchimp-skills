@@ -50,7 +50,7 @@ The routines will fail until a user connects TestChimp. That's expected; don't t
 TestChimp delivers events like this:
 
 - `POST <webhook URL>` with a JSON body: `{deliveryId, botId, projectId, ackUrl, events: [...]}`, up to 50 events and 256 KB.
-- Header `Authorization: Bearer <webhook key>`. The user pastes the URL and key into TestChimp (**Project Settings → My QA Bot**).
+- Header `Authorization: Bearer <webhook key>`. The user pastes the URL and key into TestChimp (**User Settings → My Bots**).
 - Any 2xx response within 30 seconds counts as delivered. Otherwise TestChimp retries after 5, 15 and 60 minutes, then hourly, until each event's TTL expires.
 
 If Grok Bot supports a webhook-triggered routine (a URL that wakes the Bot):
