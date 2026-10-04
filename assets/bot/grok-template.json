@@ -20,7 +20,7 @@
   "skill": {
     "name": "testchimp",
     "repo": "https://github.com/testchimphq/testchimp-skills",
-    "version": "1.0.53",
+    "version": "1.0.54",
     "branch": "main",
     "setup": "Installed with the template; the bot instructions also self-install it from the repo on first run if missing."
   },
