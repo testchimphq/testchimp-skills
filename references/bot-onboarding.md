@@ -39,7 +39,7 @@ Do **not** ask for the user's name or free-text "what do you want help with". Us
 
 | Capability | What the bot does | Subscriptions it needs |
 |---|---|---|
-| REQUIREMENTS_UPDATE | Keeps stories / scenarios in sync with pushed code (AgentWatch) and meeting decisions | `git-push` (`author eq me`), `meeting-ended` (`adder eq me`) |
+| REQUIREMENTS_UPDATE | Keep requirements up to date based on your dev-agent conversations | `git-push` (`author eq me`), `meeting-ended` (`adder eq me`) |
 | E2E_AUTHORING | Proposes E2E tests for your pushed changes | `git-push` (`author eq me`) |
 | ISSUE_FIX | Proposes fixes for issues assigned to you | `issue-assigned` (`assignee eq me`) |
 | MANUAL_TEST_COORDINATION | Tracks manual scenarios assigned to you | `scenario-assigned` (`assignee eq me`) |
@@ -97,10 +97,10 @@ Events only reach the bot once TestChimp knows where to deliver them. From the p
 - **Otherwise** → guide the user:
   1. In the bot host (e.g. Grok), copy the bot's webhook URL and key (Grok: the **TestChimp deliveries** routine).
   2. Send them the **settings link as a clickable URL**: `settingsUrl` from `get-bot-profile`. It opens this bot's page directly (project and bot already selected). Never describe menu navigation instead of giving the link. If `settingsUrl` is missing (older deployment), build it from the app host of the MCP you connected to: `https://staging.testchimp.io` for `mcp-staging.testchimp.io`, `https://prod.testchimp.io` for `mcp.testchimp.io`, plus `/user-settings?tab=my-bots&projectId=<projectId>&botId=<botId>`. For a custom MCP URL without `settingsUrl`, ask the user for their TestChimp app URL.
-  3. On that page they paste the **Webhook URL** and **Webhook key**, click **Save webhook**, then **Check Connection**.
+  3. On that page they paste the **Webhook URL** and **Webhook key** and click **Save webhook**. Saving runs the connection check automatically (**Check Connection** re-runs it later).
   4. A `test-event` delivery arrives here. Ack it (see [`bot-playbook.md`](./bot-playbook.md#test-event)). Re-run `get-bot-profile` to confirm `lastCheckSuccess`.
 
-Example: "Open the **TestChimp deliveries** routine and copy its webhook URL and key. Then open <settingsUrl>, paste both, click **Save webhook** and **Check Connection**. I'll acknowledge the test event when it arrives."
+Example: "Open the **TestChimp deliveries** routine and copy its webhook URL and key. Then open <settingsUrl>, paste both and click **Save webhook**. TestChimp checks the connection right away, and I'll acknowledge the test event when it arrives."
 
 The same page shows the subscriptions you registered and the **Pause all** switch; **View recent deliveries** lists the latest 50 events.
 
