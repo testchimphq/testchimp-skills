@@ -1,6 +1,11 @@
 # TestChimp QA bot template changelog
 
-Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and instruction changes through the daily self-update routine; bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
+Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
+
+## 1.0.2 — skill 1.0.56, CLI ≥ 0.1.87
+
+- Daily self-update is automatic: the routine looks up the latest skill (`SKILL.md` on `main`) and CLI (npm) versions at run time and updates anything older on the bot's cloud computer without asking; updating the CLI on the user's computer still asks first. It tells the user only what was updated or failed. Instructions pre-approve the cloud-computer updates (hard rule 1) and install the latest CLI instead of a pinned minimum.
+- Bots created from 1.0.1 or earlier: replace the instructions and the **Daily self-update** routine prompt with the 1.0.2 text (or reinstall from the template). Until then they keep asking before updating.
 
 ## 1.0.1
 

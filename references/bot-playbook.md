@@ -255,7 +255,7 @@ Routines run only when the bot is **not paused** and the related capability is s
 
 ### Daily self-update
 
-Once a day (and on startup): [`bot-self-update.md`](./bot-self-update.md). Report only when something is outdated.
+Once a day (and on startup): [`bot-self-update.md`](./bot-self-update.md). Updates the skill and CLI on your cloud computer to the latest published versions without asking (the CLI on the user's computer only with their approval); report only what was updated or failed. Runs even when the bot is paused.
 
 ### Weekday reminder (default: weekdays, user-chosen time)
 
