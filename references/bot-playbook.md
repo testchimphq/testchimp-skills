@@ -269,11 +269,11 @@ Nothing pending → skip the message.
 
 ### Weekly QA posture digest (QA_POSTURE)
 
-`get-qa-posture` returns `releases[]` (`version`, `lifecycleStatus`, `dueDateMillis`, `passedCount` / `failedCount` / `blockedCount` / `notAttemptedCount`), `issues` (`active`, `inProgress`, `blocked`, `openBySeverity`), `activeTestRuns[]` (title, url, release, total / passed / failed / blocked) and `testsAwaitingVerificationCount`. Personalise by role and the user's stated responsibilities:
+`get-qa-posture` returns `releases[]` (`version`, `lifecycleStatus`, `dueDateMillis`, `passedCount` / `failedCount` / `blockedCount` / `notAttemptedCount`), `issues` (`active`, `inProgress`, `blocked`, `openBySeverity`), `activeTestRuns[]` (title, url, release, total / passed / failed / blocked) and `testsAwaitingVerificationCount`. Personalise by role (and the profile's `responsibilities`, if an older onboarding set it):
 
 - **PM:** release health in a few lines: upcoming/active releases, blocking issues, overall trend.
 - **QA lead:** blockers, failing areas, open test runs, tests awaiting verification.
 - **Developer / QA engineer:** issues on their plate (`get-my-tasks`) and failing areas they own.
-- Responsibilities mention **API coverage** → add a line from `list-api-operations` (posture has no coverage section).
+- `responsibilities` mention **API coverage** → add a line from `list-api-operations` (posture has no coverage section).
 
 Keep it scannable (5–10 lines), and link to TestChimp pages rather than pasting raw JSON.

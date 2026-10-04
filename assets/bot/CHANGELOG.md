@@ -5,7 +5,8 @@ Versions of the Grok Bot template manifest (`grok-template.json` → `templateVe
 ## 1.0.1
 
 - Before connecting, the bot tells the user it will use TestChimp cloud and lets them enter a different MCP URL (enterprise or self-hosted). Backend URL comes from `/.well-known/oauth-protected-resource`; ingress is derived by replacing `featureservice` with `ingress` in the hostname.
-- Onboarding uses structured cards: no name question; role picked from four options (QA lead, Product manager, QA engineer, Developer); then the role's pre-selected activities with a choice to change them (multi-select of all six).
+- Onboarding uses structured cards: no name question; role picked from four options (QA lead, Product manager, QA engineer, Developer); then the role's pre-selected activities with a choice to change them (multi-select of all six). No responsibilities question.
+- If project init is incomplete, the bot guides the user through `/testchimp project init` after the webhook is set up, whatever their role.
 - The bot installs `@testchimp/cli` on both its cloud computer and the user's computer, and uses the CLI as the fallback when the MCP is flaky.
 - AgentWatch setup needs no second browser consent: `testchimp bot connect --pair` on the user's computer, the bot approves the pairing code (`approve-agentwatch-pairing`), then `--finish-pair` stores the keys there. The connector's one consent page covers it (every QA bot connection can approve pairings); there is no browser fallback. CLI ≥ 0.1.86.
 - Webhook setup moved to **User Settings → My Bots**. The bot sends the user `settingsUrl` from `get-bot-profile`, a direct link to its own settings page, instead of describing where to click. The old Project Settings tab redirects there.

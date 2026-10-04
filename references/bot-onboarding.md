@@ -4,7 +4,7 @@ Run on the bot's **first conversation** (profile has no role / capabilities yet)
 
 Event handling after onboarding → [`bot-playbook.md`](./bot-playbook.md). Version checks → [`bot-self-update.md`](./bot-self-update.md). CLI shapes → [`cli.md`](./cli.md) § QA bots.
 
-Steps 6 and 6b run on the **user's own computer** through the bot host's access to it, never on the bot's cloud computer ([`bot-playbook.md` § Where commands run](./bot-playbook.md#where-commands-run)).
+Steps 5b, 6 and 6b run on the **user's own computer** through the bot host's access to it, never on the bot's cloud computer ([`bot-playbook.md` § Where commands run](./bot-playbook.md#where-commands-run)).
 
 **Connector first.** If the TestChimp MCP tools are missing, add the custom MCP server yourself: name `testchimp`, URL `https://mcp.testchimp.io/mcp` (staging: `https://mcp-staging.testchimp.io/mcp`). Don't ask the user for the URL. They only click **Add**, then **Authorize**, sign in, pick the project and click **Allow** on the TestChimp consent page.
 
@@ -19,14 +19,13 @@ Before step 1: `get-bot-profile` (CLI: `testchimp bot get-profile`). Tell the us
 Response: `{status: {platformComms, folderMapping, connectToTestEnv, ciWiring, importPlans, importTests, smokeValidation, overallComplete}}`, each `PROJECT_INIT_ITEM_STATUS_{INCOMPLETE|DONE|SKIPPED|NOT_APPLICABLE}`.
 
 - `overallComplete` is `…_DONE` → say so in one line and continue.
-- Otherwise → list the items still `…_INCOMPLETE` (or missing), one line each. Say who usually finishes them (a QA lead or the project owner, via `/testchimp project init`) and that the bot still works for events in the meantime. Do **not** start project init from onboarding unless the user asks.
+- Otherwise → list the items still `…_INCOMPLETE` (or missing), one line each, and say you'll walk them through project init once the bot is set up for events ([step 5b](#5b-project-init-when-incomplete)). Remember the result; don't start project init yet.
 
-### 2. Role and responsibilities
+### 2. Role
 
-Do **not** ask for the user's name or free-text "what do you want help with". Use structured cards (a `SendToUser` widget, one question per card, options as buttons), one step at a time:
+Do **not** ask for the user's name, their responsibilities or free-text "what do you want help with". Use structured cards (a `SendToUser` widget, one question per card, options as buttons), one step at a time:
 
 1. **Role card** (single select, exactly these four): QA lead (`QA_LEAD`), Product manager (`PM`), QA engineer (`QA_ENGINEER`), Developer (`DEVELOPER`). No custom answer.
-2. **Responsibilities card** (optional): a free-text card with a Skip option, e.g. "checkout + payments; API coverage for billing service". Keep the text verbatim. It personalises digests and triage.
 
 ### 3. Capabilities (pre-selected for the role)
 
@@ -61,14 +60,13 @@ Also ask for routine preferences (stored in bot memory, not in the profile):
 
 ### 4. Register the profile
 
-Confirm the summary (role, responsibilities, capabilities, subscriptions, routine times) and get approval. Registration is a mutating action and **replaces** the previous profile and subscriptions atomically.
+Confirm the summary (role, capabilities, subscriptions, routine times) and get approval. Registration is a mutating action and **replaces** the previous profile and subscriptions atomically.
 
 MCP `register-bot-profile`:
 
 ```json
 {
   "role": "QA_ENGINEER",
-  "responsibilities": "Checkout + payments; API coverage for billing",
   "capabilities": ["E2E_AUTHORING", "TEST_BATCH_FIX"],
   "subscriptions": [
     { "eventType": "git-push", "filters": [{ "field": "author", "op": "eq", "value": "me" }] },
@@ -82,7 +80,6 @@ CLI:
 
 ```bash
 testchimp bot register-profile --role QA_ENGINEER \
-  --responsibilities "Checkout + payments; API coverage for billing" \
   --capability E2E_AUTHORING --capability TEST_BATCH_FIX \
   --subscriptions-json '[{"eventType":"git-push","filters":[{"field":"author","op":"eq","value":"me"}]},{"eventType":"e2e-batch-completed"},{"eventType":"k6-batch-completed"}]'
 ```
@@ -103,6 +100,15 @@ Events only reach the bot once TestChimp knows where to deliver them. From the p
 Example: "Open the **TestChimp deliveries** routine and copy its webhook URL and key. Then open <settingsUrl>, paste both and click **Save webhook**. TestChimp checks the connection right away, and I'll acknowledge the test event when it arrives."
 
 The same page shows the subscriptions you registered and the **Pause all** switch; **View recent deliveries** lists the latest 50 events.
+
+### 5b. Project init (when incomplete)
+
+Run this whenever step 1 found `overallComplete` not `…_DONE`, **whatever role the user picked**. Skip it when project init is already complete.
+
+1. Re-run `get-project-init-status` (a teammate may have finished items meanwhile). If it is now complete, say so and move on.
+2. Explain in a line or two that the project's one-time setup isn't finished, list the remaining items, and that you'll guide them through it now: it's what lets tests, plans, environments and CI work for the whole team.
+3. Follow [`project-init-testchimp.md`](./project-init-testchimp.md) for the remaining items only, on the **user's computer** in their local clone of the product repo (request access as in [step 6](#6-per-user-init-local-repo-folder) if you don't have it yet; ask for the clone path if you don't know it). Keep its plan → approve → execute flow; every mutating step needs their approval.
+4. If the user wants to stop or defer partway, record what's done (`update-project-init-status` is updated as each area finishes), say what's left, and continue onboarding. Offer to resume later.
 
 ### 6. Per-user init (local repo folder)
 
@@ -143,11 +149,12 @@ To revoke later: `testchimp bot disconnect --project-id <projectId>`.
 
 Confirm back in a few lines:
 
-- Project, role, responsibilities, capabilities.
+- Project, role, capabilities.
+- Project init status (complete, or what's still left).
 - What you will watch for and what you will propose for each (from the capability table).
 - Webhook status, mapped folder, routine times.
 - Nothing mutating happens without their approval. They can pause from their bot settings page (link it: `settingsUrl` from `get-bot-profile`) or say "change my focus" anytime.
 
 ## Changing focus later
 
-Re-run steps 2–4 with the current profile pre-filled. Ask only about what changed. Always send the **full** desired capability and subscription set, because registration replaces rather than merges. Re-run step 5 only if the webhook check fails, and step 6 only if the folder moved.
+Re-run steps 2–4 with the current profile pre-filled (keep any existing `responsibilities` value as is; don't ask about it). Ask only about what changed. Always send the **full** desired capability and subscription set, because registration replaces rather than merges. Re-run step 5 only if the webhook check fails, and step 6 only if the folder moved.
