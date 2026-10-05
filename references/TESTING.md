@@ -98,6 +98,36 @@ TESTCHIMP_PROJECT_ID: present (not printed)
 WARN: TESTCHIMP_USER_ID missing/placeholder (needed for get-my-tasks / list-tests-awaiting-verification and run attribution)
 ```
 
+### Test 4: Plugin-provided server (no project config)
+
+**Setup:**
+- No project-level MCP config
+- User-level config at `~/.cursor/mcp.json` with testchimp server
+
+**Config (user-level):**
+```json
+{
+  "mcpServers": {
+    "testchimp": {
+      "type": "http",
+      "url": "https://mcp.testchimp.io/mcp"
+    }
+  }
+}
+```
+
+**Expected behavior:**
+- Detect user-level testchimp server
+- Report NOTE (not BLOCKER) that MCP is satisfied if tools are available
+- Advise not to write a second server unless needed
+
+**Result:** ✅ PASS
+
+```
+USER_LEVEL_TESTCHIMP: found at /home/ubuntu/.cursor/mcp.json
+NOTE: No project-level MCP config found, but user-level/plugin testchimp server detected. If testchimp MCP tools are available in your session, MCP is satisfied.
+```
+
 ## Frontmatter Validation
 
 The SKILL.md frontmatter structure was verified to contain:

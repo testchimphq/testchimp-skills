@@ -172,6 +172,23 @@ if [ -z "${MCP_JSON:-}" ]; then
   done
 fi
 
+# Check user-level / plugin MCP locations for testchimp server
+USER_LEVEL_TESTCHIMP="no"
+if [ -z "${MCP_JSON:-}" ] || [ "${HAS_SERVER:-no}" = "no" ]; then
+  for user_config in \
+    "$HOME/.cursor/mcp.json" \
+    "$HOME/.claude/mcp.json" \
+    "$HOME/.claude/settings.json" \
+    "$HOME/.kiro/mcp.json"
+  do
+    if [ -f "$user_config" ] && _is_testchimp_mcp "$user_config"; then
+      USER_LEVEL_TESTCHIMP="yes"
+      _say "USER_LEVEL_TESTCHIMP: found at $user_config"
+      break
+    fi
+  done
+fi
+
 if [ -n "${MCP_JSON:-}" ] && command -v node >/dev/null 2>&1; then
   _say "MCP_CONFIG: $MCP_JSON"
   eval "$(MCP_JSON="$MCP_JSON" node - <<'NODE' 2>/dev/null || true
@@ -231,7 +248,11 @@ try{
 NODE
   )"
   if [ "${HAS_SERVER:-no}" != "yes" ]; then
-    _warn "BLOCKER: mcpServers.testchimp missing — run /testchimp init Workstation gate or merge assets/sample-mcp.json"
+    if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ]; then
+      _say "NOTE: No project-level testchimp server found, but user-level/plugin server detected. If testchimp MCP tools are available in your session, MCP is satisfied. Do not write a second server at project level unless you need per-project config (e.g. stdio with different API keys)."
+    else
+      _warn "BLOCKER: mcpServers.testchimp missing — run /testchimp init Workstation gate or merge assets/sample-mcp.json"
+    fi
   else
     _say "TESTCHIMP_SERVER_MODE: $([ "${IS_REMOTE:-no}" = "yes" ] && echo "remote (OAuth)" || echo "stdio (local process)")"
   fi
@@ -273,7 +294,11 @@ NODE
     _say "TESTCHIMP_INGRESS_URL: not set in MCP (reporter uses ingress default or SaaS featureservice→ingress rewrite)"
   fi
 else
-  _warn "WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp) — /testchimp init should create it from assets/sample-mcp.json"
+  if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ]; then
+    _say "NOTE: No project-level MCP config found, but user-level/plugin testchimp server detected. If testchimp MCP tools are available in your session, MCP is satisfied."
+  else
+    _warn "WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp) — /testchimp init should create it from assets/sample-mcp.json"
+  fi
 fi
 
 exit 0

@@ -4,7 +4,7 @@ TestChimp works through an MCP server plus this agent skill. No local build is n
 
 Install the MCP server at project level (Cursor: `.cursor/mcp.json`; Claude Code: `.mcp.json` in the app repo), not in user-level config. TestChimp API keys are scoped to a single project.
 
-**Use one option, not both.** IDE plugins may register the hosted server at user level for all workspaces. To scope per project (Claude Code only), use `--scope project` when adding the server.
+**Use one option, not both.** IDE plugins may register the hosted server at user level for all workspaces. To add a manual server at project scope with Claude Code, use `claude mcp add --scope project` when configuring the server manually (plugin installs register at user level by default).
 
 ## Option A: hosted MCP server (recommended)
 - URL: `https://mcp.testchimp.io/mcp`
