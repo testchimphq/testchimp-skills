@@ -2,9 +2,11 @@
 
 TestChimp works through an MCP server plus this agent skill. No local build is needed.
 
+Install the MCP server at project level (Cursor: `.cursor/mcp.json`; Claude Code: `.mcp.json` in the app repo), not in user-level config. TestChimp API keys are scoped to a single project.
+
 ## Option A: hosted MCP server (recommended)
 - URL: `https://mcp.testchimp.io/mcp` (Streamable HTTP)
-- Auth: OAuth 2.1. The client opens a browser sign-in on first use; no API key is stored in config.
+- Auth: OAuth 2.1. The client opens a browser sign-in on first use, where you pick the TestChimp project; no API key is stored in config.
 
 ```json
 { "mcpServers": { "testchimp": { "url": "https://mcp.testchimp.io/mcp" } } }
