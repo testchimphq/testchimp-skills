@@ -174,19 +174,72 @@ fi
 
 # Check user-level / plugin MCP locations for testchimp server
 USER_LEVEL_TESTCHIMP="no"
+PLUGIN_SOURCE=""
 if [ -z "${MCP_JSON:-}" ] || [ "${HAS_SERVER:-no}" = "no" ]; then
-  for user_config in \
-    "$HOME/.cursor/mcp.json" \
-    "$HOME/.claude/mcp.json" \
-    "$HOME/.claude/settings.json" \
-    "$HOME/.kiro/mcp.json"
-  do
-    if [ -f "$user_config" ] && _is_testchimp_mcp "$user_config"; then
+  # Check if the skill itself is running from a plugin cache (signal that plugins are in use)
+  if echo "$SKILL_DIR" | grep -qE '\.claude/plugins|\.cursor/plugins|\.gemini/extensions'; then
+    USER_LEVEL_TESTCHIMP="yes"
+    PLUGIN_SOURCE="skill location ($SKILL_DIR under plugin cache)"
+  fi
+  
+  # Check Claude Code plugins (enabled plugins in settings.json, .mcp.json in plugin cache)
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -f "$HOME/.claude/settings.json" ] && command -v node >/dev/null 2>&1; then
+    _claude_check=$(SETTINGS="$HOME/.claude/settings.json" node - <<'NODE' 2>/dev/null || echo "no"
+const fs=require('fs');
+try {
+  const s=JSON.parse(fs.readFileSync(process.env.SETTINGS,'utf8'));
+  const enabled=s?.enabledPlugins||[];
+  if (enabled.some(p=>String(p).includes('testchimp'))) process.stdout.write('yes');
+  else process.stdout.write('no');
+} catch { process.stdout.write('no'); }
+NODE
+    )
+    if [ "$_claude_check" = "yes" ]; then
       USER_LEVEL_TESTCHIMP="yes"
-      _say "USER_LEVEL_TESTCHIMP: found at $user_config"
-      break
+      PLUGIN_SOURCE="Claude Code plugin (testchimp in enabledPlugins)"
     fi
-  done
+  fi
+  
+  # Check Gemini extensions
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -d "$HOME/.gemini/extensions" ]; then
+    for ext_dir in "$HOME/.gemini/extensions"/*; do
+      if [ -f "$ext_dir/gemini-extension.json" ] && grep -q "testchimp" "$ext_dir/gemini-extension.json" 2>/dev/null; then
+        USER_LEVEL_TESTCHIMP="yes"
+        PLUGIN_SOURCE="Gemini extension ($ext_dir)"
+        break
+      fi
+    done
+  fi
+  
+  # Check Cursor plugins (verify location - may be ~/.cursor/extensions or similar)
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -d "$HOME/.cursor/extensions" ]; then
+    for plugin_dir in "$HOME/.cursor/extensions"/*testchimp*; do
+      if [ -d "$plugin_dir" ]; then
+        USER_LEVEL_TESTCHIMP="yes"
+        PLUGIN_SOURCE="Cursor plugin ($plugin_dir)"
+        break
+      fi
+    done
+  fi
+  
+  # Fallback: user-level mcp.json files (less common for plugins)
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ]; then
+    for user_config in \
+      "$HOME/.cursor/mcp.json" \
+      "$HOME/.claude/mcp.json" \
+      "$HOME/.kiro/mcp.json"
+    do
+      if [ -f "$user_config" ] && _is_testchimp_mcp "$user_config"; then
+        USER_LEVEL_TESTCHIMP="yes"
+        PLUGIN_SOURCE="user-level config ($user_config)"
+        break
+      fi
+    done
+  fi
+  
+  if [ "${USER_LEVEL_TESTCHIMP}" = "yes" ]; then
+    _say "USER_LEVEL_TESTCHIMP: $PLUGIN_SOURCE"
+  fi
 fi
 
 if [ -n "${MCP_JSON:-}" ] && command -v node >/dev/null 2>&1; then
@@ -249,9 +302,9 @@ NODE
   )"
   if [ "${HAS_SERVER:-no}" != "yes" ]; then
     if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ]; then
-      _say "NOTE: No project-level testchimp server found, but user-level/plugin server detected. If testchimp MCP tools are available in your session, MCP is satisfied. Do not write a second server at project level unless you need per-project config (e.g. stdio with different API keys)."
+      _say "NOTE: No project-level testchimp server found, but plugin/user-level server detected ($PLUGIN_SOURCE). If testchimp MCP tools are available in your session, MCP is satisfied. Do not write a second server at project level unless you need per-project config (e.g. stdio with different API keys)."
     else
-      _warn "BLOCKER: mcpServers.testchimp missing — run /testchimp init Workstation gate or merge assets/sample-mcp.json"
+      _warn "BLOCKER (unless the testchimp MCP tools are already available in this session, e.g. via a plugin): mcpServers.testchimp missing at project level — run /testchimp init Workstation gate or merge assets/sample-mcp.json"
     fi
   else
     _say "TESTCHIMP_SERVER_MODE: $([ "${IS_REMOTE:-no}" = "yes" ] && echo "remote (OAuth)" || echo "stdio (local process)")"
@@ -295,9 +348,9 @@ NODE
   fi
 else
   if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ]; then
-    _say "NOTE: No project-level MCP config found, but user-level/plugin testchimp server detected. If testchimp MCP tools are available in your session, MCP is satisfied."
+    _say "NOTE: No project-level MCP config found, but plugin/user-level testchimp server detected ($PLUGIN_SOURCE). If testchimp MCP tools are available in your session, MCP is satisfied."
   else
-    _warn "WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp) — /testchimp init should create it from assets/sample-mcp.json"
+    _warn "WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp). If testchimp MCP tools are not available via a plugin, run /testchimp init to create project-level config from assets/sample-mcp.json"
   fi
 fi
 

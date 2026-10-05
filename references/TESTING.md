@@ -98,35 +98,66 @@ TESTCHIMP_PROJECT_ID: present (not printed)
 WARN: TESTCHIMP_USER_ID missing/placeholder (needed for get-my-tasks / list-tests-awaiting-verification and run attribution)
 ```
 
-### Test 4: Plugin-provided server (no project config)
+### Test 4: Claude Code plugin (no project config)
 
 **Setup:**
 - No project-level MCP config
-- User-level config at `~/.cursor/mcp.json` with testchimp server
+- Claude Code plugin installed: `testchimp@testchimp` in `~/.claude/settings.json` `enabledPlugins`
+- Plugin provides MCP server from its cached `.mcp.json`
 
 **Config (user-level):**
 ```json
 {
-  "mcpServers": {
-    "testchimp": {
-      "type": "http",
-      "url": "https://mcp.testchimp.io/mcp"
-    }
-  }
+  "enabledPlugins": ["testchimp@testchimp"]
 }
 ```
 
 **Expected behavior:**
-- Detect user-level testchimp server
+- Detect Claude Code plugin installation
 - Report NOTE (not BLOCKER) that MCP is satisfied if tools are available
 - Advise not to write a second server unless needed
 
 **Result:** ✅ PASS
 
 ```
-USER_LEVEL_TESTCHIMP: found at /home/ubuntu/.cursor/mcp.json
-NOTE: No project-level MCP config found, but user-level/plugin testchimp server detected. If testchimp MCP tools are available in your session, MCP is satisfied.
+USER_LEVEL_TESTCHIMP: Claude Code plugin (testchimp in enabledPlugins)
+NOTE: No project-level MCP config found, but plugin/user-level testchimp server detected (Claude Code plugin (testchimp in enabledPlugins)). If testchimp MCP tools are available in your session, MCP is satisfied.
 ```
+
+### Test 5: Gemini extension (no project config)
+
+**Setup:**
+- No project-level MCP config
+- Gemini extension installed at `~/.gemini/extensions/testchimp-skills/gemini-extension.json`
+
+**Expected behavior:**
+- Detect Gemini extension
+- Report NOTE (not BLOCKER) that MCP is satisfied if tools are available
+
+**Result:** ✅ PASS
+
+```
+USER_LEVEL_TESTCHIMP: Gemini extension (/home/ubuntu/.gemini/extensions/testchimp-skills)
+NOTE: No project-level MCP config found, but plugin/user-level testchimp server detected (Gemini extension (/home/ubuntu/.gemini/extensions/testchimp-skills)). If testchimp MCP tools are available in your session, MCP is satisfied.
+```
+
+### Test 6: No plugin or config (new user)
+
+**Setup:**
+- No project-level MCP config
+- No plugin or user-level config detected
+
+**Expected behavior:**
+- Report BLOCKER with caveat about plugins
+- Message should not be a hard instruction to write stdio config
+
+**Result:** ✅ PASS
+
+```
+WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp). If testchimp MCP tools are not available via a plugin, run /testchimp init to create project-level config from assets/sample-mcp.json
+```
+
+Note: The BLOCKER message (when MCP config is parsed but testchimp server missing) now includes: "BLOCKER (unless the testchimp MCP tools are already available in this session, e.g. via a plugin)"
 
 ## Frontmatter Validation
 
