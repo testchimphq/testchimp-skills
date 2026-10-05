@@ -1,0 +1,14 @@
+{
+  "name": "testchimp",
+  "owner": { "name": "TestChimp", "url": "https://testchimp.io" },
+  "description": "TestChimp: the QA platform for coding agents.",
+  "plugins": [
+    {
+      "name": "testchimp",
+      "source": "./",
+      "description": "QA platform for coding agents: coverage signals, in-repo test plans, verified tests and release governance.",
+      "category": "testing",
+      "tags": ["qa", "testing", "playwright", "test-coverage", "release-readiness"]
+    }
+  ]
+}
