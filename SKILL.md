@@ -4,8 +4,8 @@ description: "TestChimp is the QA platform for coding agents. Use it to run the 
 compatibility: "Requires Node.js 18+, @testchimp/cli at or above metadata.required_cli_version, TESTCHIMP_API_KEY and network access to TestChimp APIs. Web projects need @playwright/test and playwright 1.59.0 or later; mobile projects need mobilewright. Per-version CLI notes: references/version-matrix.md."
 license: MIT
 metadata:
-  version: 1.0.59
-  required_cli_version: "0.1.88"
+  version: 1.0.60
+  required_cli_version: "0.1.90"
   homepage: "https://testchimp.io"
 ---
 
@@ -87,7 +87,7 @@ Before executing a TestChimp flow:
 
 3. **MCP-first access to TestChimp (BLOCKING)** — without TestChimp API access, the agent cannot fetch coverage, execution history, environments, or create/update stories/scenarios.
    - **Two modes**:
-     * **Remote (OAuth)**: uses `https://mcp.testchimp.io/mcp` (registered via IDE plugins or manual config). User picks the TestChimp project during OAuth sign-in; access is scoped automatically. No API key in MCP config. Available when the testchimp server entry has `url`, `httpUrl`, or `type: http` / `streamable-http`.
+     * **Remote (OAuth)**: project-level config uses `https://mcp.testchimp.io/mcp?projectId=<id>` (every call acts on that project); plugin installs register the plain `https://mcp.testchimp.io/mcp`, where the user picks the project during OAuth sign-in. No API key in MCP config. Available when the testchimp server entry has `url`, `httpUrl`, or `type: http` / `streamable-http`.
      * **Stdio (local process)**: uses `npx -y @testchimp/cli@latest mcp` with `TESTCHIMP_API_KEY` and optionally `TESTCHIMP_USER_ID` in the server's `env` block. Available when the testchimp server entry has `command` and `args`.
    - **Preference order (critical)**:
      1) **Use MCP tools first** (preferred): remote mode via OAuth, or stdio mode with the key in the MCP server's `env` block.
@@ -102,16 +102,21 @@ Before executing a TestChimp flow:
      3. **`TESTCHIMP_BACKEND_URL`** **when present** in that `env` block (staging, enterprise, or self-hosted **featureservice** base URL — used by **CLI / MCP / ai-wright**)
      4. **`TESTCHIMP_INGRESS_URL`** **when present** in that `env` block (staging / enterprise **ingress** host — used by **`@testchimp/playwright` CI ingest** and RUM emit overrides). Parallel to `TESTCHIMP_BACKEND_URL` in mcp.json.
      5. **`TESTCHIMP_PROJECT_ID`** when present (TrueCoverage RUM `projectId` if not already in app config — [`references/instrument-truecoverage.md`](references/instrument-truecoverage.md))
+   - **Remote MCP (OAuth) — no key in the IDE config:** The TestChimp entry may be a remote **`url`** (e.g. `https://mcp.testchimp.io/mcp?projectId=<id>`, or a staging / enterprise MCP host) with **no** `env` block. That is a valid setup, not a missing key — the IDE signs in with OAuth and MCP tools work without a key. Runners still need **`TESTCHIMP_API_KEY`**, which lives in the gitignored **`<repo>/.testchimp/mcp.json`** (the same file TestChimp Studio writes; it is candidate #1 in **[Finding project MCP config](#finding-project-mcp-config-testchimp)**, so the normal resolution above finds it). When that file is missing (or its **`TESTCHIMP_PROJECT_ID`** differs from the URL's `projectId`):
+     1. Call the MCP tool **`get-project-credentials`** (returns `projectId`, `projectName`, `projectApiKey`, `backendUrl`, `ingressUrl`).
+     2. Pipe **only** the key on stdin: `printf '%s' "<projectApiKey>" | testchimp workspace save-creds --folder <git root> --project-id <projectId> --project-name "<projectName>" --backend-url <backendUrl> --ingress-url <ingressUrl>` (add `--reassign` when replacing another project's entry). It writes `.testchimp/mcp.json` (mode 0600), adds `.testchimp/` to `.gitignore`, and maps the folder for Studio. Never echo the key, put it in a command-line argument, or write it anywhere else.
+     3. Re-run the resolution above (now satisfied by `.testchimp/mcp.json`) and export for the runner as usual.
+     Only stop and ask the user to paste a key when no TestChimp MCP connection works at all. Remote setup details: [`references/init-testchimp.md`](references/init-testchimp.md)#remote-mcp-oauth-setup.
    - **`TESTCHIMP_EXECUTION_SOURCE` (P0 — runner spawn, not from MCP `env`):** Compute and **export** on **every** Playwright / Mobilewright process. Do **not** look for this key in MCP JSON. Skill **never** exports `CI`. Set **`CLOUD_AGENT`** only for a **remote** agent host: `GITHUB_ACTIONS`, `CURSOR_AGENT_WORKER_ID` (Cursor cloud worker), or Copilot platform (`COPILOT_USE_PLATFORM` / `COPILOT_WORKSPACE`). **`CURSOR_AGENT` alone is the local Cursor IDE** — use **`LOCAL_AGENT`** (same for Claude Code, Codex, OpenHands on the developer machine). True pipelines (testrunner / GHA workflows that are not this skill) set `CI` themselves. See [`references/policies-and-traceability.md`](references/policies-and-traceability.md)#execution-source-local_agent--cloud_agent.
    - **Scoped execution tags:** During **`/testchimp execute tests`**, export **`TESTCHIMP_RELEASE`** for a release scope and **`TESTCHIMP_TEST_RUN_ID`** for a named test-run scope. Forward them independently; do not look up a release when the unique test-run ID is known—the backend resolves and applies it to the automation batch. Never substitute **`TESTCHIMP_BATCH_INVOCATION_ID`**, which identifies the newly executed batch.
    - **Host split:** **CLI/MCP** → `TESTCHIMP_BACKEND_URL` (featureservice). **Playwright reporter CI ingest** → `TESTCHIMP_INGRESS_URL` when set; otherwise `@testchimp/playwright` rewrites SaaS `featureservice*.testchimp.io` → matching `ingress*.testchimp.io`, or defaults to `https://ingress.testchimp.io`.
    - **`TESTCHIMP_BACKEND_URL` (enterprise / non-prod — BLOCKING when configured):** If MCP `env` defines **`TESTCHIMP_BACKEND_URL`**, the agent **MUST** export it into **every** CLI / runner shell **before** the first `testchimp …` or Playwright spawn. **Do not** call the SaaS/prod default host when a project-specific backend is configured — keys are environment-scoped and a prod call with a staging/enterprise key returns **401**. Only omit / leave unset when the MCP config has **no** `TESTCHIMP_BACKEND_URL` (then the CLI/MCP package default prod host is correct).
    - **`TESTCHIMP_INGRESS_URL` (when configured):** Export into **every Playwright / Mobilewright runner shell** alongside the API key. Prefer this over relying solely on featureservice→ingress rewrite.
-   - **Missing / blank / placeholder API key:** **STOP**; during **`/testchimp init`**, create or merge the project MCP file from [`assets/sample-mcp.json`](assets/sample-mcp.json) (see [Workstation gate](references/init-testchimp.md#workstation-gate-always-first)), ask the user to paste API key + project ID (and backend/ingress URLs when not using SaaS prod), reload MCP, then re-export for the **runner**. For **cloud / CI** agents, inject `TESTCHIMP_API_KEY` from GitHub Actions secrets (or the host’s secret store) into the MCP `env` / job environment — see [Setting up cloud agents](https://docs.testchimp.io/automations/setting-up-cloud-agents).
+   - **Missing / blank / placeholder API key** (and no working remote MCP connection — see the remote bullet above): **STOP**; during **`/testchimp init`**, create or merge the project MCP file from [`assets/sample-mcp.json`](assets/sample-mcp.json) (see [Workstation gate](references/init-testchimp.md#workstation-gate-always-first)), ask the user to paste API key + project ID (and backend/ingress URLs when not using SaaS prod), reload MCP, then re-export for the **runner**. For **cloud / CI** agents, inject `TESTCHIMP_API_KEY` from GitHub Actions secrets (or the host’s secret store) into the MCP `env` / job environment — see [Setting up cloud agents](https://docs.testchimp.io/automations/setting-up-cloud-agents).
    - **On 401 / unauthorized (checklist — do in order):**
      1. Re-read project MCP `env` and confirm **`TESTCHIMP_BACKEND_URL`** / **`TESTCHIMP_INGRESS_URL`** were exported into **this** shell when configured (wrong host is the most common agent failure mode).
      2. Confirm **`TESTCHIMP_API_KEY`** from the **same** MCP entry is exported (not blank/placeholder; never print it).
-     3. Re-run the failing CLI/MCP call; if still 401, ask the user to verify the key for that backend (staging vs prod vs enterprise).
+     3. Re-run the failing CLI/MCP call; if still 401, ask the user to verify the key for that backend (staging vs prod vs enterprise). **Remote MCP setups:** refresh the key with `get-project-credentials` → `testchimp workspace save-creds` (it updates a rotated key in place) instead of asking the user.
    - **Symptoms (same fix):** reporter **disabled**, **401**, missing-key logs → re-apply **#4** (key **and** backend/ingress URLs) on the **runner**/CLI env, then re-run.
    - **Honor config reporters (P0):** Never pass Playwright/Mobilewright CLI **`--reporter`** / **`-r`** — it **replaces** config reporters and drops **`@testchimp/playwright/reporter`** (execution ingest + ExploreChimp **`exploration_end`**). Full rule: [`references/run-explorechimp.md`](references/run-explorechimp.md)#honor-playwright-config-reporters-p0 and [`references/run-qa.md`](references/run-qa.md) non-negotiables.
    - **Never print the key.** **No key-rotation noise** unless leaked or committed.
@@ -169,6 +174,8 @@ Locate a JSON file that registers the TestChimp MCP server. **Do not assume a si
 6. `<project dir>/.github/mcp.json` (when present)
 
 At each ancestor directory from **`.testchimp-tests`** up to the git root, check for mcp.json. Accept the first file whose JSON has **`mcpServers.testchimp`** **or** any `mcpServers` entry whose **`args`** array includes a string containing **`@testchimp/cli`**.
+
+**Remote MCP entries:** An entry with a **`url`** on a TestChimp MCP host (e.g. `https://mcp.testchimp.io/mcp?projectId=<id>`; Codex: `[mcp_servers.testchimp] url = …` in `.codex/config.toml`) also counts as TestChimp, but carries no key. For runner env, keep walking for **`.testchimp/mcp.json`**; if there is none, follow the **Remote MCP (OAuth)** bullet in **Preamble checks #4**. The URL's `projectId` is the project for this repo.
 
 **If walk-up finds nothing:** from the git root, search for files named `mcp.json` or `.mcp.json` (limit to a shallow find; skip `node_modules`, `.git`). Prefer a hit that contains TestChimp as above. Also accept **`.testchimp/mcp.json`** in that search.
 
@@ -247,6 +254,8 @@ Optional layout: a **TestChimp-mapped repo** that is mostly `plans/` + `tests/`,
 Install **`@testchimp/cli@latest`** (see [`references/init-testchimp.md`](references/init-testchimp.md)) and register the MCP server using **`npx`** with **`@testchimp/cli@latest`** and the **`mcp`** subcommand in **`args`**.
 
 **CLI (shell / CI):** Same package exposes the **`testchimp`** binary for calling the same HTTP APIs with flags or **`--json-input`**. See [`references/cli.md`](references/cli.md) for env resolution, stdout/stderr, and when to prefer CLI vs MCP.
+
+**Remote MCP (OAuth, optional and additive):** instead of the local `npx` server, the project MCP file may point at `https://mcp.testchimp.io/mcp?projectId=<id>` ([`assets/sample-mcp.remote.json`](assets/sample-mcp.remote.json)); the IDE signs in with OAuth and no key is pasted. Runners then get the key via **Preamble checks #4** (remote bullet). The manual `npx` + `env` setup below stays the default and keeps working unchanged.
 
 **Reference config:** [`assets/sample-mcp.json`](assets/sample-mcp.json) — shows **`command`**, **`args`** (`-y` + **`@testchimp/cli@latest`** + **`mcp`**), and **`env`** with **`TESTCHIMP_API_KEY`** and **`TESTCHIMP_PROJECT_ID`** placeholders. Cloud/CI template with `${TESTCHIMP_API_KEY}` refs: [`assets/sample-mcp.cloud.json`](assets/sample-mcp.cloud.json). **`/testchimp init`** must **write** this blob into the **project-level** MCP file (create or merge) when missing. Replace placeholders with values from **TestChimp → Project Settings → Key management**; **do not commit** real secrets. Discovery rules: **[Finding project MCP config](#finding-project-mcp-config-testchimp)**.
 

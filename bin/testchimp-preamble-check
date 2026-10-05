@@ -102,7 +102,7 @@ _is_testchimp_mcp() {
 const fs=require('fs');
 try{
   const j=JSON.parse(fs.readFileSync(process.env.MCP_CANDIDATE,'utf8'));
-  const servers=j?.mcpServers||{};
+  const servers=j?.mcpServers||j?.servers||{};
   if (servers.testchimp) process.exit(0);
   for (const s of Object.values(servers)) {
     const args=s?.args;
@@ -263,7 +263,7 @@ function ok(v){
 }
 try{
   const j=JSON.parse(fs.readFileSync(p,'utf8'));
-  const servers=j?.mcpServers||{};
+  const servers=j?.mcpServers||j?.servers||{};
   let entry=servers.testchimp;
   if (!entry) {
     for (const s of Object.values(servers)) {
@@ -278,7 +278,8 @@ try{
   const backend=env.TESTCHIMP_BACKEND_URL;
   const ingress=env.TESTCHIMP_INGRESS_URL;
   const hasServer=!!entry;
-  const isRemote=(entry?.url || entry?.httpUrl || /^(http|streamable-http)$/i.test(String(entry?.type||'')));
+  const remoteUrl=[entry?.url, entry?.httpUrl, entry?.serverUrl].find(u=>typeof u==='string') || '';
+  const isRemote=(!!remoteUrl || /^(http|streamable-http)$/i.test(String(entry?.type||''))) && !entry?.command;
   const isStdio=entry?.command || (entry?.args && Array.isArray(entry.args));
   const backendConfigured=backend && String(backend).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(backend)) && !looksLikeEnvRef(backend);
   const ingressConfigured=ingress && String(ingress).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(ingress)) && !looksLikeEnvRef(ingress);
@@ -290,6 +291,11 @@ try{
   process.stdout.write(`HAS_PROJECT_ID=${ok(pid)?'yes':'no'}\n`);
   process.stdout.write(`HAS_BACKEND_URL=${backendConfigured?'yes':'no'}\n`);
   process.stdout.write(`HAS_INGRESS_URL=${ingressConfigured?'yes':'no'}\n`);
+  if (isRemote && remoteUrl) {
+    let rpid='';
+    try { rpid=new URL(remoteUrl).searchParams.get('projectId')||''; } catch {}
+    if (/^[A-Za-z0-9_-]{1,64}$/.test(rpid)) process.stdout.write(`REMOTE_PROJECT_ID=${rpid}\n`);
+  }
   if (backendConfigured) {
     process.stdout.write(`TESTCHIMP_BACKEND_URL=${String(backend).trim()}\n`);
   }
@@ -314,7 +320,8 @@ NODE
     if [ "${HAS_KEY:-no}" = "yes" ]; then
       _say "TESTCHIMP_API_KEY: present in config (not needed for MCP but useful for test runners; not printed)"
     else
-      _warn "WARN: TESTCHIMP_API_KEY not in MCP config — test runs will need it in the runner process environment"
+      _say "MCP: remote (OAuth) entry${REMOTE_PROJECT_ID:+, projectId $REMOTE_PROJECT_ID} — no key in IDE config (expected)"
+      _warn "ACTION: runner key not saved yet — call MCP get-project-credentials, then pipe projectApiKey to: testchimp workspace save-creds --folder <git root> --project-id <projectId> --backend-url <backendUrl> --ingress-url <ingressUrl> (writes .testchimp/mcp.json; SKILL.md Preamble #4). Never print the key."
     fi
   else
     if [ "${HAS_KEY:-no}" = "yes" ]; then
@@ -332,6 +339,8 @@ NODE
   fi
   if [ "${HAS_PROJECT_ID:-no}" = "yes" ]; then
     _say "TESTCHIMP_PROJECT_ID: present (not printed)"
+  elif [ "${IS_REMOTE:-no}" = "yes" ]; then
+    :
   else
     _warn "WARN: TESTCHIMP_PROJECT_ID missing/placeholder (needed for TrueCoverage RUM instrumentation)"
   fi

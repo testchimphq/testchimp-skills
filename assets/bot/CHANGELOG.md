@@ -5,7 +5,7 @@ Versions of the Grok Bot template manifest (`grok-template.json` → `templateVe
 ## 1.0.3 — skill 1.0.57, CLI ≥ 0.1.88
 
 - One bot per project, one connector per user. The host shares the TestChimp connector across a user's bots, so it now carries only the user. Each bot keeps its own **project binding** (`projectId`, `projectName`, `botId`, `projectApiKey`) as a bot-scoped env var or secret, else in bot memory. It gets the binding with `get-bot-credentials` right after the user authorizes the connector for that bot's project (onboarding step 0).
-- MCP: every tool takes `projectApiKey` and `botId` arguments; bots pass them on every call. CLI: `testchimp bot save-binding` once per computer, then `testchimp --bot <botId> …` (`bot exec` for runners).
+- The CLI is now the bot's preferred path: `testchimp bot save-binding` once per computer, then `testchimp --bot <botId> …` (`bot exec` for runners). It talks to TestChimp directly. MCP tools are for binding (`get-bot-credentials`), AgentWatch pairing approval and as a fallback; every tool takes `projectApiKey` and `botId` arguments, and bots pass them on every call.
 - A second bot no longer moves the first bot to its project: the backend takes the project from the key and the user from the connector.
 - **Existing bots must re-bind.** QA bot calls without a project key now get 403 "no project binding". Replace the instructions with the 1.0.3 text (or reinstall from the template). The bot then runs step 0: the user clicks Authorize on the existing connector, picks the bot's project, and ticks **Use this connection as my QA bot**.
 

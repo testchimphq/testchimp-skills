@@ -8,9 +8,9 @@ Steps 5b, 6 and 6b run on the **user's own computer** through the bot host's acc
 
 **Connector first.** If the TestChimp MCP tools are missing, add the custom MCP server yourself: name `testchimp`, URL `https://mcp.testchimp.io/mcp` (staging: `https://mcp-staging.testchimp.io/mcp`). Don't ask the user for the URL. If another of the user's bots already added it, reuse it; don't add a second one.
 
-**The connector is the user's, not this bot's.** All of the user's bots share it, and it identifies the user only. This bot's project lives in its **binding** (`projectId`, `projectName`, `botId`, `projectApiKey`), stored bot-scoped and sent with every call (MCP: `projectApiKey` + `botId` arguments; CLI: `--bot <botId>`). See the bot instructions § "Your project binding".
+**The connector is the user's, not this bot's.** All of the user's bots share it, and it identifies the user only. This bot's project lives in its **binding** (`projectId`, `projectName`, `botId`, `projectApiKey`), stored bot-scoped and sent with every call (CLI, preferred: `--bot <botId>`; MCP fallback: `projectApiKey` + `botId` arguments). See the bot instructions § "Your project binding".
 
-Before step 1: run [step 0](#0-bind-this-bot-to-a-project) if this bot has no binding yet. Then `get-bot-profile` (CLI: `testchimp --bot <botId> bot get-profile`). Tell the user which TestChimp project and team member this bot represents (`projectName`, `userId`). Wrong project → re-run step 0 for the right one. Run the compat check once ([`bot-self-update.md`](./bot-self-update.md)).
+Before step 1: run [step 0](#0-bind-this-bot-to-a-project) if this bot has no binding yet. Then `testchimp --bot <botId> bot get-profile` (MCP fallback: `get-bot-profile`). Tool names below are the MCP names; prefer the matching `testchimp --bot <botId> …` command. Tell the user which TestChimp project and team member this bot represents (`projectName`, `userId`). Wrong project → re-run step 0 for the right one. Run the compat check once ([`bot-self-update.md`](./bot-self-update.md)).
 
 ## Steps
 
@@ -24,14 +24,14 @@ Run when the bot has no binding (new bot), when calls fail with "no project bind
    - 403 `Requires a QA bot connection` → the box was not ticked, or the connection predates bot bindings. Ask them to authorize again with it ticked.
 4. Confirm the project with the user ("I'm now bound to **<projectName>**"). Wrong project → back to step 2.
 5. Store the binding bot-scoped: per-bot env vars or secrets if the host lets you write them (`TESTCHIMP_PROJECT_ID`, `TESTCHIMP_PROJECT_NAME`, `TESTCHIMP_BOT_ID`, `TESTCHIMP_API_KEY`), otherwise bot memory under "TestChimp binding". Never print the key in chat.
-6. For CLI use on your cloud computer, save it there once (no approval needed: it only writes this bot's own file):
+6. Save it for the CLI on your cloud computer now (no approval needed: it only writes this bot's own file). The CLI is your default way to call TestChimp from here on:
 
    ```bash
    printf '%s' "$KEY" | testchimp bot save-binding --bot-id <botId> --project-id <projectId> --project-name "<projectName>"
    ```
 
    Set `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` on that command for staging, enterprise or self-hosted deployments; the binding remembers them. Do the same on the user's computer (with their approval) before running `testchimp` there.
-7. From now on, pass `projectApiKey` and `botId` on every MCP tool call and `--bot <botId>` on every CLI command.
+7. From now on, use `testchimp --bot <botId> …` for TestChimp calls. Use the MCP tools only for `approve-agentwatch-pairing` or when the CLI fails, and then pass `projectApiKey` and `botId` on every call.
 
 ### 1. Project init status
 
@@ -83,7 +83,15 @@ Also ask for routine preferences (stored in bot memory, not in the profile):
 
 Confirm the summary (role, capabilities, subscriptions, routine times) and get approval. Registration is a mutating action and **replaces** the previous profile and subscriptions atomically.
 
-MCP `register-bot-profile`:
+CLI:
+
+```bash
+testchimp --bot <botId> bot register-profile --role QA_ENGINEER \
+  --capability E2E_AUTHORING --capability TEST_BATCH_FIX \
+  --subscriptions-json '[{"eventType":"git-push","filters":[{"field":"author","op":"eq","value":"me"}]},{"eventType":"e2e-batch-completed"},{"eventType":"k6-batch-completed"}]'
+```
+
+MCP fallback, `register-bot-profile` with your binding arguments:
 
 ```json
 {
@@ -97,15 +105,7 @@ MCP `register-bot-profile`:
 }
 ```
 
-CLI:
-
-```bash
-testchimp --bot <botId> bot register-profile --role QA_ENGINEER \
-  --capability E2E_AUTHORING --capability TEST_BATCH_FIX \
-  --subscriptions-json '[{"eventType":"git-push","filters":[{"field":"author","op":"eq","value":"me"}]},{"eventType":"e2e-batch-completed"},{"eventType":"k6-batch-completed"}]'
-```
-
-`botId` comes from your binding (MCP `botId` argument / CLI `--bot`), so omit it from the body.
+`botId` comes from your binding (CLI `--bot` / MCP `botId` argument), so omit it from the body.
 
 ### 5. Webhook
 

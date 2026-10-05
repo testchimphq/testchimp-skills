@@ -23,7 +23,7 @@ Your bot host runs you on its own (cloud) computer. Your user's computer is a di
 | Run on | Commands | Why |
 |---|---|---|
 | **Your user's computer, always** | `testchimp workspace map` / `get`, `testchimp bot connect` / `disconnect`, `npx -y @testchimp/agentwatch …`, `git log` / `git diff` in the mapped folder, local test runs, installing the CLI for these | AgentWatch reads the coding-agent chats (Cursor, Claude Code, …) and the repo clone on that machine. `~/.testchimp/projects.json` and `~/.testchimp/agentwatch/credentials.json` must live there. `bot connect --pair` / `--finish-pair` keep the pairing verifier there. Never run `bot connect` without `--pair`: it opens a second browser consent the user doesn't need. |
-| Either | TestChimp API calls (MCP tools with your binding's `projectApiKey` + `botId` arguments, or `testchimp --bot <botId> <tool>` once `testchimp bot save-binding` ran on that computer), acks, reminders, digests | They only talk to TestChimp. The connector is your user's and shared with their other bots, so your binding, not the connector, decides the project. |
+| Either (your cloud computer by default) | TestChimp API calls (`testchimp --bot <botId> <tool>` once `testchimp bot save-binding` ran on that computer; MCP tools with your binding's `projectApiKey` + `botId` arguments only as the fallback), acks, reminders, digests | They only talk to TestChimp. The connector is your user's and shared with their other bots, so your binding, not the connector, decides the project. |
 
 - **Never run the local commands on your own computer.** A folder mapped there is not the user's repo, keys stored there are on the wrong machine, and AgentWatch there sees none of the user's chats, so its "no decisions" answer would be wrong rather than empty.
 - **No access to the user's computer yet:** ask them to grant it and say why (folder mapping and AgentWatch need their repo and their coding-agent chats). Until they do, skip local flows and say so once. Do not fall back to your own computer.
@@ -61,8 +61,8 @@ Your bot host runs you on its own (cloud) computer. Your user's computer is a di
 2. Group events by type and collapse duplicates (several `git-push` on the same `branch` → evaluate the latest `after` only, using the union of their `commits`).
 3. For each event, follow the matching section below: summarise in one or two lines, propose the next step, wait for approval.
 4. **Ack** every `eventId` in the delivery once handled or consciously ignored:
-   - MCP: `ack-bot-events` with `{ "eventIds": [...], "ackUrl": "<delivery ackUrl>", "projectApiKey": "…", "botId": "…" }` (max 100 per call).
-   - CLI: `testchimp --bot <botId> bot ack <eventId>... --ack-url <ackUrl>`.
+   - CLI (preferred): `testchimp --bot <botId> bot ack <eventId>... --ack-url <ackUrl>`.
+   - MCP fallback: `ack-bot-events` with `{ "eventIds": [...], "ackUrl": "<delivery ackUrl>", "projectApiKey": "…", "botId": "…" }` (max 100 per call).
    Ack **after** you have proposed (or decided to ignore or wait), not after the user finishes the work. Waiting for approval does not keep the event open, because your proposal is in the conversation.
 5. Inspect ack results: `BOT_ACK_ACCEPTED` / `BOT_ACK_ACKED` / `BOT_ACK_ALREADY_ACKED` / `BOT_ACK_EXPIRED_RECORDED` are fine. `BOT_ACK_UNKNOWN_EVENT`, `BOT_ACK_NOT_A_TARGET`, `BOT_ACK_MISSING_BOT_ID` mean a wrong id or bot identity. Tell the user once. The usual cause is a missing or wrong binding (`botId` / `projectApiKey` not passed, or from another bot); re-check your stored binding and re-run onboarding step 0 if needed. A "does not support bot acks yet" error means the deployment is older. Tell the user and stop retrying.
 
@@ -259,7 +259,7 @@ Once a day (and on startup): [`bot-self-update.md`](./bot-self-update.md). Updat
 
 ### Weekday reminder (default: weekdays, user-chosen time)
 
-`get-my-tasks` (MCP: binding arguments only; CLI: `testchimp --bot <botId> get-my-tasks`, the bot's user is implied). Send a short digest only when there is something to say:
+`testchimp --bot <botId> get-my-tasks` (the bot's user is implied; MCP fallback: `get-my-tasks` with the binding arguments). Send a short digest only when there is something to say:
 
 - Manual scenarios assigned (title + test run link), oldest first.
 - Issues assigned (ordinal, severity, due date; overdue first).
