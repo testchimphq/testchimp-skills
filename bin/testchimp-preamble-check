@@ -188,7 +188,8 @@ if [ -z "${MCP_JSON:-}" ] || [ "${HAS_SERVER:-no}" = "no" ]; then
 const fs=require('fs');
 try {
   const s=JSON.parse(fs.readFileSync(process.env.SETTINGS,'utf8'));
-  const enabled=s?.enabledPlugins||[];
+  const ep=s?.enabledPlugins||{};
+  const enabled=Array.isArray(ep)?ep:Object.keys(ep).filter(k=>ep[k]!==false);
   if (enabled.some(p=>String(p).includes('testchimp'))) process.stdout.write('yes');
   else process.stdout.write('no');
 } catch { process.stdout.write('no'); }
