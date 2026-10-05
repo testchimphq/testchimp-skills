@@ -41,7 +41,24 @@ The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.
 
 **OAuth + bot identity (CLI ≥ 0.1.85):** `TESTCHIMP_OAUTH_TOKEN` (an OAuth access token issued by featureservice) is sent as `Authorization: Bearer`; when set, `TESTCHIMP_API_KEY` is optional. When both are sent, the bearer names the user and the key names the project. QA bots: see [QA bots § Project binding](#project-binding-cli--0188) (`--bot <botId>`). `TESTCHIMP_BOT_ID` (1–64 printable ASCII, no spaces) is sent as the `bot-id` header for QA-bot attribution; invalid values are ignored with a single stderr warning. Never print either value.
 
-**401 remediation order:** (1) export `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` from MCP if configured → (2) export `TESTCHIMP_API_KEY` from the same entry → (3) retry.
+**401 remediation order:** (1) export `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` from MCP if configured → (2) export `TESTCHIMP_API_KEY` from the same entry → (3) retry. Remote MCP setups: refresh `.testchimp/mcp.json` with `get-project-credentials` → `workspace save-creds` before asking the user.
+
+**`.testchimp/mcp.json` fallback (CLI ≥ 0.1.90):** When neither `TESTCHIMP_API_KEY` nor `TESTCHIMP_OAUTH_TOKEN` is set (and no `--bot` / `TESTCHIMP_BOT_ID`), the CLI itself reads `TESTCHIMP_API_KEY`, `TESTCHIMP_PROJECT_ID`, `TESTCHIMP_BACKEND_URL` and `TESTCHIMP_INGRESS_URL` from the nearest `.testchimp/mcp.json` at or above the current directory (written by TestChimp Studio or `workspace save-creds`) and notes the file on stderr. Exported variables always win. The file must be mode 0600 (Studio and `save-creds` write it that way); other copies are ignored with a stderr warning. Playwright / Mobilewright / k6 do **not** read this file — keep exporting for runners per steps 1–4.
+
+### Remote MCP (OAuth) and runner keys (CLI ≥ 0.1.90)
+
+Remote MCP is an **additional** way to connect; manual `npx` + `env` and Studio setups keep working unchanged.
+
+- **Per-project URL:** `https://mcp.testchimp.io/mcp?projectId=<id>` in the project MCP file (`url` entry, no `env`). Every tool call acts on that project; TestChimp checks the signed-in user is a member. One sign-in covers all of the user's projects. Plain `/mcp` uses the project picked on the consent page. A QA bot's `projectApiKey` argument still wins over the URL.
+- **Runner key:** remote entries carry no key, so local runners get it once per repo:
+
+```bash
+# get-project-credentials (MCP) → projectId, projectName, projectApiKey, backendUrl, ingressUrl
+printf '%s' "<projectApiKey>" | testchimp workspace save-creds --folder <git root> --project-id <projectId> \
+  --project-name "<projectName>" --backend-url <backendUrl> --ingress-url <ingressUrl> [--reassign]
+```
+
+`workspace save-creds` writes `<folder>/.testchimp/mcp.json` in TestChimp Studio's exact format (mode 0600, other servers kept), adds `.testchimp/` to `.gitignore`, and maps the folder in `~/.testchimp/projects.json`. The key is read from stdin only and never printed. Output: `{projectId, status: written|updated|unchanged, folder, mcpJsonPath, gitignoreUpdated}`. An existing entry for the same project is kept (only a rotated key is refreshed); another project's entry needs `--reassign`.
 
 ## Quick invoke
 
@@ -1633,7 +1650,7 @@ Used by QA-bot mode ([`bot-playbook.md`](./bot-playbook.md), [`bot-onboarding.md
 The bot host shares one TestChimp connector (one OAuth token, the user's) across all of a user's bots, so the connector names the **user** only. Each bot names its **project** with its own binding (`projectId`, `projectName`, `botId`, `projectApiKey`), fetched once with `get-bot-credentials` right after the user authorizes the connector for that bot's project, and stored bot-scoped.
 
 - **Preferred path:** QA bots use the CLI (below) for TestChimp calls; it goes straight to featureservice / ingress. The remote MCP is for `get-bot-credentials`, `approve-agentwatch-pairing` and as a fallback.
-- **Remote MCP:** every tool takes optional `projectApiKey` and `botId` arguments. They are sent as `TestChimp-Api-Key` / `bot-id` alongside the connector's bearer: the key decides the project (the user must be a member) and the bearer decides the user. A QA bot token without a key gets 403 "no project binding", except on `get-bot-credentials` and `get-bot-compat`.
+- **Remote MCP:** every tool takes optional `projectApiKey` and `botId` arguments. They are sent as `TestChimp-Api-Key` / `bot-id` alongside the connector's bearer: the key decides the project (the user must be a member) and the bearer decides the user. A QA bot token without a key gets 403 "no project binding", except on `get-bot-credentials` and `get-bot-compat`. A remote MCP URL's `?projectId=` does not replace the key for bot tokens (naming another project still gets 403); keep sending `projectApiKey`.
 - **CLI:** save the binding once per computer, then add `--bot <botId>` to every command. It loads `~/.testchimp/bots/<botId>.json` and sets `TESTCHIMP_API_KEY`, `TESTCHIMP_BOT_ID` and the stored backend / ingress URLs for that command. These override inherited env, and an inherited `TESTCHIMP_OAUTH_TOKEN` is dropped. With only `TESTCHIMP_BOT_ID` set (no key, no token), the CLI loads that bot's binding if it has one. When an API-key caller sends `bot-id`, it acts as that bot's user, so `--user-id` isn't needed.
 
 | Command | Notes |

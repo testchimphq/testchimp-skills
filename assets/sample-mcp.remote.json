@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "testchimp": {
+      "url": "https://mcp.testchimp.io/mcp?projectId=<project-id>"
+    }
+  }
+}
