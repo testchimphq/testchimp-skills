@@ -28,6 +28,22 @@ Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environmen
 
 **Claude Code plugin:** run `/plugin marketplace add testchimphq/testchimp-skills`, then `/plugin install testchimp@testchimp`. It installs the same skill; update it with `/plugin marketplace update testchimp` instead of `git pull`.
 
+### Install by host
+
+| Host | Install |
+| --- | --- |
+| Any agent (skill) | `npx skills add testchimphq/testchimp-skills` |
+| Claude Code | `/plugin marketplace add testchimphq/testchimp-skills` then `/plugin install testchimp@testchimp` |
+| Cursor | Cursor Marketplace (search TestChimp), or clone this repo as a Cursor plugin |
+| Gemini CLI | `gemini extensions install https://github.com/testchimphq/testchimp-skills` |
+| Kiro | Powers panel: import this repo (Agent Plugins `plugin.json`) |
+| VS Code / GitHub Copilot | Install from the agent plugins gallery, or add the MCP server below |
+| Codex / ChatGPT | Plugin directory once listed; or load this repo as a plugin |
+| MCP only (hosted) | `https://mcp.testchimp.io/mcp` (OAuth) |
+| MCP only (stdio) | `npx -y @testchimp/cli@latest mcp` with `TESTCHIMP_API_KEY` |
+
+See [`llms-install.md`](llms-install.md) for copy-paste MCP config.
+
 **Entrypoint:** `SKILL.md` — then load the matching `references/*.md` (and default policy under `assets/policies/` when seeding).
 
 ---

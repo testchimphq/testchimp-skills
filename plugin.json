@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "testchimp",
+  "version": "1.0.58",
+  "description": "QA platform for coding agents. Agents read consolidated coverage signals (scenario, API contract, TrueCoverage from real users, observability) and manage test plans in the repo; humans get verified tests, QA posture and release governance.",
+  "author": { "name": "TestChimp", "url": "https://testchimp.io" },
+  "homepage": "https://testchimp.io",
+  "repository": "https://github.com/testchimphq/testchimp-skills",
+  "license": "MIT",
+  "keywords": ["qa", "quality-assurance", "testing", "test-automation", "e2e-testing", "api-testing", "test-coverage", "api-contract-coverage", "playwright", "test-plans", "regression-testing", "smoke-testing", "flaky-tests", "release-readiness", "release-governance", "verified-tests", "truecoverage", "performance-testing", "k6", "mcp"]
+}

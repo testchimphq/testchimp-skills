@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "testchimp": {
+      "type": "http",
+      "url": "https://mcp.testchimp.io/mcp"
+    }
+  }
+}
