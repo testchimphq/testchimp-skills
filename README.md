@@ -44,6 +44,8 @@ Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environmen
 
 See [`llms-install.md`](llms-install.md) for copy-paste MCP config.
 
+**Install the MCP server per project, not globally.** TestChimp API keys are scoped to one project, so put the config in the app repo (Cursor: `.cursor/mcp.json`; Claude Code: `.mcp.json`) rather than your user-level config. With the hosted server you pick the project during OAuth sign-in; with stdio, set `TESTCHIMP_API_KEY` to that project's key.
+
 **Entrypoint:** `SKILL.md` — then load the matching `references/*.md` (and default policy under `assets/policies/` when seeding).
 
 ---
