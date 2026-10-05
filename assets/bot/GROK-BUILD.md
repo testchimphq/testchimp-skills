@@ -65,7 +65,7 @@ If Grok Bot has **no** webhook-triggered routine, or it can't pass the request b
 
 - **The TestChimp MCP connector.** Templates don't carry custom MCP servers. The instructions make each user's bot add `https://mcp.testchimp.io/mcp` itself on first run. Don't add it to this Bot. If you need to check that the server is reachable, report its metadata: `https://mcp.testchimp.io/.well-known/oauth-protected-resource` should return JSON with `"resource":"https://mcp.testchimp.io/mcp"`.
 - Any memories about the maintainer, their projects or this build conversation.
-- API keys, tokens, webhook URLs or keys, or local file paths.
+- API keys, tokens, webhook URLs or keys, or local file paths. That includes a TestChimp project binding: each user's bot fetches its own after they authorize.
 - Access to the maintainer's computer as a saved setting, if Grok Bot stores that per Bot. Each user grants their own.
 
 ### 7. Check the Bot before sharing
@@ -104,6 +104,8 @@ Write `assets/bot/grok-build-report.md` in this repo on the maintainer's compute
 
 ## Grok Bot behaviour we need to know
 - Can a Bot add a custom MCP server from chat? Exact user steps (Add / Authorize cards)?
+- Is a connector shared by all of a user's Bots? Can a second Bot re-run Authorize on it (to pick another project)?
+- Per-Bot storage for the project binding: per-Bot env vars or secrets? Bot-scoped memory? Can one Bot read another's?
 - How does a Bot run commands on the user's computer (per-command approval? Node.js / npm available? can it open the user's browser)?
 - Anything in instructions.md or the skill that Grok Bot couldn't follow or represent
 

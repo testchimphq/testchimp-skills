@@ -2,6 +2,13 @@
 
 Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
 
+## 1.0.3 — skill 1.0.57, CLI ≥ 0.1.88
+
+- One bot per project, one connector per user. The host shares the TestChimp connector across a user's bots, so it now carries only the user. Each bot keeps its own **project binding** (`projectId`, `projectName`, `botId`, `projectApiKey`) as a bot-scoped env var or secret, else in bot memory. It gets the binding with `get-bot-credentials` right after the user authorizes the connector for that bot's project (onboarding step 0).
+- MCP: every tool takes `projectApiKey` and `botId` arguments; bots pass them on every call. CLI: `testchimp bot save-binding` once per computer, then `testchimp --bot <botId> …` (`bot exec` for runners).
+- A second bot no longer moves the first bot to its project: the backend takes the project from the key and the user from the connector.
+- **Existing bots must re-bind.** QA bot calls without a project key now get 403 "no project binding". Replace the instructions with the 1.0.3 text (or reinstall from the template). The bot then runs step 0: the user clicks Authorize on the existing connector, picks the bot's project, and ticks **Use this connection as my QA bot**.
+
 ## 1.0.2 — skill 1.0.56, CLI ≥ 0.1.87
 
 - Daily self-update is automatic: the routine looks up the latest skill (`SKILL.md` on `main`) and CLI (npm) versions at run time and updates anything older on the bot's cloud computer without asking; updating the CLI on the user's computer still asks first. It tells the user only what was updated or failed. Instructions pre-approve the cloud-computer updates (hard rule 1) and install the latest CLI instead of a pinned minimum.

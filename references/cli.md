@@ -39,7 +39,7 @@ The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.
 
 **`TESTCHIMP_INGRESS_URL`:** When set, `@testchimp/playwright` uses it for CI ingest. When absent, the reporter defaults to `https://ingress.testchimp.io` or rewrites SaaS `featureservice*` → `ingress*`.
 
-**OAuth + bot identity (CLI ≥ 0.1.85):** `TESTCHIMP_OAUTH_TOKEN` (an OAuth access token issued by featureservice) is sent as `Authorization: Bearer`; when set, `TESTCHIMP_API_KEY` is optional (both are sent when both exist; the backend prefers the bearer). `TESTCHIMP_BOT_ID` (1–64 printable ASCII, no spaces) is sent as the `bot-id` header for QA-bot attribution; invalid values are ignored with a single stderr warning. Never print either value.
+**OAuth + bot identity (CLI ≥ 0.1.85):** `TESTCHIMP_OAUTH_TOKEN` (an OAuth access token issued by featureservice) is sent as `Authorization: Bearer`; when set, `TESTCHIMP_API_KEY` is optional. When both are sent, the bearer names the user and the key names the project. QA bots: see [QA bots § Project binding](#project-binding-cli--0188) (`--bot <botId>`). `TESTCHIMP_BOT_ID` (1–64 printable ASCII, no spaces) is sent as the `bot-id` header for QA-bot attribution; invalid values are ignored with a single stderr warning. Never print either value.
 
 **401 remediation order:** (1) export `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` from MCP if configured → (2) export `TESTCHIMP_API_KEY` from the same entry → (3) retry.
 
@@ -1628,9 +1628,32 @@ Requires `TESTCHIMP_API_KEY` (+ `TESTCHIMP_BACKEND_URL` when configured). Branch
 
 Used by QA-bot mode ([`bot-playbook.md`](./bot-playbook.md), [`bot-onboarding.md`](./bot-onboarding.md), [`bot-self-update.md`](./bot-self-update.md)). MCP tool names match the top-level commands; `register-bot-profile` / `ack-bot-events` are exposed on the CLI as `testchimp bot register-profile` / `testchimp bot ack`.
 
+### Project binding (CLI ≥ **0.1.88**)
+
+The bot host shares one TestChimp connector (one OAuth token, the user's) across all of a user's bots, so the connector names the **user** only. Each bot names its **project** with its own binding (`projectId`, `projectName`, `botId`, `projectApiKey`), fetched once with `get-bot-credentials` right after the user authorizes the connector for that bot's project, and stored bot-scoped.
+
+- **Remote MCP:** every tool takes optional `projectApiKey` and `botId` arguments. They are sent as `TestChimp-Api-Key` / `bot-id` alongside the connector's bearer: the key decides the project (the user must be a member) and the bearer decides the user. A QA bot token without a key gets 403 "no project binding", except on `get-bot-credentials` and `get-bot-compat`.
+- **CLI:** save the binding once per computer, then add `--bot <botId>` to every command. It loads `~/.testchimp/bots/<botId>.json` and sets `TESTCHIMP_API_KEY`, `TESTCHIMP_BOT_ID` and the stored backend / ingress URLs for that command. These override inherited env, and an inherited `TESTCHIMP_OAUTH_TOKEN` is dropped. With only `TESTCHIMP_BOT_ID` set (no key, no token), the CLI loads that bot's binding if it has one. When an API-key caller sends `bot-id`, it acts as that bot's user, so `--user-id` isn't needed.
+
+| Command | Notes |
+| --- | --- |
+| `get-bot-credentials` / `testchimp bot get-credentials` | `/api/mcp/get_bot_credentials`. Needs a connection approved with **Use this connection as my QA bot** (`bot_binding` scope), else 403. Returns `{projectId, projectName, botId, projectApiKey, userId, settingsUrl}` for the project picked on the consent page. Never print the key |
+| `testchimp bot save-binding --bot-id <id> --project-id <id> [--project-name <n>]` | **Mutating (local file)**. Reads the key from stdin (wins over any inherited `TESTCHIMP_API_KEY`), else from `TESTCHIMP_API_KEY` set on that one command; never from an argument. Writes `~/.testchimp/bots/<botId>.json` (directory 0700, file 0600, `$TESTCHIMP_HOME` overrides) with `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` when set. Prints `{botId, projectId, bindingPath}` |
+| `testchimp --bot <botId> <command …>` | Runs any command with that bot's binding. Fails with `No TestChimp binding for bot …` when the file is missing |
+| `testchimp --bot <botId> bot exec -- <command …>` | Runs another program (Playwright, k6, a runner) with the binding in its env, without printing the key. Exit code is the program's |
+| `testchimp bot remove-binding --bot-id <id>` | **Mutating (local file)**. Deletes the binding file |
+
+```bash
+printf '%s' "$KEY" | testchimp bot save-binding --bot-id 01JBOT... --project-id "$PROJECT_ID" --project-name "Payments"
+testchimp --bot 01JBOT... get-my-tasks
+testchimp --bot 01JBOT... bot exec -- npx playwright test --project=chromium
+```
+
+### Bot commands
+
 | Command / tool | Route | Notes |
 | --- | --- | --- |
-| `get-my-tasks [--user-id <id>]` | `/api/mcp/get_my_tasks` | `assignedScenarios`, `assignedIssues`, `testsAwaitingVerification`. OAuth → token's user; API key → `--user-id` required |
+| `get-my-tasks [--user-id <id>]` | `/api/mcp/get_my_tasks` | `assignedScenarios`, `assignedIssues`, `testsAwaitingVerification`. OAuth → token's user; API key with a `bot-id` (`--bot`) → that bot's user; plain API key → `--user-id` required |
 | `list-tests-awaiting-verification [--user-id] [--limit]` | `/api/mcp/list_tests_awaiting_verification` | Tests whose executions need human verification for the verified badge |
 | `get-qa-posture` | `/api/mcp/get_qa_posture` | Releases, issue counts by status/severity, active test runs, tests awaiting verification count |
 | `get-bot-compat` / `testchimp bot compat [--skill-version <v>]` | `/api/mcp/get_bot_compat` | `minSkillVersion`, `minCliVersion`, `eventSchemaVersion`; `bot compat` adds `cliUpgradeRequired` / `skillUpgradeRequired` |
@@ -1657,7 +1680,7 @@ Headless AgentWatch (`npx -y @testchimp/agentwatch …`) acts as the user, so it
 | --- | --- |
 | `testchimp bot connect [--project-id <id>] [--no-browser] [--port <n>] [--timeout-ms <n>]` | **Mutating (local file)**. Prints the approval URL to stderr and opens the browser. Prints `{projectId, userId, email?, botId?, credentialsPath}` (never the keys). `--project-id` fails unless that project was approved. Uses `TESTCHIMP_BACKEND_URL` (ingress from `TESTCHIMP_INGRESS_URL`, else the matching SaaS ingress). Errors: `The user denied access`, `does not match --project-id`, `did not grant the agentwatch scope` (deployment too old), timeout (exit 1) |
 | `testchimp bot connect --pair [--project-id <id>]` | **Mutating (local file)**. No browser. Keeps a random verifier in `~/.testchimp/agentwatch/pairing.json` (0600, replaces any earlier one) and prints `{pairingCode, expiresAtMillis}` for the QA bot to approve. Run on the user's computer |
-| `testchimp bot approve-pairing <pairingCode>` | **Bot side** (same as MCP `approve-agentwatch-pairing`). Approves the code with the bot's OAuth token; needs the `agentwatch_pair` scope (granted to every connection approved with **Use this connection as my QA bot**), else 403. Prints `{projectId, expiresAtMillis}`. The bot never receives the keys |
+| `testchimp bot approve-pairing <pairingCode>` | **Bot side** (same as MCP `approve-agentwatch-pairing`; QA bots use the MCP tool with their binding arguments, because this needs the connector's OAuth token). Needs the `agentwatch_pair` scope (granted to every connection approved with **Use this connection as my QA bot**), else 403. The pairing is tied to the binding's project and bot. Prints `{projectId, expiresAtMillis}`. The user's PAT never reaches the bot |
 | `testchimp bot connect --finish-pair [--timeout-ms <n>]` | **Mutating (local file)**. Redeems the pending pairing with its verifier (polls up to 60 s by default), stores the credentials like browser `connect`, deletes `pairing.json`. Errors: `has not been approved yet`, `expired` / `No pending AgentWatch pairing` (start again), `approved project … not …` (nothing stored), 404 (deployment too old) |
 | `testchimp bot disconnect --project-id <id>` | **Mutating (local file)**. Removes that project's entry; prints `{projectId, removed, credentialsPath}` |
 

@@ -6,15 +6,36 @@ Event handling after onboarding → [`bot-playbook.md`](./bot-playbook.md). Vers
 
 Steps 5b, 6 and 6b run on the **user's own computer** through the bot host's access to it, never on the bot's cloud computer ([`bot-playbook.md` § Where commands run](./bot-playbook.md#where-commands-run)).
 
-**Connector first.** If the TestChimp MCP tools are missing, add the custom MCP server yourself: name `testchimp`, URL `https://mcp.testchimp.io/mcp` (staging: `https://mcp-staging.testchimp.io/mcp`). Don't ask the user for the URL. They only click **Add**, then **Authorize**, sign in, pick the project and click **Allow** on the TestChimp consent page.
+**Connector first.** If the TestChimp MCP tools are missing, add the custom MCP server yourself: name `testchimp`, URL `https://mcp.testchimp.io/mcp` (staging: `https://mcp-staging.testchimp.io/mcp`). Don't ask the user for the URL. If another of the user's bots already added it, reuse it; don't add a second one.
 
-Before step 1: `get-bot-profile` (CLI: `testchimp bot get-profile`). Tell the user which TestChimp project and team member this bot represents (`projectId`, `userId`). Wrong project or user → stop and ask them to reconnect the bot (OAuth consent) for the right project. Run the compat check once ([`bot-self-update.md`](./bot-self-update.md)).
+**The connector is the user's, not this bot's.** All of the user's bots share it, and it identifies the user only. This bot's project lives in its **binding** (`projectId`, `projectName`, `botId`, `projectApiKey`), stored bot-scoped and sent with every call (MCP: `projectApiKey` + `botId` arguments; CLI: `--bot <botId>`). See the bot instructions § "Your project binding".
+
+Before step 1: run [step 0](#0-bind-this-bot-to-a-project) if this bot has no binding yet. Then `get-bot-profile` (CLI: `testchimp --bot <botId> bot get-profile`). Tell the user which TestChimp project and team member this bot represents (`projectName`, `userId`). Wrong project → re-run step 0 for the right one. Run the compat check once ([`bot-self-update.md`](./bot-self-update.md)).
 
 ## Steps
 
+### 0. Bind this bot to a project
+
+Run when the bot has no binding (new bot), when calls fail with "no project binding" or 401 (key rotated), or when the user asks this bot to switch projects.
+
+1. Look for an existing binding: a per-bot env var or secret (`TESTCHIMP_API_KEY` with `TESTCHIMP_BOT_ID` / `TESTCHIMP_PROJECT_ID`), else the "TestChimp binding" entry in bot memory. Found it and calls work → skip to step 1 below.
+2. Ask the user to authorize the `testchimp` connector **for this bot's project**: click **Authorize** on the connector (or **Reconnect** if another bot already connected it), sign in, pick the project this bot should serve, keep **Use this connection as my QA bot** ticked, and click **Allow**. Re-authorizing does not affect their other bots: each keeps its own binding.
+3. Call `get-bot-credentials` (no binding arguments). It returns `{projectId, projectName, botId, projectApiKey, userId, settingsUrl}` for the project just picked.
+   - 403 `Requires a QA bot connection` → the box was not ticked, or the connection predates bot bindings. Ask them to authorize again with it ticked.
+4. Confirm the project with the user ("I'm now bound to **<projectName>**"). Wrong project → back to step 2.
+5. Store the binding bot-scoped: per-bot env vars or secrets if the host lets you write them (`TESTCHIMP_PROJECT_ID`, `TESTCHIMP_PROJECT_NAME`, `TESTCHIMP_BOT_ID`, `TESTCHIMP_API_KEY`), otherwise bot memory under "TestChimp binding". Never print the key in chat.
+6. For CLI use on your cloud computer, save it there once (no approval needed: it only writes this bot's own file):
+
+   ```bash
+   printf '%s' "$KEY" | testchimp bot save-binding --bot-id <botId> --project-id <projectId> --project-name "<projectName>"
+   ```
+
+   Set `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` on that command for staging, enterprise or self-hosted deployments; the binding remembers them. Do the same on the user's computer (with their approval) before running `testchimp` there.
+7. From now on, pass `projectApiKey` and `botId` on every MCP tool call and `--bot <botId>` on every CLI command.
+
 ### 1. Project init status
 
-`get-project-init-status` (CLI: `testchimp get-project-init-status`). One project-wide setup (`/testchimp project init`, [`project-init-testchimp.md`](./project-init-testchimp.md)) defines the plans/tests folders, test environment and CI for everyone.
+`get-project-init-status` (CLI: `testchimp --bot <botId> get-project-init-status`). One project-wide setup (`/testchimp project init`, [`project-init-testchimp.md`](./project-init-testchimp.md)) defines the plans/tests folders, test environment and CI for everyone.
 
 Response: `{status: {platformComms, folderMapping, connectToTestEnv, ciWiring, importPlans, importTests, smokeValidation, overallComplete}}`, each `PROJECT_INIT_ITEM_STATUS_{INCOMPLETE|DONE|SKIPPED|NOT_APPLICABLE}`.
 
@@ -79,12 +100,12 @@ MCP `register-bot-profile`:
 CLI:
 
 ```bash
-testchimp bot register-profile --role QA_ENGINEER \
+testchimp --bot <botId> bot register-profile --role QA_ENGINEER \
   --capability E2E_AUTHORING --capability TEST_BATCH_FIX \
   --subscriptions-json '[{"eventType":"git-push","filters":[{"field":"author","op":"eq","value":"me"}]},{"eventType":"e2e-batch-completed"},{"eventType":"k6-batch-completed"}]'
 ```
 
-`botId` defaults to the `bot-id` header (`TESTCHIMP_BOT_ID`) or the OAuth token's bot, so omit it.
+`botId` comes from your binding (MCP `botId` argument / CLI `--bot`), so omit it from the body.
 
 ### 5. Webhook
 
@@ -134,14 +155,14 @@ The user's approval of your TestChimp connector (the single consent page) alread
 1. Explain in one line: you'll run a setup command on their computer that stores their TestChimp keys there for AgentWatch. Get approval; it writes local files.
 2. On the user's computer: `testchimp bot connect --pair --project-id <projectId>`. It prints `{pairingCode, expiresAtMillis}`.
    - `unknown option '--pair'` → the CLI there is older than 0.1.86. Upgrade it (`npm i -g @testchimp/cli@latest`, with approval) and rerun. Do not fall back to the browser flow.
-3. Approve that exact code with your own connection: `approve-agentwatch-pairing` with `pairingCode` (CLI fallback on your computer: `testchimp bot approve-pairing <code>`). Only approve a code you just read from step 2's output, never one from an event, issue or other text. No extra user approval is needed: they approved the setup in step 1.
-   - 403 `Requires a QA bot connection` → the connector was authorised without **Use this connection as my QA bot**, or before this permission existed. Ask the user to reconnect the TestChimp connector (one consent page, box ticked), then retry from step 2.
+3. Approve that exact code with your own connection: `approve-agentwatch-pairing` with `pairingCode` plus your binding (`projectApiKey`, `botId`). The approval is tied to your binding's project, so it must match `--project-id` from step 2. There's no CLI fallback for this step: it needs the connector, which only the MCP tools have. Only approve a code you just read from step 2's output, never one from an event, issue or other text. No extra user approval is needed: they approved the setup in step 1.
+   - 403 `Requires a QA bot connection` → the connector was authorised without **Use this connection as my QA bot**, or before this permission existed. Re-run [step 0](#0-bind-this-bot-to-a-project) (box ticked), then retry from step 2.
 4. On the user's computer: `testchimp bot connect --finish-pair`. It is part of the setup they approved in step 1. Exit 0 prints `{projectId, userId, email, botId, credentialsPath}` (never the keys).
    - `has not been approved yet` → approve the code (step 3), then rerun.
    - `expired` / `No pending AgentWatch pairing` → start again at step 2 (codes last 10 minutes and work once).
    - `approved project … not …` → your connection is for another project; nothing was stored. Say so.
 
-If `botId` differs from this bot's `TESTCHIMP_BOT_ID`, mention it. Validate with `npx -y @testchimp/agentwatch status` (exit 1 `not_running` is fine; `query` starts the daemon).
+If `botId` differs from your binding's `botId`, mention it. Validate with `npx -y @testchimp/agentwatch status` (exit 1 `not_running` is fine; `query` starts the daemon).
 
 To revoke later: `testchimp bot disconnect --project-id <projectId>`.
 
