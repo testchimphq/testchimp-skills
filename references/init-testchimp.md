@@ -20,10 +20,11 @@ Include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-aut
 
 ## Workstation gate (always first)
 
-1. **Project MCP file** — if a working TestChimp entry already exists (manual `npx` + `env`, TestChimp Studio's `.testchimp/mcp.json`, or a remote `url`), keep it. Otherwise offer the setups below; **manual is the default** unless the user picks another:
-   - **Manual (default):** create or merge from [`../assets/sample-mcp.json`](../assets/sample-mcp.json) (`.cursor/mcp.json`, `.mcp.json`, or Codex `config.toml`). Real **`TESTCHIMP_API_KEY`** + **`TESTCHIMP_PROJECT_ID`**; reload MCP after edits.
+1. **Project MCP file** — if TestChimp MCP tools are already available in the session (e.g. plugin-provided server) or a working TestChimp entry already exists (manual `npx` + `env`, TestChimp Studio's `.testchimp/mcp.json`, or a remote `url`), keep it. Otherwise offer the setups below; **manual is the default** unless the user picks another:
+   - **Manual (default):** create or merge from [`../assets/sample-mcp.json`](../assets/sample-mcp.json) (`.cursor/mcp.json`, `.mcp.json`, or Codex `config.toml`). Real **`TESTCHIMP_API_KEY`** + **`TESTCHIMP_PROJECT_ID`** (and **`TESTCHIMP_USER_ID`** when known — needed for get-my-tasks / list-tests-awaiting-verification and run attribution); reload MCP after edits.
    - **TestChimp Studio:** map the folder in Studio; it writes `.testchimp/mcp.json` with the key. Nothing to paste.
    - **Remote MCP (OAuth):** see [Remote MCP (OAuth) setup](#remote-mcp-oauth-setup). Nothing to paste.
+   - **Never configure both** a manual and a remote TestChimp server in the same project MCP file.
 2. **CLI connectivity** — **`get-eaas-config`** `{}` (auth gate). Empty config is OK.
 3. **Runner key** — confirm **Preamble checks #4** resolves **`TESTCHIMP_API_KEY`** for runners (for remote MCP this is the `save-creds` step below).
 4. **Optional gaps** — call **`get-project-init-status`**. If `overall_complete` is false, summarize missing required items and ask whether to run **`/testchimp project init`** now or defer.

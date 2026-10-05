@@ -8,7 +8,7 @@ Look them up fresh on every run; never reuse a value from memory.
 
 | What | Latest | Installed |
 |---|---|---|
-| Skill | `version` in the frontmatter of `https://raw.githubusercontent.com/testchimphq/testchimp-skills/main/SKILL.md` | `version` in the installed skill's `SKILL.md` frontmatter |
+| Skill | `metadata.version` in the frontmatter of `https://raw.githubusercontent.com/testchimphq/testchimp-skills/main/SKILL.md` | `metadata.version` in the installed skill's `SKILL.md` frontmatter |
 | CLI | `npm view @testchimp/cli version` (or `version` from `https://registry.npmjs.org/@testchimp/cli/latest`) | `testchimp --version` on each computer that has it |
 
 Compare as numeric semver (`x.y.z`). Update only when installed < latest. If a lookup fails (network, registry down), skip that item and retry on the next run; don't report it unless it fails three runs in a row.

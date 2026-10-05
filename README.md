@@ -26,6 +26,26 @@ Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environmen
 
 **Recommended install:** **git clone** into **`<skills-parent>/testchimp`** and keep **`.git`** so agents can **`git pull`** for updates (`/testchimp skill upgrade`).
 
+**Claude Code plugin:** run `/plugin marketplace add testchimphq/testchimp-skills`, then `/plugin install testchimp@testchimp`. It installs the same skill; update it with `/plugin marketplace update testchimp` instead of `git pull`.
+
+### Install by host
+
+| Host | Install |
+| --- | --- |
+| Any agent (skill) | `npx skills add testchimphq/testchimp-skills` |
+| Claude Code | `/plugin marketplace add testchimphq/testchimp-skills` then `/plugin install testchimp@testchimp` |
+| Cursor | Cursor Marketplace (search TestChimp), or clone this repo as a Cursor plugin |
+| Gemini CLI | `gemini extensions install https://github.com/testchimphq/testchimp-skills` |
+| Kiro | Powers panel: import this repo (Agent Plugins `plugin.json`) |
+| VS Code / GitHub Copilot | Install from the agent plugins gallery, or add the MCP server below |
+| Codex / ChatGPT | Plugin directory once listed; or load this repo as a plugin |
+| MCP only (hosted) | `https://mcp.testchimp.io/mcp` (OAuth, no API key in config) |
+| MCP only (stdio) | `npx -y @testchimp/cli@latest mcp` with `TESTCHIMP_API_KEY` and `TESTCHIMP_USER_ID` |
+
+See [`llms-install.md`](llms-install.md) for copy-paste MCP config.
+
+**Install the MCP server per project, not globally.** TestChimp API keys are scoped to one project. For the hosted server (OAuth), you pick the project during sign-in; plugin installs register it at user level and bind to one project across all workspaces. For stdio, configure at project level (Cursor: `.cursor/mcp.json`; Claude Code: `.mcp.json`) with `TESTCHIMP_API_KEY` and `TESTCHIMP_USER_ID` for that project.
+
 **Entrypoint:** `SKILL.md` — then load the matching `references/*.md` (and default policy under `assets/policies/` when seeding).
 
 ---
@@ -220,6 +240,20 @@ Natural-language equivalents still route correctly (e.g. “Write tests for this
 
 ## MCP
 
-**`@testchimp/cli`** is not part of this skill tree. Install it in the app repo (**`@testchimp/cli@latest`**, or pin ≥ **`required_cli_version`** in **`SKILL.md`** frontmatter). During **`/testchimp init`**, agents **create or merge** the **project-level** MCP config (Cursor: **`.cursor/mcp.json`**; Claude Code: **`.mcp.json`**) from **`assets/sample-mcp.json`**, including placeholders for **`TESTCHIMP_API_KEY`** and **`TESTCHIMP_PROJECT_ID`**. Use **`npx`** with **`@testchimp/cli@latest`** in **`args`**. Pair with **`@testchimp/playwright` ≥ 0.2.0** for execution device context on ingest. Full steps: **`references/init-testchimp.md`** (Workstation gate). Agents verify CLI compatibility via **Preamble checks** in **`SKILL.md`**.
+**Two modes supported:**
+
+1. **Hosted (OAuth)**: `https://mcp.testchimp.io/mcp` with `type: http` or `streamable-http`. No API key in MCP config. User picks the TestChimp project during sign-in. Plugin manifests in this repo (`.mcp.json`, `.cursor-plugin/plugin.json`, `gemini-extension.json`, `.codex-plugin/plugin.json`) register the hosted server. Test runners still need `TESTCHIMP_API_KEY` in the runner process environment.
+
+2. **Stdio (local process)**: `npx -y @testchimp/cli@latest mcp` with `TESTCHIMP_API_KEY`, `TESTCHIMP_USER_ID`, and `TESTCHIMP_PROJECT_ID` in the server's `env` block. Use at project level (`.cursor/mcp.json` or `.mcp.json`) when you need per-project MCP config. Template: `assets/sample-mcp.json`.
+
+During **`/testchimp init`**, agents check for an existing testchimp server (plugin or project config). If none exists, they offer hosted vs stdio and write the chosen config at project level. Full steps: **`references/init-testchimp.md`** (Workstation gate). Agents verify CLI compatibility via **Preamble checks** in **`SKILL.md`**.
 
 Policy / workflow MCP tools (CLI ≥ **0.1.21**, skill **`required_cli_version`** may be higher): **`get-policy`**, **`list-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-last-run-workflow-detail`**.
+
+---
+
+## Privacy and support
+
+- **Privacy policy:** https://testchimp.io/privacy-policy
+- **Support:** contact@testchimp.io, or open an issue at https://github.com/testchimphq/testchimp-skills/issues
+- **Docs:** https://docs.testchimp.io
