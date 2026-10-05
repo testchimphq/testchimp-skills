@@ -241,3 +241,11 @@ Natural-language equivalents still route correctly (e.g. “Write tests for this
 **`@testchimp/cli`** is not part of this skill tree. Install it in the app repo (**`@testchimp/cli@latest`**, or pin ≥ **`required_cli_version`** in **`SKILL.md`** frontmatter). During **`/testchimp init`**, agents **create or merge** the **project-level** MCP config (Cursor: **`.cursor/mcp.json`**; Claude Code: **`.mcp.json`**) from **`assets/sample-mcp.json`**, including placeholders for **`TESTCHIMP_API_KEY`** and **`TESTCHIMP_PROJECT_ID`**. Use **`npx`** with **`@testchimp/cli@latest`** in **`args`**. Pair with **`@testchimp/playwright` ≥ 0.2.0** for execution device context on ingest. Full steps: **`references/init-testchimp.md`** (Workstation gate). Agents verify CLI compatibility via **Preamble checks** in **`SKILL.md`**.
 
 Policy / workflow MCP tools (CLI ≥ **0.1.21**, skill **`required_cli_version`** may be higher): **`get-policy`**, **`list-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-last-run-workflow-detail`**.
+
+---
+
+## Privacy and support
+
+- **Privacy policy:** https://testchimp.io/privacy-policy
+- **Support:** contact@testchimp.io, or open an issue at https://github.com/testchimphq/testchimp-skills/issues
+- **Docs:** https://docs.testchimp.io
