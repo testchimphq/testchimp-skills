@@ -26,6 +26,8 @@ Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environmen
 
 **Recommended install:** **git clone** into **`<skills-parent>/testchimp`** and keep **`.git`** so agents can **`git pull`** for updates (`/testchimp skill upgrade`).
 
+**Claude Code plugin:** run `/plugin marketplace add testchimphq/testchimp-skills`, then `/plugin install testchimp@testchimp`. It installs the same skill; update it with `/plugin marketplace update testchimp` instead of `git pull`.
+
 **Entrypoint:** `SKILL.md` — then load the matching `references/*.md` (and default policy under `assets/policies/` when seeding).
 
 ---
