@@ -20,7 +20,19 @@ Include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-aut
 
 ## Workstation gate (always first)
 
-1. **Project MCP file** — create or merge from [`../assets/sample-mcp.json`](../assets/sample-mcp.json) (`.cursor/mcp.json`, `.mcp.json`, or Codex `config.toml`). Real **`TESTCHIMP_API_KEY`** + **`TESTCHIMP_PROJECT_ID`**; reload MCP after edits.
+1. **Check for existing TestChimp server**:
+   - First check if testchimp tools are already available (plugin-provided server).
+   - If not, scan for a project MCP file with a testchimp server entry (`.cursor/mcp.json`, `.mcp.json`, or Codex `config.toml`).
+   - If a working testchimp server exists (remote OAuth URL or stdio with valid config), **skip MCP setup** and proceed to step 2.
+   - If no server exists, offer the user a choice:
+     * **Hosted server** (recommended): uses `https://mcp.testchimp.io/mcp` with OAuth (no API key in config).
+     * **Local stdio server**: uses `npx -y @testchimp/cli@latest mcp` with `TESTCHIMP_API_KEY` and `TESTCHIMP_USER_ID` in env.
+   - Write the chosen server configuration to the project MCP file (prefer `.cursor/mcp.json` or `.mcp.json`).
+   - For stdio: copy from [`../assets/sample-mcp.json`](../assets/sample-mcp.json) with real **`TESTCHIMP_API_KEY`**, **`TESTCHIMP_USER_ID`**, and **`TESTCHIMP_PROJECT_ID`**.
+   - For remote: copy from [`../assets/.mcp.json`](../.mcp.json) (just the URL, OAuth handles auth).
+   - **Never configure both servers** in the same project.
+   - After adding or updating config, tell the user to reload MCP in their client.
+
 2. **CLI connectivity** — **`get-eaas-config`** `{}` (auth gate). Empty config is OK.
 3. **Optional gaps** — call **`get-project-init-status`**. If `overall_complete` is false, summarize missing required items and ask whether to run **`/testchimp project init`** now or defer.
 

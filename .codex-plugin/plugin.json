@@ -1,6 +1,6 @@
 {
   "name": "testchimp",
-  "version": "1.0.58",
+  "version": "1.0.59",
   "description": "QA platform for coding agents: coverage signals, in-repo test plans, verified tests and release governance.",
   "author": { "name": "TestChimp", "url": "https://testchimp.io" },
   "homepage": "https://testchimp.io",

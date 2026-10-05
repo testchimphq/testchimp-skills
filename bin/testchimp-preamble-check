@@ -172,6 +172,77 @@ if [ -z "${MCP_JSON:-}" ]; then
   done
 fi
 
+# Check user-level / plugin MCP locations for testchimp server
+USER_LEVEL_TESTCHIMP="no"
+PLUGIN_SOURCE=""
+if [ -z "${MCP_JSON:-}" ] || [ "${HAS_SERVER:-no}" = "no" ]; then
+  # Check if the skill itself is running from a plugin cache (signal that plugins are in use)
+  if echo "$SKILL_DIR" | grep -qE '\.claude/plugins|\.cursor/plugins|\.gemini/extensions'; then
+    USER_LEVEL_TESTCHIMP="yes"
+    PLUGIN_SOURCE="skill location ($SKILL_DIR under plugin cache)"
+  fi
+  
+  # Check Claude Code plugins (enabled plugins in settings.json, .mcp.json in plugin cache)
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -f "$HOME/.claude/settings.json" ] && command -v node >/dev/null 2>&1; then
+    _claude_check=$(SETTINGS="$HOME/.claude/settings.json" node - <<'NODE' 2>/dev/null || echo "no"
+const fs=require('fs');
+try {
+  const s=JSON.parse(fs.readFileSync(process.env.SETTINGS,'utf8'));
+  const ep=s?.enabledPlugins||{};
+  const enabled=Array.isArray(ep)?ep:Object.keys(ep).filter(k=>ep[k]!==false);
+  if (enabled.some(p=>String(p).includes('testchimp'))) process.stdout.write('yes');
+  else process.stdout.write('no');
+} catch { process.stdout.write('no'); }
+NODE
+    )
+    if [ "$_claude_check" = "yes" ]; then
+      USER_LEVEL_TESTCHIMP="yes"
+      PLUGIN_SOURCE="Claude Code plugin (testchimp in enabledPlugins)"
+    fi
+  fi
+  
+  # Check Gemini extensions
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -d "$HOME/.gemini/extensions" ]; then
+    for ext_dir in "$HOME/.gemini/extensions"/*; do
+      if [ -f "$ext_dir/gemini-extension.json" ] && grep -q "testchimp" "$ext_dir/gemini-extension.json" 2>/dev/null; then
+        USER_LEVEL_TESTCHIMP="yes"
+        PLUGIN_SOURCE="Gemini extension ($ext_dir)"
+        break
+      fi
+    done
+  fi
+  
+  # Check Cursor plugins (verify location - may be ~/.cursor/extensions or similar)
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -d "$HOME/.cursor/extensions" ]; then
+    for plugin_dir in "$HOME/.cursor/extensions"/*testchimp*; do
+      if [ -d "$plugin_dir" ]; then
+        USER_LEVEL_TESTCHIMP="yes"
+        PLUGIN_SOURCE="Cursor plugin ($plugin_dir)"
+        break
+      fi
+    done
+  fi
+  
+  # Fallback: user-level mcp.json files (less common for plugins)
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ]; then
+    for user_config in \
+      "$HOME/.cursor/mcp.json" \
+      "$HOME/.claude/mcp.json" \
+      "$HOME/.kiro/mcp.json"
+    do
+      if [ -f "$user_config" ] && _is_testchimp_mcp "$user_config"; then
+        USER_LEVEL_TESTCHIMP="yes"
+        PLUGIN_SOURCE="user-level config ($user_config)"
+        break
+      fi
+    done
+  fi
+  
+  if [ "${USER_LEVEL_TESTCHIMP}" = "yes" ]; then
+    _say "USER_LEVEL_TESTCHIMP: $PLUGIN_SOURCE"
+  fi
+fi
+
 if [ -n "${MCP_JSON:-}" ] && command -v node >/dev/null 2>&1; then
   _say "MCP_CONFIG: $MCP_JSON"
   eval "$(MCP_JSON="$MCP_JSON" node - <<'NODE' 2>/dev/null || true
@@ -202,14 +273,20 @@ try{
   }
   const env=entry?.env || {};
   const key=env.TESTCHIMP_API_KEY;
+  const uid=env.TESTCHIMP_USER_ID;
   const pid=env.TESTCHIMP_PROJECT_ID;
   const backend=env.TESTCHIMP_BACKEND_URL;
   const ingress=env.TESTCHIMP_INGRESS_URL;
   const hasServer=!!entry;
+  const isRemote=(entry?.url || entry?.httpUrl || /^(http|streamable-http)$/i.test(String(entry?.type||'')));
+  const isStdio=entry?.command || (entry?.args && Array.isArray(entry.args));
   const backendConfigured=backend && String(backend).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(backend)) && !looksLikeEnvRef(backend);
   const ingressConfigured=ingress && String(ingress).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(ingress)) && !looksLikeEnvRef(ingress);
   process.stdout.write(`HAS_SERVER=${hasServer?'yes':'no'}\n`);
+  process.stdout.write(`IS_REMOTE=${isRemote?'yes':'no'}\n`);
+  process.stdout.write(`IS_STDIO=${isStdio?'yes':'no'}\n`);
   process.stdout.write(`HAS_KEY=${ok(key)?'yes':'no'}\n`);
+  process.stdout.write(`HAS_USER_ID=${ok(uid)?'yes':'no'}\n`);
   process.stdout.write(`HAS_PROJECT_ID=${ok(pid)?'yes':'no'}\n`);
   process.stdout.write(`HAS_BACKEND_URL=${backendConfigured?'yes':'no'}\n`);
   process.stdout.write(`HAS_INGRESS_URL=${ingressConfigured?'yes':'no'}\n`);
@@ -220,17 +297,38 @@ try{
     process.stdout.write(`TESTCHIMP_INGRESS_URL=${String(ingress).trim()}\n`);
   }
 }catch{
-  process.stdout.write('HAS_SERVER=no\nHAS_KEY=no\nHAS_PROJECT_ID=no\nHAS_BACKEND_URL=no\nHAS_INGRESS_URL=no\n');
+  process.stdout.write('HAS_SERVER=no\nIS_REMOTE=no\nIS_STDIO=no\nHAS_KEY=no\nHAS_USER_ID=no\nHAS_PROJECT_ID=no\nHAS_BACKEND_URL=no\nHAS_INGRESS_URL=no\n');
 }
 NODE
   )"
   if [ "${HAS_SERVER:-no}" != "yes" ]; then
-    _warn "BLOCKER: mcpServers.testchimp missing — run /testchimp init Workstation gate or merge assets/sample-mcp.json"
-  fi
-  if [ "${HAS_KEY:-no}" = "yes" ]; then
-    _say "TESTCHIMP_API_KEY: present (not printed)"
+    if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ]; then
+      _say "NOTE: No project-level testchimp server found, but plugin/user-level server detected ($PLUGIN_SOURCE). If testchimp MCP tools are available in your session, MCP is satisfied. Do not write a second server at project level unless you need per-project config (e.g. stdio with different API keys)."
+    else
+      _warn "BLOCKER (unless the testchimp MCP tools are already available in this session, e.g. via a plugin): mcpServers.testchimp missing at project level — run /testchimp init Workstation gate or merge assets/sample-mcp.json"
+    fi
   else
-    _warn "BLOCKER: TESTCHIMP_API_KEY missing/blank/placeholder in MCP config (or unresolved \${TESTCHIMP_API_KEY} — set secret in process env / host; reload MCP after setting)"
+    _say "TESTCHIMP_SERVER_MODE: $([ "${IS_REMOTE:-no}" = "yes" ] && echo "remote (OAuth)" || echo "stdio (local process)")"
+  fi
+  if [ "${IS_REMOTE:-no}" = "yes" ]; then
+    if [ "${HAS_KEY:-no}" = "yes" ]; then
+      _say "TESTCHIMP_API_KEY: present in config (not needed for MCP but useful for test runners; not printed)"
+    else
+      _warn "WARN: TESTCHIMP_API_KEY not in MCP config — test runs will need it in the runner process environment"
+    fi
+  else
+    if [ "${HAS_KEY:-no}" = "yes" ]; then
+      _say "TESTCHIMP_API_KEY: present (not printed)"
+    else
+      _warn "BLOCKER: TESTCHIMP_API_KEY missing/blank/placeholder in MCP config (or unresolved \${TESTCHIMP_API_KEY} — set secret in process env / host; reload MCP after setting)"
+    fi
+  fi
+  if [ "${HAS_USER_ID:-no}" = "yes" ]; then
+    _say "TESTCHIMP_USER_ID: present (not printed)"
+  else
+    if [ "${IS_STDIO:-no}" = "yes" ]; then
+      _warn "WARN: TESTCHIMP_USER_ID missing/placeholder (needed for get-my-tasks / list-tests-awaiting-verification and run attribution)"
+    fi
   fi
   if [ "${HAS_PROJECT_ID:-no}" = "yes" ]; then
     _say "TESTCHIMP_PROJECT_ID: present (not printed)"
@@ -250,7 +348,11 @@ NODE
     _say "TESTCHIMP_INGRESS_URL: not set in MCP (reporter uses ingress default or SaaS featureservice→ingress rewrite)"
   fi
 else
-  _warn "WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp) — /testchimp init should create it from assets/sample-mcp.json"
+  if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ]; then
+    _say "NOTE: No project-level MCP config found, but plugin/user-level testchimp server detected ($PLUGIN_SOURCE). If testchimp MCP tools are available in your session, MCP is satisfied."
+  else
+    _warn "WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp). If testchimp MCP tools are not available via a plugin, run /testchimp init to create project-level config from assets/sample-mcp.json"
+  fi
 fi
 
 exit 0
