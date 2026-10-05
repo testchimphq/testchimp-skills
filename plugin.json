@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "testchimp",
-  "version": "1.0.58",
+  "version": "1.0.59",
   "description": "QA platform for coding agents. Agents read consolidated coverage signals (scenario, API contract, TrueCoverage from real users, observability) and manage test plans in the repo; humans get verified tests, QA posture and release governance.",
   "author": { "name": "TestChimp", "url": "https://testchimp.io" },
   "homepage": "https://testchimp.io",

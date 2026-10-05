@@ -202,14 +202,20 @@ try{
   }
   const env=entry?.env || {};
   const key=env.TESTCHIMP_API_KEY;
+  const uid=env.TESTCHIMP_USER_ID;
   const pid=env.TESTCHIMP_PROJECT_ID;
   const backend=env.TESTCHIMP_BACKEND_URL;
   const ingress=env.TESTCHIMP_INGRESS_URL;
   const hasServer=!!entry;
+  const isRemote=(entry?.url || entry?.httpUrl || /^(http|streamable-http)$/i.test(String(entry?.type||'')));
+  const isStdio=entry?.command || (entry?.args && Array.isArray(entry.args));
   const backendConfigured=backend && String(backend).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(backend)) && !looksLikeEnvRef(backend);
   const ingressConfigured=ingress && String(ingress).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(ingress)) && !looksLikeEnvRef(ingress);
   process.stdout.write(`HAS_SERVER=${hasServer?'yes':'no'}\n`);
+  process.stdout.write(`IS_REMOTE=${isRemote?'yes':'no'}\n`);
+  process.stdout.write(`IS_STDIO=${isStdio?'yes':'no'}\n`);
   process.stdout.write(`HAS_KEY=${ok(key)?'yes':'no'}\n`);
+  process.stdout.write(`HAS_USER_ID=${ok(uid)?'yes':'no'}\n`);
   process.stdout.write(`HAS_PROJECT_ID=${ok(pid)?'yes':'no'}\n`);
   process.stdout.write(`HAS_BACKEND_URL=${backendConfigured?'yes':'no'}\n`);
   process.stdout.write(`HAS_INGRESS_URL=${ingressConfigured?'yes':'no'}\n`);
@@ -220,17 +226,34 @@ try{
     process.stdout.write(`TESTCHIMP_INGRESS_URL=${String(ingress).trim()}\n`);
   }
 }catch{
-  process.stdout.write('HAS_SERVER=no\nHAS_KEY=no\nHAS_PROJECT_ID=no\nHAS_BACKEND_URL=no\nHAS_INGRESS_URL=no\n');
+  process.stdout.write('HAS_SERVER=no\nIS_REMOTE=no\nIS_STDIO=no\nHAS_KEY=no\nHAS_USER_ID=no\nHAS_PROJECT_ID=no\nHAS_BACKEND_URL=no\nHAS_INGRESS_URL=no\n');
 }
 NODE
   )"
   if [ "${HAS_SERVER:-no}" != "yes" ]; then
     _warn "BLOCKER: mcpServers.testchimp missing — run /testchimp init Workstation gate or merge assets/sample-mcp.json"
-  fi
-  if [ "${HAS_KEY:-no}" = "yes" ]; then
-    _say "TESTCHIMP_API_KEY: present (not printed)"
   else
-    _warn "BLOCKER: TESTCHIMP_API_KEY missing/blank/placeholder in MCP config (or unresolved \${TESTCHIMP_API_KEY} — set secret in process env / host; reload MCP after setting)"
+    _say "TESTCHIMP_SERVER_MODE: $([ "${IS_REMOTE:-no}" = "yes" ] && echo "remote (OAuth)" || echo "stdio (local process)")"
+  fi
+  if [ "${IS_REMOTE:-no}" = "yes" ]; then
+    if [ "${HAS_KEY:-no}" = "yes" ]; then
+      _say "TESTCHIMP_API_KEY: present in config (not needed for MCP but useful for test runners; not printed)"
+    else
+      _warn "WARN: TESTCHIMP_API_KEY not in MCP config — test runs will need it in the runner process environment"
+    fi
+  else
+    if [ "${HAS_KEY:-no}" = "yes" ]; then
+      _say "TESTCHIMP_API_KEY: present (not printed)"
+    else
+      _warn "BLOCKER: TESTCHIMP_API_KEY missing/blank/placeholder in MCP config (or unresolved \${TESTCHIMP_API_KEY} — set secret in process env / host; reload MCP after setting)"
+    fi
+  fi
+  if [ "${HAS_USER_ID:-no}" = "yes" ]; then
+    _say "TESTCHIMP_USER_ID: present (not printed)"
+  else
+    if [ "${IS_STDIO:-no}" = "yes" ]; then
+      _warn "WARN: TESTCHIMP_USER_ID missing/placeholder (needed for get-my-tasks / list-tests-awaiting-verification and run attribution)"
+    fi
   fi
   if [ "${HAS_PROJECT_ID:-no}" = "yes" ]; then
     _say "TESTCHIMP_PROJECT_ID: present (not printed)"
