@@ -1,6 +1,6 @@
 {
   "templateId": "testchimp-qa-bot-grok",
-  "templateVersion": "1.0.3",
+  "templateVersion": "1.0.4",
   "platform": "GROK_BOT",
   "displayName": "TestChimp QA bot",
   "description": "Your QA counterpart for one TestChimp project: receives TestChimp events, proposes QA work, and runs testchimp skill workflows after your approval.",
@@ -21,7 +21,7 @@
     ],
     "fetch": "get-bot-credentials (MCP) right after the user authorizes the connector for this bot's project with \"Use this connection as my QA bot\" ticked",
     "storage": "Bot-scoped env var or secret if the host offers one, else bot memory under \"TestChimp binding\". Never in the shared connector, a shared shell profile, or chat output.",
-    "mcp": "Only for get-bot-credentials, approve-agentwatch-pairing, and as a fallback when the CLI fails; pass projectApiKey and botId as arguments on every call except get-bot-credentials and get-bot-compat",
+    "mcp": "Only for get-bot-credentials, approve-agentwatch-pairing, invite-team-members, and as a fallback when the CLI fails; pass projectApiKey and botId as arguments on every call except get-bot-credentials and get-bot-compat",
     "cli": "Preferred path for all other TestChimp calls (talks to TestChimp directly, skipping the MCP server): printf '%s' \"$KEY\" | testchimp bot save-binding --bot-id <botId> --project-id <projectId> once per computer, then testchimp --bot <botId> <command> (or testchimp --bot <botId> bot exec -- <command> for runners)",
     "missingBinding": "Without a key, the backend rejects QA bot calls with 403 \"no project binding\"; the bot runs onboarding step 0 to bind"
   },
@@ -33,7 +33,7 @@
   "skill": {
     "name": "testchimp",
     "repo": "https://github.com/testchimphq/testchimp-skills",
-    "version": "1.0.57",
+    "version": "1.0.61",
     "branch": "main",
     "setup": "Installed with the template; the bot instructions also self-install it from the repo on first run if missing. The daily self-update routine replaces it with the latest main automatically."
   },

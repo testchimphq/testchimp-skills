@@ -22,7 +22,8 @@ Run when the bot has no binding (new bot), when calls fail with "no project bind
 2. Ask the user to authorize the `testchimp` connector **for this bot's project**: click **Authorize** on the connector (or **Reconnect** if another bot already connected it), sign in, pick the project this bot should serve, keep **Use this connection as my QA bot** ticked, and click **Allow**. Re-authorizing does not affect their other bots: each keeps its own binding.
 3. Call `get-bot-credentials` (no binding arguments). It returns `{projectId, projectName, botId, projectApiKey, userId, settingsUrl}` for the project just picked.
    - 403 `Requires a QA bot connection` → the box was not ticked, or the connection predates bot bindings. Ask them to authorize again with it ticked.
-4. Confirm the project with the user ("I'm now bound to **<projectName>**"). Wrong project → back to step 2.
+   - Its response is the **only** source of this bot's binding. Ignore any project you saw earlier through the shared connector, another bot's binding, or earlier chat. With several bots, the connector may still describe another bot's project.
+4. Confirm the project with the user: "I'm now bound to **<projectName>**. Is that the project you picked?" Wrong project → back to step 2. Don't carry on with a project the user didn't confirm.
 5. Store the binding bot-scoped: per-bot env vars or secrets if the host lets you write them (`TESTCHIMP_PROJECT_ID`, `TESTCHIMP_PROJECT_NAME`, `TESTCHIMP_BOT_ID`, `TESTCHIMP_API_KEY`), otherwise bot memory under "TestChimp binding". Never print the key in chat.
 6. Save it for the CLI on your cloud computer now (no approval needed: it only writes this bot's own file). The CLI is your default way to call TestChimp from here on:
 
@@ -31,7 +32,7 @@ Run when the bot has no binding (new bot), when calls fail with "no project bind
    ```
 
    Set `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` on that command for staging, enterprise or self-hosted deployments; the binding remembers them. Do the same on the user's computer (with their approval) before running `testchimp` there.
-7. From now on, use `testchimp --bot <botId> …` for TestChimp calls. Use the MCP tools only for `approve-agentwatch-pairing` or when the CLI fails, and then pass `projectApiKey` and `botId` on every call.
+7. From now on, use `testchimp --bot <botId> …` for TestChimp calls. Use the MCP tools only for `approve-agentwatch-pairing`, `invite-team-members` or when the CLI fails, and then pass `projectApiKey` and `botId` on every call.
 
 ### 1. Project init status
 
@@ -71,7 +72,7 @@ Present the capabilities as cards, based on the role they picked:
 1. **Defaults card** (single select): list the role's pre-selected activities in plain words (use the "What the bot does" column) and offer **Looks good** (primary) and **Change activities**.
 2. **Only if they choose Change activities:** a **multi-select card** with all six capabilities as options (label plus the "What the bot does" text as the description). In the prompt, say which ones were the role's defaults. Use exactly the ones they pick as the new set.
 
-Subscriptions = union of the selected rows, deduplicated by `eventType` + filters. `meeting-started` (`adder eq me`) is optional context; add it only if the user wants a heads-up when the meeting bot joins. `test-event` (Check Connection) is always delivered, so never subscribe to it.
+Subscriptions = union of the selected rows, deduplicated by `eventType` + filters, **plus `workflow-execution-assigned` (`recipient eq me`) for every role** (workflow executions the user is made assignee of or CC'd on). It is on by default: include it unless the user explicitly opts out, and mention it in the summary ("I'll also tell you when a workflow execution is assigned to you"). `meeting-started` (`adder eq me`) is optional context; add it only if the user wants a heads-up when the meeting bot joins. `test-event` (Check Connection) is always delivered, so never subscribe to it.
 
 Also ask for routine preferences (stored in bot memory, not in the profile):
 
@@ -81,14 +82,14 @@ Also ask for routine preferences (stored in bot memory, not in the profile):
 
 ### 4. Register the profile
 
-Confirm the summary (role, capabilities, subscriptions, routine times) and get approval. Registration is a mutating action and **replaces** the previous profile and subscriptions atomically.
+Confirm the summary (role, capabilities, subscriptions, routine times) and get approval. Registration is a mutating action and **replaces** the previous profile and subscriptions atomically, so every re-registration must include `workflow-execution-assigned` again unless the user opted out.
 
 CLI:
 
 ```bash
 testchimp --bot <botId> bot register-profile --role QA_ENGINEER \
   --capability E2E_AUTHORING --capability TEST_BATCH_FIX \
-  --subscriptions-json '[{"eventType":"git-push","filters":[{"field":"author","op":"eq","value":"me"}]},{"eventType":"e2e-batch-completed"},{"eventType":"k6-batch-completed"}]'
+  --subscriptions-json '[{"eventType":"git-push","filters":[{"field":"author","op":"eq","value":"me"}]},{"eventType":"e2e-batch-completed"},{"eventType":"k6-batch-completed"},{"eventType":"workflow-execution-assigned","filters":[{"field":"recipient","op":"eq","value":"me"}]}]'
 ```
 
 MCP fallback, `register-bot-profile` with your binding arguments:
@@ -100,7 +101,8 @@ MCP fallback, `register-bot-profile` with your binding arguments:
   "subscriptions": [
     { "eventType": "git-push", "filters": [{ "field": "author", "op": "eq", "value": "me" }] },
     { "eventType": "e2e-batch-completed" },
-    { "eventType": "k6-batch-completed" }
+    { "eventType": "k6-batch-completed" },
+    { "eventType": "workflow-execution-assigned", "filters": [{ "field": "recipient", "op": "eq", "value": "me" }] }
   ]
 }
 ```
@@ -129,7 +131,8 @@ Run this whenever step 1 found `overallComplete` not `…_DONE`, **whatever role
 1. Re-run `get-project-init-status` (a teammate may have finished items meanwhile). If it is now complete, say so and move on.
 2. Explain in a line or two that the project's one-time setup isn't finished, list the remaining items, and that you'll guide them through it now: it's what lets tests, plans, environments and CI work for the whole team.
 3. Follow [`project-init-testchimp.md`](./project-init-testchimp.md) for the remaining items only, on the **user's computer** in their local clone of the product repo (request access as in [step 6](#6-per-user-init-local-repo-folder) if you don't have it yet; ask for the clone path if you don't know it). Keep its plan → approve → execute flow; every mutating step needs their approval.
-4. If the user wants to stop or defer partway, record what's done (`update-project-init-status` is updated as each area finishes), say what's left, and continue onboarding. Offer to resume later.
+4. **Finish with its last step: offer to invite teammates** ([§ 7](./project-init-testchimp.md#7-final--invite-team-members)) once every other item is done or skipped. Ask for their emails, confirm the list, then call the `invite-team-members` **MCP tool** with your binding arguments (`projectApiKey`, `botId`). It acts as the connector's user, so it can't go through the CLI. Report each email's outcome. If it fails with 403 (the user isn't an org admin, Indie plan, seat limit), share the link from the error instead.
+5. If the user wants to stop or defer partway, record what's done (`update-project-init-status` is updated as each area finishes), say what's left, and continue onboarding. Offer to resume later; the invite offer comes at the end of whichever run finishes init.
 
 ### 6. Per-user init (local repo folder)
 
@@ -171,7 +174,7 @@ To revoke later: `testchimp bot disconnect --project-id <projectId>`.
 Confirm back in a few lines:
 
 - Project, role, capabilities.
-- Project init status (complete, or what's still left).
+- Project init status (complete, or what's still left), and who was invited if you ran its last step.
 - What you will watch for and what you will propose for each (from the capability table).
 - Webhook status, mapped folder, routine times.
 - Nothing mutating happens without their approval. They can pause from their bot settings page (link it: `settingsUrl` from `get-bot-profile`) or say "change my focus" anytime.
