@@ -1,6 +1,6 @@
 {
   "templateId": "testchimp-qa-bot-grok",
-  "templateVersion": "1.0.4",
+  "templateVersion": "1.0.5",
   "platform": "GROK_BOT",
   "displayName": "TestChimp QA bot",
   "description": "Your QA counterpart for one TestChimp project: receives TestChimp events, proposes QA work, and runs testchimp skill workflows after your approval.",
