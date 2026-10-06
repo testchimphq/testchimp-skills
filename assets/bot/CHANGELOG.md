@@ -2,6 +2,13 @@
 
 Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
 
+## 1.0.4 — skill 1.0.61, CLI ≥ 0.1.88
+
+- Project init now ends by offering to invite teammates. The bot asks for emails, confirms them, and calls the new `invite-team-members` MCP tool through the connector (it acts as the signed-in user, who must be an org admin; the CLI's `--bot` key can't invite). Instructions list it next to `get-bot-credentials` and `approve-agentwatch-pairing` as a connector-only call.
+- New default event `workflow-execution-assigned` (`recipient eq me`): the bot tells its user when a workflow execution is assigned to them or they're CC'd, suggests the next step for its status (review the plan, approve the run, investigate a failure) and can reassign or CC with `update-workflow-execution-assignees` after approval. New bots get it at creation; onboarding adds it to every role's subscriptions. The weekday reminder lists assigned executions waiting for approval.
+- After (re)authorizing, the bot takes its project only from `get-bot-credentials` and asks the user to confirm it, so a second bot doesn't pick up the first bot's project.
+- Existing bots need no action: the skill update carries the new steps. Replacing the instructions with the 1.0.4 text is optional.
+
 ## 1.0.3 — skill 1.0.57, CLI ≥ 0.1.88
 
 - One bot per project, one connector per user. The host shares the TestChimp connector across a user's bots, so it now carries only the user. Each bot keeps its own **project binding** (`projectId`, `projectName`, `botId`, `projectApiKey`) as a bot-scoped env var or secret, else in bot memory. It gets the binding with `get-bot-credentials` right after the user authorizes the connector for that bot's project (onboarding step 0).

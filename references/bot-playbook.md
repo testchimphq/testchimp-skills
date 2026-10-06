@@ -57,7 +57,7 @@ Your bot host runs you on its own (cloud) computer. Your user's computer is a di
 
 ## Per-delivery loop
 
-1. Once per conversation: `get-bot-profile` (with your binding). Check the delivery's `botId` and `projectId` match your binding. If they don't, the delivery was meant for another of your user's bots: don't act on it or ack it, and tell your user once that this bot's webhook settings look wrong. While `paused` is true, skip proposals and routines, but still ack. Events for a capability the user has not selected → ack and do nothing.
+1. Once per conversation: `get-bot-profile` (with your binding). Check the delivery's `botId` and `projectId` match your binding. If they don't, the delivery was meant for another of your user's bots: don't act on it or ack it, and tell your user once that this bot's webhook settings look wrong. While `paused` is true, skip proposals and routines, but still ack. Events for a capability the user has not selected → ack and do nothing (`workflow-execution-assigned` belongs to every role, so always handle it).
 2. Group events by type and collapse duplicates (several `git-push` on the same `branch` → evaluate the latest `after` only, using the union of their `commits`).
 3. For each event, follow the matching section below: summarise in one or two lines, propose the next step, wait for approval.
 4. **Ack** every `eventId` in the delivery once handled or consciously ignored:
@@ -79,6 +79,7 @@ Your bot host runs you on its own (cloud) computer. Your user's computer is a di
 | `e2e-batch-completed` | USER (latest branch author) | TEST_BATCH_FIX | none | [`fix-test-execution.md`](./fix-test-execution.md); `create-issue` for product bugs |
 | `k6-batch-completed` | USER | TEST_BATCH_FIX | none | Perf investigation: [`run-perf-tests.md`](./run-perf-tests.md#baseline-and-comparison) comparison → [`upkeep-perf.md`](./upkeep-perf.md) |
 | `release-created` / `release-status-updated` | BROADCAST | QA_POSTURE | none | Posture heads-up (inline below); [`run-release-check.md`](./run-release-check.md) on request |
+| `workflow-execution-assigned` | USER | all roles (default subscription) | `recipient eq me` | Inform + coordinate (inline below); `update-workflow-execution-assignees` to hand off |
 | `test-event` | control | n/a | always delivered | ack only |
 
 Scheduled routines (no event): daily [self-update](./bot-self-update.md), [weekday reminder](#weekday-reminder-default-weekdays-user-chosen-time), [weekly posture digest](#weekly-qa-posture-digest-qa_posture).
@@ -193,6 +194,40 @@ Payload: `{ issueId, ordinalId, title, severity, status, assigneeEmail, url }` �
 
 `get-issue-details --issue-id <ordinalId>` (takes the ordinal, not `issueId`), summarise severity, repro, and suspected area in 2–3 lines with `url`, and propose `/testchimp fix issue: <ordinalId>` ([`fix-issue.md`](./fix-issue.md)). Do not change issue status until the user approves the plan. Ack.
 
+### `workflow-execution-assigned` — you own (or are CC'd on) a workflow execution
+
+Sent when your user is made the assignee of, or CC'd on, a workflow execution. The assignee is the human who should unblock it. Automatic assignment happens when an approval notification goes out (plan approval or approve-to-invoke); people can also reassign or CC by hand.
+
+Payload:
+
+```json
+{
+  "workflowExecutionId": "01J...", "workflowId": "run-qa", "status": "PLANNED",
+  "role": "ASSIGNEE", "reason": "PLAN_APPROVAL",
+  "assigneeUserId": "...", "ccUserIds": ["..."], "assignedByUserId": "",
+  "planFilePath": "plans/knowledge/workflow_plans/01J....plan.md",
+  "taskDetail": "first 500 chars of the task", "url": "https://.../executions/workflow-executions/01J...?project_id=..."
+}
+```
+
+`role` is `ASSIGNEE` or `CC`. `reason` is `PLAN_APPROVAL` / `INVOKE_APPROVAL` (automatic, `assignedByUserId` empty), `REASSIGNED`, or `CC_ADDED`. `status` is the execution status when the event fired, so re-read it before proposing.
+
+**`role: ASSIGNEE`**
+
+1. `get-workflow-execution --workflow-execution-id <id>` for the current status, task and plan path.
+2. Tell your user in two or three lines: they now own this execution (and who handed it over, if `REASSIGNED`), what the workflow is doing (`workflowId`, task), its status, and `url`.
+3. Suggest the next step by status, then wait for approval:
+   - `PLANNED` → the plan needs review. Offer a short summary of the plan (`get-plans-support-file` for `planFilePath`), edits, or approval in the UI via `url` (approve / reject stays a human action in TestChimp).
+   - `PENDING_INVOKE_APPROVAL` → the run is waiting to be triggered. Summarise `taskDetail` and point to `url` to approve or reject.
+   - `FAILED` → offer to investigate (`/testchimp fix test failure` for test-side causes, [`fix-test-execution.md`](./fix-test-execution.md)) or a retry.
+   - `RUNNING` / `QUEUED` → offer to check back and report when it finishes.
+   - `COMPLETED` / `REJECTED` / `CANCELLED` → one-line FYI; nothing to do.
+4. Offer to hand it off: reassign to a teammate or CC someone. Only after the user names the person and approves, call `update-workflow-execution-assignees` (CLI ≥ **0.1.91**: `testchimp --bot <botId> update-workflow-execution-assignees --workflow-execution-id <id> --assignee <email> --add-cc <emails>`). With `--bot`, your user must be the current assignee (an admin overriding someone else's assignment needs the MCP tool through the connector). A 409 means someone else changed it meanwhile: re-read the execution and confirm with the user before retrying.
+
+**`role: CC`** → one-line FYI ("You were CC'd on *<workflowId>* (`status`)" + `url`). No proposal unless the user asks.
+
+Ack after informing. Open assigned executions also show in the weekday reminder (`list-workflow-executions --json-input '{"assignedToMeOnly":true,"pendingApprovalOnly":true}'`). The user can also get this as email / Slack (User Settings → Notifications → Assignments).
+
 ### `e2e-batch-completed` — E2E batch result
 
 Payload:
@@ -264,6 +299,7 @@ Once a day (and on startup): [`bot-self-update.md`](./bot-self-update.md). Updat
 - Manual scenarios assigned (title + test run link), oldest first.
 - Issues assigned (ordinal, severity, due date; overdue first).
 - Tests awaiting verification (count + top few).
+- Workflow executions assigned to them and waiting for approval: `list-workflow-executions --json-input '{"assignedToMeOnly":true,"pendingApprovalOnly":true}'` (workflow, status, link).
 
 Nothing pending → skip the message.
 

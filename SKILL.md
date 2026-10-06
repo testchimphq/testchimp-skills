@@ -4,8 +4,8 @@ description: "TestChimp is the QA platform for coding agents. Use it to run the 
 compatibility: "Requires Node.js 18+, @testchimp/cli at or above metadata.required_cli_version, TESTCHIMP_API_KEY and network access to TestChimp APIs. Web projects need @playwright/test and playwright 1.59.0 or later; mobile projects need mobilewright. Per-version CLI notes: references/version-matrix.md."
 license: MIT
 metadata:
-  version: 1.0.60
-  required_cli_version: "0.1.90"
+  version: 1.0.61
+  required_cli_version: "0.1.91"
   homepage: "https://testchimp.io"
 ---
 
@@ -24,8 +24,8 @@ TestChimp runs **pre-defined QA workflows**. **`references/`** details how each 
 | **Meeting transcript context** (`referring the meeting <id> as context`, or `~/.testchimp/data/meetings/…`) | [`references/meeting-transcripts.md`](references/meeting-transcripts.md) — cloud **`get-meeting-transcript`** (`--summary-only` first; full transcript only when needed); then the workflow playbook for the named objective |
 | **Meeting-set context** (`using meeting-set context <id>`) | [`references/meeting-transcripts.md`](references/meeting-transcripts.md) § Meeting set — **`get-meeting-set`**, then per-meeting summaries first, full transcripts only when needed |
 | **Find / search meetings** (no id given: "meetings with acme.com last month", "calls labelled Sales that mention pricing") | [`references/meeting-transcripts.md`](references/meeting-transcripts.md) § Search meetings — **`list-meeting-filter-options`** → **`list-meetings`** → per-hit summaries (team-wide meetings only) |
-| **QA bot** receiving a TestChimp webhook delivery (`deliveryId` + `events[]` + `ackUrl`), or running bot routines (reminders / digests) | [`references/bot-playbook.md`](references/bot-playbook.md) — event → workflow map (AgentWatch plan on `git-push`, create-tests, fix-issue, fix-test-execution, perf investigation); propose → approval → existing workflows; **ack every `eventId`** |
-| **QA bot onboarding** (first run, or user wants to change role / capabilities) | [`references/bot-onboarding.md`](references/bot-onboarding.md) — `get-project-init-status` → role → role-preselected capabilities → `register-bot-profile` → webhook (User Settings → My Bots) → project init if incomplete (any role) → `testchimp workspace map` → summary |
+| **QA bot** receiving a TestChimp webhook delivery (`deliveryId` + `events[]` + `ackUrl`), or running bot routines (reminders / digests) | [`references/bot-playbook.md`](references/bot-playbook.md) — event → workflow map (AgentWatch plan on `git-push`, create-tests, fix-issue, fix-test-execution, perf investigation, workflow executions assigned to the user); propose → approval → existing workflows; **ack every `eventId`** |
+| **QA bot onboarding** (first run, or user wants to change role / capabilities) | [`references/bot-onboarding.md`](references/bot-onboarding.md) — `get-project-init-status` → role → role-preselected capabilities → `register-bot-profile` → webhook (User Settings → My Bots) → project init if incomplete (any role; ends by offering team invites) → `testchimp workspace map` → summary |
 | **QA bot self-update** (bot startup / daily, or "is my bot up to date") | [`references/bot-self-update.md`](references/bot-self-update.md) — latest skill (`main`) / CLI (npm) vs installed → automatic update; `get-bot-compat` floor + event schema |
 | A normal `/testchimp …` workflow (local or cloud) | Matching row in [Command routing](#command-routing) |
 | Stuck on ChimpHands git/auth / workflow install | [`references/chimphands-faq.md`](references/chimphands-faq.md) |
@@ -305,7 +305,7 @@ Write `message` in plain words (what happened, what the user expected). Put the 
 | User says | Read |
 |-----------|------|
 | *(ChimpHands on CI — any turn)* | [`references/chimphands.md`](references/chimphands.md) **first** (branch + end-of-turn commit), then the matching workflow row below. Auth/CI FAQ: [`references/chimphands-faq.md`](references/chimphands-faq.md). |
-| `/testchimp project init` | [`references/project-init-testchimp.md`](references/project-init-testchimp.md) — **one-time per project**: platform comms, folder mapping (`get-git-folder-mapping` / scaffold PR + `update-git-folder-mapping`), **`connect-to-test-env`**, CI wiring, then optional import plans/tests/smoke (smoke **after** required setup — never first). Track progress via **`get-project-init-status`** / **`update-project-init-status`**. TrueCoverage removed from init → **`/testchimp setup truecoverage`**. Phased plan → approve → execute; PR prefix **`testchimp-`**. |
+| `/testchimp project init` | [`references/project-init-testchimp.md`](references/project-init-testchimp.md) — **one-time per project**: platform comms, folder mapping (`get-git-folder-mapping` / scaffold PR + `update-git-folder-mapping`), **`connect-to-test-env`**, CI wiring, then optional import plans/tests/smoke (smoke **after** required setup — never first), and **last** an offer to invite teammates (**`invite-team-members`**). Track progress via **`get-project-init-status`** / **`update-project-init-status`**. TrueCoverage removed from init → **`/testchimp setup truecoverage`**. Phased plan → approve → execute; PR prefix **`testchimp-`**. |
 | `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — **per developer**: workstation MCP, **`get-eaas-config`** gate, local test env. Continues even if project init incomplete; offer **`/testchimp project init`** for gaps. Best-effort **`report-agent-action`** (`workflowId: init`). |
 | `/testchimp import plans` / `/testchimp import plans <folder>` | [`references/import-plans.md`](references/import-plans.md) — import existing plan markdown into mapped **`plans/`**; nested under project init with one approval when agreed. |
 | `/testchimp import` / `/testchimp import existing tests <folder>` | [`references/import-existing-tests.md`](references/import-existing-tests.md) — workflow **`import`** (One-Off); Playwright as-is or best-effort translate other frameworks; CI; scenario links; optional `markScreenState`. Nested under init with **one approval**. |
@@ -480,7 +480,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 
 | Path | Purpose |
 |------|---------|
-| [`references/project-init-testchimp.md`](references/project-init-testchimp.md) | One-time project init: folder mapping, CI, test env, then optional imports/smoke; **`get-project-init-status`** / **`update-project-init-status`** |
+| [`references/project-init-testchimp.md`](references/project-init-testchimp.md) | One-time project init: folder mapping, CI, test env, then optional imports/smoke, then team invites (last); **`get-project-init-status`** / **`update-project-init-status`** / **`invite-team-members`** |
 | [`references/init-testchimp.md`](references/init-testchimp.md) | Per-developer thin init: workstation MCP, local test env, connectivity gate |
 | [`references/import-plans.md`](references/import-plans.md) | `/testchimp import plans` — migrate existing plan markdown into mapped **`plans/`** |
 | [`references/policies-and-traceability.md`](references/policies-and-traceability.md) | Policy frontmatter, resolution, ULID, closed `report-agent-action` vocabulary, Report workflow execution, Disabled/Missing Config |

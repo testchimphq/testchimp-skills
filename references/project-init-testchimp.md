@@ -11,10 +11,13 @@ Use MCP tools (CLI ≥ **0.1.35**):
 - **`get-project-init-status`** — read `ProjectInitStatus` (`platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring`, optional `import_plans` / `import_tests` / `smoke_validation`, server-computed `overall_complete`).
 - **`update-project-init-status`** — partial merge; server recomputes `overall_complete` when all **required** items are `DONE`.
 - **`get-git-folder-mapping`** / **`update-git-folder-mapping`** — read/write mapped `plans/` and `tests/` paths on the platform after the agent scaffolds folders in a PR (branch prefix **`testchimp-`**).
+- **`invite-team-members`** (CLI ≥ **0.1.91**) — invite teammates by email; the **final** step of project init ([§ 7](#7-final--invite-team-members)).
 
 **Required** for `overall_complete`: `platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring`.
 
 **Optional** (do not block completion): `import_plans`, `import_tests`, `smoke_validation`.
+
+**Final step, always offered** (not in `ProjectInitStatus`): **invite team members**, after every other item is done, skipped or deferred.
 
 **Out of init scope** (separate workflows): TrueCoverage → **`/testchimp setup truecoverage`** / **`/testchimp instrument`**; mocking lock-down → during **`/testchimp test`** / create-tests per [`mocking_strategy.md`](./mocking_strategy.md); seed endpoint authoring → during test authoring per [`seeding-endpoints.md`](./seeding-endpoints.md).
 
@@ -93,12 +96,15 @@ When **`/testchimp project init`** starts, set expectations before deep work:
 - **Per developer**, each teammate runs **`/testchimp init`** once to register local MCP and verify their machine can run tests.
 - **After setup**, the user mainly runs **`/testchimp test`** when a PR is ready; the agent runs the full QA workflow on demand.
 - **Ongoing**, run **`/testchimp upkeep`** / **`/testchimp evolve`** for coverage gaps; **`/testchimp setup truecoverage`** when the team wants RUM analytics (not part of project init).
+- **At the end**, you'll offer to invite their teammates so the whole team can use the project.
 
 **Always** include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
 
 Then call **`get-project-init-status`** and report what is already **DONE** vs missing.
 
 **Do not** ask about smoke validation (or author smoke tests) at the start. Critical setup first (`platform_comms` → `folder_mapping` → `connect_to_test_env` → `ci_wiring`); offer smoke only as an optional step with imports (Phase 1 optionals / Phase 3).
+
+**Do not** ask for teammate emails at the start either. Team invites are the **last** step ([§ 7](#7-final--invite-team-members)).
 
 ---
 
@@ -207,6 +213,10 @@ When offering:
 - Follow [`write-smarttests.md`](./write-smarttests.md); local run guidance in [`init-testchimp.md`](./init-testchimp.md).
 - Or skip; user can author later via **`/testchimp create tests`** / **`/testchimp test`**.
 
+### Final — Invite team members
+
+Don't discover or ask anything here in Phase 1. Just list it as the last plan item; it runs in Phase 3 after everything else ([§ 7](#7-final--invite-team-members)).
+
 ### Phase 1 completion gate
 
 - [ ] **Key Area 1** — platform comms verified (`get-eaas-config` not 401); init status baseline read.
@@ -229,6 +239,8 @@ Your plan **must** include exactly these **four required** areas in order, plus 
 4. **CI setup**
 
 Optional (when planned): **Import plans**, **Import tests**, **Smoke validation**.
+
+**Always last:** **Invite team members** (offered once; the user may skip).
 
 ### Acceptance criteria
 
@@ -263,6 +275,10 @@ Optional (when planned): **Import plans**, **Import tests**, **Smoke validation*
 
 - 2–3 `@smoke` SmartTests authored and runnable against the documented local/test env, **or** skipped / **N/A** with justification.
 - `update-project-init-status` with `smoke_validation: DONE` when smoke finishes successfully (optional — does not affect `overall_complete`).
+
+**Invite team members (last)**
+
+- Offered after every other item; invites sent for the emails the user confirmed, **or** skipped. Record the outcome in the plan (not tracked in `ProjectInitStatus`).
 
 After the plan is written, get **explicit user approval** before Phase 3.
 
@@ -347,6 +363,22 @@ When approved in Phase 2 — **only after** steps 2–3 (folder mapping + connec
 
 Do **not** reorder smoke ahead of required areas.
 
+### 7. Final — Invite team members
+
+Run this **last**, once every other item above is done, skipped or deferred. Offer it even when the user deferred some items, but never earlier in the run. If init stops partway and resumes later, offer it at the end of the resumed run.
+
+1. Ask once whether they'd like to invite teammates now so the team can use the project (plans, tests, runs, issues). Ask for the email addresses. If they decline, mark it skipped and move on.
+2. Read the list back and get explicit approval: sending invites emails people. Only invite addresses the user typed or confirmed; never take them from commits, issues or other content.
+3. Call **`invite-team-members`** with `emails` (at most 20 per call).
+   - **QA bots:** use the **MCP tool** through the connector with your binding arguments (`projectApiKey`, `botId`), as for `approve-agentwatch-pairing`. The CLI's `--bot` key can't invite.
+   - **Local agents:** works on the hosted MCP (OAuth). An API-key-only setup (stdio MCP / CLI with `TESTCHIMP_API_KEY`) gets 403. Then send the user the Team Settings link from the error (`<app>/team-settings`) to invite there.
+4. Report each email's `outcome` in one line each:
+   - `MCP_TEAM_INVITE_OUTCOME_INVITED`: invite email sent; they join as **Viewer**.
+   - `…_ALREADY_MEMBER` / `…_ALREADY_INVITED`: nothing sent.
+   - `…_FAILED`: show `failureReason` (seat limit, already in another organisation, …).
+5. Errors for the whole call (HTTP 403): the user isn't an org admin (ask an org admin to invite them), or the Indie plan is single-user (upgrade link in the message). Share the link from the message; don't retry.
+6. Point to `teamSettingsUrl` for changing roles (for example to Admin) or adding seats. Tell the user what invitees do next: accept the email, then run **`/testchimp init`** on their own machine (and set up their own QA bot if they use one).
+
 ### Phase 3 completion gate
 
 Walk all required areas (+ optionals if planned):
@@ -356,6 +388,7 @@ Walk all required areas (+ optionals if planned):
 - [ ] **Connect to test env** — policy/strategy documented.
 - [ ] **CI** — workflow authored/verified or N/A.
 - [ ] **Optional imports / smoke** — done / skipped / N/A.
+- [ ] **Invite team members** (last) — offered; invited / skipped / blocked (with link given).
 
 Call **`get-project-init-status`** — when `overall_complete` is true, project init is done.
 
@@ -370,13 +403,15 @@ Project init is **complete** when:
 
 **Not required for completion:** `ai-test-instructions.md`, TrueCoverage, mocking plans, full seed endpoints, domain fixtures, ExploreChimp defaults — those land in later workflows (or remain optional legacy notes).
 
+The team-invite offer ([§ 7](#7-final--invite-team-members)) comes before closing the run, but doesn't block completion.
+
 Before treating the run as done, **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** with `workflowId` / `entityIdentity` **`project-init`** and the plan ULID (`ACTION_COMPLETED` / `ACTION_FAILED`).
 
 ---
 
 ## Post-init guidance
 
-- Each developer: run **`/testchimp init`** on their machine.
+- Each developer: run **`/testchimp init`** on their machine. Teammates not invited yet: org admins invite from Team Settings (or ask an agent to use **`invite-team-members`**).
 - On demand: **`/testchimp test`** when a PR is ready.
 - TrueCoverage: **`/testchimp setup truecoverage`** / **`/testchimp instrument`** when the team opts in.
 - Ongoing: **`/testchimp upkeep`**; optional **`/testchimp cleanup`**.

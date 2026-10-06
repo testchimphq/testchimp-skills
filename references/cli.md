@@ -1415,7 +1415,27 @@ testchimp upsert-plans-support-file \
 
 Lists catalog workflows with Active / Disabled / Missing Config for the project. Use `--json-input '{}'` when no flags are needed.
 
-Also related (flags vary): **`report-agent-action`**, **`get-last-run-workflow-detail`**, **`list-workflow-executions`**, **`get-workflow-execution`** — see `testchimp <cmd> -h`.
+Also related (flags vary): **`report-agent-action`**, **`get-last-run-workflow-detail`**, **`list-workflow-executions`**, **`get-workflow-execution`** — see `testchimp <cmd> -h`. `list-workflow-executions` accepts `pendingApprovalOnly` and (CLI ≥ **0.1.91**) `assignedToMeOnly` (executions whose assignee is the calling user: OAuth user, or the bot's owner with `--bot`).
+
+### `update-workflow-execution-assignees` (CLI ≥ **0.1.91**)
+
+**API:** `POST /api/mcp/update_workflow_execution_assignees`. **Mutating.** Sets the assignee and / or CC list of a workflow execution. Executions get an assignee automatically when their plan-approval or approve-to-invoke notification goes out (the initiator if they're on the team, otherwise the first notified recipient; everyone else notified is CC'd). After that, approval and completion notifications go to the assignee and CC instead of the configured recipients.
+
+Needs a user: an OAuth session, or a project API key **with** `--bot <botId>` (acts as the bot's owner). Plain API keys get 403. The caller must be a team member and either the current assignee or an org admin; the admin override needs an OAuth session (not `--bot`). Anyone on the team can assign an execution that has no assignee yet, and a CC'd user can remove themselves. A CC needs an assignee; adds can't take the CC list past 20 users; the assignee is dropped from CC automatically. New assignee and newly CC'd users get the `workflow-execution-assigned` bot event plus email / Slack per their notification settings. Removals notify nobody.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--workflow-execution-id <id>` | Yes | `workflowExecutionId` | |
+| `--assignee <emailOrUserId>` | No | `assigneeEmail` / `assigneeUserId` | Values containing `@` are emails |
+| `--add-cc <list>` | No | `addCcEmails` / `addCcUserIds` | Comma-separated emails or user ids |
+| `--remove-cc <list>` | No | `removeCcUserIds` | Comma-separated user ids |
+| `--json-input …` | No | (merge) | |
+
+Returns the updated `WorkflowExecution` (`assigneeUserId`, `ccUserIds`, `assignmentHistory`). 409: the assignment changed since it was read; re-read and retry. Only change assignees after the user has named the person and approved.
+
+```bash
+testchimp --bot <botId> update-workflow-execution-assignees --workflow-execution-id 01J... --assignee dana@acme.com --add-cc lee@acme.com
+```
 
 ---
 
@@ -1649,7 +1669,7 @@ Used by QA-bot mode ([`bot-playbook.md`](./bot-playbook.md), [`bot-onboarding.md
 
 The bot host shares one TestChimp connector (one OAuth token, the user's) across all of a user's bots, so the connector names the **user** only. Each bot names its **project** with its own binding (`projectId`, `projectName`, `botId`, `projectApiKey`), fetched once with `get-bot-credentials` right after the user authorizes the connector for that bot's project, and stored bot-scoped.
 
-- **Preferred path:** QA bots use the CLI (below) for TestChimp calls; it goes straight to featureservice / ingress. The remote MCP is for `get-bot-credentials`, `approve-agentwatch-pairing` and as a fallback.
+- **Preferred path:** QA bots use the CLI (below) for TestChimp calls; it goes straight to featureservice / ingress. The remote MCP is for `get-bot-credentials`, `approve-agentwatch-pairing`, `invite-team-members` and as a fallback.
 - **Remote MCP:** every tool takes optional `projectApiKey` and `botId` arguments. They are sent as `TestChimp-Api-Key` / `bot-id` alongside the connector's bearer: the key decides the project (the user must be a member) and the bearer decides the user. A QA bot token without a key gets 403 "no project binding", except on `get-bot-credentials` and `get-bot-compat`. A remote MCP URL's `?projectId=` does not replace the key for bot tokens (naming another project still gets 403); keep sending `projectApiKey`.
 - **CLI:** save the binding once per computer, then add `--bot <botId>` to every command. It loads `~/.testchimp/bots/<botId>.json` and sets `TESTCHIMP_API_KEY`, `TESTCHIMP_BOT_ID` and the stored backend / ingress URLs for that command. These override inherited env, and an inherited `TESTCHIMP_OAUTH_TOKEN` is dropped. With only `TESTCHIMP_BOT_ID` set (no key, no token), the CLI loads that bot's binding if it has one. When an API-key caller sends `bot-id`, it acts as that bot's user, so `--user-id` isn't needed.
 
@@ -1723,6 +1743,27 @@ Per-user mapping of a local repo folder to a TestChimp project, stored in `~/.te
 ```bash
 testchimp workspace map --project-id "$PROJECT_ID" --folder ~/code/shop --project-name "Shop"
 testchimp workspace get --project-id "$PROJECT_ID" | jq -r '.folders[0].path'
+```
+
+---
+
+## Team invites (CLI ≥ **0.1.91**)
+
+### `invite-team-members`
+
+**API:** `POST /api/mcp/invite_team_members`. **Mutating** (sends invite emails). Invites teammates to the organisation; members can open every project in it. Used as the last step of project init ([`project-init-testchimp.md` § 7](./project-init-testchimp.md#7-final--invite-team-members)).
+
+Needs an **OAuth user session** (hosted MCP, or a QA bot's connector) whose user is an **org admin**. A project API key can't invite, including with a `bot-id` header, so QA bots call the **MCP tool** with their binding arguments, not `testchimp --bot …`. API-key callers get 403 with the Team Settings link.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--emails <list>` | Yes | `emails` | Comma-separated; 1–20 per call. Only addresses the user confirmed |
+| `--json-input …` | No | (merge) | |
+
+Returns `{results: [{email, outcome, userId?, failureReason?}], teamSettingsUrl}`. `outcome`: `MCP_TEAM_INVITE_OUTCOME_INVITED` (email sent; joins as Viewer), `…_ALREADY_MEMBER`, `…_ALREADY_INVITED` (nothing re-sent), `…_FAILED` (`failureReason`: seat limit with upgrade link, email in another organisation, …). Errors for the whole call: 403 when the session has no user, the user isn't an org admin, or the org is on the single-user Indie plan; 400 for an invalid email or more than 20. Roles (for example Admin) and seats are managed at `teamSettingsUrl`.
+
+```json
+{ "emails": ["dana@acme.com", "lee@acme.com"] }
 ```
 
 ---
