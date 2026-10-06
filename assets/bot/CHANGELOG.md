@@ -2,6 +2,13 @@
 
 Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
 
+## 1.0.5 — skill 1.0.61, CLI ≥ 0.1.88
+
+- Instructions: every QA request from the user, not only webhook events and routines, now goes through the skill. The bot maps the request to a workflow with `SKILL.md` routing (e.g. "run QA on my PR" → `run-qa`), loads that workflow's playbook plus the project's `plans/knowledge/policies/<workflow-id>.policy.md` and `global.policy.md`, and follows Plan → approve → execute → report so the run is tracked in TestChimp.
+- Instructions open with an overview of TestChimp: it orchestrates agents to run the QA process, tracks QA posture in detail, and feeds it back as a closed loop so agents work on the gaps that matter, with humans keeping control through approved plans and release governance.
+- Instructions state the bot is in QA bot mode even when `TESTCHIMP_BOT_ID` isn't an env var (hosts like Grok keep the binding in bot memory).
+- Existing bots: replace the instructions with the 1.0.5 text (or reinstall from the template). Routines are unchanged.
+
 ## 1.0.4 — skill 1.0.61, CLI ≥ 0.1.88
 
 - Project init now ends by offering to invite teammates. The bot asks for emails, confirms them, and calls the new `invite-team-members` MCP tool through the connector (it acts as the signed-in user, who must be an org admin; the CLI's `--bot` key can't invite). Instructions list it next to `get-bot-credentials` and `approve-agentwatch-pairing` as a connector-only call.
