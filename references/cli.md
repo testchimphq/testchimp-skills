@@ -135,6 +135,8 @@ testchimp get-org-capabilities
 
 **Agent rule:** Always check **`capabilities`**, never infer from a separate "tier" field — this API is the single source of truth for what a workflow may rely on. When a capability is missing **and** `freeTrialActive` is `false`, soft-skip only the gated insight/analysis (mark **N/A** + reason); never abort the surrounding workflow.
 
+**Not capability-gated:** Only the capabilities listed in the response gate anything. **ExploreChimp has no org capability** (there is no `EXPLORECHIMP` value) — never skip or block ExploreChimp because it is absent from `capabilities`. ExploreChimp is limited only by org **credits**; when credits run out the backend returns **403 `Throttled as quota is over`** (see [`run-explorechimp.md`](./run-explorechimp.md#availability-no-org-capability-required)).
+
 ---
 
 ## `get-suite-execution-stats`

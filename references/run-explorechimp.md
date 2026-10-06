@@ -10,6 +10,10 @@ This reference supports **local ExploreChimp** runs: Playwright UI tests drive t
 
 **P0 — honor config reporters + complete explorations:** Spawn Playwright/Mobilewright **exactly** via the SmartTests config (no CLI **`--reporter`**). After every ExploreChimp batch, the platform exploration for **`TESTCHIMP_BATCH_INVOCATION_ID`** must be **`COMPLETED_EXPLORATION`** before the workflow treats Explore as done — see [Honor Playwright config reporters (P0)](#honor-playwright-config-reporters-p0) and [Exploration completion (required)](#exploration-completion-required).
 
+## Availability: no org capability required
+
+ExploreChimp is **not** an org capability — **do not** call `get-org-capabilities` to decide whether to run it, and never report "org doesn't have the ExploreChimp capability". Every org can run ExploreChimp; it is limited only by org **credits**. If the backend returns **403 `Throttled as quota is over`**, tell the user the org is out of credits (top up / upgrade), mark the ExploreChimp step **N/A** with that reason, and continue the surrounding workflow.
+
 ## Policy: UX testing preferences
 
 Before selecting sources or reporting bugs, read **`plans/knowledge/policies/run-explorechimp.policy.md`** (and/or **`global.policy.md`** when UX preferences are mirrored there). Honor the **`## UX testing`** section:
