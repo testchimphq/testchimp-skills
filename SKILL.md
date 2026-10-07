@@ -4,7 +4,7 @@ description: "TestChimp is the QA platform for coding agents. Use it to run the 
 compatibility: "Requires Node.js 18+, @testchimp/cli at or above metadata.required_cli_version, TESTCHIMP_API_KEY and network access to TestChimp APIs. Web projects need @playwright/test and playwright 1.59.0 or later; mobile projects need mobilewright. Per-version CLI notes: references/version-matrix.md."
 license: MIT
 metadata:
-  version: 1.0.62
+  version: 1.0.63
   required_cli_version: "0.1.91"
   homepage: "https://testchimp.io"
 ---
