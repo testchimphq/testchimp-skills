@@ -12,7 +12,9 @@ This reference supports **local ExploreChimp** runs: Playwright UI tests drive t
 
 ## Availability: no org capability required
 
-ExploreChimp is **not** an org capability — **do not** call `get-org-capabilities` to decide whether to run it, and never report "org doesn't have the ExploreChimp capability". Every org can run ExploreChimp; it is limited only by org **credits**. If the backend returns **403 `Throttled as quota is over`**, tell the user the org is out of credits (top up / upgrade), mark the ExploreChimp step **N/A** with that reason, and continue the surrounding workflow.
+ExploreChimp is **not** an org capability — **do not** call `get-org-capabilities` to decide whether to run it, and never report "org doesn't have the ExploreChimp capability". Every org can run ExploreChimp; it is limited only by org **credits**. Credit exhaustion during local runs does **not** produce an HTTP error: `analyze_explorechimp_data_sources` returns 200 with status **`DATA_SOURCE_ANALYSIS_SKIPPED_EXPLORATION_CREDIT_LIMIT`** (per-exploration `maxCredits` reached) or **`DATA_SOURCE_ANALYSIS_SKIPPED_ORG_CREDIT_LIMIT`** (org out of credits). When you see those, tell the user (raise `maxCredits` / top up), mark the ExploreChimp step **N/A** with that reason, and continue the surrounding workflow.
+
+If every `markScreenState` logs **`ExploreChimp markScreenState failed (non-fatal): Request failed with status code 403`** while `get_exploration_result` shows `creditsUsed: 0` and `totalScreenStatesAnalyzed: 0`, that is **not** a credit or capability problem — the analyze request was rejected before reaching TestChimp's analysis. File it with **`send-feedback`** (include the batch invocation id and the resolved ingress / backend host) and mark the ExploreChimp step **N/A** with that reason; do not retry the batch in a loop.
 
 ## Policy: UX testing preferences
 
