@@ -169,6 +169,7 @@ Decide and record **in `connect-to-test-env.policy.md`** (then **`upsert-policy`
 
 - **Local — Test Authoring** (`## Local Agent`): single agent-runnable **local up** command + **wait-for-healthy** criteria + URL mapping (`BASE_URL`, backends).
 - **CI — Test Execution** (`## CI / Cloud`): persistent vs ephemeral (EaaS/Bunnyshell, Branch Management preview URLs, on-runner spin-up) per [`environment-management.md`](./environment-management.md).
+- **Auth flows** (`## Auth flows`, when the product has sign-up / verify / OTP / MFA / reset): detect provider and existing test hooks; choose a ladder step; ask only for gaps; record provider, env/secret **names**, and setup/`storageState` paths. Full playbook: [`auth-flows.md`](./auth-flows.md). Do **not** plan hosted inboxes or rented SMS numbers.
 
 If a legacy **`## Environment Provision Strategy`** exists in `ai-test-instructions.md`, migrate usable content into the policy rather than duplicating forever.
 

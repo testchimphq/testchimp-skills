@@ -4,7 +4,7 @@ description: "TestChimp is the QA platform for coding agents. Use it to run the 
 compatibility: "Requires Node.js 18+, @testchimp/cli at or above metadata.required_cli_version, TESTCHIMP_API_KEY and network access to TestChimp APIs. Web projects need @playwright/test and playwright 1.59.0 or later; mobile projects need mobilewright. Per-version CLI notes: references/version-matrix.md."
 license: MIT
 metadata:
-  version: 1.0.63
+  version: 1.0.64
   required_cli_version: "0.1.91"
   homepage: "https://testchimp.io"
 ---
@@ -47,7 +47,7 @@ TestChimp runs **pre-defined QA workflows**. **`references/`** details how each 
 
 TestChimp is a **QA workflow orchestration layer for AI agents**. It provides:
 
-- **Setup QA infra** - sets up opinionated, enterprise-grade QA infra including CI setup, test-only seed / teardown / read endpoints, mocking strategy (Playwright **`page.route`** for HTTP/API; optional **AIMock** for LLM), TrueCoverage instrumentation, per-PR environment provisioning. **Fixtures** (barrels per scaffold — [`references/project-types-and-scaffolds.md`](references/project-types-and-scaffolds.md)) are introduced during **`/testchimp test`** as needed—see [`references/fixture-usage.md`](references/fixture-usage.md).
+- **Setup QA infra** - sets up opinionated, enterprise-grade QA infra including CI setup, test-only seed / teardown / read endpoints, mocking strategy (Playwright **`page.route`** for HTTP/API; optional **AIMock** for LLM), TrueCoverage instrumentation, per-PR environment provisioning. **Auth flows** (sign-up, verify, OTP, MFA, reset) use provider test modes or guarded app flags — not real inboxes or SMS numbers; see [`references/auth-flows.md`](references/auth-flows.md). **Fixtures** (barrels per scaffold — [`references/project-types-and-scaffolds.md`](references/project-types-and-scaffolds.md)) are introduced during **`/testchimp test`** as needed—see [`references/fixture-usage.md`](references/fixture-usage.md).
 - **Requirement traceability** via Playwright **`annotation`** on tests (e.g. `{ type: 'scenario', description: '#TS-101' }`) linking SmartTests to scenarios. One test may include **multiple** scenario annotations in the same `annotation` array when it covers several scenarios—see [`references/write-smarttests.md`](references/write-smarttests.md). Do **not** author deprecated `// @Scenario:` comments. **Suite grouping** uses Playwright **`tag`** (e.g. `tag: '@smoke'`) from **`global.policy.md` → `tags:`** so the CLI can filter (`npx playwright test --grep @smoke`) — never `{ type: 'group' }` annotations.
 
 - **Markdown test plans** in a mapped `plans/` folder (YAML frontmatter, `stories/` / `scenarios/` / `knowledge/`) — how to read and author them in [`references/author-plans.md`](references/author-plans.md).
@@ -506,6 +506,7 @@ See also [`references/seeding-endpoints.md`](references/seeding-endpoints.md) (a
 | [`references/fix-test-execution.md`](references/fix-test-execution.md) | `/testchimp fix test failure` |
 | [`references/fix-issue.md`](references/fix-issue.md) | `/testchimp fix issue` |
 | [`references/write-smarttests.md`](references/write-smarttests.md) | SmartTest authoring details used by the execution phase (incl. insufficient-context → manual session fallback) |
+| [`references/auth-flows.md`](references/auth-flows.md) | Sign-up / verify / magic link / OTP / MFA / password reset: detect provider, decision ladder (test mode → flag → seeded `storageState` → TOTP), record in connect-to-test-env policy |
 | [`references/author-test-from-manual-session.md`](references/author-test-from-manual-session.md) | Author SmartTest from Chrome-extension manual session (**Copy test generate prompt**) |
 | [`references/meeting-transcripts.md`](references/meeting-transcripts.md) | Meeting Bots transcript context (`referring the meeting <id> as context`, `using meeting-set context <id>`); **`get-meeting-transcript`** (summary first) + **`get-meeting-set`** + meeting search (**`list-meetings`**, **`list-meeting-filter-options`**) |
 | [`references/bot-playbook.md`](references/bot-playbook.md) | **QA bot:** webhook event → workflow playbook, acks, routines (weekday reminders, weekly QA posture digest) |

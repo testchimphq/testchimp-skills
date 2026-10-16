@@ -171,4 +171,5 @@ Plan path pattern: `knowledge/workflow_plans/<workflow-id>/<ulid>.plan.md`.
 | ChimpHands branch / end-of-turn commit | [`chimphands.md`](./chimphands.md) |
 | ChimpHands GHA auth / CI self-heal | [`chimphands-faq.md`](./chimphands-faq.md) |
 | Test env bring-up (local or ChimpHands) | [`connect-to-test-env.md`](./connect-to-test-env.md) + `plans/knowledge/policies/connect-to-test-env.policy.md` |
+| Sign-up / OTP / MFA / magic link / password reset in tests | [`auth-flows.md`](./auth-flows.md) — detect provider; prefer test mode / guarded flag / seeded `storageState` / TOTP; record under policy **`## Auth flows`**; no hosted inboxes |
 | Repo-specific env / bring-up blockers | Prefer the connect-to-test-env policy; legacy FAQ only if `ai-test-instructions.md` already exists ([`run-qa.md`](./run-qa.md#binding-test-env-contract-policy-and-legacy-faq)) |

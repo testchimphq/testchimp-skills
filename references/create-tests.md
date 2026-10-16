@@ -55,6 +55,7 @@ In both cases: scenario ordinal from the prompt (when present) is the authoring 
 | UI SmartTests | [`write-smarttests.md`](./write-smarttests.md), [`fixture-usage.md`](./fixture-usage.md), [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) |
 | Mobile UI | [`mobilewright-smarttests.md`](./mobilewright-smarttests.md) |
 | API tests / **API operation coverage scopes** | [`api-testing.md`](./api-testing.md) (coverage strategy: update existing UI or API tests; dedicated `api/` specs are one option) |
+| Auth flows (sign-up, verify, OTP, MFA, reset) | [`auth-flows.md`](./auth-flows.md) — detect provider / test hooks; decision ladder; record in connect-to-test-env policy |
 | Seeds / probes | [`seeding-endpoints.md`](./seeding-endpoints.md) |
 | Environment | [`connect-to-test-env.md`](./connect-to-test-env.md) |
 | Suite tags / goals | Project **`plans/knowledge/policies/global.policy.md`** (seed: [`assets/policies/global.policy.md`](../assets/policies/global.policy.md); or **`get-policy --policy-file-name global.policy.md`**) — coverage target, prioritization, **`tags:`** |
@@ -101,7 +102,7 @@ After Plan approval (standalone) or when the parent hands off (nested):
 1. **[`@testchimp/playwright` upgrade](#testchimpplaywright-upgrade-autonomous)** — complete before any new/changed specs or runner invocations.
 2. **[`connect-to-test-env.md`](./connect-to-test-env.md)** when the parent has not already brought the env up.
 3. **Filter by verification strategy (required before authoring):** After the in-scope scenario ordinals are known (from coverage, plans, or the approved plan), call **`get-spec-lifecycle-details --scenario-ids …`** (CLI ≥ **0.1.30** / MCP `get-spec-lifecycle-details`) in one batch. For each scenario, read `lifecycleFields.verification_strategy`. **Skip** scenarios where the value is **`manual`**. Missing / empty → treat as **`auto`**. Only author SmartTests for **`auto`** scenarios. Note skipped manual scenarios on the plan. Do **not** infer this from plan markdown frontmatter — it is platform lifecycle only.
-4. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan (automated scenarios only) — include **suite tags** from [Global policy tags](#global-policy-tags-blocking-before-authoring).
+4. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan (automated scenarios only) — include **suite tags** from [Global policy tags](#global-policy-tags-blocking-before-authoring). If the scope includes auth journeys (sign-up, verify, OTP, MFA, reset), follow [`auth-flows.md`](./auth-flows.md) and reuse / update **`## Auth flows`** in the connect-to-test-env policy.
 5. Run and triage with the real runner until green (or explicit blockers). On the **final green Validate** of new/changed specs: pin `TESTCHIMP_BATCH_INVOCATION_ID`, capture `[TestChimp] Batch invocation view:` from that spawn, then **`unset TESTCHIMP_BATCH_INVOCATION_ID`**. Upsert the PR/MR comment per [`policies-and-traceability.md`](./policies-and-traceability.md)#authored-tests-pr-comment (after the PR exists; soft-fail if no PR/URL).
 6. **Write `plans/smart-smoke/<branch>/related-tests.json` (BLOCKING)** — see [Related-tests.json (required)](#related-testsjson-required). Do **not** close create-tests (standalone or nested) without this file for the current branch.
 7. Report workflow completion when standalone.
@@ -121,7 +122,8 @@ After Plan approval (standalone) or when the parent hands off (nested):
 2. **Impact-related existing tests** — from PR/scope analysis: scenarios sharing the same feature area / journey / APIs as the change, then specs linked via `annotation: { type: 'scenario', description: '#TS-…' }` (see [`run-smart-smoke.md`](./run-smart-smoke.md) → *Analyze impact* / *Write `related-tests.json`*).
 
 **Format:** JSON array of TestLocators, or `{ "relatedTests": [ … ] }` / `{ "related_tests": [ … ] }`.  
-`folderPath` is relative to the SmartTests root and **must not** prefix `tests/` (e.g. `["auth"]`, not `["tests","auth"]`).
+`folderPath` is relative to the SmartTests root and **must not** prefix `tests/` (e.g. `["auth"]`, not `["tests","auth"]`).  
+`folderPath` and `testSuite` must be **JSON arrays** — a single describe is `["My suite"]`, never a bare string `"My suite"`.
 
 **Also:** set / document **`TESTCHIMP_BRANCH_NAME=<branch>`** so runners load this path. Do **not** author `.testchimp-smart-smoke-selection.json` (plugin temp sidecar only).
 

@@ -67,7 +67,7 @@ From the SmartTests root (directory containing **`.testchimp-tests`**):
 2. For each matching **test** (not only the file), build a **TestLocator** relative to the SmartTests / mapped tests root:
    - **`folderPath`** / **`folder_path`**: path segments **under the mapped tests root** — **do not** prefix `tests/` (e.g. `["auth"]` or `["checkout","cart"]`, never `["tests","auth"]`).
    - **`fileName`** / **`file_name`**: spec basename (e.g. `login.spec.ts`)
-   - **`testSuite`** / **`test_suite`**: nested `test.describe` titles (array; empty if none)
+   - **`testSuite`** / **`test_suite`**: nested `test.describe` titles as a **JSON array** (empty `[]` if none). A single describe must be `["My suite"]` — **never** a bare string (`"My suite"`), which breaks smart-smoke selection.
    - **`testName`** / **`test_name`**: the test title
 3. **Also include** every **new or materially changed** SmartTest from this run / PR (always).
 4. Deduplicate by locator identity; record the list under completion notes on the plan.
@@ -84,6 +84,7 @@ plans/smart-smoke/<branch>/related-tests.json
 
 - **`<branch>`** = current git branch name. Keep path segments literally when the branch contains `/` (nested dirs).
 - File body: either a **JSON array** of TestLocators, or `{ "relatedTests": [ … ] }` / `{ "related_tests": [ … ] }`.
+- **`folderPath`** and **`testSuite`** must be **arrays**, not strings (even for a single segment / describe).
 
 Example:
 
@@ -93,7 +94,7 @@ Example:
     {
       "folderPath": ["auth"],
       "fileName": "login.spec.ts",
-      "testSuite": [],
+      "testSuite": ["Login page"],
       "testName": "user can log in"
     }
   ]

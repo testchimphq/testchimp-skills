@@ -50,6 +50,19 @@ follow (1) then use that stack for create-tests / execute / fix failures.
 Update this section when bring-up learnings change; bump version + upsert-policy.
 -->
 
+## Auth flows
+
+<!--
+When the product has sign-up / email verify / magic link / OTP / SMS / MFA / password reset:
+record the approach so create-tests / run-qa reuse it. See references/auth-flows.md.
+
+- Provider: <Clerk | Auth0 | Firebase | Supabase | Cognito | NextAuth | Lucia | Better Auth | custom>
+- Ladder step: <1 provider test mode | 2 app flag | 3 seeded + storageState | 4 TOTP | 5 manual>
+- Env / secret names only (never values)
+- Setup / storageState path if used
+- Seed or guarded bypass notes (non-prod only)
+-->
+
 ## Performance testing (when enabled)
 
 <!--

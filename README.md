@@ -90,6 +90,7 @@ testchimp-skills/
 │   ├── create-policy.md
 │   ├── policies-and-traceability.md
 │   ├── write-smarttests.md
+│   ├── auth-flows.md        # Sign-up / OTP / MFA / reset without real inboxes
 │   ├── cli.md
 │   └── …
 └── assets/
