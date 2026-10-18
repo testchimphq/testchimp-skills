@@ -141,7 +141,7 @@ If **`get-project-init-status`** shows required items already **DONE**, treat Ke
 Verify the **project** can talk to TestChimp APIs from this agent session (not every teammate’s laptop). Prefer the **plugin-provided** hosted MCP (`https://mcp.testchimp.io/mcp`) when TestChimp is installed as a Claude Code plugin — do **not** write a second project-level server or require a stdio API key for these calls.
 
 1. **`get-eaas-config`** `{}` — must **not** return **401** (empty config is OK).
-2. **`get-project-credentials`** (when the connection is OAuth) — confirm `projectName` / `projectId` with the user. That is the project picked on the consent screen; every later tool call is scoped to it.
+2. **`get-project-credentials`** (when the connection is OAuth) — confirm `projectName` / `projectId` with the user. That is the project picked on the consent screen; every later tool call is scoped to it. If **`<git root>/.testchimp/mcp.json`** is missing and runners will need a key, save it now using [Save the runner key](./init-testchimp.md#save-the-runner-key) — do not put the key in a shell command.
 3. **`get-project-init-status`** — baseline current progress.
 4. **Project mismatch (blocking)** — if this repo already has `.testchimp-plans` / `.testchimp-tests`, a gitignored `.testchimp/mcp.json` with a different `TESTCHIMP_PROJECT_ID`, or `get-git-folder-mapping` points at another `owner/repo` than this tree's remotes, the user signed in to the wrong project. Stop and tell them to re-authenticate: **`/mcp`** → TestChimp → **Authenticate**, picking **this** repo's project. Then re-run this area. Details: [`init-testchimp.md`](./init-testchimp.md)#workstation-gate-always-first.
 

@@ -40,7 +40,7 @@ Install from this marketplace, then sign in, then init. Do not invent extra comm
 
    **Time:** project-init with one-by-one tool approvals typically takes about **20 minutes** and on the order of **60 approval prompts**. Init is shorter. Pre-allow TestChimp's MCP tools (below) so you are not clicking through every call.
 
-   Test runners (Playwright, k6, the CLI) still need a project API key. Init fetches it with `get-project-credentials` and writes the gitignored `.testchimp/mcp.json`. It does **not** write a second TestChimp server into the project's `.mcp.json`.
+   Test runners (Playwright, k6, the CLI) still need a project API key. On hosted / plugin MCP, init calls `get-project-credentials` and writes the gitignored `.testchimp/mcp.json` with the file-write tool (never a shell command that contains the key). On local stdio MCP, it calls `save-workspace-creds` with only the folder. It does **not** write a second TestChimp server into the project's `.mcp.json`.
 
 ### Fewer approval prompts (Claude Code)
 
