@@ -55,7 +55,7 @@ Remote MCP is an **additional** way to connect; manual `npx` + `env` and Studio 
 
 **Already saved:** if `.testchimp/mcp.json` already has a real `TESTCHIMP_API_KEY` and matching `TESTCHIMP_PROJECT_ID`, leave it — do not rewrite for missing `schemaVersion` / `enabled`.
 
-**Hosted or plugin MCP:** call **`get-project-credentials`**, then write **`<git root>/.testchimp/mcp.json`** with the file-write tool (2-space JSON, trailing newline, keep other `mcpServers` and extra `env` keys). On Unix run `chmod 700 .testchimp && chmod 600 .testchimp/mcp.json`; if `chmod` is missing (Windows) or there is no shell, continue. Add `.testchimp/` to `.gitignore` if missing (no markdown `---`). Omit `TESTCHIMP_BACKEND_URL` for prod; for non-prod set it (no trailing slash) and the matching ingress from `get-project-credentials`. Never put the key in a shell command. Never echo or print it. If the tool description still mentions `workspace save-creds`, ignore that line. If there is no file-write tool, use `save-workspace-creds` when listed, else ask the user to create the file in their editor.
+**Hosted or plugin MCP:** call **`get-project-credentials`**, then write **`<git root>/.testchimp/mcp.json`** with the file-write tool (2-space JSON, trailing newline, keep other `mcpServers` and extra `env` keys). On Unix run `chmod 700 .testchimp && chmod 600 .testchimp/mcp.json`; if `chmod` is missing (Windows) or there is no shell, continue. If `.gitignore` is missing `.testchimp/`, append **exactly** the line `.testchimp/` and no other paths (no `mobilewright-report/`, no markdown `---`). Omit `TESTCHIMP_BACKEND_URL` for prod; for non-prod set it (no trailing slash) and the matching ingress from `get-project-credentials`. Never put the key in a shell command. Never echo or print it. If the tool description still mentions `workspace save-creds`, ignore that line. If there is no file-write tool, use `save-workspace-creds` when listed, else ask the user to create the file in their editor.
 
 **Local-npm or stdio MCP:** call **`save-workspace-creds`** with `{ "folder": "<git root>" }` and never pass the key. If that tool is not listed (current hosted/prod MCP), use the hosted path — do not stall.
 
@@ -1422,17 +1422,17 @@ Also related (flags vary): **`report-agent-action`**, **`get-last-run-workflow-d
 
 ### `update-project-init-status`
 
-**API:** `POST /api/mcp/update_project_init_status`. MCP argument is **`{ "status": { … } }`**. Use these **exact snake_case** keys (values typically `DONE`):
+**API:** `POST /api/mcp/update_project_init_status`. MCP argument is **`{ "status": { … } }`**. Use these **exact snake_case** keys. Values must be the **full** enum (`PROJECT_INIT_ITEM_STATUS_DONE`, `PROJECT_INIT_ITEM_STATUS_SKIPPED`, `PROJECT_INIT_ITEM_STATUS_NOT_APPLICABLE`, `PROJECT_INIT_ITEM_STATUS_INCOMPLETE`) — never short `DONE` / `SKIPPED` / `NOT_APPLICABLE` / `INCOMPLETE` on write.
 
 `platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring` (required for `overall_complete`); optional `import_plans`, `import_tests`, `smoke_validation`.
 
-Only **snake_case** is supported on **write**. Do **not** send camelCase (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, `importPlans`, `importTests`, `smokeValidation`, `overallComplete`). Do not send `overall_complete` (server-computed). Partial merge: send only the keys you are updating.
+Only **snake_case** is supported on **write**. Do **not** send camelCase (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, `importPlans`, `importTests`, `smokeValidation`, `overallComplete`). Do not send `overall_complete` (server-computed). Partial merge: send only the keys you are updating. After the call, **verify the returned status** for the keys you sent.
 
-**Reading `get-project-init-status`:** prefer the snake_case keys above. If a snake_case key is absent, accept the camelCase twin. Treat `PROJECT_INIT_ITEM_STATUS_DONE`, `DONE`, or boolean `true` as complete.
+**Reading `get-project-init-status`:** prefer the snake_case keys above. If a snake_case key is absent, accept the camelCase twin. Treat `PROJECT_INIT_ITEM_STATUS_DONE` as complete (also accept bare `DONE` or boolean `true` on read).
 
 ### `report-agent-action` (first row vs close)
 
-First successful RAA for a `workflowExecutionId` **creates** the run. Start with a non-`WORKFLOW` entity (`POLICY` + `CREATED` / `UPDATED` / `ANALYZED` and `entityIdentity` such as `project-init`). Close with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity` equal to `workflowId`. **`WORKFLOW` + `ANALYZED` is rejected** by the MCP schema.
+First successful RAA for a `workflowExecutionId` **creates** the run. Start with a non-`WORKFLOW` entity (`POLICY` + `CREATED` / `UPDATED` / `ANALYZED` and `entityIdentity` a real **`*.policy.md` filename**, e.g. `connect-to-test-env.policy.md`). Catalog ids such as `project-init` or `init` are **rejected** on `POLICY` (`POLICY entity_identity must be a *.policy.md filename`). Close with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity` equal to `workflowId`. **`WORKFLOW` + `ANALYZED` is rejected** by the MCP schema.
 
 ### `update-workflow-execution-assignees` (CLI ≥ **0.1.91**)
 
