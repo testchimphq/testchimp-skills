@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Leftover path for skill clones that still invoke bin/ after the scripts/ rename.
+set -euo pipefail
+exec "$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)/testchimp-preamble-check" "$@"

@@ -53,9 +53,11 @@ Remote MCP is an **additional** way to connect; manual `npx` + `env` and Studio 
 - **Optional per-project URL (non-plugin hosts):** `https://mcp.testchimp.io/mcp?projectId=<id>` in a project MCP file (`url` entry, no `env`). Every tool call acts on that project; TestChimp checks the signed-in user is a member. A QA bot's `projectApiKey` argument still wins over the URL.
 - **Runner key:** remote entries carry no key, so local runners get it once per repo. Full agent procedure: [Save the runner key](./init-testchimp.md#save-the-runner-key).
 
-**Hosted or plugin MCP:** call **`get-project-credentials`**, then write **`<git root>/.testchimp/mcp.json`** with the file-write tool (2-space JSON, trailing newline, keep other `mcpServers`). On Unix run `chmod 700 .testchimp && chmod 600 .testchimp/mcp.json`; if `chmod` is missing (Windows) or there is no shell, continue. Add `.testchimp/` to `.gitignore` if missing (no markdown `---`). Omit `TESTCHIMP_BACKEND_URL` for prod; for non-prod set it (no trailing slash) and the matching ingress from `get-project-credentials`. Never put the key in a shell command. Never echo or print it. If there is no file-write tool, use `save-workspace-creds` or ask the user to create the file in their editor.
+**Already saved:** if `.testchimp/mcp.json` already has a real `TESTCHIMP_API_KEY` and matching `TESTCHIMP_PROJECT_ID`, leave it — do not rewrite for missing `schemaVersion` / `enabled`.
 
-**Local-npm or stdio MCP:** call **`save-workspace-creds`** with `{ "folder": "<git root>" }` and never pass the key. If that tool is not listed, use the hosted path.
+**Hosted or plugin MCP:** call **`get-project-credentials`**, then write **`<git root>/.testchimp/mcp.json`** with the file-write tool (2-space JSON, trailing newline, keep other `mcpServers` and extra `env` keys). On Unix run `chmod 700 .testchimp && chmod 600 .testchimp/mcp.json`; if `chmod` is missing (Windows) or there is no shell, continue. Add `.testchimp/` to `.gitignore` if missing (no markdown `---`). Omit `TESTCHIMP_BACKEND_URL` for prod; for non-prod set it (no trailing slash) and the matching ingress from `get-project-credentials`. Never put the key in a shell command. Never echo or print it. If the tool description still mentions `workspace save-creds`, ignore that line. If there is no file-write tool, use `save-workspace-creds` when listed, else ask the user to create the file in their editor.
+
+**Local-npm or stdio MCP:** call **`save-workspace-creds`** with `{ "folder": "<git root>" }` and never pass the key. If that tool is not listed (current hosted/prod MCP), use the hosted path — do not stall.
 
 **Never** run `testchimp workspace save-creds <key>` (no key as an argument). The CLI command (humans / scripts, CLI ≥ **0.1.93**) reads the key from stdin, `TESTCHIMP_API_KEY` in the environment, or `get-project-credentials` when `TESTCHIMP_OAUTH_TOKEN` is set. Agents should use the MCP tool or the file-write path above, not the CLI.
 
@@ -1424,7 +1426,9 @@ Also related (flags vary): **`report-agent-action`**, **`get-last-run-workflow-d
 
 `platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring` (required for `overall_complete`); optional `import_plans`, `import_tests`, `smoke_validation`.
 
-Only **snake_case** is supported. Do **not** send camelCase (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, `importPlans`, `importTests`, `smokeValidation`, `overallComplete`). Do not send `overall_complete` (server-computed). Partial merge: send only the keys you are updating.
+Only **snake_case** is supported on **write**. Do **not** send camelCase (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, `importPlans`, `importTests`, `smokeValidation`, `overallComplete`). Do not send `overall_complete` (server-computed). Partial merge: send only the keys you are updating.
+
+**Reading `get-project-init-status`:** prefer the snake_case keys above. If a snake_case key is absent, accept the camelCase twin. Treat `PROJECT_INIT_ITEM_STATUS_DONE`, `DONE`, or boolean `true` as complete.
 
 ### `report-agent-action` (first row vs close)
 
