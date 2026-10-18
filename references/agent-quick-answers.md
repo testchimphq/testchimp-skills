@@ -140,15 +140,17 @@ Use the real commit — **never fabricate** a SHA:
 git rev-parse HEAD
 ```
 
+Prefer **`git -C <dir> …`** over `cd <dir> && git …` (Claude Code warns when a command changes directory before a VCS command).
+
 For branch scope vs default branch, use merge-base / `git log` as in [`policies-and-traceability.md`](./policies-and-traceability.md#scoping-overarching--all-workflows).
 
 ---
 
 ## `/testchimp` composer command → `workflow-id`
 
-| User command (after `/testchimp`) | `workflow-id` |
+| User command (after `/testchimp` or `/testchimp:`) | `workflow-id` |
 | --- | --- |
-| `project init` | `project-init` |
+| `project-init` / `project init` | `project-init` |
 | `author plan` | `author-plans` |
 | `run qa` / `test` | `run-qa` |
 | `upkeep` / `evolve` | `upkeep` |

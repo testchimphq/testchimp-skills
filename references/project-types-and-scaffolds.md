@@ -205,6 +205,8 @@ When listing tests in the branch plan ([`run-qa.md`](./run-qa.md)), record for e
 
 | Asset | Purpose |
 |-------|---------|
+| `assets/template_smarttests.yml` | GitHub Actions SmartTests workflow (copy as-is; change `tests` if the mapped root differs) |
+| `assets/guide/SAMPLE_PLANS.md` | Plans guide: create via author-plans tools, then write the returned ids — no hard-coded or placeholder `US-` / `TS-` ids. Copy to `plans/guide/SAMPLE_PLANS.md` |
 | `assets/template_playwright.config.js` | Web-only scaffold |
 | `assets/template_mobile_mobilewright.config.ts` | Mobile: setup + api + ios + android |
 | `assets/template_multi_platform_playwright.config.js` | Web + api projects |

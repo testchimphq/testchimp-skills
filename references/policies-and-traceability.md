@@ -243,6 +243,14 @@ At end of every **standalone** Execute (or when aborting), report **`ACTION_COMP
 
 **First successful report** for a client-supplied `workflow_execution_id` **creates** the DB workflow execution (`execution_created: true`); later reports with that **same** id append actions. The server **requires** `workflow_execution_id` on every `report-agent-action` (no auto-mint). **`upsert-plans-support-file` alone does not create a workflow execution** — without RAA / inline `agentTraceability` (with both workflow id + execution id), the platform shows no run.
 
+**First-row RAA (project-init and any catalog start):** send a **non-`WORKFLOW`** entity so the row is created without closing the run. Example that the MCP schema accepts:
+
+- `entityType`: **`POLICY`**
+- `actionType`: **`CREATED`** (or **`UPDATED`** / **`ANALYZED`**)
+- `entityIdentity`: the catalog workflow id (e.g. `project-init`) or the policy filename
+
+`entityType: WORKFLOW` is **only** valid with `ACTION_COMPLETED` / `ACTION_FAILED`. **`WORKFLOW` + `ANALYZED` is rejected** by the MCP client schema. `ANALYZED` is for `USER_STORY` / `SCENARIO` / `POLICY` / other non-workflow entities.
+
 **Since last run:** **`get-last-run-workflow-detail`** (`workflow_id`, optional `branch_name`, optional `user_id`).
 
 ## Report workflow execution

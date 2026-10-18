@@ -38,9 +38,9 @@ Run when the bot has no binding (new bot), when calls fail with "no project bind
 
 `get-project-init-status` (CLI: `testchimp --bot <botId> get-project-init-status`). One project-wide setup (`/testchimp project init`, [`project-init-testchimp.md`](./project-init-testchimp.md)) defines the plans/tests folders, test environment and CI for everyone.
 
-Response: `{status: {platformComms, folderMapping, connectToTestEnv, ciWiring, importPlans, importTests, smokeValidation, overallComplete}}`, each `PROJECT_INIT_ITEM_STATUS_{INCOMPLETE|DONE|SKIPPED|NOT_APPLICABLE}`.
+Response: `{status: {…}}`. Read **snake_case** keys (`platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring`, `import_plans`, `import_tests`, `smoke_validation`, `overall_complete`). If a snake_case key is absent, accept the camelCase twin (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, `importPlans`, `importTests`, `smokeValidation`, `overallComplete`). Each value is `PROJECT_INIT_ITEM_STATUS_{INCOMPLETE|DONE|SKIPPED|NOT_APPLICABLE}` (also accept bare `DONE` / `INCOMPLETE` / boolean `true` for complete). When calling **`update-project-init-status`**, send those **exact snake_case** keys only (never camelCase).
 
-- `overallComplete` is `…_DONE` → say so in one line and continue.
+- `overall_complete` (or `overallComplete`) is `…_DONE` / `DONE` / `true` → say so in one line and continue. Do not re-run project init.
 - Otherwise → list the items still `…_INCOMPLETE` (or missing), one line each, and say you'll walk them through project init once the bot is set up for events ([step 5b](#5b-project-init-when-incomplete)). Remember the result; don't start project init yet.
 
 ### 2. Role
@@ -126,7 +126,7 @@ The same page shows the subscriptions you registered and the **Pause all** switc
 
 ### 5b. Project init (when incomplete)
 
-Run this whenever step 1 found `overallComplete` not `…_DONE`, **whatever role the user picked**. Skip it when project init is already complete.
+Run this whenever step 1 found overall not complete (`overall_complete` / `overallComplete` not `…_DONE` / `DONE` / `true`), **whatever role the user picked**. Skip it when project init is already complete.
 
 1. Re-run `get-project-init-status` (a teammate may have finished items meanwhile). If it is now complete, say so and move on.
 2. Explain in a line or two that the project's one-time setup isn't finished, list the remaining items, and that you'll guide them through it now: it's what lets tests, plans, environments and CI work for the whole team.

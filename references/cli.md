@@ -41,24 +41,25 @@ The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.
 
 **OAuth + bot identity (CLI ≥ 0.1.85):** `TESTCHIMP_OAUTH_TOKEN` (an OAuth access token issued by featureservice) is sent as `Authorization: Bearer`; when set, `TESTCHIMP_API_KEY` is optional. When both are sent, the bearer names the user and the key names the project. QA bots: see [QA bots § Project binding](#project-binding-cli--0188) (`--bot <botId>`). `TESTCHIMP_BOT_ID` (1–64 printable ASCII, no spaces) is sent as the `bot-id` header for QA-bot attribution; invalid values are ignored with a single stderr warning. Never print either value.
 
-**401 remediation order:** (1) export `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` from MCP if configured → (2) export `TESTCHIMP_API_KEY` from the same entry → (3) retry. Remote MCP setups: refresh `.testchimp/mcp.json` with `get-project-credentials` → `workspace save-creds` before asking the user.
+**401 remediation order:** (1) export `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` from MCP if configured → (2) export `TESTCHIMP_API_KEY` from the same entry → (3) retry. Remote MCP setups: refresh `.testchimp/mcp.json` via [Save the runner key](./init-testchimp.md#save-the-runner-key) — never put the key on a command line.
 
-**`.testchimp/mcp.json` fallback (CLI ≥ 0.1.90):** When neither `TESTCHIMP_API_KEY` nor `TESTCHIMP_OAUTH_TOKEN` is set (and no `--bot` / `TESTCHIMP_BOT_ID`), the CLI itself reads `TESTCHIMP_API_KEY`, `TESTCHIMP_PROJECT_ID`, `TESTCHIMP_BACKEND_URL` and `TESTCHIMP_INGRESS_URL` from the nearest `.testchimp/mcp.json` at or above the current directory (written by TestChimp Studio or `workspace save-creds`) and notes the file on stderr. Exported variables always win. The file must be mode 0600 (Studio and `save-creds` write it that way); other copies are ignored with a stderr warning. Playwright / Mobilewright / k6 do **not** read this file — keep exporting for runners per steps 1–4.
+**`.testchimp/mcp.json` fallback (CLI ≥ 0.1.90):** When neither `TESTCHIMP_API_KEY` nor `TESTCHIMP_OAUTH_TOKEN` is set (and no `--bot` / `TESTCHIMP_BOT_ID`), the CLI itself reads `TESTCHIMP_API_KEY`, `TESTCHIMP_PROJECT_ID`, `TESTCHIMP_BACKEND_URL` and `TESTCHIMP_INGRESS_URL` from the nearest `.testchimp/mcp.json` at or above the current directory (written by TestChimp Studio, `save-workspace-creds`, or the hosted file-write path) and notes the file on stderr. Exported variables always win. The file must be mode 0600 (directory 0700); other copies are ignored with a stderr warning. Playwright / Mobilewright / k6 do **not** read this file — keep exporting for runners per steps 1–4.
 
-### Remote MCP (OAuth) and runner keys (CLI ≥ 0.1.90)
+### Remote MCP (OAuth) and runner keys (CLI ≥ 0.1.90; `save-workspace-creds` ≥ 0.1.93)
 
 Remote MCP is an **additional** way to connect; manual `npx` + `env` and Studio setups keep working unchanged.
 
-- **Per-project URL:** `https://mcp.testchimp.io/mcp?projectId=<id>` in the project MCP file (`url` entry, no `env`). Every tool call acts on that project; TestChimp checks the signed-in user is a member. One sign-in covers all of the user's projects. Plain `/mcp` uses the project picked on the consent page. A QA bot's `projectApiKey` argument still wins over the URL.
-- **Runner key:** remote entries carry no key, so local runners get it once per repo:
+- **Global URL (plugin / extension and recommended remote setup):** `https://mcp.testchimp.io/mcp`. The user picks the project on the OAuth consent screen; that project is in the token payload and every tool call is scoped to it. Do not add a second project-level TestChimp server when the plugin already registered this URL. If the signed-in project is the wrong repo, re-authenticate through the host MCP UI (Claude Code: `/mcp`).
+- **Optional per-project URL (non-plugin hosts):** `https://mcp.testchimp.io/mcp?projectId=<id>` in a project MCP file (`url` entry, no `env`). Every tool call acts on that project; TestChimp checks the signed-in user is a member. A QA bot's `projectApiKey` argument still wins over the URL.
+- **Runner key:** remote entries carry no key, so local runners get it once per repo. Full agent procedure: [Save the runner key](./init-testchimp.md#save-the-runner-key).
 
-```bash
-# get-project-credentials (MCP) → projectId, projectName, projectApiKey, backendUrl, ingressUrl
-printf '%s' "<projectApiKey>" | testchimp workspace save-creds --folder <git root> --project-id <projectId> \
-  --project-name "<projectName>" --backend-url <backendUrl> --ingress-url <ingressUrl> [--reassign]
-```
+**Already saved:** if `.testchimp/mcp.json` already has a real `TESTCHIMP_API_KEY` and matching `TESTCHIMP_PROJECT_ID`, leave it — do not rewrite for missing `schemaVersion` / `enabled`.
 
-`workspace save-creds` writes `<folder>/.testchimp/mcp.json` in TestChimp Studio's exact format (mode 0600, other servers kept), adds `.testchimp/` to `.gitignore`, and maps the folder in `~/.testchimp/projects.json`. The key is read from stdin only and never printed. Output: `{projectId, status: written|updated|unchanged, folder, mcpJsonPath, gitignoreUpdated}`. An existing entry for the same project is kept (only a rotated key is refreshed); another project's entry needs `--reassign`.
+**Hosted or plugin MCP:** call **`get-project-credentials`**, then write **`<git root>/.testchimp/mcp.json`** with the file-write tool (2-space JSON, trailing newline, keep other `mcpServers` and extra `env` keys). On Unix run `chmod 700 .testchimp && chmod 600 .testchimp/mcp.json`; if `chmod` is missing (Windows) or there is no shell, continue. Add `.testchimp/` to `.gitignore` if missing (no markdown `---`). Omit `TESTCHIMP_BACKEND_URL` for prod; for non-prod set it (no trailing slash) and the matching ingress from `get-project-credentials`. Never put the key in a shell command. Never echo or print it. If the tool description still mentions `workspace save-creds`, ignore that line. If there is no file-write tool, use `save-workspace-creds` when listed, else ask the user to create the file in their editor.
+
+**Local-npm or stdio MCP:** call **`save-workspace-creds`** with `{ "folder": "<git root>" }` and never pass the key. If that tool is not listed (current hosted/prod MCP), use the hosted path — do not stall.
+
+**Never** run `testchimp workspace save-creds <key>` (no key as an argument). The CLI command (humans / scripts, CLI ≥ **0.1.93**) reads the key from stdin, `TESTCHIMP_API_KEY` in the environment, or `get-project-credentials` when `TESTCHIMP_OAUTH_TOKEN` is set. Agents should use the MCP tool or the file-write path above, not the CLI.
 
 ## Quick invoke
 
@@ -970,7 +971,7 @@ MCP: `create-issue` with the same JSON fields (no CLI flag mapping).
 
 **API:** `POST /api/mcp/create_user_story`
 
-**Agent rule:** Call **before** writing any new `plans/stories/**/*.md`. Response includes **`content`** (stub with **`id: US-<ordinalId>`** already set) — **Write that content** to disk, edit the body if needed, then **`update-user-story`**. Never omit `id:`. Updates reject missing `id` with a clear error.
+**Agent rule:** Call **before** writing any new `plans/stories/**/*.md`. Response includes **`content`** (stub with the platform-assigned **`id:`** already set) — **Write that content** to disk, edit the body if needed, then **`update-user-story`**. Never invent or placeholder an id. Updates reject missing `id` with a clear error.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
@@ -982,7 +983,7 @@ MCP: `create-issue` with the same JSON fields (no CLI flag mapping).
 
 **API:** `POST /api/mcp/create_test_scenario`
 
-**Agent rule:** Call **before** writing any new `plans/scenarios/**/*.md`. Response includes **`content`** (stub with **`id: TS-<ordinalId>`** and **`story: US-<n>`** already set) — **Write that content** to disk, edit the body if needed, then **`update-test-scenario`**. Never omit `id:` (linking `story:` alone is not enough). Updates reject missing `id`/`story` with a clear error.
+**Agent rule:** Call **before** writing any new `plans/scenarios/**/*.md`. Response includes **`content`** (stub with the platform-assigned **`id:`** and **`story:`** already set) — **Write that content** to disk, edit the body if needed, then **`update-test-scenario`**. Never invent or placeholder an id (linking `story:` alone is not enough). Updates reject missing `id`/`story` with a clear error.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
@@ -1419,6 +1420,20 @@ Lists catalog workflows with Active / Disabled / Missing Config for the project.
 
 Also related (flags vary): **`report-agent-action`**, **`get-last-run-workflow-detail`**, **`list-workflow-executions`**, **`get-workflow-execution`** — see `testchimp <cmd> -h`. `list-workflow-executions` accepts `pendingApprovalOnly` and (CLI ≥ **0.1.91**) `assignedToMeOnly` (executions whose assignee is the calling user: OAuth user, or the bot's owner with `--bot`).
 
+### `update-project-init-status`
+
+**API:** `POST /api/mcp/update_project_init_status`. MCP argument is **`{ "status": { … } }`**. Use these **exact snake_case** keys (values typically `DONE`):
+
+`platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring` (required for `overall_complete`); optional `import_plans`, `import_tests`, `smoke_validation`.
+
+Only **snake_case** is supported on **write**. Do **not** send camelCase (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, `importPlans`, `importTests`, `smokeValidation`, `overallComplete`). Do not send `overall_complete` (server-computed). Partial merge: send only the keys you are updating.
+
+**Reading `get-project-init-status`:** prefer the snake_case keys above. If a snake_case key is absent, accept the camelCase twin. Treat `PROJECT_INIT_ITEM_STATUS_DONE`, `DONE`, or boolean `true` as complete.
+
+### `report-agent-action` (first row vs close)
+
+First successful RAA for a `workflowExecutionId` **creates** the run. Start with a non-`WORKFLOW` entity (`POLICY` + `CREATED` / `UPDATED` / `ANALYZED` and `entityIdentity` such as `project-init`). Close with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity` equal to `workflowId`. **`WORKFLOW` + `ANALYZED` is rejected** by the MCP schema.
+
 ### `update-workflow-execution-assignees` (CLI ≥ **0.1.91**)
 
 **API:** `POST /api/mcp/update_workflow_execution_assignees`. **Mutating.** Sets the assignee and / or CC list of a workflow execution. Executions get an assignee automatically when their plan-approval or approve-to-invoke notification goes out (the initiator if they're on the team, otherwise the first notified recipient; everyone else notified is CC'd). After that, approval and completion notifications go to the assignee and CC instead of the configured recipients.
@@ -1774,7 +1789,7 @@ Returns `{results: [{email, outcome, userId?, failureReason?}], teamSettingsUrl}
 
 ### `send-feedback`
 
-**API:** `POST /api/mcp/send_feedback`. "Contact us" for agents: the message goes to the TestChimp team's support inbox with the project, organisation, user / bot id (when known) attached. Works with a project API key or OAuth token. When to use it: [`SKILL.md` § Feedback to TestChimp](../SKILL.md#feedback-to-testchimp).
+**API:** `POST /api/mcp/send_feedback`. "Contact us" for agents: the message goes to the TestChimp team's support inbox with the project, organisation, user / bot id (when known) attached. Works with a project API key or OAuth token. When to use it: [`SKILL.md` § Feedback to TestChimp](../SKILL.md#feedback-to-testchimp). You may call this on your own after telling the user **what** you are sending and **why**. If they decline the tool, continue the workflow.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|

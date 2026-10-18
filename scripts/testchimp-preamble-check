@@ -1,0 +1,367 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# testchimp-preamble-check
+# - Designed to be safe to run in any repo (no secrets printed)
+# - Best-effort: never blocks the session by default (exit 0), but prints blockers clearly
+
+_say() { printf '%s\n' "$*"; }
+_warn() { printf '%s\n' "$*" >&2; }
+
+_is_placeholder() {
+  local v="$1"
+  [ -z "${v// }" ] && return 0
+  echo "$v" | grep -qiE 'paste_your|placeholder|your_project|changeme|xxx' && return 0
+  return 1
+}
+
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export SKILL_DIR
+
+# --- Skill update check (git-based; canonical source of truth) ---
+LOCAL_VERSION=""
+REMOTE_VERSION=""
+
+if command -v node >/dev/null 2>&1 && [ -f "$SKILL_DIR/SKILL.md" ]; then
+  LOCAL_VERSION="$(SKILL_MD="$SKILL_DIR/SKILL.md" node - <<'NODE' 2>/dev/null || true
+const fs = require('fs');
+const txt = fs.readFileSync(process.env.SKILL_MD, 'utf8');
+const m = txt.match(/^\s*version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*$/m);
+if (m) process.stdout.write(m[1]);
+NODE
+  )"
+fi
+
+if [ -d "$SKILL_DIR/.git" ]; then
+  git -C "$SKILL_DIR" fetch origin main >/dev/null 2>&1 || true
+  if command -v node >/dev/null 2>&1; then
+    REMOTE_VERSION="$(SKILL_DIR="$SKILL_DIR" node - <<'NODE' 2>/dev/null || true
+const { execSync } = require('child_process');
+function parseVersion(txt) {
+  const m = txt.match(/^\s*version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*$/m);
+  return m ? m[1] : '';
+}
+let remote = '';
+try { remote = execSync(`git -C "${process.env.SKILL_DIR}" show origin/main:SKILL.md`, { stdio: ['ignore','pipe','ignore'] }).toString('utf8'); } catch {}
+process.stdout.write(parseVersion(remote));
+NODE
+    )"
+  fi
+fi
+
+_say "TESTCHIMP_SKILL_LOCAL_VERSION: ${LOCAL_VERSION:-unknown}"
+_say "TESTCHIMP_SKILL_REMOTE_VERSION: ${REMOTE_VERSION:-unknown}"
+
+if command -v node >/dev/null 2>&1 && [ -n "${LOCAL_VERSION:-}" ] && [ -n "${REMOTE_VERSION:-}" ]; then
+  _upgrade_rc=0
+  node - "$LOCAL_VERSION" "$REMOTE_VERSION" <<'NODE' >/dev/null 2>&1 || _upgrade_rc=$?
+const [a,b] = process.argv.slice(2);
+function cmp(x,y){
+  const pa=x.split('.').map(n=>parseInt(n,10));
+  const pb=y.split('.').map(n=>parseInt(n,10));
+  for(let i=0;i<3;i++){ if((pa[i]||0)!==(pb[i]||0)) return (pa[i]||0)-(pb[i]||0); }
+  return 0;
+}
+process.exit(cmp(a,b) < 0 ? 10 : 0);
+NODE
+  if [ "${_upgrade_rc}" -eq 10 ]; then
+    _warn "UPGRADE_AVAILABLE: run: git -C \"$SKILL_DIR\" pull origin main  (or /testchimp skill upgrade)"
+    # Strongly advise major 1.0.0+ (policy workflows) — do not hard-stop
+    _advise_rc=0
+    node - "$LOCAL_VERSION" "$REMOTE_VERSION" <<'NODE' >/dev/null 2>&1 || _advise_rc=$?
+const [local, remote] = process.argv.slice(2);
+function maj(v){ return parseInt(String(v).split('.')[0],10)||0; }
+function cmp(x,y){
+  const pa=x.split('.').map(n=>parseInt(n,10));
+  const pb=y.split('.').map(n=>parseInt(n,10));
+  for(let i=0;i<3;i++){ if((pa[i]||0)!==(pb[i]||0)) return (pa[i]||0)-(pb[i]||0); }
+  return 0;
+}
+const needAdvise = maj(remote) >= 1 && cmp(local, '1.0.0') < 0;
+process.exit(needAdvise ? 11 : 0);
+NODE
+    if [ "${_advise_rc}" -eq 11 ]; then
+      _warn "STRONGLY_ADVISE_UPGRADE: remote skill is >= 1.0.0 (policy-backed workflows) and local is < 1.0.0 — run /testchimp skill upgrade (synonym /testchimp update). Continuing without upgrade is allowed but policy/traceability tools may be missing."
+    fi
+  fi
+fi
+
+TOP=""
+if command -v git >/dev/null 2>&1; then
+  TOP="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+fi
+
+# --- MCP config / TESTCHIMP_* discoverability (no printing) ---
+# Prefer a file that actually contains TestChimp MCP; search common paths then shallow find.
+MCP_JSON=""
+_is_testchimp_mcp() {
+  local f="$1"
+  [ -f "$f" ] || return 1
+  command -v node >/dev/null 2>&1 || return 1
+  MCP_CANDIDATE="$f" node - <<'NODE' 2>/dev/null
+const fs=require('fs');
+try{
+  const j=JSON.parse(fs.readFileSync(process.env.MCP_CANDIDATE,'utf8'));
+  const servers=j?.mcpServers||j?.servers||{};
+  if (servers.testchimp) process.exit(0);
+  for (const s of Object.values(servers)) {
+    const args=s?.args;
+    if (Array.isArray(args) && args.some(a=>String(a).includes('@testchimp/cli'))) process.exit(0);
+  }
+}catch{}
+process.exit(1);
+NODE
+}
+
+_search_dirs=""
+if [ -n "${TOP:-}" ]; then
+  _search_dirs="$TOP"
+  # Prefer SmartTests root if present
+  if [ -f "$TOP/.testchimp-tests" ]; then
+    _search_dirs="$TOP $_search_dirs"
+  else
+    _tc_root="$(find "$TOP" -maxdepth 4 -name '.testchimp-tests' -type f 2>/dev/null | head -n 1 || true)"
+    if [ -n "$_tc_root" ]; then
+      _search_dirs="$(dirname "$_tc_root") $_search_dirs"
+    fi
+  fi
+fi
+_search_dirs="$_search_dirs . $PWD"
+
+for base in $_search_dirs; do
+  [ -n "$base" ] || continue
+  for candidate in \
+    "$base/.testchimp/mcp.json" \
+    "$base/.cursor/mcp.json" \
+    "$base/.mcp.json" \
+    "$base/mcp.json" \
+    "$base/.vscode/mcp.json" \
+    "$base/.github/mcp.json" \
+    "$base/ui/.cursor/mcp.json"
+  do
+    if _is_testchimp_mcp "$candidate"; then
+      MCP_JSON="$candidate"
+      break 2
+    fi
+  done
+done
+
+if [ -z "${MCP_JSON:-}" ] && [ -n "${TOP:-}" ] && command -v find >/dev/null 2>&1; then
+  while IFS= read -r candidate; do
+    if _is_testchimp_mcp "$candidate"; then
+      MCP_JSON="$candidate"
+      break
+    fi
+  done < <(find "$TOP" \( -path '*/node_modules/*' -o -path '*/.git/*' \) -prune -o \( -name 'mcp.json' -o -name '.mcp.json' \) -type f -print 2>/dev/null | head -n 40)
+fi
+
+# Fallback: first existing common path (even without TestChimp yet)
+if [ -z "${MCP_JSON:-}" ]; then
+  for candidate in \
+    "${TOP:+$TOP/.testchimp/mcp.json}" \
+    "${TOP:+$TOP/ui/.cursor/mcp.json}" \
+    "${TOP:+$TOP/.cursor/mcp.json}" \
+    "${TOP:+$TOP/.mcp.json}" \
+    "${TOP:+$TOP/mcp.json}" \
+    ".testchimp/mcp.json" \
+    ".cursor/mcp.json" \
+    ".mcp.json" \
+    "mcp.json"
+  do
+    [ -n "$candidate" ] && [ -f "$candidate" ] && MCP_JSON="$candidate" && break
+  done
+fi
+
+# Check user-level / plugin MCP locations for testchimp server
+USER_LEVEL_TESTCHIMP="no"
+PLUGIN_SOURCE=""
+if [ -z "${MCP_JSON:-}" ] || [ "${HAS_SERVER:-no}" = "no" ]; then
+  # Check if the skill itself is running from a plugin cache (signal that plugins are in use)
+  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] || echo "$SKILL_DIR" | grep -qE '\.claude/plugins|\.cursor/plugins|\.gemini/extensions'; then
+    USER_LEVEL_TESTCHIMP="yes"
+    PLUGIN_SOURCE="skill location ($SKILL_DIR under plugin cache)"
+  fi
+  
+  # Check Claude Code plugins (enabled plugins in settings.json, .mcp.json in plugin cache)
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -f "$HOME/.claude/settings.json" ] && command -v node >/dev/null 2>&1; then
+    _claude_check=$(SETTINGS="$HOME/.claude/settings.json" node - <<'NODE' 2>/dev/null || echo "no"
+const fs=require('fs');
+try {
+  const s=JSON.parse(fs.readFileSync(process.env.SETTINGS,'utf8'));
+  const ep=s?.enabledPlugins||{};
+  const enabled=Array.isArray(ep)?ep:Object.keys(ep).filter(k=>ep[k]!==false);
+  if (enabled.some(p=>String(p).includes('testchimp'))) process.stdout.write('yes');
+  else process.stdout.write('no');
+} catch { process.stdout.write('no'); }
+NODE
+    )
+    if [ "$_claude_check" = "yes" ]; then
+      USER_LEVEL_TESTCHIMP="yes"
+      PLUGIN_SOURCE="Claude Code plugin (testchimp in enabledPlugins)"
+    fi
+  fi
+  
+  # Check Gemini extensions
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -d "$HOME/.gemini/extensions" ]; then
+    for ext_dir in "$HOME/.gemini/extensions"/*; do
+      if [ -f "$ext_dir/gemini-extension.json" ] && grep -q "testchimp" "$ext_dir/gemini-extension.json" 2>/dev/null; then
+        USER_LEVEL_TESTCHIMP="yes"
+        PLUGIN_SOURCE="Gemini extension ($ext_dir)"
+        break
+      fi
+    done
+  fi
+  
+  # Check Cursor plugins (verify location - may be ~/.cursor/extensions or similar)
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -d "$HOME/.cursor/extensions" ]; then
+    for plugin_dir in "$HOME/.cursor/extensions"/*testchimp*; do
+      if [ -d "$plugin_dir" ]; then
+        USER_LEVEL_TESTCHIMP="yes"
+        PLUGIN_SOURCE="Cursor plugin ($plugin_dir)"
+        break
+      fi
+    done
+  fi
+  
+  # Fallback: user-level mcp.json files (less common for plugins)
+  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ]; then
+    for user_config in \
+      "$HOME/.cursor/mcp.json" \
+      "$HOME/.claude/mcp.json" \
+      "$HOME/.kiro/mcp.json"
+    do
+      if [ -f "$user_config" ] && _is_testchimp_mcp "$user_config"; then
+        USER_LEVEL_TESTCHIMP="yes"
+        PLUGIN_SOURCE="user-level config ($user_config)"
+        break
+      fi
+    done
+  fi
+  
+  if [ "${USER_LEVEL_TESTCHIMP}" = "yes" ]; then
+    _say "USER_LEVEL_TESTCHIMP: $PLUGIN_SOURCE"
+  fi
+fi
+
+if [ -n "${MCP_JSON:-}" ] && command -v node >/dev/null 2>&1; then
+  _say "MCP_CONFIG: $MCP_JSON"
+  eval "$(MCP_JSON="$MCP_JSON" node - <<'NODE' 2>/dev/null || true
+const fs=require('fs');
+const p=process.env.MCP_JSON;
+function looksLikeEnvRef(v){
+  return /^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?$/.test(String(v||'').trim());
+}
+function ok(v){
+  if (!v || !String(v).trim()) return false;
+  if (/paste_your|placeholder|your_project|changeme/i.test(String(v))) return false;
+  if (looksLikeEnvRef(v)) {
+    const name=String(v).replace(/^\$\{?/,'').replace(/\}?$/,'');
+    const fromEnv=process.env[name];
+    return !!(fromEnv && String(fromEnv).trim() && !/paste_your|placeholder|changeme/i.test(String(fromEnv)));
+  }
+  return true;
+}
+try{
+  const j=JSON.parse(fs.readFileSync(p,'utf8'));
+  const servers=j?.mcpServers||j?.servers||{};
+  let entry=servers.testchimp;
+  if (!entry) {
+    for (const s of Object.values(servers)) {
+      const args=s?.args;
+      if (Array.isArray(args) && args.some(a=>String(a).includes('@testchimp/cli'))) { entry=s; break; }
+    }
+  }
+  const env=entry?.env || {};
+  const key=env.TESTCHIMP_API_KEY;
+  const uid=env.TESTCHIMP_USER_ID;
+  const pid=env.TESTCHIMP_PROJECT_ID;
+  const backend=env.TESTCHIMP_BACKEND_URL;
+  const ingress=env.TESTCHIMP_INGRESS_URL;
+  const hasServer=!!entry;
+  const remoteUrl=[entry?.url, entry?.httpUrl, entry?.serverUrl].find(u=>typeof u==='string') || '';
+  const isRemote=(!!remoteUrl || /^(http|streamable-http)$/i.test(String(entry?.type||''))) && !entry?.command;
+  const isStdio=entry?.command || (entry?.args && Array.isArray(entry.args));
+  const backendConfigured=backend && String(backend).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(backend)) && !looksLikeEnvRef(backend);
+  const ingressConfigured=ingress && String(ingress).trim() && !/paste_|placeholder|omit_for_saas|changeme/i.test(String(ingress)) && !looksLikeEnvRef(ingress);
+  process.stdout.write(`HAS_SERVER=${hasServer?'yes':'no'}\n`);
+  process.stdout.write(`IS_REMOTE=${isRemote?'yes':'no'}\n`);
+  process.stdout.write(`IS_STDIO=${isStdio?'yes':'no'}\n`);
+  process.stdout.write(`HAS_KEY=${ok(key)?'yes':'no'}\n`);
+  process.stdout.write(`HAS_USER_ID=${ok(uid)?'yes':'no'}\n`);
+  process.stdout.write(`HAS_PROJECT_ID=${ok(pid)?'yes':'no'}\n`);
+  process.stdout.write(`HAS_BACKEND_URL=${backendConfigured?'yes':'no'}\n`);
+  process.stdout.write(`HAS_INGRESS_URL=${ingressConfigured?'yes':'no'}\n`);
+  if (isRemote && remoteUrl) {
+    let rpid='';
+    try { rpid=new URL(remoteUrl).searchParams.get('projectId')||''; } catch {}
+    if (/^[A-Za-z0-9_-]{1,64}$/.test(rpid)) process.stdout.write(`REMOTE_PROJECT_ID=${rpid}\n`);
+  }
+  if (backendConfigured) {
+    process.stdout.write(`TESTCHIMP_BACKEND_URL=${String(backend).trim()}\n`);
+  }
+  if (ingressConfigured) {
+    process.stdout.write(`TESTCHIMP_INGRESS_URL=${String(ingress).trim()}\n`);
+  }
+}catch{
+  process.stdout.write('HAS_SERVER=no\nIS_REMOTE=no\nIS_STDIO=no\nHAS_KEY=no\nHAS_USER_ID=no\nHAS_PROJECT_ID=no\nHAS_BACKEND_URL=no\nHAS_INGRESS_URL=no\n');
+}
+NODE
+  )"
+  if [ "${HAS_SERVER:-no}" != "yes" ]; then
+    if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ]; then
+      _say "NOTE: No project-level testchimp server found, but plugin/user-level server detected ($PLUGIN_SOURCE). If testchimp MCP tools are available in your session, MCP is satisfied. Do not write a second server at project level unless you need per-project config (e.g. stdio with different API keys)."
+    else
+      _warn "BLOCKER (unless the testchimp MCP tools are already available in this session, e.g. via a plugin): mcpServers.testchimp missing at project level — run /testchimp init Workstation gate or merge assets/sample-mcp.json"
+    fi
+  else
+    _say "TESTCHIMP_SERVER_MODE: $([ "${IS_REMOTE:-no}" = "yes" ] && echo "remote (OAuth)" || echo "stdio (local process)")"
+  fi
+  if [ "${IS_REMOTE:-no}" = "yes" ]; then
+    if [ "${HAS_KEY:-no}" = "yes" ]; then
+      _say "TESTCHIMP_API_KEY: present in config (not needed for MCP but useful for test runners; not printed)"
+    else
+      _say "MCP: remote (OAuth) entry${REMOTE_PROJECT_ID:+, projectId $REMOTE_PROJECT_ID} — no key in IDE config (expected)"
+      _warn "ACTION: runner key not saved yet — hosted/plugin: get-project-credentials then write .testchimp/mcp.json with the file-write tool; chmod 700 .testchimp && chmod 600 .testchimp/mcp.json; append only .testchimp/ to .gitignore (no markdown ---). stdio: save-workspace-creds {folder} if listed, else the hosted path. Never put the key in a shell command. Never print the key. See init-testchimp.md Save the runner key."
+    fi
+  else
+    if [ "${HAS_KEY:-no}" = "yes" ]; then
+      _say "TESTCHIMP_API_KEY: present (not printed)"
+    else
+      _warn "BLOCKER: TESTCHIMP_API_KEY missing/blank/placeholder in MCP config (or unresolved \${TESTCHIMP_API_KEY} — set secret in process env / host; reload MCP after setting)"
+    fi
+  fi
+  if [ "${HAS_USER_ID:-no}" = "yes" ]; then
+    _say "TESTCHIMP_USER_ID: present (not printed)"
+  else
+    if [ "${IS_STDIO:-no}" = "yes" ]; then
+      _warn "WARN: TESTCHIMP_USER_ID missing/placeholder (needed for get-my-tasks / list-tests-awaiting-verification and run attribution)"
+    fi
+  fi
+  if [ "${HAS_PROJECT_ID:-no}" = "yes" ]; then
+    _say "TESTCHIMP_PROJECT_ID: present (not printed)"
+  elif [ "${IS_REMOTE:-no}" = "yes" ]; then
+    :
+  else
+    _warn "WARN: TESTCHIMP_PROJECT_ID missing/placeholder (needed for TrueCoverage RUM instrumentation)"
+  fi
+  if [ "${HAS_BACKEND_URL:-no}" = "yes" ]; then
+    _say "TESTCHIMP_BACKEND_URL: configured — export into every CLI/runner shell (do not use prod default)"
+    [ -n "${TESTCHIMP_BACKEND_URL:-}" ] && _say "TESTCHIMP_BACKEND_URL: $TESTCHIMP_BACKEND_URL"
+  else
+    _say "TESTCHIMP_BACKEND_URL: not set in MCP (CLI will use package default / SaaS prod)"
+  fi
+  if [ "${HAS_INGRESS_URL:-no}" = "yes" ]; then
+    _say "TESTCHIMP_INGRESS_URL: configured — export into every Playwright/Mobilewright runner shell"
+    [ -n "${TESTCHIMP_INGRESS_URL:-}" ] && _say "TESTCHIMP_INGRESS_URL: $TESTCHIMP_INGRESS_URL"
+  else
+    _say "TESTCHIMP_INGRESS_URL: not set in MCP (reporter uses ingress default or SaaS featureservice→ingress rewrite)"
+  fi
+else
+  if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ]; then
+    _say "NOTE: No project-level MCP config found, but plugin/user-level testchimp server detected ($PLUGIN_SOURCE). If testchimp MCP tools are available in your session, MCP is satisfied."
+  else
+    _warn "WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp). If testchimp MCP tools are not available via a plugin, run /testchimp init to create project-level config from assets/sample-mcp.json"
+  fi
+fi
+
+exit 0
