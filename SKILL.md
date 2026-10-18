@@ -4,7 +4,7 @@ description: "TestChimp is the QA platform for coding agents. Use when the user 
 compatibility: "Requires Node.js 18+, @testchimp/cli at or above metadata.required_cli_version, TESTCHIMP_API_KEY and network access to TestChimp APIs. Web projects need @playwright/test and playwright 1.59.0 or later; mobile projects need mobilewright. Per-version CLI notes: references/version-matrix.md."
 license: MIT
 metadata:
-  version: 1.0.69
+  version: 1.0.70
   required_cli_version: "0.1.91"
   homepage: "https://testchimp.io"
 ---
@@ -66,16 +66,29 @@ Run this once at the start of any TestChimp flow. It will:
 
 ```bash
 _TC_PRE=$(
-  "${CLAUDE_PLUGIN_ROOT}/scripts/testchimp-preamble-check" 2>/dev/null \
-    || ~/.cursor/skills/testchimp/scripts/testchimp-preamble-check 2>/dev/null \
-    || ~/.claude/skills/testchimp/scripts/testchimp-preamble-check 2>/dev/null \
-    || .cursor/skills/testchimp/scripts/testchimp-preamble-check 2>/dev/null \
-    || .claude/skills/testchimp/scripts/testchimp-preamble-check 2>/dev/null \
-    || ~/.cursor/skills/testchimp/bin/testchimp-preamble-check 2>/dev/null \
-    || ~/.claude/skills/testchimp/bin/testchimp-preamble-check 2>/dev/null \
-    || .cursor/skills/testchimp/bin/testchimp-preamble-check 2>/dev/null \
-    || .claude/skills/testchimp/bin/testchimp-preamble-check 2>/dev/null \
-    || true
+  for _p in \
+    "${CLAUDE_PLUGIN_ROOT}/scripts/testchimp-preamble-check" \
+    ./scripts/testchimp-preamble-check \
+    ~/.cursor/skills/testchimp/scripts/testchimp-preamble-check \
+    ~/.claude/skills/testchimp/scripts/testchimp-preamble-check \
+    ~/.kiro/skills/testchimp/scripts/testchimp-preamble-check \
+    ~/.agents/skills/testchimp/scripts/testchimp-preamble-check \
+    ~/.copilot/skills/testchimp/scripts/testchimp-preamble-check \
+    ~/.gemini/extensions/testchimp/scripts/testchimp-preamble-check \
+    .cursor/skills/testchimp/scripts/testchimp-preamble-check \
+    .claude/skills/testchimp/scripts/testchimp-preamble-check \
+    .kiro/skills/testchimp/scripts/testchimp-preamble-check \
+    .agents/skills/testchimp/scripts/testchimp-preamble-check \
+    .github/skills/testchimp/scripts/testchimp-preamble-check \
+    /home/box/agent-data/workflows/testchimp/scripts/testchimp-preamble-check \
+    ~/.cursor/skills/testchimp/bin/testchimp-preamble-check \
+    ~/.claude/skills/testchimp/bin/testchimp-preamble-check \
+    .cursor/skills/testchimp/bin/testchimp-preamble-check \
+    .claude/skills/testchimp/bin/testchimp-preamble-check
+  do
+    [ -n "$_p" ] && [ -x "$_p" ] && "$_p" && break
+  done
+  true
 )
 [ -n "$_TC_PRE" ] && echo "$_TC_PRE" || true
 ```
@@ -107,8 +120,8 @@ Before executing a TestChimp flow:
      3. **`TESTCHIMP_BACKEND_URL`** **when present** in that `env` block (staging, enterprise, or self-hosted **featureservice** base URL — used by **CLI / MCP / ai-wright**)
      4. **`TESTCHIMP_INGRESS_URL`** **when present** in that `env` block (staging / enterprise **ingress** host — used by **`@testchimp/playwright` CI ingest** and RUM emit overrides). Parallel to `TESTCHIMP_BACKEND_URL` in mcp.json.
      5. **`TESTCHIMP_PROJECT_ID`** when present (TrueCoverage RUM `projectId` if not already in app config — [`references/instrument-truecoverage.md`](references/instrument-truecoverage.md))
-   - **Remote MCP (OAuth) — no key in the IDE config:** The TestChimp entry may be a remote **`url`** (e.g. `https://mcp.testchimp.io/mcp`, or a staging / enterprise MCP host) with **no** `env` block. That is a valid setup, not a missing key — the IDE signs in with OAuth and MCP tools work without a key. The project is the one picked at consent (`get-project-credentials` returns it). Runners still need **`TESTCHIMP_API_KEY`**, which lives in the gitignored **`<repo>/.testchimp/mcp.json`** (the same file TestChimp Studio writes; it is candidate #1 in **[Finding project MCP config](#finding-project-mcp-config-testchimp)**, so the normal resolution above finds it). When that file is missing (or its **`TESTCHIMP_PROJECT_ID`** differs from the signed-in project): if the saved id names a **different** project than `get-project-credentials`, treat it as a mismatch and tell the user to re-authenticate through **`/mcp`** (see [`references/init-testchimp.md`](references/init-testchimp.md)). Otherwise:
-     1. **Hosted or plugin MCP** (`https://mcp.testchimp.io/mcp`): call **`get-project-credentials`**, then write **`<git root>/.testchimp/mcp.json`** with the **file-write tool**. Exact shape and chmod: [Save the runner key](references/init-testchimp.md#save-the-runner-key). Never put the key in a shell command; never echo or print it. Never run `testchimp workspace save-creds <key>`.
+   - **Remote MCP (OAuth) — no key in the IDE config:** The TestChimp entry may be a remote **`url`** (e.g. `https://mcp.testchimp.io/mcp`, or a staging / enterprise MCP host) with **no** `env` block. That is a valid setup, not a missing key — the IDE signs in with OAuth and MCP tools work without a key. The project is the one picked at consent (`get-project-credentials` returns it). Runners still need **`TESTCHIMP_API_KEY`**, which lives in the gitignored **`<repo>/.testchimp/mcp.json`** (the same file TestChimp Studio writes; it is candidate #1 in **[Finding project MCP config](#finding-project-mcp-config-testchimp)**, so the normal resolution above finds it). When that file is missing (or its **`TESTCHIMP_PROJECT_ID`** differs from the signed-in project): if the saved id names a **different** project than `get-project-credentials`, treat it as a mismatch and tell the user to re-authenticate through the **host MCP UI** (Claude Code: **`/mcp`**; Cursor / Gemini / Codex / others: the TestChimp server’s Authenticate / reconnect) — see [`references/init-testchimp.md`](references/init-testchimp.md). Otherwise:
+     1. **Hosted or plugin MCP** (`https://mcp.testchimp.io/mcp`): call **`get-project-credentials`**, then write **`<git root>/.testchimp/mcp.json`** with the **file-write tool**. Exact shape, chmod (Unix), and fallbacks: [Save the runner key](references/init-testchimp.md#save-the-runner-key). Never put the key in a shell command; never echo or print it. Never run `testchimp workspace save-creds <key>`.
      2. **Local-npm or stdio MCP:** if **`save-workspace-creds`** is listed, call it with `{ "folder": "<git root>" }` and never pass the key. If that tool is not listed, use the hosted path above.
      3. Re-run the resolution above (now satisfied by `.testchimp/mcp.json`) and export for the runner as usual.
      Only stop and ask the user to paste a key when no TestChimp MCP connection works at all. Remote setup details: [`references/init-testchimp.md`](references/init-testchimp.md)#remote-mcp-oauth-setup.
@@ -117,7 +130,7 @@ Before executing a TestChimp flow:
    - **Host split:** **CLI/MCP** → `TESTCHIMP_BACKEND_URL` (featureservice). **Playwright reporter CI ingest** → `TESTCHIMP_INGRESS_URL` when set; otherwise `@testchimp/playwright` rewrites SaaS `featureservice*.testchimp.io` → matching `ingress*.testchimp.io`, or defaults to `https://ingress.testchimp.io`.
    - **`TESTCHIMP_BACKEND_URL` (enterprise / non-prod — BLOCKING when configured):** If MCP `env` defines **`TESTCHIMP_BACKEND_URL`**, the agent **MUST** export it into **every** CLI / runner shell **before** the first `testchimp …` or Playwright spawn. **Do not** call the SaaS/prod default host when a project-specific backend is configured — keys are environment-scoped and a prod call with a staging/enterprise key returns **401**. Only omit / leave unset when the MCP config has **no** `TESTCHIMP_BACKEND_URL` (then the CLI/MCP package default prod host is correct).
    - **`TESTCHIMP_INGRESS_URL` (when configured):** Export into **every Playwright / Mobilewright runner shell** alongside the API key. Prefer this over relying solely on featureservice→ingress rewrite.
-   - **Missing / blank / placeholder API key** (and no working remote MCP connection — see the remote bullet above): **STOP**; during **`/testchimp init`**, use the plugin / remote OAuth path first ([Workstation gate](references/init-testchimp.md#workstation-gate-always-first)). If the Claude Code plugin is installed, tell the user to run **`/mcp`** → Authenticate (do not write a project `.mcp.json`). Only when there is no plugin or remote server, create or merge the project MCP file from [`assets/sample-mcp.json`](assets/sample-mcp.json), ask the user to paste API key + project ID (and backend/ingress URLs when not using SaaS prod), reload MCP, then re-export for the **runner**. For **cloud / CI** agents, inject `TESTCHIMP_API_KEY` from GitHub Actions secrets (or the host’s secret store) into the MCP `env` / job environment — see [Setting up cloud agents](https://docs.testchimp.io/automations/setting-up-cloud-agents).
+   - **Missing / blank / placeholder API key** (and no working remote MCP connection — see the remote bullet above): **STOP**; during **`/testchimp init`**, use the plugin / remote OAuth path first ([Workstation gate](references/init-testchimp.md#workstation-gate-always-first)). If a plugin or hosted server is already installed, tell the user to authenticate it in the **host MCP UI** (Claude Code: **`/mcp`** → Authenticate — do not write a project `.mcp.json`). Only when there is no plugin or remote server, create or merge the project MCP file from [`assets/sample-mcp.json`](assets/sample-mcp.json), ask the user to paste API key + project ID (and backend/ingress URLs when not using SaaS prod), reload MCP, then re-export for the **runner**. For **cloud / CI** agents, inject `TESTCHIMP_API_KEY` from GitHub Actions secrets (or the host’s secret store) into the MCP `env` / job environment — see [Setting up cloud agents](https://docs.testchimp.io/automations/setting-up-cloud-agents).
    - **On 401 / unauthorized (checklist — do in order):**
      1. Re-read project MCP `env` and confirm **`TESTCHIMP_BACKEND_URL`** / **`TESTCHIMP_INGRESS_URL`** were exported into **this** shell when configured (wrong host is the most common agent failure mode).
      2. Confirm **`TESTCHIMP_API_KEY`** from the **same** MCP entry is exported (not blank/placeholder; never print it).
@@ -261,7 +274,7 @@ Install **`@testchimp/cli@latest`** (see [`references/init-testchimp.md`](refere
 
 **CLI (shell / CI):** Same package exposes the **`testchimp`** binary for calling the same HTTP APIs with flags or **`--json-input`**. See [`references/cli.md`](references/cli.md) for env resolution, stdout/stderr, and when to prefer CLI vs MCP.
 
-**Remote MCP (OAuth, preferred with the Claude Code plugin):** the plugin registers `https://mcp.testchimp.io/mcp`. The user signs in through **`/mcp`** and picks the project on the consent screen. Do **not** write a second project-level TestChimp server. Runners still get a key via **Preamble checks #4** (remote bullet). The manual `npx` + `env` setup below stays available when the plugin is not installed.
+**Remote MCP (OAuth, preferred when a plugin / extension already registered the hosted URL):** the plugin or extension registers `https://mcp.testchimp.io/mcp`. The user signs in through the **host MCP UI** (Claude Code: **`/mcp`**) and picks the project on the consent screen. Do **not** write a second project-level TestChimp server. Runners still get a key via **Preamble checks #4** (remote bullet). The manual `npx` + `env` setup below stays available when the plugin is not installed.
 
 **Reference config:** [`assets/sample-mcp.json`](assets/sample-mcp.json) — shows **`command`**, **`args`** (`-y` + **`@testchimp/cli@latest`** + **`mcp`**), and **`env`** with **`TESTCHIMP_API_KEY`** and **`TESTCHIMP_PROJECT_ID`** placeholders. Cloud/CI template with `${TESTCHIMP_API_KEY}` refs: [`assets/sample-mcp.cloud.json`](assets/sample-mcp.cloud.json). Hosted OAuth template (global URL): [`assets/sample-mcp.remote.json`](assets/sample-mcp.remote.json). **`/testchimp init`** writes the stdio blob only when no plugin / remote server is already connected. Replace placeholders with values from **TestChimp → Project Settings → Key management**; **do not commit** real secrets. Discovery rules: **[Finding project MCP config](#finding-project-mcp-config-testchimp)**.
 
@@ -314,6 +327,8 @@ Write `message` in plain words (what happened, what the user expected). Put the 
 
 **Claude Code plugin:** users type the same commands as other hosts — **`/testchimp project-init`** / **`/testchimp project init`** and **`/testchimp init`**. The skill’s last segment is `testchimp`, so the bare `/testchimp` form works when nothing else owns that name. Dedicated menu entries **`/testchimp:project-init`** and **`/testchimp:init`** (`commands/*.md`) are thin aliases that read this file once — do not also invoke the skill. Do **not** tell users to run `/testchimp:testchimp …`. Natural language such as “set up TestChimp for this repo” also routes here.
 
+**Other hosts (Cursor, Gemini, Codex, Kiro, `npx skills add`, Grok Bot):** there is no `commands/` folder to load. Users type **`/testchimp init`** / **`/testchimp project init`** (or the same words without a slash). The skill description is what auto-triggers setup.
+
 | User says | Read |
 |-----------|------|
 | *(ChimpHands on CI — any turn)* | [`references/chimphands.md`](references/chimphands.md) **first** (branch + end-of-turn commit), then the matching workflow row below. Auth/CI FAQ: [`references/chimphands-faq.md`](references/chimphands-faq.md). |
@@ -357,7 +372,7 @@ When the user runs **`/testchimp init`** or **`/testchimp:init`**, the **first s
 
 **Include the following substance** (adapt wording slightly for tone; keep meaning):
 
-- **During init** (this machine), TestChimp confirms the **MCP connection** (plugin OAuth via `/mcp`, or a project MCP file), verifies API connectivity against the signed-in project, and wires **your local test environment** for authoring. **One-time project setup** (folder mapping, shared env strategy, CI) is **`/testchimp project-init`** (Claude Code menu alias **`/testchimp:project-init`**) — see [`references/project-init-testchimp.md`](references/project-init-testchimp.md).
+- **During init** (this machine), TestChimp confirms the **MCP connection** (hosted/plugin OAuth via the host MCP UI, or a project MCP file), verifies API connectivity against the signed-in project, and wires **your local test environment** for authoring. **One-time project setup** (folder mapping, shared env strategy, CI) is **`/testchimp project init`** (hyphenated **`/testchimp project-init`** also routes here; Claude Code `/` menu: **`/testchimp:project-init`**) — see [`references/project-init-testchimp.md`](references/project-init-testchimp.md).
 - **After setup**, the user mainly runs **`/testchimp run QA`** (synonym **`/testchimp test`**) when they finish a PR and want it tested.
 - **Ongoing**, the agent runs the full QA workflow (say in first person when addressing the user: *I will run the complete QA workflow* — author tests for relevant scenarios, author missing test plans for the PR, adjust QA infrastructure as needed — seed endpoints, TrueCoverage instrumentation via **`/testchimp instrument`**, fixture updates, find coverage gaps and address them).
 - **Periodically**, run **`/testchimp upkeep`** (synonym **`/testchimp evolve`**) — "I will" (similar to above say in first-person) analyze requirement coverage gaps, **recently failing tests**, and TrueCoverage insights—by communicating with the TestChimp platform—and address them systematically: fix failing SmartTests, tests and infra to cover under-tested slices, and when planned, **ExploreChimp** runs on **TrueCoverage-prioritized** UI journeys (drop-offs, duration/demand hotspots) to surface UX issues in those critical areas ([`references/upkeep.md`](references/upkeep.md)).

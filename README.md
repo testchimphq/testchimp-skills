@@ -137,7 +137,7 @@ testchimp-skills/
 │   └── marketplace.json     # self-hosted marketplace "testchimp"
 ├── .mcp.json                # hosted MCP, global URL
 ├── SKILL.md                 # Entrypoint: preamble, routing, guardrails
-├── commands/                # Claude Code /testchimp:project-init and /testchimp:init
+├── commands/                # Claude Code only: /testchimp:project-init and /testchimp:init
 ├── README.md                # Install + 1.0 overview (this file)
 ├── LICENSE
 ├── scripts/
