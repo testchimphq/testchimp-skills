@@ -1,11 +1,21 @@
 {
   "name": "testchimp",
   "displayName": "TestChimp",
+  "version": "1.0.64",
   "description": "QA platform for coding agents: coverage signals, in-repo test plans, verified tests and release governance.",
-  "author": { "name": "TestChimp", "url": "https://testchimp.io" },
-  "homepage": "https://testchimp.io",
+  "author": {
+    "name": "TestChimp",
+    "email": "nuwansam@testchimp.io",
+    "url": "https://testchimp.io"
+  },
+  "homepage": "https://docs.testchimp.io",
   "repository": "https://github.com/testchimphq/testchimp-skills",
   "license": "MIT",
-  "keywords": ["qa", "testing", "test-automation", "playwright", "test-coverage", "release-readiness"],
+  "keywords": ["qa", "testing", "test-automation", "playwright", "test-coverage", "release-readiness", "mcp"],
+  "icon": "./assets/logo-512.png",
+  "documentationUrl": "https://docs.testchimp.io/introduction/quick-start",
+  "supportUrl": "https://testchimp.io/contact-us",
+  "privacyPolicyUrl": "https://testchimp.io/privacy-policy",
+  "termsOfServiceUrl": "https://testchimp.io/terms-conditions",
   "skills": ["."]
 }
