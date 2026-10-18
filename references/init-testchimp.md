@@ -111,13 +111,13 @@ Local Playwright / CLI / k6 need a project API key in gitignored **`<git root>/.
    ```
 
    If `chmod` is missing (**Windows** without Git Bash) or the command fails, **continue** — do not treat that as a hard stop. Do not invent an `icacls` line that might print the path into a prompt with the key. If this session has **no shell**, skip this step after the file-write.
-5. If `.gitignore` does not already ignore it, append **only** this line:
+5. If `.gitignore` does not already ignore `.testchimp/`, append **exactly this one line and nothing else** — no extra paths, comments, or blanks added in the same edit:
 
    ```
    .testchimp/
    ```
 
-   Never append markdown `---` (those are section breaks in this playbook).
+   Do **not** add `mobilewright-report/`, `playwright-report/`, `test-results/`, `blob-report/`, or any other ignore in this step. Those report folders are a later, separate concern (SKILL.md Preamble checks #4). Never append markdown `---` (those are section breaks in this playbook).
 
 ### Local-npm or stdio MCP
 
@@ -153,4 +153,4 @@ Thin init is **done** when:
 - Local test env strategy is documented or verified on this machine.
 - User knows how to run **`/testchimp test`** and where project-level status lives (`get-project-init-status`).
 
-Best-effort **`report-agent-action`** with `workflowId: init` after connectivity check — first row: `entityType: POLICY`, `actionType: CREATED` or `UPDATED`, `entityIdentity: init` (this **creates** the run). Close later with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED`, `entityIdentity: init`. Never send `WORKFLOW` + `ANALYZED`. If you hit a TestChimp bug or docs gap, you may **`send-feedback`** after telling the user what you will send and why; if they decline the tool, continue.
+Best-effort **`report-agent-action`** with `workflowId: init` after connectivity check. First row (creates the run without closing it): `entityType: POLICY`, `actionType: ANALYZED` (or `CREATED` / `UPDATED` if you wrote that policy this step), `entityIdentity: connect-to-test-env.policy.md` — a real **`*.policy.md` filename**. The server **400**s `POLICY entity_identity must be a *.policy.md filename` if you send `init` or any other non-filename. Close later with the whole-run type: `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED`, `entityIdentity: init` (must equal `workflowId`). Never send `WORKFLOW` + `ANALYZED`, and never send `POLICY` + `entityIdentity: init`. If you hit a TestChimp bug or docs gap, you may **`send-feedback`** after telling the user what you will send and why; if they decline the tool, continue.
