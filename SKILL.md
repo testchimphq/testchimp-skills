@@ -4,7 +4,7 @@ description: "TestChimp is the QA platform for coding agents. Use when the user 
 compatibility: "Requires Node.js 18+, @testchimp/cli at or above metadata.required_cli_version, TESTCHIMP_API_KEY and network access to TestChimp APIs. Web projects need @playwright/test and playwright 1.59.0 or later; mobile projects need mobilewright. Per-version CLI notes: references/version-matrix.md."
 license: MIT
 metadata:
-  version: 1.0.71
+  version: 1.0.72
   required_cli_version: "0.1.91"
   homepage: "https://testchimp.io"
 ---
@@ -192,7 +192,7 @@ Locate a JSON file that registers the TestChimp MCP server. **Do not assume a si
 
 **Example candidate paths (check in order from SmartTests root upward, then repo root):**
 
-1. `<project dir>/.testchimp/mcp.json` (**TestChimp Studio** / LOCAL_DESKTOP — prefer this when present; gitignored credentials)
+1. `<project dir>/.testchimp/mcp.json` (**runner credentials** — TestChimp Studio / LOCAL_DESKTOP / hosted save-key file; gitignored). Prefer this for **`TESTCHIMP_API_KEY`**. It is often stdio-shaped (`npx` + `env`) even when the **session** MCP is the plugin’s hosted HTTP server (`https://mcp.testchimp.io/mcp`). Do not treat this file alone as “stdio (local process)” if a plugin / `.mcp.json` HTTP server is also configured.
 2. `<project dir>/.cursor/mcp.json`
 3. `<project dir>/.mcp.json`
 4. `<project dir>/mcp.json`

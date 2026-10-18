@@ -234,22 +234,24 @@ Still use for analyze/completion and non-CRUD entities (SmartTest locator action
 | `skill_version` | Skill `SKILL.md` frontmatter `version` (`--skill-version` / `TESTCHIMP_SKILL_VERSION`) |
 | `cli_version` | `@testchimp/cli` package version (auto-filled by CLI when omitted) |
 | `entity_type` | e.g. `test`, `story`, `scenario`, `issue`, `test_execution`, `batch_invocation`, `workflow` |
-| `test` **or** `entityIdentity` | **Mutually exclusive** (camelCase on the wire). SmartTests → `test` TestLocator (`folderPath`, `fileName`, `testSuite`, `testName`). Other artifacts → `entityIdentity` as project-scoped **ordinal id** (readable int string). Do **not** use platform UUIDs. Exception: execution/batch ids only when the prompt explicitly provided them. |
+| `test` **or** `entityIdentity` | **Mutually exclusive** (camelCase on the wire). SmartTests → `test` TestLocator (`folderPath`, `fileName`, `testSuite`, `testName`). Stories / scenarios / issues → `entityIdentity` as project-scoped **ordinal id** (readable int string). **`POLICY`** → a real **`*.policy.md` filename** (not a catalog workflow id). Do **not** use platform UUIDs. Exception: execution/batch ids only when the prompt explicitly provided them. |
 | `action_type` | `created` / `updated` / `deleted` / `analyzed` / **`completed`** (`ACTION_COMPLETED`) / **`failed`** (`ACTION_FAILED`). Completing/failing marks the workflow execution done (`completedAtMillis`). Prefer `entity_type: workflow` for those. |
 
 At end of every **standalone** Execute (or when aborting), report **`ACTION_COMPLETED`** or **`ACTION_FAILED`** so timelines leave `RUNNING` — see **[Report workflow execution](#report-workflow-execution)** (required gate, not optional).
 
-**`init` (bootstrap, not catalog):** During **`/testchimp init`**, after workstation-gate **`get-eaas-config`** succeeds, best-effort report **`ACTION_COMPLETED`** with `workflow_id` / `entityIdentity` **`init`** and a fresh ULID (no policy fields). For stdio mode, omit `user_id` because the MCP CLI injects `TESTCHIMP_USER_ID` from mcp.json when set. For hosted mode (OAuth), pass `userId` explicitly until the backend defaults it from the token (backend work planned separately). Report failure must not block init. See [`init-testchimp.md`](./init-testchimp.md)#workstation-gate-always-first.
+**`init` (bootstrap, not catalog):** During **`/testchimp init`**, after workstation-gate **`get-eaas-config`** succeeds, best-effort **close** with **`ACTION_COMPLETED`**, `entityType: WORKFLOW`, `workflow_id` / `entityIdentity` **`init`**, and a fresh ULID (no policy fields). That is the whole-run report (`WORKFLOW` is only valid on completion). To create the run earlier without closing it, first-row **`POLICY`** + **`ANALYZED`** + **`connect-to-test-env.policy.md`** (the policy this flow follows for local env). **Never** send `POLICY` + `entityIdentity: init` — the server requires a `*.policy.md` filename. For stdio mode, omit `user_id` because the MCP CLI injects `TESTCHIMP_USER_ID` from mcp.json when set. For hosted mode (OAuth), pass `userId` explicitly until the backend defaults it from the token (backend work planned separately). Report failure must not block init. See [`init-testchimp.md`](./init-testchimp.md)#workstation-gate-always-first.
 
 **First successful report** for a client-supplied `workflow_execution_id` **creates** the DB workflow execution (`execution_created: true`); later reports with that **same** id append actions. The server **requires** `workflow_execution_id` on every `report-agent-action` (no auto-mint). **`upsert-plans-support-file` alone does not create a workflow execution** — without RAA / inline `agentTraceability` (with both workflow id + execution id), the platform shows no run.
 
-**First-row RAA (project-init and any catalog start):** send a **non-`WORKFLOW`** entity so the row is created without closing the run. Example that the MCP schema accepts:
+**First-row RAA (project-init and any catalog start):** send a **non-`WORKFLOW`** entity so the row is created without closing the run. When `entityType` is **`POLICY`**, the server requires `entityIdentity` to be a real **`*.policy.md` filename** for the policy this step is acting on — not a catalog workflow id. Example the server accepts:
 
 - `entityType`: **`POLICY`**
-- `actionType`: **`CREATED`** (or **`UPDATED`** / **`ANALYZED`**)
-- `entityIdentity`: the catalog workflow id (e.g. `project-init`) or the policy filename
+- `actionType`: **`ANALYZED`** (or **`CREATED`** / **`UPDATED`** when you created/updated that policy this step)
+- `entityIdentity`: **`connect-to-test-env.policy.md`** (or whichever `*.policy.md` the step is acting on)
 
-`entityType: WORKFLOW` is **only** valid with `ACTION_COMPLETED` / `ACTION_FAILED`. **`WORKFLOW` + `ANALYZED` is rejected** by the MCP client schema. `ANALYZED` is for `USER_STORY` / `SCENARIO` / `POLICY` / other non-workflow entities.
+Do **not** send `entityIdentity: project-init` or `init` with `POLICY` — that returns **400** (`POLICY entity_identity must be a *.policy.md filename`). There is no non-`POLICY` entity type for a mid-run “whole workflow” row; `WORKFLOW` is only the close.
+
+`entityType: WORKFLOW` is **only** valid with `ACTION_COMPLETED` / `ACTION_FAILED` (and `entityIdentity` must equal `workflowId`). **`WORKFLOW` + `ANALYZED` is rejected** by the MCP client schema. `ANALYZED` is for `USER_STORY` / `SCENARIO` / `POLICY` / other non-workflow entities.
 
 **Since last run:** **`get-last-run-workflow-detail`** (`workflow_id`, optional `branch_name`, optional `user_id`).
 
