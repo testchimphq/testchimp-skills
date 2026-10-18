@@ -6,7 +6,7 @@
     "url": "https://testchimp.io"
   },
   "description": "TestChimp: the QA platform for coding agents.",
-  "version": "1.0.68",
+  "version": "1.0.69",
   "plugins": [
     {
       "name": "testchimp",
