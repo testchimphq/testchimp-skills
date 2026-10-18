@@ -2,7 +2,7 @@
 
 TestChimp is the QA platform for coding agents. This repository is the **Claude Code plugin** (skill + hosted MCP) and the same skill pack other agents install from Git. Agents run pre-defined playbooks under **`references/`**; project-specific decisions live in **`plans/knowledge/policies/*.policy.md`**.
 
-The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth: you pick the TestChimp project on the consent screen, and every tool call is scoped to that project. One person runs **`/testchimp project init`** once per repo. Everyone else runs only **`/testchimp init`**.
+The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth: you pick the TestChimp project on the consent screen, and every tool call is scoped to that project. In Claude Code the slash commands are **`/testchimp:testchimp project-init`** and **`/testchimp:testchimp init`** (plugin namespace plus skill name — not `/testchimp project-init`). One person runs project-init once per repo. Everyone else runs only init.
 
 ## Claude Code plugin
 
@@ -27,16 +27,36 @@ Install from this marketplace, then sign in, then init. Do not invent extra comm
    - Pick the TestChimp project for **this** repository from the dropdown. That project is written into the token; every tool call is scoped to it. There is one global URL and no project IDs in the MCP config.
    - Leave **Use this connection as my QA bot** **unticked**. That box is for Grok Bot. Ticking it binds the connection as a QA bot instead of a normal coding-agent login.
 
-   If you later open a repo that belongs to a different TestChimp project, `/testchimp init` will detect the mismatch and tell you to re-authenticate through **`/mcp`** and pick that repo's project.
+   If you later open a repo that belongs to a different TestChimp project, `/testchimp:testchimp init` will detect the mismatch and tell you to re-authenticate through **`/mcp`** and pick that repo's project.
 
 3. **Init**
 
-   | Who | Command | What it does |
+   | Who | Command in Claude Code | What it does |
    | --- | --- | --- |
-   | One person, once per project | `/testchimp project init` | Folder mapping, shared test env, CI, optional imports, team invites |
-   | Every other teammate | `/testchimp init` | Confirm the plugin MCP, save a runner API key, wire the local stack |
+   | One person, once per project | `/testchimp:testchimp project-init` | Folder mapping, shared test env, CI, optional imports, team invites |
+   | Every other teammate | `/testchimp:testchimp init` | Confirm the plugin MCP, save a runner API key, wire the local stack |
+
+   Claude Code names plugin skills as **`/<plugin>:<skill> <args>`**. The plugin and the skill are both named `testchimp`, so the commands are **`/testchimp:testchimp project-init`** and **`/testchimp:testchimp init`**. Other hosts still use `/testchimp project init` / `/testchimp init`.
+
+   **Time:** project-init with one-by-one tool approvals typically takes about **20 minutes** and on the order of **60 approval prompts**. Init is shorter. Pre-allow TestChimp's MCP tools (below) so you are not clicking through every call.
 
    Test runners (Playwright, k6, the CLI) still need a project API key. Init fetches it with `get-project-credentials` and writes the gitignored `.testchimp/mcp.json`. It does **not** write a second TestChimp server into the project's `.mcp.json`.
+
+### Fewer approval prompts (Claude Code)
+
+Add this to project **`.claude/settings.json`** or user settings so TestChimp MCP tools from this plugin do not prompt on every call ([permission rules](https://code.claude.com/docs/en/permissions), [plugin MCP names](https://code.claude.com/docs/en/mcp)):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_testchimp_testchimp__*"
+    ]
+  }
+}
+```
+
+That rule is `mcp__plugin_<plugin-name>_<server-name>__*`. This plugin's server key is `testchimp`, so the server segment is `plugin_testchimp_testchimp`. A single tool would be `mcp__plugin_testchimp_testchimp__get-project-init-status`. You can also choose **Always allow** the first time Claude Code asks for a TestChimp tool.
 
 Update the plugin with `/plugin marketplace update testchimp`.
 
@@ -54,8 +74,8 @@ The plugin does not run a local MCP process and does not put an API key in Claud
 
 | Command | Workflow id | What it does |
 |---------|-------------|--------------|
-| `/testchimp init` | `init` (One-Off) | Per-developer workstation: MCP sign-in, runner key, local env |
-| `/testchimp project init` | `project-init` (One-Off) | One-time project setup: folder mapping, shared env, CI, optional imports |
+| `/testchimp:testchimp init` (Claude Code) / `/testchimp init` | `init` (One-Off) | Per-developer workstation: MCP sign-in, runner key, local env |
+| `/testchimp:testchimp project-init` (Claude Code) / `/testchimp project init` | `project-init` (One-Off) | One-time project setup: folder mapping, shared env, CI, optional imports |
 | `/testchimp import` | `import` (One-Off) | Import existing E2E into SmartTests (Playwright as-is or translate) |
 | `/testchimp import-perf-tests` | `import-perf-tests` (One-Off) | Import existing Locust/k6/JMeter/etc. into the TestChimp `k6/` folder |
 | `/testchimp run QA` | `run-qa` | Full PR QA composite (plans → env → tests → smart smoke → ExploreChimp → TrueCoverage) |
@@ -145,6 +165,8 @@ testchimp-skills/
     ├── logo-512.png
     ├── sample-mcp.json
     ├── sample-mcp.remote.json
+    ├── template_smarttests.yml
+    ├── guide/SAMPLE_PLANS.md
     └── template_*.config.*
 ```
 
@@ -270,6 +292,8 @@ Repeat that block (or re-clone) when you need updates.
 ## Usage examples
 
 ```
+/testchimp:testchimp init
+/testchimp:testchimp project-init
 /testchimp init
 /testchimp project init
 /testchimp run QA
@@ -293,7 +317,7 @@ Natural-language equivalents still route correctly (e.g. “Write tests for this
 
 2. **Stdio (local process)**: `npx -y @testchimp/cli@latest mcp` with `TESTCHIMP_API_KEY`, `TESTCHIMP_USER_ID`, and `TESTCHIMP_PROJECT_ID` in the server's `env` block. Use at project level (`.cursor/mcp.json` or `.mcp.json`) only when you are not using the plugin. Template: `assets/sample-mcp.json`.
 
-During **`/testchimp init`**, agents keep a plugin-provided server if it is already connected. They do not write a second TestChimp entry. Full steps: **`references/init-testchimp.md`** (Workstation gate). Agents verify CLI compatibility via **Preamble checks** in **`SKILL.md`**.
+During **`/testchimp:testchimp init`** (Claude Code) / **`/testchimp init`**, agents keep a plugin-provided server if it is already connected. They do not write a second TestChimp entry. Full steps: **`references/init-testchimp.md`** (Workstation gate). Agents verify CLI compatibility via **Preamble checks** in **`SKILL.md`**.
 
 Policy / workflow MCP tools (CLI ≥ **0.1.21**, skill **`required_cli_version`** may be higher): **`get-policy`**, **`list-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-last-run-workflow-detail`**.
 

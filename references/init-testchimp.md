@@ -1,18 +1,21 @@
 # /testchimp init
 
-**Per developer / workstation** — confirm the TestChimp MCP connection, save a runner API key, and wire a **local test environment** for authoring. Runs even when **`/testchimp project init`** is incomplete; offer to continue remaining project-setup gaps via [`project-init-testchimp.md`](./project-init-testchimp.md).
+**Per developer / workstation** — confirm the TestChimp MCP connection, save a runner API key, and wire a **local test environment** for authoring. Runs even when project init is incomplete; offer to continue remaining project-setup gaps via [`project-init-testchimp.md`](./project-init-testchimp.md).
 
-**Project-level setup** (folder mapping, CI, shared test env, imports) → **`/testchimp project init`** ([`project-init-testchimp.md`](./project-init-testchimp.md)). One person runs that once per project. Every other teammate then runs only **`/testchimp init`**.
+**Claude Code plugin command:** **`/testchimp:testchimp init`** (plugin namespace plus skill name). Do not tell Claude Code users to run `/testchimp init` or `/testchimp project-init`. Other hosts: **`/testchimp init`**.
+
+**Project-level setup** (folder mapping, CI, shared test env, imports) → **`/testchimp:testchimp project-init`** / **`/testchimp project init`** ([`project-init-testchimp.md`](./project-init-testchimp.md)). One person runs that once per project. Every other teammate then runs only init.
 
 ---
 
 ## Opening message (required)
 
-When **`/testchimp init`** starts, tell the user:
+When init starts, tell the user:
 
 - This flow sets up **their machine** (MCP sign-in, runner API key, local stack / env) so they can run TestChimp workflows from their coding agent.
-- **One-time project setup** (if not done) is **`/testchimp project init`** — ChimpHands or a lead dev runs it once per repo.
+- **One-time project setup** (if not done) is **`/testchimp:testchimp project-init`** in Claude Code (elsewhere **`/testchimp project init`**) — ChimpHands or a lead dev runs it once per repo.
 - After both are done, they mainly run **`/testchimp test`** on PRs; periodically **`/testchimp upkeep`** / **`/testchimp evolve`**.
+- If the user declines a tool call, continue to the next step. Do not stall.
 
 Include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
 
@@ -38,7 +41,7 @@ Include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-aut
    If any of those disagree with the signed-in `projectId`, **stop**. Tell the user this session is signed in to **project A** while this repo is bound to **project B**. They must re-authenticate: **`/mcp`** → TestChimp → **Authenticate** (or **Clear authentication** then **Authenticate**), and pick **this** repo's project on the consent dropdown. Do not write a `?projectId=` URL or a second server. After they sign in again, re-run this gate.
 4. **CLI connectivity** — **`get-eaas-config`** `{}` (auth gate). Empty config is OK.
 5. **Runner key** — confirm **Preamble checks #4** resolves **`TESTCHIMP_API_KEY`** for runners (for plugin / remote MCP this is the `save-creds` step below).
-6. **Optional gaps** — call **`get-project-init-status`**. If `overall_complete` is false, summarize missing required items and ask whether to run **`/testchimp project init`** now or defer.
+6. **Optional gaps** — call **`get-project-init-status`**. If `overall_complete` is false, summarize missing required items and ask whether to run **`/testchimp:testchimp project-init`** / **`/testchimp project init`** now or defer.
 
 Do **not** infer workstation setup from git — check local config every time.
 
@@ -55,7 +58,13 @@ Additive option when the Claude Code plugin is **not** already providing the ser
    Staging / enterprise: use that deployment's MCP host. **Claude Code with the TestChimp plugin:** skip this write. The plugin already registered the same URL; a second entry would load a duplicate server.
 2. Ask the user to reload MCP and complete the browser sign-in. On the consent page they pick the TestChimp project for this repo and leave **Use this connection as my QA bot** unticked.
 3. If tools come back for the wrong project, follow the **mismatch** step in the workstation gate (`/mcp` → re-authenticate, pick the correct project).
-4. Save the runner key once: call **`get-project-credentials`**, then pipe only the key: `printf '%s' "<projectApiKey>" | testchimp workspace save-creds --folder <git root> --project-id <projectId> --project-name "<projectName>" --backend-url <backendUrl> --ingress-url <ingressUrl>`. This writes the gitignored `.testchimp/mcp.json` (Studio's format) that **Preamble checks #4** reads. Never print the key.
+4. Save the runner key once: call **`get-project-credentials`**. **Do not** run `printf … | testchimp workspace save-creds` or put `projectApiKey` on any command line — Claude Code shows the command on the approval prompt and keeps it in history. `save-creds` reads stdin only and cannot fetch the key itself (CLI/MCP change needed). Write **`<git root>/.testchimp/mcp.json`** with the file Write tool (Studio `mcpServers.testchimp.env` shape; include `TESTCHIMP_API_KEY`, `TESTCHIMP_PROJECT_ID`, and backend/ingress when returned), then `chmod 0600 <git root>/.testchimp/mcp.json`. If `.gitignore` does not already ignore it, append **only** this line:
+
+   ```
+   .testchimp/
+   ```
+
+   Never append markdown `---` (those are section breaks in this playbook). Then `testchimp workspace map --project-id <projectId> --folder <git root> --project-name "<projectName>"`. This is the gitignored file **Preamble checks #4** reads. Never print the key.
 
 ---
 
@@ -79,4 +88,4 @@ Thin init is **done** when:
 - Local test env strategy is documented or verified on this machine.
 - User knows how to run **`/testchimp test`** and where project-level status lives (`get-project-init-status`).
 
-Best-effort **`report-agent-action`** with `workflowId: init` after connectivity check.
+Best-effort **`report-agent-action`** with `workflowId: init` after connectivity check — first row: `entityType: POLICY`, `actionType: CREATED` or `UPDATED`, `entityIdentity: init` (this **creates** the run). Close later with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED`, `entityIdentity: init`. Never send `WORKFLOW` + `ANALYZED`. Do **not** call **`send-feedback`** unless the user asked or agreed.

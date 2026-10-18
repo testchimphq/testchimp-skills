@@ -10,7 +10,7 @@
 This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and scenario **`annotation`** links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
 
 **Ids (hard rules — BLOCKING):**
-- **Never hallucinate** **`US-…`** or **`TS-…`** ids (the ordinals are TestChimp-generated, not freetext).
+- **Never hallucinate** **`US-…`** or **`TS-…`** ids (the ordinals are TestChimp-generated, not freetext). Sample guides (including [`../assets/guide/SAMPLE_PLANS.md`](../assets/guide/SAMPLE_PLANS.md)) must use placeholders such as `US-<ordinalId>` — never hard-coded `US-103` / `TS-104`. The platform renumbers ordinals per project.
 - **Never create** (even temporarily) story/scenario markdown files with a **blank `id:`**, and **never omit `id:`** from frontmatter. Omitting `id` is the same class of bug as inventing one.
 - **Always provision first via MCP / CLI** (`create-user-story` / `create-test-scenario`) to get the real **`ordinalId`**, **then** write the markdown file with **`id: US-…`** / **`id: TS-…` already populated** in the **first** on-disk version.
 - **Do not** treat “I linked `story: US-…`” as sufficient for a new scenario — scenarios still need a platform-issued **`id: TS-…`**.

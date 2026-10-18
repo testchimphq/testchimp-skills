@@ -321,7 +321,7 @@ NODE
       _say "TESTCHIMP_API_KEY: present in config (not needed for MCP but useful for test runners; not printed)"
     else
       _say "MCP: remote (OAuth) entry${REMOTE_PROJECT_ID:+, projectId $REMOTE_PROJECT_ID} — no key in IDE config (expected)"
-      _warn "ACTION: runner key not saved yet — call MCP get-project-credentials, then pipe projectApiKey to: testchimp workspace save-creds --folder <git root> --project-id <projectId> --backend-url <backendUrl> --ingress-url <ingressUrl> (writes .testchimp/mcp.json; SKILL.md Preamble #4). Never print the key."
+      _warn "ACTION: runner key not saved yet — call MCP get-project-credentials, then write .testchimp/mcp.json with the file Write tool (never printf/save-creds with the key on a command line). chmod 0600 the file, append only .testchimp/ to .gitignore (no markdown ---), then: testchimp workspace map --folder <git root> --project-id <projectId> (SKILL.md Preamble #4). Never print the key."
     fi
   else
     if [ "${HAS_KEY:-no}" = "yes" ]; then
