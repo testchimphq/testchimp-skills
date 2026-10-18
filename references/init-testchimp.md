@@ -24,7 +24,7 @@ Include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-aut
 
 1. **MCP connection**
    - If TestChimp MCP tools are already available in the session (plugin server, Studio `.testchimp/mcp.json`, a working remote `url`, or stdio `npx` + `env`), keep that connection.
-   - If tools are missing, return **401**, or the server shows as needing authentication: tell the user to run **`/mcp`**, choose **`plugin:testchimp:testchimp`** (or the TestChimp server), then **Authenticate**. On the consent page they pick the TestChimp project for **this** repo. Then stop and wait — do not invent a project-level MCP file.
+   - If tools are missing, return **401**, or the server shows as needing authentication: tell the user to run **`/mcp`**, choose **`plugin:testchimp:testchimp`** (or the TestChimp server), then **Authenticate**. On the consent page they pick the TestChimp project for **this** repo and leave **Use this connection as my QA bot** **unticked** (that box is for Grok Bot). Then stop and wait — do not invent a project-level MCP file.
    - If the plugin is not installed and no TestChimp server exists, offer the setups below; **plugin / remote OAuth is the default** when the user is in Claude Code, otherwise **manual** is the default unless they pick another:
      - **Remote MCP (OAuth):** see [Remote MCP (OAuth) setup](#remote-mcp-oauth-setup). Nothing to paste.
      - **Manual:** create or merge from [`../assets/sample-mcp.json`](../assets/sample-mcp.json) (`.cursor/mcp.json`, `.mcp.json`, or Codex `config.toml`). Real **`TESTCHIMP_API_KEY`** + **`TESTCHIMP_PROJECT_ID`** (and **`TESTCHIMP_USER_ID`** when known — needed for get-my-tasks / list-tests-awaiting-verification and run attribution); reload MCP after edits.
@@ -53,7 +53,7 @@ Additive option when the Claude Code plugin is **not** already providing the ser
    - **Codex:** `.codex/config.toml` (trusted projects only) — `[mcp_servers.testchimp]` with `url = "https://mcp.testchimp.io/mcp"`, then `codex mcp login testchimp`.
 
    Staging / enterprise: use that deployment's MCP host. **Claude Code with the TestChimp plugin:** skip this write. The plugin already registered the same URL; a second entry would load a duplicate server.
-2. Ask the user to reload MCP and complete the browser sign-in. On the consent page they pick the TestChimp project for this repo.
+2. Ask the user to reload MCP and complete the browser sign-in. On the consent page they pick the TestChimp project for this repo and leave **Use this connection as my QA bot** unticked.
 3. If tools come back for the wrong project, follow the **mismatch** step in the workstation gate (`/mcp` → re-authenticate, pick the correct project).
 4. Save the runner key once: call **`get-project-credentials`**, then pipe only the key: `printf '%s' "<projectApiKey>" | testchimp workspace save-creds --folder <git root> --project-id <projectId> --project-name "<projectName>" --backend-url <backendUrl> --ingress-url <ingressUrl>`. This writes the gitignored `.testchimp/mcp.json` (Studio's format) that **Preamble checks #4** reads. Never print the key.
 
