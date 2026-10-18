@@ -17,9 +17,15 @@ Install from this marketplace, then sign in, then init. Do not invent extra comm
 
    On Claude Code v2.1.275+ you can do both in one step: `/plugin install testchimp --marketplace testchimphq/testchimp-skills`.
 
+   **Restart the Claude Code session** after install. A session that is already running does not pick up the plugin until you quit and start it again.
+
 2. **Sign in to the hosted MCP**
 
-   Run **`/mcp`**, choose **`plugin:testchimp:testchimp`**, then **Authenticate**. The browser opens `https://mcp.testchimp.io/mcp` (OAuth through `https://featureservice.testchimp.io`). On the consent screen, pick the TestChimp project for **this** repository from the dropdown. The project comes back in the token payload. There is one global URL and no project IDs in the MCP config.
+   Run **`/mcp`**, choose **`plugin:testchimp:testchimp`**, then **Authenticate**. The browser opens `https://mcp.testchimp.io/mcp` (OAuth through `https://featureservice.testchimp.io`).
+
+   On the consent screen:
+   - Pick the TestChimp project for **this** repository from the dropdown. That project is written into the token; every tool call is scoped to it. There is one global URL and no project IDs in the MCP config.
+   - Leave **Use this connection as my QA bot** **unticked**. That box is for Grok Bot. Ticking it binds the connection as a QA bot instead of a normal coding-agent login.
 
    If you later open a repo that belongs to a different TestChimp project, `/testchimp init` will detect the mismatch and tell you to re-authenticate through **`/mcp`** and pick that repo's project.
 
@@ -70,7 +76,7 @@ Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environmen
 
 | Host | Install |
 | --- | --- |
-| Claude Code | `/plugin marketplace add testchimphq/testchimp-skills` then `/plugin install testchimp@testchimp` |
+| Claude Code | `/plugin marketplace add testchimphq/testchimp-skills` then `/plugin install testchimp@testchimp`, then **restart the session** |
 | Any agent (skill only) | `npx skills add testchimphq/testchimp-skills` |
 | Cursor | Cursor Marketplace (search TestChimp), or clone this repo as a Cursor plugin |
 | Gemini CLI | `gemini extensions install https://github.com/testchimphq/testchimp-skills` |
