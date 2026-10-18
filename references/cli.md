@@ -49,7 +49,8 @@ The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.
 
 Remote MCP is an **additional** way to connect; manual `npx` + `env` and Studio setups keep working unchanged.
 
-- **Per-project URL:** `https://mcp.testchimp.io/mcp?projectId=<id>` in the project MCP file (`url` entry, no `env`). Every tool call acts on that project; TestChimp checks the signed-in user is a member. One sign-in covers all of the user's projects. Plain `/mcp` uses the project picked on the consent page. A QA bot's `projectApiKey` argument still wins over the URL.
+- **Global URL (Claude Code plugin and recommended remote setup):** `https://mcp.testchimp.io/mcp`. The user picks the project on the OAuth consent screen; that project is in the token payload and every tool call is scoped to it. Do not add a second project-level TestChimp server when the plugin already registered this URL. If the signed-in project is the wrong repo, re-authenticate through `/mcp`.
+- **Optional per-project URL (non-plugin hosts):** `https://mcp.testchimp.io/mcp?projectId=<id>` in a project MCP file (`url` entry, no `env`). Every tool call acts on that project; TestChimp checks the signed-in user is a member. A QA bot's `projectApiKey` argument still wins over the URL.
 - **Runner key:** remote entries carry no key, so local runners get it once per repo:
 
 ```bash

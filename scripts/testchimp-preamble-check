@@ -177,7 +177,7 @@ USER_LEVEL_TESTCHIMP="no"
 PLUGIN_SOURCE=""
 if [ -z "${MCP_JSON:-}" ] || [ "${HAS_SERVER:-no}" = "no" ]; then
   # Check if the skill itself is running from a plugin cache (signal that plugins are in use)
-  if echo "$SKILL_DIR" | grep -qE '\.claude/plugins|\.cursor/plugins|\.gemini/extensions'; then
+  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] || echo "$SKILL_DIR" | grep -qE '\.claude/plugins|\.cursor/plugins|\.gemini/extensions'; then
     USER_LEVEL_TESTCHIMP="yes"
     PLUGIN_SOURCE="skill location ($SKILL_DIR under plugin cache)"
   fi

@@ -4,7 +4,7 @@ This document describes manual testing performed for the remote MCP server suppo
 
 ## Preamble Check Tests
 
-The `bin/testchimp-preamble-check` script was tested with three configurations:
+The `scripts/testchimp-preamble-check` script was tested with three configurations:
 
 ### Test 1: Remote mode (OAuth)
 
@@ -181,7 +181,7 @@ The following compatibility scenarios were considered:
 
 ## Files Updated
 
-- `bin/testchimp-preamble-check`: Mode detection and validation logic
+- `scripts/testchimp-preamble-check`: Mode detection and validation logic
 - `SKILL.md`: Preamble documentation for both modes
 - `references/init-testchimp.md`: Init flow with server detection
 - `references/policies-and-traceability.md`: userId note for hosted mode
