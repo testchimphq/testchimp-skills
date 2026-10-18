@@ -2,7 +2,7 @@
 
 TestChimp is the QA platform for coding agents. This repository is the **Claude Code plugin** (skill + hosted MCP) and the same skill pack other agents install from Git. Agents run pre-defined playbooks under **`references/`**; project-specific decisions live in **`plans/knowledge/policies/*.policy.md`**.
 
-The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth: you pick the TestChimp project on the consent screen, and every tool call is scoped to that project. Type **`/testchimp project-init`** and **`/testchimp init`** (same as other hosts). Claude Code’s `/` menu also lists **`/testchimp:<name>`** aliases for each testing workflow (`commands/*.md`). One person runs project-init once per repo. Everyone else runs only init. Plain language such as “set up TestChimp for this repo” also starts the skill.
+The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth: you pick the TestChimp project on the consent screen, and every tool call is scoped to that project. Type **`/testchimp project-init`** and **`/testchimp init`** (same as other hosts). Claude Code’s `/` menu also lists **`/testchimp:<name>`** aliases for core QA commands (`commands/*.md`). One person runs project-init once per repo. Everyone else runs only init. Plain language such as “set up TestChimp for this repo” also starts the skill.
 
 ## Claude Code plugin
 
@@ -36,7 +36,7 @@ Install from this marketplace, then sign in, then init. Do not invent extra comm
    | One person, once per project | `/testchimp project-init` | Folder mapping, shared test env, CI, optional imports, team invites |
    | Every other teammate | `/testchimp init` | Confirm the plugin MCP, save a runner API key, wire the local stack |
 
-   In Claude Code you can type those same commands, or pick **`/testchimp:project-init`** / **`/testchimp:init`** (and the other **`/testchimp:<name>`** workflow aliases) from the `/` menu. Other hosts use `/testchimp project init` / `/testchimp init`. Do not use `/testchimp:testchimp …`.
+   In Claude Code you can type those same commands, or pick **`/testchimp:project-init`** / **`/testchimp:init`** (and the other core QA **`/testchimp:<name>`** aliases) from the `/` menu. Other hosts use `/testchimp project init` / `/testchimp init`. Do not use `/testchimp:testchimp …`.
 
    **Time:** project-init with one-by-one tool approvals typically takes about **20 minutes** and on the order of **60 approval prompts**. Init is shorter. Pre-allow TestChimp's MCP tools (below) so you are not clicking through every call.
 
@@ -78,14 +78,14 @@ The plugin does not run a local MCP process and does not put an API key in Claud
 | `/testchimp project-init` (Claude Code menu: `/testchimp:project-init`) / `/testchimp project init` | `project-init` (One-Off) | One-time project setup: folder mapping, shared env, CI, optional imports |
 | `/testchimp import` (Claude Code menu: `/testchimp:import-tests`) | `import` (One-Off) | Import existing E2E into SmartTests (Playwright as-is or translate) |
 | `/testchimp import plans` (Claude Code menu: `/testchimp:import-plans`) | `import-plans` (One-Off) | Import existing plan markdown into mapped `plans/` |
-| `/testchimp import-perf-tests` (Claude Code menu: `/testchimp:import-perf-tests`) | `import-perf-tests` (One-Off) | Import existing Locust/k6/JMeter/etc. into the TestChimp `k6/` folder |
+| `/testchimp import-perf-tests` | `import-perf-tests` (One-Off) | Import existing Locust/k6/JMeter/etc. into the TestChimp `k6/` folder (skill-only; no Claude Code plugin command) |
 | `/testchimp run QA` (Claude Code menu: `/testchimp:run-qa`) | `run-qa` | Full PR QA composite (plans → env → tests → smart smoke → ExploreChimp → TrueCoverage) |
 | `/testchimp upkeep` (Claude Code menu: `/testchimp:upkeep`) | `upkeep` | Coverage / TrueCoverage / cleanup composite (periodic maintenance) |
 | `/testchimp implement` | `implement` | Implement a story/scenario or a finetuned plan file end-to-end (skill-only; no Claude Code plugin command) |
 | `/testchimp explore` (Claude Code menu: `/testchimp:explore`) | `run-explorechimp` | ExploreChimp UX analytics on SmartTest pathways |
 | `/testchimp instrument` (Claude Code menu: `/testchimp:instrument-truecoverage`) | `instrument-truecoverage` | TrueCoverage / RUM instrumentation |
 | `/testchimp create tests` (Claude Code menu: `/testchimp:create-tests`) | `create-tests` | Author/update SmartTests for a scope (plans, PR, or **API operation coverage**) |
-| `/testchimp create policy` (Claude Code menu: `/testchimp:create-policy`) | `create-policy` | Author a `*.policy.md` for a catalog workflow |
+| `/testchimp create policy` | `create-policy` | Author a `*.policy.md` for a catalog workflow (skill-only; no Claude Code plugin command) |
 
 **Synonyms (same workflow):** `/testchimp test` → **`run QA`**; `/testchimp evolve` (legacy `/testchimp audit`) → **`upkeep`**; `/testchimp plan` → **`author plans`**.
 
@@ -138,7 +138,7 @@ testchimp-skills/
 │   └── marketplace.json     # self-hosted marketplace "testchimp"
 ├── .mcp.json                # hosted MCP, global URL
 ├── SKILL.md                 # Entrypoint: preamble, routing, guardrails
-├── commands/                # Claude Code only: /testchimp:<name> menu aliases (see SKILL.md Command routing)
+├── commands/                # Claude Code only: core QA /testchimp:<name> menu aliases (see SKILL.md Command routing)
 ├── README.md                # Install + 1.0 overview (this file)
 ├── LICENSE
 ├── scripts/
