@@ -148,7 +148,7 @@ For branch scope vs default branch, use merge-base / `git log` as in [`policies-
 
 ## `/testchimp` composer command → `workflow-id`
 
-| User command (after `/testchimp` or `/testchimp:testchimp`) | `workflow-id` |
+| User command (after `/testchimp` or `/testchimp:`) | `workflow-id` |
 | --- | --- |
 | `project-init` / `project init` | `project-init` |
 | `author plan` | `author-plans` |
