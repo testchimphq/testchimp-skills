@@ -88,4 +88,4 @@ Thin init is **done** when:
 - Local test env strategy is documented or verified on this machine.
 - User knows how to run **`/testchimp test`** and where project-level status lives (`get-project-init-status`).
 
-Best-effort **`report-agent-action`** with `workflowId: init` after connectivity check — first row: `entityType: POLICY`, `actionType: CREATED` or `UPDATED`, `entityIdentity: init` (this **creates** the run). Close later with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED`, `entityIdentity: init`. Never send `WORKFLOW` + `ANALYZED`. Do **not** call **`send-feedback`** unless the user asked or agreed.
+Best-effort **`report-agent-action`** with `workflowId: init` after connectivity check — first row: `entityType: POLICY`, `actionType: CREATED` or `UPDATED`, `entityIdentity: init` (this **creates** the run). Close later with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED`, `entityIdentity: init`. Never send `WORKFLOW` + `ANALYZED`. If you hit a TestChimp bug or docs gap, you may **`send-feedback`** after telling the user what you will send and why; if they decline the tool, continue.

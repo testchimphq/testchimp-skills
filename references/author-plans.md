@@ -10,7 +10,7 @@
 This document explains how to **read and author** TestChimp **markdown test plans** in the mapped **`plans/`** folder. For SmartTests and scenario **`annotation`** links from code, see **[`write-smarttests.md`](./write-smarttests.md)**.
 
 **Ids (hard rules — BLOCKING):**
-- **Never hallucinate** **`US-…`** or **`TS-…`** ids (the ordinals are TestChimp-generated, not freetext). Sample guides (including [`../assets/guide/SAMPLE_PLANS.md`](../assets/guide/SAMPLE_PLANS.md)) must use placeholders such as `US-<ordinalId>` — never hard-coded `US-103` / `TS-104`. The platform renumbers ordinals per project.
+- **Never hallucinate or pre-assign** **`US-…`** or **`TS-…`** ids. The platform assigns ordinals when you call **`create-user-story`** / **`create-test-scenario`**. Write local files only after that response — copy the returned **`content`** (it already has `id:`). Sample guides (including [`../assets/guide/SAMPLE_PLANS.md`](../assets/guide/SAMPLE_PLANS.md)) must not hard-code or placeholder ids (`US-103`, `US-<ordinalId>`, …).
 - **Never create** (even temporarily) story/scenario markdown files with a **blank `id:`**, and **never omit `id:`** from frontmatter. Omitting `id` is the same class of bug as inventing one.
 - **Always provision first via MCP / CLI** (`create-user-story` / `create-test-scenario`) to get the real **`ordinalId`**, **then** write the markdown file with **`id: US-…`** / **`id: TS-…` already populated** in the **first** on-disk version.
 - **Do not** treat “I linked `story: US-…`” as sufficient for a new scenario — scenarios still need a platform-issued **`id: TS-…`**.
@@ -21,8 +21,8 @@ This document explains how to **read and author** TestChimp **markdown test plan
 
 | Forbidden | Required instead |
 |-----------|------------------|
-| `Write` a new `plans/scenarios/**/*.md` with only `type` / `title` / `story` (no `id`) | `create-test-scenario` → write with `id: TS-<ordinalId>` + `story: US-<n>` → `update-test-scenario` |
-| `Write` a new `plans/stories/**/*.md` without `id: US-…` | `create-user-story` → write with `id: US-<ordinalId>` → `update-user-story` |
+| `Write` a new `plans/scenarios/**/*.md` with only `type` / `title` / `story` (no `id`) | `create-test-scenario` → write the returned **`content`** (assigned `id:` + `story:`) → `update-test-scenario` |
+| `Write` a new `plans/stories/**/*.md` without `id: US-…` | `create-user-story` → write the returned **`content`** (assigned `id:`) → `update-user-story` |
 | Invent `TS-999` / copy an id from an unrelated file | Use only the **`ordinalId`** returned by create (or an id already present from platform sync) |
 | “I’ll add the id after the user reviews the draft file” | Draft titles/paths in the **Plan**; provision + write with id only in **Execute** after approval |
 | Create **new** stories/scenarios during Plan (before approval) | Plan lists proposed titles/paths only; MCP create + local write happen in **Execute** |
@@ -108,14 +108,14 @@ Creating a file **only on disk** is **not** enough — and is **wrong** if done 
 
 ### Stories
 
-1. **`create-user-story`** — pass **`platformFilePath`** (e.g. `plans/stories/area/my-feature.md`) and **`title`**. Response includes **`ordinalId`** and **`content`** (canonical stub markdown that already has **`id: US-<ordinalId>`**).
-2. **Write** that **`content`** to the repo’s mapped plans path (edit the body as needed; **keep `id:`**). Do not invent frontmatter from scratch.
+1. **`create-user-story`** — pass **`platformFilePath`** (e.g. `plans/stories/area/my-feature.md`) and **`title`**. Response includes **`ordinalId`** and **`content`** (canonical stub markdown that already has the platform-assigned **`id:`**).
+2. **Write** that **`content`** to the repo’s mapped plans path (edit the body as needed; **keep `id:`**). Do not invent frontmatter or an id from scratch.
 3. **`update-user-story`** — pass the **full file contents** so the platform stays in sync. **Rejects** markdown missing **`id: US-<n>`** with an actionable error.
 
 ### Scenarios
 
 1. Ensure the **parent story** exists and you know its **`US-<n>`** (create the story first if needed).
-2. **`create-test-scenario`** — **`platformFilePath`** under `plans/scenarios/...`, **`title`**, **`userStoryOrdinalId`** = **`n`**. Response includes **`ordinalId`** and **`content`** (stub already has **`id: TS-<ordinalId>`** and **`story: US-<n>`**). **Do not skip this call.** **Do not** fire multiple creates in parallel — await each response before the next.
+2. **`create-test-scenario`** — **`platformFilePath`** under `plans/scenarios/...`, **`title`**, **`userStoryOrdinalId`** = **`n`**. Response includes **`ordinalId`** and **`content`** (stub already has the platform-assigned **`id:`** and **`story:`**). **Do not skip this call.** **Do not** fire multiple creates in parallel — await each response before the next.
 3. **Write** that **`content`** locally (edit body; **keep `id:` and `story:`**).
 4. **`update-test-scenario`** with **full markdown**. **Rejects** missing **`id: TS-<n>`** or **`story: US-<n>`** with an actionable error (tells you to call create first).
 5. After several creates: confirm **`ordinalId`**s are unique before writing remaining files; on collision, fail the workflow (do not write).
@@ -124,7 +124,7 @@ Creating a file **only on disk** is **not** enough — and is **wrong** if done 
 
 - [ ] `create-user-story` / `create-test-scenario` already returned **`ordinalId`** in this session (or the file already exists with a valid `id:` from platform).
 - [ ] Creates in this turn were **sequential** (not parallel), and all returned **`ordinalId`**s in the batch are **unique**.
-- [ ] Frontmatter includes **`id: US-<ordinalId>`** or **`id: TS-<ordinalId>`** (non-empty).
+- [ ] Frontmatter includes the **`id:`** from the create response (non-empty). No invented or placeholder ids.
 - [ ] Scenario frontmatter includes **`story: US-<n>`** for the parent.
 - [ ] Immediately after write: call **`update-*-*`** with full content (or schedule it in the same turn before finishing).
 

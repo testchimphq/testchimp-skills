@@ -4,7 +4,7 @@ description: "TestChimp is the QA platform for coding agents. Use when the user 
 compatibility: "Requires Node.js 18+, @testchimp/cli at or above metadata.required_cli_version, TESTCHIMP_API_KEY and network access to TestChimp APIs. Web projects need @playwright/test and playwright 1.59.0 or later; mobile projects need mobilewright. Per-version CLI notes: references/version-matrix.md."
 license: MIT
 metadata:
-  version: 1.0.67
+  version: 1.0.68
   required_cli_version: "0.1.91"
   homepage: "https://testchimp.io"
 ---
@@ -300,16 +300,16 @@ Use the repo, plans, policies, and those tools to decide what to test and how to
 
 ### Feedback to TestChimp
 
-`send-feedback` reaches the TestChimp team directly. **Do not call it unless the user asked you to send feedback or explicitly agreed in this conversation** (e.g. they said yes after you offered). Never file a bug report, struggle note, or docs-gap unprompted — including at the end of project-init or init.
+`send-feedback` reaches the TestChimp team directly. You may file a report on your own — **do not wait for the user to ask**. Before you call the tool, tell the user clearly **what** you are sending and **why**. Then send one call per distinct problem (not per retry). Do not send a ritual “init finished” note.
 
-When the user has agreed, send one (once per distinct problem, not per retry) for:
+Send when:
 
 - a TestChimp tool, CLI command or API returns an error that looks like a platform bug, or behaves differently from this skill (`BUG`);
 - the user struggles with, is confused by, or complains about TestChimp (`USER_STRUGGLE`);
 - the user asks for something TestChimp can't do (`FEATURE_REQUEST`);
 - this skill or the docs were wrong, missing or unclear and you had to work around it (`DOCS_GAP`).
 
-Write `message` in plain words (what happened, what the user expected). Put the workflow, command, error text and CLI / skill versions in `context`, and your host in `agentName`. Never include secrets, keys, tokens or customer data beyond what's needed. Tell the user you sent it. CLI shape: [`references/cli.md`](references/cli.md) § Feedback to TestChimp.
+Write `message` in plain words (what happened, what the user expected). Put the workflow, command, error text and CLI / skill versions in `context`, and your host in `agentName`. Never include secrets, keys, tokens or customer data beyond what's needed. After a successful send, tell the user you sent it. CLI shape: [`references/cli.md`](references/cli.md) § Feedback to TestChimp.
 
 **Declined tool calls:** If the user rejects `send-feedback` or any other tool, continue the workflow. Do not stall, retry the same call, or treat the decline as a hard stop unless that tool was required to proceed.
 
