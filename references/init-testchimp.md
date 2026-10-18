@@ -46,7 +46,7 @@ Include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-aut
    If any of those disagree with the signed-in `projectId`, **stop**. Tell the user this session is signed in to **project A** while this repo is bound to **project B**. They must re-authenticate via **Host MCP sign-in** above (clear authentication first if the host offers it), and pick **this** repo's project on the consent dropdown. Do not write a `?projectId=` URL or a second server. After they sign in again, re-run this gate.
 4. **CLI connectivity** — **`get-eaas-config`** `{}` (auth gate). Empty config is OK.
 5. **Runner key** — confirm **Preamble checks #4** resolves **`TESTCHIMP_API_KEY`** for runners. If the key is missing, follow [Save the runner key](#save-the-runner-key).
-6. **Optional gaps** — call **`get-project-init-status`**. If `overall_complete` is false, summarize missing required items and ask whether to run **`/testchimp project-init`** / **`/testchimp:project-init`** now or defer.
+6. **Optional gaps** — call **`get-project-init-status`**. Read snake_case keys; if a key is missing, accept the camelCase twin (`overallComplete` for `overall_complete`, and the same for the item keys — [Reading init status](./project-init-testchimp.md#progress-tracking-platform)). If overall is not complete, summarize missing required items and ask whether to run **`/testchimp project-init`** / **`/testchimp:project-init`** now or defer.
 
 Do **not** infer workstation setup from git — check local config every time.
 
@@ -69,14 +69,16 @@ Additive option when the Claude Code plugin is **not** already providing the ser
 
 ## Save the runner key
 
-Local Playwright / CLI / k6 need a project API key in gitignored **`<git root>/.testchimp/mcp.json`**. Never put the key in a shell command, and never echo or print it. Never run `testchimp workspace save-creds <key>` (no key on the command line).
+Local Playwright / CLI / k6 need a project API key in gitignored **`<git root>/.testchimp/mcp.json`**. Never put the key in a shell command, and never echo or print it. Never run `testchimp workspace save-creds <key>` (no key on the command line). If the **`get-project-credentials`** tool description still mentions `testchimp workspace save-creds`, **ignore that line**.
+
+**Already saved — do not rewrite:** If **`<git root>/.testchimp/mcp.json`** already has a non-placeholder **`TESTCHIMP_API_KEY`** and a **`TESTCHIMP_PROJECT_ID`** that matches the signed-in project (`get-project-credentials`), **leave the file**. Do not rewrite it to add `schemaVersion` / `enabled`. Missing those fields is fine — TestChimp Studio and older skill writes omit them. The preamble and CLI read `mcpServers.testchimp.env` either way.
 
 ### Hosted or plugin MCP (`https://mcp.testchimp.io/mcp`)
 
-`save-workspace-creds` is not listed on the hosted server (it cannot write the laptop). Do this instead:
+`save-workspace-creds` is **not** listed on the hosted / plugin server (it cannot write the laptop). That is expected on current prod, before CLI **0.1.93**. Do not stall waiting for the tool. Do this instead:
 
 1. Call **`get-project-credentials`** (returns `projectId`, `projectName`, `projectApiKey`, `backendUrl`, `ingressUrl`).
-2. Read **`<git root>/.testchimp/mcp.json`** if it exists. Keep any other **`mcpServers`** entries already in the file; only replace or add the **`testchimp`** server.
+2. Read **`<git root>/.testchimp/mcp.json`** if it exists. If it already has a real key and matching project id, **stop** (see **Already saved** above). Otherwise keep any other **`mcpServers`** entries and any extra `env` keys on `testchimp` (`TESTCHIMP_USER_ID`, existing backend/ingress); only replace or add the **`testchimp`** server.
 3. Write the file with the **file-write tool** (not Bash / not a command that contains the key). **2-space JSON** and a **trailing newline**. Directory mode **0700**, file mode **0600** when the host can set them.
 
    If this session has **no file-write tool**, call **`save-workspace-creds`** `{ "folder": "<git root>" }` when that tool is listed. If neither Write nor `save-workspace-creds` is available, tell the user to create the file in their editor from the shape below (they paste the key; you never echo it) and continue.
@@ -127,7 +129,7 @@ If the MCP tool **`save-workspace-creds`** is listed (CLI / local `@testchimp/cl
 
 Optional: `projectId`, `projectName`, `reassign`. The tool fetches the key from the current MCP auth and writes the same file (mode 0700 / 0600). The response must not include the key.
 
-If **`save-workspace-creds`** is **not** listed, use the hosted path above (`get-project-credentials` + file-write tool).
+If **`save-workspace-creds`** is **not** listed (current hosted/prod MCP, or CLI older than **0.1.93**), use the hosted path above (`get-project-credentials` + file-write tool). Do not stall.
 
 ---
 

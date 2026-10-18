@@ -4,7 +4,7 @@ description: "TestChimp is the QA platform for coding agents. Use when the user 
 compatibility: "Requires Node.js 18+, @testchimp/cli at or above metadata.required_cli_version, TESTCHIMP_API_KEY and network access to TestChimp APIs. Web projects need @playwright/test and playwright 1.59.0 or later; mobile projects need mobilewright. Per-version CLI notes: references/version-matrix.md."
 license: MIT
 metadata:
-  version: 1.0.70
+  version: 1.0.71
   required_cli_version: "0.1.91"
   homepage: "https://testchimp.io"
 ---
@@ -83,8 +83,16 @@ _TC_PRE=$(
     /home/box/agent-data/workflows/testchimp/scripts/testchimp-preamble-check \
     ~/.cursor/skills/testchimp/bin/testchimp-preamble-check \
     ~/.claude/skills/testchimp/bin/testchimp-preamble-check \
+    ~/.kiro/skills/testchimp/bin/testchimp-preamble-check \
+    ~/.agents/skills/testchimp/bin/testchimp-preamble-check \
+    ~/.copilot/skills/testchimp/bin/testchimp-preamble-check \
+    ~/.gemini/extensions/testchimp/bin/testchimp-preamble-check \
     .cursor/skills/testchimp/bin/testchimp-preamble-check \
-    .claude/skills/testchimp/bin/testchimp-preamble-check
+    .claude/skills/testchimp/bin/testchimp-preamble-check \
+    .kiro/skills/testchimp/bin/testchimp-preamble-check \
+    .agents/skills/testchimp/bin/testchimp-preamble-check \
+    .github/skills/testchimp/bin/testchimp-preamble-check \
+    /home/box/agent-data/workflows/testchimp/bin/testchimp-preamble-check
   do
     [ -n "$_p" ] && [ -x "$_p" ] && "$_p" && break
   done
@@ -120,9 +128,9 @@ Before executing a TestChimp flow:
      3. **`TESTCHIMP_BACKEND_URL`** **when present** in that `env` block (staging, enterprise, or self-hosted **featureservice** base URL — used by **CLI / MCP / ai-wright**)
      4. **`TESTCHIMP_INGRESS_URL`** **when present** in that `env` block (staging / enterprise **ingress** host — used by **`@testchimp/playwright` CI ingest** and RUM emit overrides). Parallel to `TESTCHIMP_BACKEND_URL` in mcp.json.
      5. **`TESTCHIMP_PROJECT_ID`** when present (TrueCoverage RUM `projectId` if not already in app config — [`references/instrument-truecoverage.md`](references/instrument-truecoverage.md))
-   - **Remote MCP (OAuth) — no key in the IDE config:** The TestChimp entry may be a remote **`url`** (e.g. `https://mcp.testchimp.io/mcp`, or a staging / enterprise MCP host) with **no** `env` block. That is a valid setup, not a missing key — the IDE signs in with OAuth and MCP tools work without a key. The project is the one picked at consent (`get-project-credentials` returns it). Runners still need **`TESTCHIMP_API_KEY`**, which lives in the gitignored **`<repo>/.testchimp/mcp.json`** (the same file TestChimp Studio writes; it is candidate #1 in **[Finding project MCP config](#finding-project-mcp-config-testchimp)**, so the normal resolution above finds it). When that file is missing (or its **`TESTCHIMP_PROJECT_ID`** differs from the signed-in project): if the saved id names a **different** project than `get-project-credentials`, treat it as a mismatch and tell the user to re-authenticate through the **host MCP UI** (Claude Code: **`/mcp`**; Cursor / Gemini / Codex / others: the TestChimp server’s Authenticate / reconnect) — see [`references/init-testchimp.md`](references/init-testchimp.md). Otherwise:
-     1. **Hosted or plugin MCP** (`https://mcp.testchimp.io/mcp`): call **`get-project-credentials`**, then write **`<git root>/.testchimp/mcp.json`** with the **file-write tool**. Exact shape, chmod (Unix), and fallbacks: [Save the runner key](references/init-testchimp.md#save-the-runner-key). Never put the key in a shell command; never echo or print it. Never run `testchimp workspace save-creds <key>`.
-     2. **Local-npm or stdio MCP:** if **`save-workspace-creds`** is listed, call it with `{ "folder": "<git root>" }` and never pass the key. If that tool is not listed, use the hosted path above.
+   - **Remote MCP (OAuth) — no key in the IDE config:** The TestChimp entry may be a remote **`url`** (e.g. `https://mcp.testchimp.io/mcp`, or a staging / enterprise MCP host) with **no** `env` block. That is a valid setup, not a missing key — the IDE signs in with OAuth and MCP tools work without a key. The project is the one picked at consent (`get-project-credentials` returns it). Runners still need **`TESTCHIMP_API_KEY`**, which lives in the gitignored **`<repo>/.testchimp/mcp.json`** (the same file TestChimp Studio writes; it is candidate #1 in **[Finding project MCP config](#finding-project-mcp-config-testchimp)**, so the normal resolution above finds it). If that file already has a non-placeholder **`TESTCHIMP_API_KEY`** and a **`TESTCHIMP_PROJECT_ID`** matching the signed-in project, **leave it** — do not rewrite for missing `schemaVersion` / `enabled` (Studio and older skill writes omit those). When the file is missing (or its **`TESTCHIMP_PROJECT_ID`** differs from the signed-in project): if the saved id names a **different** project than `get-project-credentials`, treat it as a mismatch and tell the user to re-authenticate through the **host MCP UI** (Claude Code: **`/mcp`**; Cursor / Gemini / Codex / others: the TestChimp server’s Authenticate / reconnect) — see [`references/init-testchimp.md`](references/init-testchimp.md). Otherwise:
+     1. **Hosted or plugin MCP** (`https://mcp.testchimp.io/mcp`): call **`get-project-credentials`**, then write **`<git root>/.testchimp/mcp.json`** with the **file-write tool**. Exact shape, chmod (Unix), and fallbacks: [Save the runner key](references/init-testchimp.md#save-the-runner-key). Never put the key in a shell command; never echo or print it. Never run `testchimp workspace save-creds <key>`. If the **`get-project-credentials`** tool text still mentions `workspace save-creds`, ignore that line.
+     2. **Local-npm or stdio MCP:** if **`save-workspace-creds`** is listed, call it with `{ "folder": "<git root>" }` and never pass the key. If that tool is **not** listed (current hosted/prod MCP), do not stall — use the hosted path above.
      3. Re-run the resolution above (now satisfied by `.testchimp/mcp.json`) and export for the runner as usual.
      Only stop and ask the user to paste a key when no TestChimp MCP connection works at all. Remote setup details: [`references/init-testchimp.md`](references/init-testchimp.md)#remote-mcp-oauth-setup.
    - **`TESTCHIMP_EXECUTION_SOURCE` (P0 — runner spawn, not from MCP `env`):** Compute and **export** on **every** Playwright / Mobilewright process. Do **not** look for this key in MCP JSON. Skill **never** exports `CI`. Set **`CLOUD_AGENT`** only for a **remote** agent host: `GITHUB_ACTIONS`, `CURSOR_AGENT_WORKER_ID` (Cursor cloud worker), or Copilot platform (`COPILOT_USE_PLATFORM` / `COPILOT_WORKSPACE`). **`CURSOR_AGENT` alone is the local Cursor IDE** — use **`LOCAL_AGENT`** (same for Claude Code, Codex, OpenHands on the developer machine). True pipelines (testrunner / GHA workflows that are not this skill) set `CI` themselves. See [`references/policies-and-traceability.md`](references/policies-and-traceability.md)#execution-source-local_agent--cloud_agent.

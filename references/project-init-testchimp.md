@@ -12,8 +12,8 @@
 
 Use MCP tools (CLI ≥ **0.1.35**):
 
-- **`get-project-init-status`** — read `ProjectInitStatus` (`platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring`, optional `import_plans` / `import_tests` / `smoke_validation`, server-computed `overall_complete`).
-- **`update-project-init-status`** — wrap fields in **`status`**. Only **snake_case** is supported. Use these **exact** keys:
+- **`get-project-init-status`** — read `ProjectInitStatus`. Prefer snake_case (`platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring`, optional `import_plans` / `import_tests` / `smoke_validation`, server-computed `overall_complete`). If a snake_case key is absent, accept the camelCase twin (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, `importPlans`, `importTests`, `smokeValidation`, `overallComplete`). Treat `PROJECT_INIT_ITEM_STATUS_DONE`, `DONE`, or boolean `true` as complete for that item. **Do not** re-run init when overall is already complete.
+- **`update-project-init-status`** — wrap fields in **`status`**. Only **snake_case** is supported on write. Use these **exact** keys:
 
   ```json
   {
@@ -141,7 +141,7 @@ If **`get-project-init-status`** shows required items already **DONE**, treat Ke
 Verify the **project** can talk to TestChimp APIs from this agent session (not every teammate’s laptop). Prefer the **plugin/extension-provided** hosted MCP (`https://mcp.testchimp.io/mcp`) when TestChimp is already installed as a plugin — do **not** write a second project-level server or require a stdio API key for these calls.
 
 1. **`get-eaas-config`** `{}` — must **not** return **401** (empty config is OK).
-2. **`get-project-credentials`** (when the connection is OAuth) — confirm `projectName` / `projectId` with the user. That is the project picked on the consent screen; every later tool call is scoped to it. If **`<git root>/.testchimp/mcp.json`** is missing and runners will need a key, save it now using [Save the runner key](./init-testchimp.md#save-the-runner-key) — do not put the key in a shell command.
+2. **`get-project-credentials`** (when the connection is OAuth) — confirm `projectName` / `projectId` with the user. That is the project picked on the consent screen; every later tool call is scoped to it. If **`<git root>/.testchimp/mcp.json`** already has a real key for this project, leave it. If it is missing and runners will need a key, save it now using [Save the runner key](./init-testchimp.md#save-the-runner-key) — do not put the key in a shell command.
 3. **`get-project-init-status`** — baseline current progress.
 4. **Project mismatch (blocking)** — if this repo already has `.testchimp-plans` / `.testchimp-tests`, a gitignored `.testchimp/mcp.json` with a different `TESTCHIMP_PROJECT_ID`, or `get-git-folder-mapping` points at another `owner/repo` than this tree's remotes, the user signed in to the wrong project. Stop and tell them to re-authenticate via [Host MCP sign-in](./init-testchimp.md#workstation-gate-always-first), picking **this** repo's project. Then re-run this area.
 
@@ -348,7 +348,7 @@ Execute in order; after each area, verify acceptance criteria, call **`update-pr
    - **Mobile:** `mobilewright`, `@mobilewright/test` (same version), mobilewright config templates.
 3. **`update-git-folder-mapping`** as soon as markers exist locally (do not wait for merge).
 4. Confirm markers locally. Suggest commit / PR; continue if it is not merged.
-5. If the platform seeded or you write **`plans/guide/SAMPLE_PLANS.md`**, copy [`../assets/guide/SAMPLE_PLANS.md`](../assets/guide/SAMPLE_PLANS.md). That guide must **not** contain real or placeholder story/scenario ids. New stories and scenarios are created with **`create-user-story`** / **`create-test-scenario`**; write local files from the create response (the platform assigns the ids).
+5. If **`plans/guide/SAMPLE_PLANS.md`** is missing, copy [`../assets/guide/SAMPLE_PLANS.md`](../assets/guide/SAMPLE_PLANS.md). Do **not** overwrite an existing guide, and never overwrite **`plans/stories/**`** or **`plans/scenarios/**`**. Existing story/scenario files keep their frontmatter `id:` values — do not re-create them or invent ids. That guide must **not** contain real or placeholder story/scenario ids. New stories and scenarios are created with **`create-user-story`** / **`create-test-scenario`**; write local files from the create response (the platform assigns the ids).
 
 **Dependencies** (SmartTests root):
 
