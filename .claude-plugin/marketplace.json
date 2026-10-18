@@ -6,12 +6,12 @@
     "url": "https://testchimp.io"
   },
   "description": "TestChimp: the QA platform for coding agents.",
-  "version": "1.0.65",
+  "version": "1.0.66",
   "plugins": [
     {
       "name": "testchimp",
       "source": "./",
-      "description": "QA platform for coding agents: coverage signals, in-repo test plans, verified tests and release governance.",
+      "description": "QA platform for coding agents. Claude Code: /testchimp:testchimp project-init once per repo, then /testchimp:testchimp init per developer.",
       "author": {
         "name": "TestChimp",
         "email": "nuwansam@testchimp.io",

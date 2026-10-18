@@ -4,7 +4,7 @@ description: "TestChimp is the QA platform for coding agents. Use it to run the 
 compatibility: "Requires Node.js 18+, @testchimp/cli at or above metadata.required_cli_version, TESTCHIMP_API_KEY and network access to TestChimp APIs. Web projects need @playwright/test and playwright 1.59.0 or later; mobile projects need mobilewright. Per-version CLI notes: references/version-matrix.md."
 license: MIT
 metadata:
-  version: 1.0.65
+  version: 1.0.66
   required_cli_version: "0.1.91"
   homepage: "https://testchimp.io"
 ---
@@ -109,7 +109,10 @@ Before executing a TestChimp flow:
      5. **`TESTCHIMP_PROJECT_ID`** when present (TrueCoverage RUM `projectId` if not already in app config — [`references/instrument-truecoverage.md`](references/instrument-truecoverage.md))
    - **Remote MCP (OAuth) — no key in the IDE config:** The TestChimp entry may be a remote **`url`** (e.g. `https://mcp.testchimp.io/mcp`, or a staging / enterprise MCP host) with **no** `env` block. That is a valid setup, not a missing key — the IDE signs in with OAuth and MCP tools work without a key. The project is the one picked at consent (`get-project-credentials` returns it). Runners still need **`TESTCHIMP_API_KEY`**, which lives in the gitignored **`<repo>/.testchimp/mcp.json`** (the same file TestChimp Studio writes; it is candidate #1 in **[Finding project MCP config](#finding-project-mcp-config-testchimp)**, so the normal resolution above finds it). When that file is missing (or its **`TESTCHIMP_PROJECT_ID`** differs from the signed-in project): if the saved id names a **different** project than `get-project-credentials`, treat it as a mismatch and tell the user to re-authenticate through **`/mcp`** (see [`references/init-testchimp.md`](references/init-testchimp.md)). Otherwise:
      1. Call the MCP tool **`get-project-credentials`** (returns `projectId`, `projectName`, `projectApiKey`, `backendUrl`, `ingressUrl`).
-     2. Pipe **only** the key on stdin: `printf '%s' "<projectApiKey>" | testchimp workspace save-creds --folder <git root> --project-id <projectId> --project-name "<projectName>" --backend-url <backendUrl> --ingress-url <ingressUrl>` (add `--reassign` when replacing another project's entry). It writes `.testchimp/mcp.json` (mode 0600), adds `.testchimp/` to `.gitignore`, and maps the folder for Studio. Never echo the key, put it in a command-line argument, or write it anywhere else.
+     2. **Never put `projectApiKey` in a shell command** (not `printf`, not `echo`, not `KEY=… testchimp …`). Claude Code shows the whole command on the approval prompt and keeps it in session history. `@testchimp/cli` `workspace save-creds` reads the key from **stdin only** and has **no** flag that fetches the key itself — a CLI/MCP change is required for a leak-free pipe. Until then:
+        - Write **`<git root>/.testchimp/mcp.json`** with the **file Write tool** (not Bash), Studio shape: `mcpServers.testchimp.env` with `TESTCHIMP_API_KEY`, `TESTCHIMP_PROJECT_ID`, and `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` when returned. Then `chmod 0600 <git root>/.testchimp/mcp.json` (that command has no key).
+        - If `.gitignore` lacks it, append **exactly** the line `.testchimp/` — never a markdown `---` (those horizontal rules in this skill are section breaks, not gitignore entries).
+        - Map the folder without the key: `testchimp workspace map --project-id <projectId> --folder <git root> --project-name "<projectName>"` (add `--reassign` when replacing another project's entry).
      3. Re-run the resolution above (now satisfied by `.testchimp/mcp.json`) and export for the runner as usual.
      Only stop and ask the user to paste a key when no TestChimp MCP connection works at all. Remote setup details: [`references/init-testchimp.md`](references/init-testchimp.md)#remote-mcp-oauth-setup.
    - **`TESTCHIMP_EXECUTION_SOURCE` (P0 — runner spawn, not from MCP `env`):** Compute and **export** on **every** Playwright / Mobilewright process. Do **not** look for this key in MCP JSON. Skill **never** exports `CI`. Set **`CLOUD_AGENT`** only for a **remote** agent host: `GITHUB_ACTIONS`, `CURSOR_AGENT_WORKER_ID` (Cursor cloud worker), or Copilot platform (`COPILOT_USE_PLATFORM` / `COPILOT_WORKSPACE`). **`CURSOR_AGENT` alone is the local Cursor IDE** — use **`LOCAL_AGENT`** (same for Claude Code, Codex, OpenHands on the developer machine). True pipelines (testrunner / GHA workflows that are not this skill) set `CI` themselves. See [`references/policies-and-traceability.md`](references/policies-and-traceability.md)#execution-source-local_agent--cloud_agent.
@@ -121,7 +124,7 @@ Before executing a TestChimp flow:
    - **On 401 / unauthorized (checklist — do in order):**
      1. Re-read project MCP `env` and confirm **`TESTCHIMP_BACKEND_URL`** / **`TESTCHIMP_INGRESS_URL`** were exported into **this** shell when configured (wrong host is the most common agent failure mode).
      2. Confirm **`TESTCHIMP_API_KEY`** from the **same** MCP entry is exported (not blank/placeholder; never print it).
-     3. Re-run the failing CLI/MCP call; if still 401, ask the user to verify the key for that backend (staging vs prod vs enterprise). **Remote MCP setups:** refresh the key with `get-project-credentials` → `testchimp workspace save-creds` (it updates a rotated key in place) instead of asking the user.
+     3. Re-run the failing CLI/MCP call; if still 401, ask the user to verify the key for that backend (staging vs prod vs enterprise). **Remote MCP setups:** refresh the key with `get-project-credentials` then rewrite `.testchimp/mcp.json` via the Write tool (never `save-creds` with the key on a command line).
    - **Symptoms (same fix):** reporter **disabled**, **401**, missing-key logs → re-apply **#4** (key **and** backend/ingress URLs) on the **runner**/CLI env, then re-run.
    - **Honor config reporters (P0):** Never pass Playwright/Mobilewright CLI **`--reporter`** / **`-r`** — it **replaces** config reporters and drops **`@testchimp/playwright/reporter`** (execution ingest + ExploreChimp **`exploration_end`**). Full rule: [`references/run-explorechimp.md`](references/run-explorechimp.md)#honor-playwright-config-reporters-p0 and [`references/run-qa.md`](references/run-qa.md) non-negotiables.
    - **Never print the key.** **No key-rotation noise** unless leaked or committed.
@@ -233,7 +236,8 @@ Optional layout: a **TestChimp-mapped repo** that is mostly `plans/` + `tests/`,
 
 3. **API keys, backend URL, ingress URL, and 401s.** **`TESTCHIMP_API_KEY`**, (when configured) **`TESTCHIMP_BACKEND_URL`**, and (when configured) **`TESTCHIMP_INGRESS_URL`:** canonical **`mcp.json`** / MCP **`env`** plus **runner/CLI export** — full rules in **Preamble checks #4** and **[Finding project MCP config](#finding-project-mcp-config-testchimp)**. On **401**, first verify the correct host was exported (`TESTCHIMP_BACKEND_URL` for CLI/MCP; `TESTCHIMP_INGRESS_URL` for reporter ingest), then the key. Obtain keys: **TestChimp** → **Project Settings** → **Key management**. **Do not** document **PAT**s or alternate user-auth env pairs for agents.
 
-4. **Gitignore generated report folders.** Playwright / Mobilewright (and reporters) can create generated artifacts (HTML reports, traces, screenshots, videos, raw results). These must **not** be committed. Ensure the repo’s **`.gitignore`** includes common Playwright output folders such as:
+4. **Gitignore generated report folders.** Playwright / Mobilewright (and reporters) can create generated artifacts (HTML reports, traces, screenshots, videos, raw results). These must **not** be committed. Append **only** these path patterns to **`.gitignore`** when missing (one pattern per line, nothing else — **never** copy markdown `---` section breaks from this skill into `.gitignore`):
+   - `.testchimp/`
    - `playwright-report/`
    - `mobilewright-report/`
    - `test-results/`
@@ -296,22 +300,28 @@ Use the repo, plans, policies, and those tools to decide what to test and how to
 
 ### Feedback to TestChimp
 
-`send-feedback` reaches the TestChimp team directly. Send one (once per distinct problem, not per retry) when:
+`send-feedback` reaches the TestChimp team directly. **Do not call it unless the user asked you to send feedback or explicitly agreed in this conversation** (e.g. they said yes after you offered). Never file a bug report, struggle note, or docs-gap unprompted — including at the end of project-init or init.
+
+When the user has agreed, send one (once per distinct problem, not per retry) for:
 
 - a TestChimp tool, CLI command or API returns an error that looks like a platform bug, or behaves differently from this skill (`BUG`);
 - the user struggles with, is confused by, or complains about TestChimp (`USER_STRUGGLE`);
 - the user asks for something TestChimp can't do (`FEATURE_REQUEST`);
 - this skill or the docs were wrong, missing or unclear and you had to work around it (`DOCS_GAP`).
 
-Write `message` in plain words (what happened, what the user expected). Put the workflow, command, error text and CLI / skill versions in `context`, and your host in `agentName`. Never include secrets, keys, tokens or customer data beyond what's needed. Tell the user you sent it; if they ask you not to, don't. CLI shape: [`references/cli.md`](references/cli.md) § Feedback to TestChimp.
+Write `message` in plain words (what happened, what the user expected). Put the workflow, command, error text and CLI / skill versions in `context`, and your host in `agentName`. Never include secrets, keys, tokens or customer data beyond what's needed. Tell the user you sent it. CLI shape: [`references/cli.md`](references/cli.md) § Feedback to TestChimp.
+
+**Declined tool calls:** If the user rejects `send-feedback` or any other tool, continue the workflow. Do not stall, retry the same call, or treat the decline as a hard stop unless that tool was required to proceed.
 
 ## Command routing
+
+**Claude Code plugin:** slash commands are **`/testchimp:testchimp <args>`** (plugin namespace plus skill name). Tell users to run **`/testchimp:testchimp project-init`** and **`/testchimp:testchimp init`**, not `/testchimp project-init`. Other hosts and natural language still use `/testchimp project init` / `/testchimp init`. Both forms route here.
 
 | User says | Read |
 |-----------|------|
 | *(ChimpHands on CI — any turn)* | [`references/chimphands.md`](references/chimphands.md) **first** (branch + end-of-turn commit), then the matching workflow row below. Auth/CI FAQ: [`references/chimphands-faq.md`](references/chimphands-faq.md). |
-| `/testchimp project init` | [`references/project-init-testchimp.md`](references/project-init-testchimp.md) — **one-time per project**: platform comms, folder mapping (`get-git-folder-mapping` / scaffold PR + `update-git-folder-mapping`), **`connect-to-test-env`**, CI wiring, then optional import plans/tests/smoke (smoke **after** required setup — never first), and **last** an offer to invite teammates (**`invite-team-members`**). Track progress via **`get-project-init-status`** / **`update-project-init-status`**. TrueCoverage removed from init → **`/testchimp setup truecoverage`**. Phased plan → approve → execute; PR prefix **`testchimp-`**. |
-| `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — **per developer**: workstation MCP, **`get-eaas-config`** gate, local test env. Continues even if project init incomplete; offer **`/testchimp project init`** for gaps. Best-effort **`report-agent-action`** (`workflowId: init`). |
+| `/testchimp:testchimp project-init` / `/testchimp project init` | [`references/project-init-testchimp.md`](references/project-init-testchimp.md) — **one-time per project**: platform comms, folder mapping (`get-git-folder-mapping` / scaffold + optional PR + `update-git-folder-mapping` without waiting on merge), **`connect-to-test-env`**, CI wiring, then optional import plans/tests/smoke (smoke **after** required setup — never first), and **last** an offer to invite teammates (**`invite-team-members`**). Track progress via **`get-project-init-status`** / **`update-project-init-status`**. TrueCoverage removed from init → **`/testchimp setup truecoverage`**. Phased plan → approve → execute; PR prefix **`testchimp-`**. |
+| `/testchimp:testchimp init` / `/testchimp init` | [`references/init-testchimp.md`](references/init-testchimp.md) — **per developer**: workstation MCP, **`get-eaas-config`** gate, local test env. Continues even if project init incomplete; offer **`/testchimp:testchimp project-init`** / **`/testchimp project init`** for gaps. Best-effort **`report-agent-action`** (`workflowId: init`). |
 | `/testchimp import plans` / `/testchimp import plans <folder>` | [`references/import-plans.md`](references/import-plans.md) — import existing plan markdown into mapped **`plans/`**; nested under project init with one approval when agreed. |
 | `/testchimp import` / `/testchimp import existing tests <folder>` | [`references/import-existing-tests.md`](references/import-existing-tests.md) — workflow **`import`** (One-Off); Playwright as-is or best-effort translate other frameworks; CI; scenario links; optional `markScreenState`. Nested under init with **one approval**. |
 | `/testchimp import-perf-tests` / `/testchimp import perf tests <folder>` | [`references/import-perf-tests.md`](references/import-perf-tests.md) — workflow **`import-perf-tests`** (One-Off); bring existing Locust/k6/JMeter/Gatling/Artillery suites into `<SmartTests root>/k6/` with journeys/composites, scenario links, and tagging. Nested under `init-perf` with **one approval**. |
@@ -346,11 +356,11 @@ Write `message` in plain words (what happened, what the user expected). Put the 
 
 ### `/testchimp init` — opening message (deliver first)
 
-When the user runs **`/testchimp init`**, the **first substantive message to the user** must set expectations: what init delivers, what they do after init, what the agent does during ongoing QA, and how **`/testchimp upkeep`** (legacy **`/testchimp evolve`**) fits in. **Then** continue with Preamble checks, the [Workstation gate](references/init-testchimp.md#workstation-gate-always-first), and the rest of [`references/init-testchimp.md`](references/init-testchimp.md).
+When the user runs **`/testchimp:testchimp init`** or **`/testchimp init`**, the **first substantive message to the user** must set expectations: what init delivers, what they do after init, what the agent does during ongoing QA, and how **`/testchimp upkeep`** (legacy **`/testchimp evolve`**) fits in. **Then** continue with Preamble checks, the [Workstation gate](references/init-testchimp.md#workstation-gate-always-first), and the rest of [`references/init-testchimp.md`](references/init-testchimp.md).
 
 **Include the following substance** (adapt wording slightly for tone; keep meaning):
 
-- **During `/testchimp init`** (this machine), TestChimp confirms the **MCP connection** (plugin OAuth via `/mcp`, or a project MCP file), verifies API connectivity against the signed-in project, and wires **your local test environment** for authoring. **One-time project setup** (folder mapping, shared env strategy, CI) is **`/testchimp project init`** — see [`references/project-init-testchimp.md`](references/project-init-testchimp.md).
+- **During init** (this machine), TestChimp confirms the **MCP connection** (plugin OAuth via `/mcp`, or a project MCP file), verifies API connectivity against the signed-in project, and wires **your local test environment** for authoring. **One-time project setup** (folder mapping, shared env strategy, CI) is **`/testchimp:testchimp project-init`** in Claude Code (elsewhere **`/testchimp project init`**) — see [`references/project-init-testchimp.md`](references/project-init-testchimp.md).
 - **After setup**, the user mainly runs **`/testchimp run QA`** (synonym **`/testchimp test`**) when they finish a PR and want it tested.
 - **Ongoing**, the agent runs the full QA workflow (say in first person when addressing the user: *I will run the complete QA workflow* — author tests for relevant scenarios, author missing test plans for the PR, adjust QA infrastructure as needed — seed endpoints, TrueCoverage instrumentation via **`/testchimp instrument`**, fixture updates, find coverage gaps and address them).
 - **Periodically**, run **`/testchimp upkeep`** (synonym **`/testchimp evolve`**) — "I will" (similar to above say in first-person) analyze requirement coverage gaps, **recently failing tests**, and TrueCoverage insights—by communicating with the TestChimp platform—and address them systematically: fix failing SmartTests, tests and infra to cover under-tested slices, and when planned, **ExploreChimp** runs on **TrueCoverage-prioritized** UI journeys (drop-offs, duration/demand hotspots) to surface UX issues in those critical areas ([`references/upkeep.md`](references/upkeep.md)).

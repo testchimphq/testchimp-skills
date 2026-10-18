@@ -9,7 +9,7 @@ TestChimp works through an MCP server plus this agent skill. No local build is n
 /plugin install testchimp@testchimp
 ```
 
-Restart the Claude Code session so the plugin loads. Then `/mcp` → **plugin:testchimp:testchimp** → **Authenticate**. On the consent screen, pick this repository's TestChimp project and leave **Use this connection as my QA bot** unticked (that box is for Grok Bot). One person runs `/testchimp project init`; everyone else runs `/testchimp init`.
+Restart the Claude Code session so the plugin loads. Then `/mcp` → **plugin:testchimp:testchimp** → **Authenticate**. On the consent screen, pick this repository's TestChimp project and leave **Use this connection as my QA bot** unticked (that box is for Grok Bot). One person runs `/testchimp:testchimp project-init`; everyone else runs `/testchimp:testchimp init` (plugin namespace plus skill name). Other hosts: `/testchimp project init` / `/testchimp init`.
 
 ## Option A: hosted MCP server (recommended)
 

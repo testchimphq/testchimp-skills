@@ -15,7 +15,7 @@ Same contract as other catalog workflows: ULID `workflow_execution_id`, plan fil
 
 1. Inventory source folder; map files into `plans/stories/`, `plans/scenarios/`, or `plans/knowledge/` per [`author-plans.md`](./author-plans.md).
 2. Normalize YAML frontmatter and scenario/story ordinals where possible.
-3. Open a PR (branch prefix **`testchimp-`**) — do not rely on platform sync PR for agent-authored imports.
+3. Suggest a commit / PR (branch prefix **`testchimp-`**) — do not rely on platform sync PR for agent-authored imports, and do not block remaining init steps on a merge.
 4. On success, **`update-project-init-status`** with `import_plans: DONE` when run under project init.
 
 Nested under project init counts as **one approval** with the parent plan when user agrees.
