@@ -23,11 +23,16 @@ Include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-aut
 
 ## Workstation gate (always first)
 
-**Claude Code plugin (preferred when installed):** the plugin already registered `https://mcp.testchimp.io/mcp`. Do **not** write a second TestChimp server into the project's `.mcp.json`. One global URL, one sign-in. The project is the one the user picked on the OAuth consent screen.
+**Plugin / extension already installed:** the host already registered `https://mcp.testchimp.io/mcp`. Do **not** write a second TestChimp server into the project's MCP file. One global URL, one sign-in. The project is the one the user picked on the OAuth consent screen.
+
+**Host MCP sign-in** (when tools are missing or need re-auth):
+- **Claude Code:** **`/mcp`** → **`plugin:testchimp:testchimp`** (or the TestChimp server) → **Authenticate**.
+- **Cursor / Gemini CLI / Codex / Kiro / others:** the host’s MCP panel for the TestChimp server → Authenticate / reconnect.
+- On the consent page they pick the TestChimp project for **this** repo and leave **Use this connection as my QA bot** **unticked** (that box is for Grok Bot). Then stop and wait — do not invent a project-level MCP file.
 
 1. **MCP connection**
    - If TestChimp MCP tools are already available in the session (plugin server, Studio `.testchimp/mcp.json`, a working remote `url`, or stdio `npx` + `env`), keep that connection.
-   - If tools are missing, return **401**, or the server shows as needing authentication: tell the user to run **`/mcp`**, choose **`plugin:testchimp:testchimp`** (or the TestChimp server), then **Authenticate**. On the consent page they pick the TestChimp project for **this** repo and leave **Use this connection as my QA bot** **unticked** (that box is for Grok Bot). Then stop and wait — do not invent a project-level MCP file.
+   - If tools are missing, return **401**, or the server shows as needing authentication: tell the user to complete **Host MCP sign-in** above.
    - If the plugin is not installed and no TestChimp server exists, offer the setups below; **plugin / remote OAuth is the default** when the user is in Claude Code, otherwise **manual** is the default unless they pick another:
      - **Remote MCP (OAuth):** see [Remote MCP (OAuth) setup](#remote-mcp-oauth-setup). Nothing to paste.
      - **Manual:** create or merge from [`../assets/sample-mcp.json`](../assets/sample-mcp.json) (`.cursor/mcp.json`, `.mcp.json`, or Codex `config.toml`). Real **`TESTCHIMP_API_KEY`** + **`TESTCHIMP_PROJECT_ID`** (and **`TESTCHIMP_USER_ID`** when known — needed for get-my-tasks / list-tests-awaiting-verification and run attribution); reload MCP after edits.
@@ -38,7 +43,7 @@ Include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-aut
    - gitignored **`<repo>/.testchimp/mcp.json`** `env.TESTCHIMP_PROJECT_ID` (when the file exists)
    - **`get-git-folder-mapping`**: `repository` / `repository_full_name` against this repo's remotes (`git remote -v`, `owner/repo`)
    - On-disk **`.testchimp-plans`** / **`.testchimp-tests`** markers that already map this tree, while the signed-in project's folder mapping points at a different repo
-   If any of those disagree with the signed-in `projectId`, **stop**. Tell the user this session is signed in to **project A** while this repo is bound to **project B**. They must re-authenticate: **`/mcp`** → TestChimp → **Authenticate** (or **Clear authentication** then **Authenticate**), and pick **this** repo's project on the consent dropdown. Do not write a `?projectId=` URL or a second server. After they sign in again, re-run this gate.
+   If any of those disagree with the signed-in `projectId`, **stop**. Tell the user this session is signed in to **project A** while this repo is bound to **project B**. They must re-authenticate via **Host MCP sign-in** above (clear authentication first if the host offers it), and pick **this** repo's project on the consent dropdown. Do not write a `?projectId=` URL or a second server. After they sign in again, re-run this gate.
 4. **CLI connectivity** — **`get-eaas-config`** `{}` (auth gate). Empty config is OK.
 5. **Runner key** — confirm **Preamble checks #4** resolves **`TESTCHIMP_API_KEY`** for runners. If the key is missing, follow [Save the runner key](#save-the-runner-key).
 6. **Optional gaps** — call **`get-project-init-status`**. If `overall_complete` is false, summarize missing required items and ask whether to run **`/testchimp project-init`** / **`/testchimp:project-init`** now or defer.
@@ -57,7 +62,7 @@ Additive option when the Claude Code plugin is **not** already providing the ser
 
    Staging / enterprise: use that deployment's MCP host. **Claude Code with the TestChimp plugin:** skip this write. The plugin already registered the same URL; a second entry would load a duplicate server.
 2. Ask the user to reload MCP and complete the browser sign-in. On the consent page they pick the TestChimp project for this repo and leave **Use this connection as my QA bot** unticked.
-3. If tools come back for the wrong project, follow the **mismatch** step in the workstation gate (`/mcp` → re-authenticate, pick the correct project).
+3. If tools come back for the wrong project, follow the **mismatch** step in the workstation gate (Host MCP sign-in, pick the correct project).
 4. Save the runner key once — [Save the runner key](#save-the-runner-key).
 
 ---
@@ -72,7 +77,9 @@ Local Playwright / CLI / k6 need a project API key in gitignored **`<git root>/.
 
 1. Call **`get-project-credentials`** (returns `projectId`, `projectName`, `projectApiKey`, `backendUrl`, `ingressUrl`).
 2. Read **`<git root>/.testchimp/mcp.json`** if it exists. Keep any other **`mcpServers`** entries already in the file; only replace or add the **`testchimp`** server.
-3. Write the file with the **file-write tool** (not Bash). **2-space JSON** and a **trailing newline**. Directory mode **0700**, file mode **0600**.
+3. Write the file with the **file-write tool** (not Bash / not a command that contains the key). **2-space JSON** and a **trailing newline**. Directory mode **0700**, file mode **0600** when the host can set them.
+
+   If this session has **no file-write tool**, call **`save-workspace-creds`** `{ "folder": "<git root>" }` when that tool is listed. If neither Write nor `save-workspace-creds` is available, tell the user to create the file in their editor from the shape below (they paste the key; you never echo it) and continue.
 
    Production (`backendUrl` is `https://featureservice.testchimp.io` or omitted) — **omit** `TESTCHIMP_BACKEND_URL`:
 
@@ -95,13 +102,13 @@ Local Playwright / CLI / k6 need a project API key in gitignored **`<git root>/.
    ```
 
    Non-prod: set **`TESTCHIMP_BACKEND_URL`** to `backendUrl` with **no trailing slash**, and **`TESTCHIMP_INGRESS_URL`** to the matching `ingressUrl` from `get-project-credentials`.
-4. Run (no key in this command):
+4. **Permissions (Unix / macOS / Git Bash):** from the git root, run (no key in this command):
 
    ```bash
    chmod 700 .testchimp && chmod 600 .testchimp/mcp.json
    ```
 
-   from the git root.
+   If `chmod` is missing (**Windows** without Git Bash) or the command fails, **continue** — do not treat that as a hard stop. Do not invent an `icacls` line that might print the path into a prompt with the key. If this session has **no shell**, skip this step after the file-write.
 5. If `.gitignore` does not already ignore it, append **only** this line:
 
    ```

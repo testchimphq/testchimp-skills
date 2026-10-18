@@ -4,7 +4,7 @@
 
 **Claude Code plugin command:** **`/testchimp project-init`** (same as **`/testchimp project init`** on other hosts). The `/` menu alias is **`/testchimp:project-init`**. Do **not** tell users to run `/testchimp:testchimp project-init`. Canonical prompt still routes here.
 
-**Time:** with one-by-one tool approvals this typically takes about **20 minutes** and on the order of **60 approval prompts**. Tell the user that up front. Point them at the README tip to pre-allow `mcp__plugin_testchimp_testchimp__*` in `.claude/settings.json`. If they decline a tool call, continue to the next step — do not stall or retry the same call in a loop.
+**Time:** with one-by-one tool approvals this typically takes about **20 minutes** and on the order of **60 approval prompts**. Tell the user that up front. **Claude Code:** point them at the README tip to pre-allow `mcp__plugin_testchimp_testchimp__*` in `.claude/settings.json`. If they decline a tool call, continue to the next step — do not stall or retry the same call in a loop.
 
 **Not** the per-developer workstation setup — that is [`init-testchimp.md`](./init-testchimp.md) (`/testchimp init`).
 
@@ -138,12 +138,12 @@ If **`get-project-init-status`** shows required items already **DONE**, treat Ke
 
 ### Key Area 1 — Platform comms
 
-Verify the **project** can talk to TestChimp APIs from this agent session (not every teammate’s laptop). Prefer the **plugin-provided** hosted MCP (`https://mcp.testchimp.io/mcp`) when TestChimp is installed as a Claude Code plugin — do **not** write a second project-level server or require a stdio API key for these calls.
+Verify the **project** can talk to TestChimp APIs from this agent session (not every teammate’s laptop). Prefer the **plugin/extension-provided** hosted MCP (`https://mcp.testchimp.io/mcp`) when TestChimp is already installed as a plugin — do **not** write a second project-level server or require a stdio API key for these calls.
 
 1. **`get-eaas-config`** `{}` — must **not** return **401** (empty config is OK).
 2. **`get-project-credentials`** (when the connection is OAuth) — confirm `projectName` / `projectId` with the user. That is the project picked on the consent screen; every later tool call is scoped to it. If **`<git root>/.testchimp/mcp.json`** is missing and runners will need a key, save it now using [Save the runner key](./init-testchimp.md#save-the-runner-key) — do not put the key in a shell command.
 3. **`get-project-init-status`** — baseline current progress.
-4. **Project mismatch (blocking)** — if this repo already has `.testchimp-plans` / `.testchimp-tests`, a gitignored `.testchimp/mcp.json` with a different `TESTCHIMP_PROJECT_ID`, or `get-git-folder-mapping` points at another `owner/repo` than this tree's remotes, the user signed in to the wrong project. Stop and tell them to re-authenticate: **`/mcp`** → TestChimp → **Authenticate**, picking **this** repo's project. Then re-run this area. Details: [`init-testchimp.md`](./init-testchimp.md)#workstation-gate-always-first.
+4. **Project mismatch (blocking)** — if this repo already has `.testchimp-plans` / `.testchimp-tests`, a gitignored `.testchimp/mcp.json` with a different `TESTCHIMP_PROJECT_ID`, or `get-git-folder-mapping` points at another `owner/repo` than this tree's remotes, the user signed in to the wrong project. Stop and tell them to re-authenticate via [Host MCP sign-in](./init-testchimp.md#workstation-gate-always-first), picking **this** repo's project. Then re-run this area.
 
 Do **not** emit an early `ACTION_COMPLETED` here — that would close the run before Plan/Execute.
 
@@ -161,7 +161,7 @@ Do **not** emit an early `ACTION_COMPLETED` here — that would close the run be
 
 `entityType: WORKFLOW` is **only** valid with `ACTION_COMPLETED` / `ACTION_FAILED` (and `entityIdentity` must equal `workflowId`). **`WORKFLOW` + `ANALYZED` is rejected** — that is the MCP schema, not a retry-with-different-casing issue. `ANALYZED` is for `USER_STORY` / `SCENARIO` / `POLICY` / other non-`WORKFLOW` entities. Close at end of Execute with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity: project-init`. In ChimpHands, omit `userId` / prefer `actorType: CLOUD_AGENT` — MCP stamps `SESSION_ID` and the responsible user.
 
-If **401** or tools are unavailable: the plugin / remote MCP is not signed in (or a stdio API key is missing). Ask the user to complete **`/testchimp init`** ([`init-testchimp.md`](./init-testchimp.md)) — for the Claude Code plugin that is **`/mcp`** → **Authenticate**, not pasting an API key.
+If **401** or tools are unavailable: the plugin / remote MCP is not signed in (or a stdio API key is missing). Ask the user to complete **`/testchimp init`** ([`init-testchimp.md`](./init-testchimp.md)) — authenticate the hosted server in the host MCP UI, not by pasting an API key.
 
 Seed composite policies under **`plans/knowledge/policies/`** when missing (`run-qa.policy.md`, `upkeep.policy.md` from [`../assets/policies/`](../assets/policies/) — do not overwrite team policies).
 
@@ -283,7 +283,7 @@ Optional (when planned): **Import plans**, **Import tests**, **Smoke validation*
 
 **Platform comms**
 
-- `get-eaas-config` succeeds (not 401). Plugin / OAuth sessions use the consent-chosen project; a mismatch with this repo is resolved via `/mcp` re-auth before continuing.
+- `get-eaas-config` succeeds (not 401). Plugin / OAuth sessions use the consent-chosen project; a mismatch with this repo is resolved via Host MCP sign-in before continuing.
 - `update-project-init-status` with `platform_comms: DONE` when complete.
 
 **Folder mapping**
