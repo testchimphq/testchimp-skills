@@ -1,40 +1,31 @@
 # Sample TestChimp plans
 
-This file shows the **shape** of stories and scenarios. It does **not** assign real ids.
+This file shows the **shape** of stories and scenarios. It does **not** assign ids.
 
-The platform issues ordinals when you call **`create-user-story`** / **`create-test-scenario`**. Those ordinals are remapped per project. Never copy `US-103`, `TS-104`, or any other literal id from a sample into a file or a SmartTest annotation.
+**Never** put an `id:` (or any `US-…` / `TS-…`) in a new file yourself — not a real-looking number, and not a placeholder. Story and scenario ids come only from creating the entity through the author-plans tools. The platform assigns the ordinal.
 
-## After you create entities
+## Create, then write
 
-1. Call create for the story, then the scenario (one at a time).
-2. Write the markdown using the **`ordinalId`** from that response (`id: US-<ordinalId>` / `id: TS-<ordinalId>`).
-3. Link SmartTests with `{ type: 'scenario', description: '#TS-<ordinalId>' }` using the same returned id.
+1. Call **`create-user-story`** or **`create-test-scenario`** (one at a time).
+2. Read **`ordinalId`** and **`content`** from that response. The stub markdown already has the assigned `id:`.
+3. Write that **`content`** to the mapped plans path. Edit the body if needed; keep the returned `id:` and (for scenarios) `story:`.
 
-If this repo already has stories/scenarios, open those files and use **their** frontmatter `id:` values — not the placeholders below.
+If this repo already has stories or scenarios, use **their** frontmatter `id:` values — never invent or copy an id from this guide.
 
-## Story shape
+## Story shape (do not save this as a file)
+
+Call **`create-user-story`** first. The create response is what you write to disk. The body you add after that looks like:
 
 ```md
----
-type: story
-id: US-<ordinalId>
-title: Short title
----
-
 Summary and acceptance criteria.
 ```
 
-## Scenario shape
+## Scenario shape (do not save this as a file)
+
+Call **`create-test-scenario`** after the parent story exists (use that story’s platform-assigned `US-…` as `userStoryOrdinalId`). The create response is what you write to disk. The body you add after that looks like:
 
 ```md
----
-type: scenario
-id: TS-<ordinalId>
-title: Short title
-story: US-<parentStoryOrdinalId>
----
-
 Prerequisites, steps, expected behaviour.
 ```
 
-Replace every `<ordinalId>` / `<parentStoryOrdinalId>` with the integer the platform returned in this project. If you are only reading this guide, leave the placeholders as-is.
+Link SmartTests with `{ type: 'scenario', description: '#TS-…' }` using the **same** id the create response assigned — not an id from this guide.

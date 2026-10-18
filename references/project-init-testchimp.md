@@ -13,7 +13,7 @@
 Use MCP tools (CLI ≥ **0.1.35**):
 
 - **`get-project-init-status`** — read `ProjectInitStatus` (`platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring`, optional `import_plans` / `import_tests` / `smoke_validation`, server-computed `overall_complete`).
-- **`update-project-init-status`** — wrap fields in **`status`**. Use these **exact snake_case** keys (camelCase such as `platformComms` is accepted by the MCP schema but **silently ignored** by the backend):
+- **`update-project-init-status`** — wrap fields in **`status`**. Only **snake_case** is supported. Use these **exact** keys:
 
   ```json
   {
@@ -29,7 +29,7 @@ Use MCP tools (CLI ≥ **0.1.35**):
   }
   ```
 
-  Send only the keys you are updating. Partial merge; server recomputes `overall_complete` when all **required** items are `DONE`. Do not send `overall_complete` (server-computed).
+  Send only the keys you are updating. Partial merge; server recomputes `overall_complete` when all **required** items are `DONE`. Do not send `overall_complete` (server-computed). Do **not** send camelCase keys (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, …).
 - **`get-git-folder-mapping`** / **`update-git-folder-mapping`** — read/write mapped `plans/` and `tests/` paths on the platform after the agent scaffolds folders locally (branch prefix **`testchimp-`**). Do **not** wait for a PR merge before calling `update-git-folder-mapping` or continuing local steps.
 - **`invite-team-members`** (CLI ≥ **0.1.91**) — invite teammates by email; the **final** step of project init ([§ 7](#7-final--invite-team-members)).
 
@@ -349,7 +349,7 @@ Execute in order; after each area, verify acceptance criteria, call **`update-pr
    - **Mobile:** `mobilewright`, `@mobilewright/test` (same version), mobilewright config templates.
 3. **`update-git-folder-mapping`** as soon as markers exist locally (do not wait for merge).
 4. Confirm markers locally. Suggest commit / PR; continue if it is not merged.
-5. If the platform seeded or you write **`plans/guide/SAMPLE_PLANS.md`**, copy [`../assets/guide/SAMPLE_PLANS.md`](../assets/guide/SAMPLE_PLANS.md). Use placeholders (`US-<ordinalId>`, `TS-<ordinalId>`). Never hard-code sample ids such as `US-103` / `TS-104` — the platform renumbers them.
+5. If the platform seeded or you write **`plans/guide/SAMPLE_PLANS.md`**, copy [`../assets/guide/SAMPLE_PLANS.md`](../assets/guide/SAMPLE_PLANS.md). That guide must **not** contain real or placeholder story/scenario ids. New stories and scenarios are created with **`create-user-story`** / **`create-test-scenario`**; write local files from the create response (the platform assigns the ids).
 
 **Dependencies** (SmartTests root):
 
@@ -452,7 +452,7 @@ Before treating the run as done, **[Report workflow execution](./policies-and-tr
 ## Post-init guidance
 
 - Each developer: run **`/testchimp init`** on their machine. Teammates not invited yet: org admins invite from Team Settings (or ask an agent to use **`invite-team-members`**).
-- Do **not** call **`send-feedback`** at the end unless the user asked or explicitly agreed. If they decline that tool, finish the summary and stop.
+- If you hit a TestChimp bug or docs gap during this run, you may call **`send-feedback`** after telling the user what you will send and why. Do not send a ritual end-of-init report. If they decline that tool, finish the summary and stop.
 - On demand: **`/testchimp test`** when a PR is ready.
 - TrueCoverage: **`/testchimp setup truecoverage`** / **`/testchimp instrument`** when the team opts in.
 - Ongoing: **`/testchimp upkeep`**; optional **`/testchimp cleanup`**.

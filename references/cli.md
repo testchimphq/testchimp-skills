@@ -969,7 +969,7 @@ MCP: `create-issue` with the same JSON fields (no CLI flag mapping).
 
 **API:** `POST /api/mcp/create_user_story`
 
-**Agent rule:** Call **before** writing any new `plans/stories/**/*.md`. Response includes **`content`** (stub with **`id: US-<ordinalId>`** already set) — **Write that content** to disk, edit the body if needed, then **`update-user-story`**. Never omit `id:`. Updates reject missing `id` with a clear error.
+**Agent rule:** Call **before** writing any new `plans/stories/**/*.md`. Response includes **`content`** (stub with the platform-assigned **`id:`** already set) — **Write that content** to disk, edit the body if needed, then **`update-user-story`**. Never invent or placeholder an id. Updates reject missing `id` with a clear error.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
@@ -981,7 +981,7 @@ MCP: `create-issue` with the same JSON fields (no CLI flag mapping).
 
 **API:** `POST /api/mcp/create_test_scenario`
 
-**Agent rule:** Call **before** writing any new `plans/scenarios/**/*.md`. Response includes **`content`** (stub with **`id: TS-<ordinalId>`** and **`story: US-<n>`** already set) — **Write that content** to disk, edit the body if needed, then **`update-test-scenario`**. Never omit `id:` (linking `story:` alone is not enough). Updates reject missing `id`/`story` with a clear error.
+**Agent rule:** Call **before** writing any new `plans/scenarios/**/*.md`. Response includes **`content`** (stub with the platform-assigned **`id:`** and **`story:`** already set) — **Write that content** to disk, edit the body if needed, then **`update-test-scenario`**. Never invent or placeholder an id (linking `story:` alone is not enough). Updates reject missing `id`/`story` with a clear error.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
@@ -1424,7 +1424,7 @@ Also related (flags vary): **`report-agent-action`**, **`get-last-run-workflow-d
 
 `platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring` (required for `overall_complete`); optional `import_plans`, `import_tests`, `smoke_validation`.
 
-Do **not** send camelCase (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, …) — the MCP client schema lists those aliases but the backend ignores them. Do not send `overall_complete` (server-computed). Partial merge: send only the keys you are updating.
+Only **snake_case** is supported. Do **not** send camelCase (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, `importPlans`, `importTests`, `smokeValidation`, `overallComplete`). Do not send `overall_complete` (server-computed). Partial merge: send only the keys you are updating.
 
 ### `report-agent-action` (first row vs close)
 
@@ -1785,7 +1785,7 @@ Returns `{results: [{email, outcome, userId?, failureReason?}], teamSettingsUrl}
 
 ### `send-feedback`
 
-**API:** `POST /api/mcp/send_feedback`. "Contact us" for agents: the message goes to the TestChimp team's support inbox with the project, organisation, user / bot id (when known) attached. Works with a project API key or OAuth token. When to use it: [`SKILL.md` § Feedback to TestChimp](../SKILL.md#feedback-to-testchimp). Agents must **not** call this unless the user asked or explicitly agreed. If they decline the tool, continue the workflow.
+**API:** `POST /api/mcp/send_feedback`. "Contact us" for agents: the message goes to the TestChimp team's support inbox with the project, organisation, user / bot id (when known) attached. Works with a project API key or OAuth token. When to use it: [`SKILL.md` § Feedback to TestChimp](../SKILL.md#feedback-to-testchimp). You may call this on your own after telling the user **what** you are sending and **why**. If they decline the tool, continue the workflow.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|

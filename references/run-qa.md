@@ -463,8 +463,8 @@ During Execute, the agent MUST maintain a checklist in the branch plan file and 
 
 ### 4) Test plan updates (stories/scenarios on platform) — *after code is in place for seeds/probes or in parallel if independent*
 
-- [ ] For **each** new story: **`create-user-story`** → **Write returned `content`** (already has **`id: US-<ordinalId>`**) → edit body if needed → **`update-user-story`**.
-- [ ] For **each** new scenario: **`create-test-scenario`** → **Write returned `content`** (already has **`id: TS-<ordinalId>`** + **`story:`**) → edit body if needed → **`update-test-scenario`**.
+- [ ] For **each** new story: **`create-user-story`** → **Write returned `content`** (already has the platform-assigned **`id:`**) → edit body if needed → **`update-user-story`**.
+- [ ] For **each** new scenario: **`create-test-scenario`** → **Write returned `content`** (already has the platform-assigned **`id:`** + **`story:`**) → edit body if needed → **`update-test-scenario`**.
 - [ ] **Never** write story/scenario markdown that omits or blanks **`id:`** (that is not a valid “don’t invent ids” workaround). If **`update-*`** errors on missing id/story, fix by using create’s returned content — do not invent ids.
 - [ ] Obtain **real** ids for scenario **`annotation`** entries from those create responses (or existing synced plan files).
 - [ ] Self-check: every new/changed story/scenario path under the plans root has a non-empty **`id:`** before leaving this step.
