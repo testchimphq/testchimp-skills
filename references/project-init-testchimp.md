@@ -2,11 +2,11 @@
 
 **One-time per project** (repo / team): **platform comms**, **folder mapping**, **connect-to-test-env**, **CI wiring**, plus optional imports and smoke validation. Runs in ChimpHands or a local agent workspace.
 
-**Claude Code plugin command:** **`/testchimp:testchimp project-init`** (plugin namespace plus skill name). Do not tell Claude Code users to run `/testchimp project-init` or `/testchimp project init`. Other hosts: **`/testchimp project init`**. Canonical prompt still routes here.
+**Claude Code plugin command:** **`/testchimp project-init`** (same as **`/testchimp project init`** on other hosts). The `/` menu alias is **`/testchimp:project-init`**. Do **not** tell users to run `/testchimp:testchimp project-init`. Canonical prompt still routes here.
 
 **Time:** with one-by-one tool approvals this typically takes about **20 minutes** and on the order of **60 approval prompts**. Tell the user that up front. Point them at the README tip to pre-allow `mcp__plugin_testchimp_testchimp__*` in `.claude/settings.json`. If they decline a tool call, continue to the next step — do not stall or retry the same call in a loop.
 
-**Not** the per-developer workstation setup — that is [`init-testchimp.md`](./init-testchimp.md) (`/testchimp:testchimp init` in Claude Code).
+**Not** the per-developer workstation setup — that is [`init-testchimp.md`](./init-testchimp.md) (`/testchimp init`).
 
 ## Progress tracking (platform)
 
@@ -45,7 +45,7 @@ Also persist durable **non-env** decisions (deferred optionals, ExploreChimp not
 
 ---
 
-> **Workflow overlay:** **Workflow id:** `project-init` (Claude Code **`/testchimp:testchimp project-init`**; other hosts **`/testchimp project init`**). **Plan path:** `knowledge/workflow_plans/project-init/<workflow_execution_id>.plan.md`. Mint a **ULID** `workflow_execution_id`, **write on disk** that plan file (checklist of init action items), call **`upsert-plans-support-file`** with the **same** content (blocking), then seek **explicit user approval** before Phase 3 Execute — unless `--mode=non-interactive` or policy `allow-execute-without-approval`. Do not upsert-only: ChimpHands Files changed needs the local file. See [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Workflow overlay:** **Workflow id:** `project-init` (Claude Code **`/testchimp project-init`** / **`/testchimp:project-init`**; other hosts **`/testchimp project init`**). **Plan path:** `knowledge/workflow_plans/project-init/<workflow_execution_id>.plan.md`. Mint a **ULID** `workflow_execution_id`, **write on disk** that plan file (checklist of init action items), call **`upsert-plans-support-file`** with the **same** content (blocking), then seek **explicit user approval** before Phase 3 Execute — unless `--mode=non-interactive` or policy `allow-execute-without-approval`. Do not upsert-only: ChimpHands Files changed needs the local file. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 ### Phase gating (required)
 
@@ -101,10 +101,10 @@ Keep decision files **project-level only** (no per-laptop MCP progress — that 
 
 | Scope | Command | What it covers |
 |--------|---------|----------------|
-| **Workstation** (per machine) | **`/testchimp:testchimp init`** / **`/testchimp init`** | Local MCP file, API key on this laptop, local stack smoke. See [`init-testchimp.md`](./init-testchimp.md). |
-| **Project** (repo / team) | **`/testchimp:testchimp project-init`** / **`/testchimp project init`** | Platform comms verification, folder mapping, shared env strategy, CI, optional imports. |
+| **Workstation** (per machine) | **`/testchimp init`** / **`/testchimp:init`** | Local MCP file, API key on this laptop, local stack smoke. See [`init-testchimp.md`](./init-testchimp.md). |
+| **Project** (repo / team) | **`/testchimp project-init`** / **`/testchimp:project-init`** / **`/testchimp project init`** | Platform comms verification, folder mapping, shared env strategy, CI, optional imports. |
 
-A teammate may clone after project init is **`overall_complete`** and still need init on their machine (`/testchimp:testchimp init` in Claude Code). Project init does **not** replace per-developer setup.
+A teammate may clone after project init is **`overall_complete`** and still need init on their machine (`/testchimp init`). Project init does **not** replace per-developer setup.
 
 ---
 
@@ -113,7 +113,7 @@ A teammate may clone after project init is **`overall_complete`** and still need
 When project init starts, set expectations before deep work:
 
 - **During project init**, TestChimp wires **one-time project infrastructure**: Git **plans/tests folder mapping** (agent-driven via CLI), **test environment strategy** (`connect-to-test-env`), **CI execution**, then optional **import** of existing plans/tests and optional **smoke** authoring. Basic SmartTests scaffold (markers, Playwright/Mobilewright harness) lands with folder mapping — not a full test-authoring campaign. Expect about **20 minutes** and many tool approvals unless TestChimp MCP tools are pre-allowed (`mcp__plugin_testchimp_testchimp__*` in `.claude/settings.json`).
-- **Per developer**, each teammate runs **`/testchimp:testchimp init`** (Claude Code) / **`/testchimp init`** once to register local MCP and verify their machine can run tests.
+- **Per developer**, each teammate runs **`/testchimp init`** (Claude Code menu **`/testchimp:init`**) once to register local MCP and verify their machine can run tests.
 - **After setup**, the user mainly runs **`/testchimp test`** when a PR is ready; the agent runs the full QA workflow on demand.
 - **Ongoing**, run **`/testchimp upkeep`** / **`/testchimp evolve`** for coverage gaps; **`/testchimp setup truecoverage`** when the team wants RUM analytics (not part of project init).
 - **At the end**, you'll offer to invite their teammates so the whole team can use the project.
@@ -161,7 +161,7 @@ Do **not** emit an early `ACTION_COMPLETED` here — that would close the run be
 
 `entityType: WORKFLOW` is **only** valid with `ACTION_COMPLETED` / `ACTION_FAILED` (and `entityIdentity` must equal `workflowId`). **`WORKFLOW` + `ANALYZED` is rejected** — that is the MCP schema, not a retry-with-different-casing issue. `ANALYZED` is for `USER_STORY` / `SCENARIO` / `POLICY` / other non-`WORKFLOW` entities. Close at end of Execute with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity: project-init`. In ChimpHands, omit `userId` / prefer `actorType: CLOUD_AGENT` — MCP stamps `SESSION_ID` and the responsible user.
 
-If **401** or tools are unavailable: the plugin / remote MCP is not signed in (or a stdio API key is missing). Ask the user to complete **`/testchimp:testchimp init`** / **`/testchimp init`** ([`init-testchimp.md`](./init-testchimp.md)) — for the Claude Code plugin that is **`/mcp`** → **Authenticate**, not pasting an API key.
+If **401** or tools are unavailable: the plugin / remote MCP is not signed in (or a stdio API key is missing). Ask the user to complete **`/testchimp init`** ([`init-testchimp.md`](./init-testchimp.md)) — for the Claude Code plugin that is **`/mcp`** → **Authenticate**, not pasting an API key.
 
 Seed composite policies under **`plans/knowledge/policies/`** when missing (`run-qa.policy.md`, `upkeep.policy.md` from [`../assets/policies/`](../assets/policies/) — do not overwrite team policies).
 
@@ -416,7 +416,7 @@ Run this **last**, once every other item above is done, skipped or deferred. Off
    - `…_ALREADY_MEMBER` / `…_ALREADY_INVITED`: nothing sent.
    - `…_FAILED`: show `failureReason` (seat limit, already in another organisation, …).
 5. Errors for the whole call (HTTP 403): the user isn't an org admin (ask an org admin to invite them), or the Indie plan is single-user (upgrade link in the message). Share the link from the message; don't retry.
-6. Point to `teamSettingsUrl` for changing roles (for example to Admin) or adding seats. Tell the user what invitees do next: accept the email, then run **`/testchimp:testchimp init`** (Claude Code) / **`/testchimp init`** on their own machine (and set up their own QA bot if they use one).
+6. Point to `teamSettingsUrl` for changing roles (for example to Admin) or adding seats. Tell the user what invitees do next: accept the email, then run **`/testchimp init`** on their own machine (and set up their own QA bot if they use one).
 
 ### Phase 3 completion gate
 
@@ -450,7 +450,7 @@ Before treating the run as done, **[Report workflow execution](./policies-and-tr
 
 ## Post-init guidance
 
-- Each developer: run **`/testchimp:testchimp init`** (Claude Code) / **`/testchimp init`** on their machine. Teammates not invited yet: org admins invite from Team Settings (or ask an agent to use **`invite-team-members`**).
+- Each developer: run **`/testchimp init`** on their machine. Teammates not invited yet: org admins invite from Team Settings (or ask an agent to use **`invite-team-members`**).
 - Do **not** call **`send-feedback`** at the end unless the user asked or explicitly agreed. If they decline that tool, finish the summary and stop.
 - On demand: **`/testchimp test`** when a PR is ready.
 - TrueCoverage: **`/testchimp setup truecoverage`** / **`/testchimp instrument`** when the team opts in.

@@ -2,9 +2,9 @@
 
 **Per developer / workstation** — confirm the TestChimp MCP connection, save a runner API key, and wire a **local test environment** for authoring. Runs even when project init is incomplete; offer to continue remaining project-setup gaps via [`project-init-testchimp.md`](./project-init-testchimp.md).
 
-**Claude Code plugin command:** **`/testchimp:testchimp init`** (plugin namespace plus skill name). Do not tell Claude Code users to run `/testchimp init` or `/testchimp project-init`. Other hosts: **`/testchimp init`**.
+**Claude Code plugin command:** **`/testchimp init`**. The `/` menu alias is **`/testchimp:init`**. Do **not** tell users to run `/testchimp:testchimp init`. Other hosts: **`/testchimp init`**.
 
-**Project-level setup** (folder mapping, CI, shared test env, imports) → **`/testchimp:testchimp project-init`** / **`/testchimp project init`** ([`project-init-testchimp.md`](./project-init-testchimp.md)). One person runs that once per project. Every other teammate then runs only init.
+**Project-level setup** (folder mapping, CI, shared test env, imports) → **`/testchimp project-init`** / **`/testchimp:project-init`** / **`/testchimp project init`** ([`project-init-testchimp.md`](./project-init-testchimp.md)). One person runs that once per project. Every other teammate then runs only init.
 
 ---
 
@@ -13,7 +13,7 @@
 When init starts, tell the user:
 
 - This flow sets up **their machine** (MCP sign-in, runner API key, local stack / env) so they can run TestChimp workflows from their coding agent.
-- **One-time project setup** (if not done) is **`/testchimp:testchimp project-init`** in Claude Code (elsewhere **`/testchimp project init`**) — ChimpHands or a lead dev runs it once per repo.
+- **One-time project setup** (if not done) is **`/testchimp project-init`** (Claude Code menu **`/testchimp:project-init`**) — ChimpHands or a lead dev runs it once per repo.
 - After both are done, they mainly run **`/testchimp test`** on PRs; periodically **`/testchimp upkeep`** / **`/testchimp evolve`**.
 - If the user declines a tool call, continue to the next step. Do not stall.
 
@@ -41,7 +41,7 @@ Include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-aut
    If any of those disagree with the signed-in `projectId`, **stop**. Tell the user this session is signed in to **project A** while this repo is bound to **project B**. They must re-authenticate: **`/mcp`** → TestChimp → **Authenticate** (or **Clear authentication** then **Authenticate**), and pick **this** repo's project on the consent dropdown. Do not write a `?projectId=` URL or a second server. After they sign in again, re-run this gate.
 4. **CLI connectivity** — **`get-eaas-config`** `{}` (auth gate). Empty config is OK.
 5. **Runner key** — confirm **Preamble checks #4** resolves **`TESTCHIMP_API_KEY`** for runners (for plugin / remote MCP this is the `save-creds` step below).
-6. **Optional gaps** — call **`get-project-init-status`**. If `overall_complete` is false, summarize missing required items and ask whether to run **`/testchimp:testchimp project-init`** / **`/testchimp project init`** now or defer.
+6. **Optional gaps** — call **`get-project-init-status`**. If `overall_complete` is false, summarize missing required items and ask whether to run **`/testchimp project-init`** / **`/testchimp:project-init`** now or defer.
 
 Do **not** infer workstation setup from git — check local config every time.
 

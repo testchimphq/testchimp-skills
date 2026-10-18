@@ -1,8 +1,8 @@
 {
   "name": "testchimp",
   "displayName": "TestChimp",
-  "version": "1.0.66",
-  "description": "QA platform for coding agents. Claude Code: /testchimp:testchimp project-init once per repo, then /testchimp:testchimp init per developer.",
+  "version": "1.0.67",
+  "description": "QA platform for coding agents. Claude Code: /testchimp project-init once per repo, then /testchimp init per developer.",
   "author": {
     "name": "TestChimp",
     "email": "nuwansam@testchimp.io",
