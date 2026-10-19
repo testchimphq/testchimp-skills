@@ -1,4 +1,5 @@
 ---
+name: author-plans
 description: Author or scope out TestChimp plan markdown. Use when the user runs /testchimp:author-plans.
 disable-model-invocation: true
 ---

@@ -1,4 +1,5 @@
 ---
+name: project-init
 description: One-time TestChimp project setup for this repo (folder mapping, test env, CI). Use when the user runs /testchimp:project-init.
 disable-model-invocation: true
 ---

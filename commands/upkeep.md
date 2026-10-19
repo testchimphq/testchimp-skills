@@ -1,4 +1,5 @@
 ---
+name: upkeep
 description: Coverage, failing-test, and TrueCoverage maintenance. Use when the user runs /testchimp:upkeep.
 disable-model-invocation: true
 ---

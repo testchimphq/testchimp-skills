@@ -1,4 +1,5 @@
 ---
+name: run-qa
 description: Full PR QA workflow (plans, tests, smart smoke, ExploreChimp). Use when the user runs /testchimp:run-qa.
 disable-model-invocation: true
 ---

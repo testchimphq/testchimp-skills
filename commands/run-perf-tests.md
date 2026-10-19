@@ -1,4 +1,5 @@
 ---
+name: run-perf-tests
 description: Run k6 performance tests (optional release label). Use when the user runs /testchimp:run-perf-tests.
 disable-model-invocation: true
 ---

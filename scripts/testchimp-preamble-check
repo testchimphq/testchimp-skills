@@ -18,6 +18,12 @@ _is_placeholder() {
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export SKILL_DIR
 
+# Cursor plugin-cache / marketplace installs must not self-update via git pull.
+CURSOR_PLUGIN_INSTALL=no
+if echo "$SKILL_DIR" | grep -qE '\.cursor/plugins|\.cursor/extensions'; then
+  CURSOR_PLUGIN_INSTALL=yes
+fi
+
 # --- Skill update check (git-based; canonical source of truth) ---
 LOCAL_VERSION=""
 REMOTE_VERSION=""
@@ -32,7 +38,9 @@ NODE
   )"
 fi
 
-if [ -d "$SKILL_DIR/.git" ]; then
+if [ "${CURSOR_PLUGIN_INSTALL}" = "yes" ]; then
+  _say "CURSOR_PLUGIN_INSTALL: yes. Update through Cursor's Plugins panel or the marketplace listing, not git pull"
+elif [ -d "$SKILL_DIR/.git" ]; then
   git -C "$SKILL_DIR" fetch origin main >/dev/null 2>&1 || true
   if command -v node >/dev/null 2>&1; then
     REMOTE_VERSION="$(SKILL_DIR="$SKILL_DIR" node - <<'NODE' 2>/dev/null || true
