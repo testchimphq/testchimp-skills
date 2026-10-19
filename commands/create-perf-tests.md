@@ -1,4 +1,5 @@
 ---
+name: create-perf-tests
 description: Author k6 load/volume journeys. Use when the user runs /testchimp:create-perf-tests.
 disable-model-invocation: true
 ---

@@ -1,4 +1,5 @@
 ---
+name: fix-test-execution
 description: Triage and fix a failing SmartTest execution. Use when the user runs /testchimp:fix-test-execution.
 disable-model-invocation: true
 ---

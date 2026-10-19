@@ -1,4 +1,5 @@
 ---
+name: run-smart-smoke
 description: Run related-tests-only or budgeted smart smoke. Use when the user runs /testchimp:run-smart-smoke.
 disable-model-invocation: true
 ---

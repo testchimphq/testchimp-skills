@@ -1,4 +1,5 @@
 ---
+name: explore
 description: ExploreChimp UX analytics on SmartTest pathways. Use when the user runs /testchimp:explore.
 disable-model-invocation: true
 ---

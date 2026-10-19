@@ -1,4 +1,5 @@
 ---
+name: import-plans
 description: Import existing plan markdown into mapped plans/. Use when the user runs /testchimp:import-plans.
 disable-model-invocation: true
 ---
