@@ -1,4 +1,5 @@
 ---
+name: init
 description: Per-developer TestChimp workstation setup (MCP sign-in, runner key, local stack). Use when the user runs /testchimp:init.
 disable-model-invocation: true
 ---

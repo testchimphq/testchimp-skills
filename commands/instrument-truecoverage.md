@@ -1,4 +1,5 @@
 ---
+name: instrument-truecoverage
 description: Instrument TrueCoverage / RUM in the app under test. Use when the user runs /testchimp:instrument-truecoverage.
 disable-model-invocation: true
 ---

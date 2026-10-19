@@ -1,4 +1,5 @@
 ---
+name: execute-tests
 description: Execute SmartTests for a path, release, or named test run. Use when the user runs /testchimp:execute-tests.
 disable-model-invocation: true
 ---

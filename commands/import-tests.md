@@ -1,4 +1,5 @@
 ---
+name: import-tests
 description: Import existing E2E tests into SmartTests. Use when the user runs /testchimp:import-tests.
 disable-model-invocation: true
 ---

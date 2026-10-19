@@ -1,4 +1,5 @@
 ---
+name: create-tests
 description: Author or update SmartTests for a scope. Use when the user runs /testchimp:create-tests.
 disable-model-invocation: true
 ---

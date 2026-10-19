@@ -1,4 +1,5 @@
 ---
+name: cleanup-tests
 description: Deduplicate and clean up the SmartTest suite. Use when the user runs /testchimp:cleanup-tests.
 disable-model-invocation: true
 ---

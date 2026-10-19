@@ -99,7 +99,7 @@ Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environmen
 | --- | --- |
 | Claude Code | `/plugin marketplace add testchimphq/testchimp-skills` then `/plugin install testchimp@testchimp`, then **restart the session** |
 | Any agent (skill only) | `npx skills add testchimphq/testchimp-skills` |
-| Cursor | Cursor Marketplace (search TestChimp), or clone this repo as a Cursor plugin |
+| Cursor | [cursor.directory/plugins/testchimp](https://cursor.directory/plugins/testchimp), or clone this repo into `~/.cursor/plugins/local/testchimp` |
 | Gemini CLI | `gemini extensions install https://github.com/testchimphq/testchimp-skills` |
 | Kiro | Powers panel: import this repo (Agent Plugins `plugin.json`) |
 | VS Code / GitHub Copilot | Install from the agent plugins gallery, or add the MCP server below |
@@ -239,7 +239,7 @@ Restart the IDE or CLI session if the skill does not appear.
 
 ## Updating
 
-Use this when the user or workflow wants the **latest skill content** from `main` (same as **`/testchimp skill upgrade`** / **`/testchimp update`**). Plugin installs should use **`/plugin marketplace update testchimp`** instead.
+Use this when the user or workflow wants the **latest skill content** from `main` (same as **`/testchimp skill upgrade`** / **`/testchimp update`**). Claude Code plugin installs should use **`/plugin marketplace update testchimp`** instead. Cursor plugin installs should update from Cursor's Plugins panel, or from the marketplace listing once it is listed.
 
 1. Resolve the skill root **`SKILL_DIR`** (the directory that contains **`SKILL.md`** and **`.git`**), e.g. `~/.claude/skills/testchimp` or `.cursor/skills/testchimp`.
 2. Run:
@@ -312,6 +312,17 @@ During **`/testchimp init`**, agents keep a plugin-provided server if it is alre
 Policy / workflow MCP tools (CLI ≥ **0.1.21**, skill **`required_cli_version`** may be higher): **`get-policy`**, **`list-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-last-run-workflow-detail`**.
 
 ---
+
+## Data handling
+
+The hosted MCP server at https://mcp.testchimp.io/mcp uses OAuth. You pick the TestChimp project on the consent page, so no API key goes in the IDE config.
+
+`/testchimp init` may save the project's runner API key to a gitignored `<repo>/.testchimp/mcp.json` (mode 600, never printed) so local Playwright runs can authenticate.
+
+Data is hosted in the US. The SOC 2 Type 2 audit is in progress.
+
+- **Privacy policy:** https://testchimp.io/privacy-policy
+- **Terms:** https://testchimp.io/terms-conditions
 
 ## Privacy and support
 
