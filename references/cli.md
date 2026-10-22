@@ -45,7 +45,7 @@ Old 1.x tool names are gone. Use the 2.0.0 name and params below (same table as 
 | `create-issue` | `upsert-issue` | omit `issueId`; `title` required |
 | `update-issue-status` | `upsert-issue` | `issueId` + patch fields |
 
-New / reshaped in 2.0.0: `list-issues`, `upsert-release`, `manage-test-run`, `ingest-scenario-execution`, `list-execution-job-dimension-values`, `list-test-planning-trends`, `select-smart-smoke-tests`. `get-org-capabilities` is unchanged as a tool name (empty body) and now includes `planLabel`, trial fields, and `chimphandsCredits`. `ask-about-testchimp` is **not** in MCP API 2.0.0 / `@testchimp/cli` 2.0.0; if the host lists it, use it for product copy, otherwise do not invent TestChimp value-prop text.
+New / reshaped in 2.0.0: `list-issues`, `upsert-release`, `manage-test-run`, `ingest-scenario-execution`, `list-execution-job-dimension-values`, `list-test-planning-trends`, `select-smart-smoke-tests`. `get-org-capabilities` is unchanged as a tool name (empty body) and now includes `planLabel`, trial fields, and `chimphandsCredits`. Product Q&A tools **`ask-about-testchimp`** and **`ask-testchimp-question`** are first-class — see § [**ask-about-testchimp**](#ask-about-testchimp--ask-testchimp-question).
 
 ## Install
 
@@ -179,6 +179,22 @@ testchimp get-org-capabilities
 ```
 
 **Agent rule:** Soft-gate features from **`capabilities`** plus **`freeTrialActive`**. Do **not** skip TrueCoverage / API contract / perf solely from `planLabel`. When a capability is missing **and** `freeTrialActive` is `false`, soft-skip only the gated insight/analysis (mark **N/A** + reason); never abort the surrounding workflow. Bonobi reads **`planLabel`** for indie vs role-card onboarding.
+
+## `ask-about-testchimp` / `ask-testchimp-question`
+
+First-class MCP/CLI tools for TestChimp product and value-prop questions. Bonobi (and any agent that needs official product copy) **must call these** instead of inventing marketing text. They are normal tools — not optional host extras.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|-------|
+| `--question <text>` | **Yes** | `question` | The product / value-prop question. |
+| `--json-input …` | No | (merge) | May supply **`question`**. |
+
+Call either name (`ask-about-testchimp` or `ask-testchimp-question`); they are the same family. Prefer the name your connected MCP lists; if both exist, `ask-about-testchimp` is enough.
+
+```bash
+testchimp ask-about-testchimp --question "Why does TestChimp do QA posture instead of replacing the test runner?"
+testchimp ask-testchimp-question --question "What is TrueCoverage for a growth-plan team?"
+```
 
 **Not capability-gated:** Only the capabilities listed in the response gate anything. **ExploreChimp has no org capability** (there is no `EXPLORECHIMP` value) — never skip or block ExploreChimp because it is absent from `capabilities`. ExploreChimp is limited only by org **credits**; when credits run out, analyze calls return a `…_CREDIT_LIMIT` skip status rather than an HTTP error (see [`run-explorechimp.md`](./run-explorechimp.md#availability-no-org-capability-required)).
 
@@ -1871,7 +1887,7 @@ testchimp send-feedback --category USER_STRUGGLE --agent-name "Cursor" \
 
 ## MCP parity (tool names)
 
-MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (85 tools). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names. `ask-about-testchimp` is not in this catalog.
+MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (85 tools, plus product Q&A **`ask-about-testchimp`** / **`ask-testchimp-question`**). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names.
 
 ## Related
 
