@@ -1,6 +1,6 @@
 # testchimp-skills
 
-TestChimp is the QA platform for coding agents. This repository is the **Claude Code plugin** (skill + hosted MCP) and the same skill pack other agents install from Git. Agents run pre-defined playbooks under **`references/`**; project-specific decisions live in **`plans/knowledge/policies/*.policy.md`**.
+TestChimp is QA posture monitoring and feedback-loop orchestration for coding agents. This repository is the **Claude Code plugin** (skill + hosted MCP) and the same skill pack other agents install from Git. Agents run pre-defined playbooks under **`references/`**; project-specific decisions live in **`plans/knowledge/policies/*.policy.md`**. Bonobi is TestChimp's QA bot (the same bot, not a separate product) and lives in the skill's bot playbooks.
 
 The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth: you pick the TestChimp project on the consent screen, and every tool call is scoped to that project. Type **`/testchimp project-init`** and **`/testchimp init`** (same as other hosts). Claude Code’s `/` menu also lists **`/testchimp:<name>`** aliases for core QA commands (`commands/*.md`). One person runs project-init once per repo. Everyone else runs only init. Plain language such as “set up TestChimp for this repo” also starts the skill.
 
@@ -25,7 +25,7 @@ Install from this marketplace, then sign in, then init. Do not invent extra comm
 
    On the consent screen:
    - Pick the TestChimp project for **this** repository from the dropdown. That project is written into the token; every tool call is scoped to it. There is one global URL and no project IDs in the MCP config.
-   - Leave **Use this connection as my QA bot** **unticked**. That box is for Grok Bot. Ticking it binds the connection as a QA bot instead of a normal coding-agent login.
+   - Leave **Use this connection as my QA bot** **unticked**. That box is for Bonobi (TestChimp's QA bot, typically on Grok). Ticking it binds the connection as Bonobi instead of a normal coding-agent login.
 
    If you later open a repo that belongs to a different TestChimp project, `/testchimp init` will detect the mismatch and tell you to re-authenticate through **`/mcp`** and pick that repo's project.
 
@@ -113,6 +113,12 @@ See [`llms-install.md`](llms-install.md) for copy-paste MCP config.
 
 ---
 
+## What’s new in 2.0.0 (MCP API 2.0.0)
+
+Skill **2.0.0** is a breaking MCP tool rename. Hosted / plugin MCP at `https://mcp.testchimp.io/mcp` must be **API 2.0.0** (`SKILL.md` `metadata.required_mcp_version`). `@testchimp/cli` **2.0.0** exposes **87** kebab-case tools (includes **`get-eaas-config`** and **`ask-about-testchimp`**). **`get-eaas-config` is kept unchanged** as the connectivity / first-run check (do not use `ephemeral-environment action=CONFIG` for that). Consolidated tools include `ephemeral-environment` (`PROVISION` | `STATUS`), `report-scan-findings` (`scanId`), `get-workflow-executions`, `get-policies`, `get-api-operations`, `list-meetings`, `set-entity-distinct`, `fetch-execution-report`, `get-execution-history`, `list-perf-runs`, `get-release` (omit `version` to list), `upsert-release` (`gitCommitSha`, `priorReleaseVersion`), `manage-test-run` (no `action`; `commitRange` FIND\|LINK), `upsert-issue` (`addLabels` / `removeLabels`), plus new **`list-issues`** (`statuses` / `severities` / `assignees` / `ordinalIds`). See [`references/cli.md`](references/cli.md).
+
+**Upgrade note:** If your installed skill is older than **2.0.0**, upgrade now (`/testchimp skill upgrade` / `git pull`). Tool names from skill 1.x will fail against MCP 2.0.0.
+
 ## What’s new in 1.0.x (policy-aware skill)
 
 From **v1.0.0** onward the skill is organized as a **modular workflow catalog**, not a handful of monolithic scripts:
@@ -121,9 +127,9 @@ From **v1.0.0** onward the skill is organized as a **modular workflow catalog**,
 2. **Policies** — team overrides in the mapped repo under **`plans/knowledge/policies/<workflow-id>.policy.md`**. Init seeds defaults from **`assets/policies/`**. When a policy is missing, **`plans/knowledge/ai-test-instructions.md`** remains the fallback.
 3. **Composites** — **`run-qa`** and **`upkeep`** declare **subflows** in their policy (e.g. author-plans → connect-to-test-env → create-tests → …). Agents follow the composite order and can still run a subflow alone.
 4. **Traceability** — Plan phases mint a **`workflow_execution_id`** (ULID); plans live under **`plans/knowledge/workflow_plans/<workflow-id>/`**; upload via **`upsert-plans-support-file`** before Execute; mutating work reports via **`report-agent-action`** / inline **`agentTraceability`**. Details: [`references/policies-and-traceability.md`](references/policies-and-traceability.md).
-5. **CLI/MCP** — workflow tools (`get-policy`, `list-policies`, `upsert-policy`, `list-workflow-catalog`, `get-last-run-workflow-detail`, …) plus **API operation coverage** (`list-api-operation-services`, `list-api-operations`, `get-api-operation-detail`, CLI ≥ **0.1.28**). Pin **`@testchimp/cli`** to at least **`required_cli_version`** in **`SKILL.md`**.
+5. **CLI/MCP** — MCP API **2.0.0** / **`@testchimp/cli` ≥ 2.0.0** workflow tools (`get-policies`, `upsert-policy`, `list-workflow-catalog`, `get-workflow-executions`, `list-issues`, …) plus **API operation coverage** (`get-api-operations`). Pin **`@testchimp/cli`** to at least **`required_cli_version`** (**2.0.0**) in **`SKILL.md`**. Hosted MCP must be **2.0.0**.
 
-**Upgrade note:** If your installed skill is older than **1.0.0**, upgrade now (`/testchimp skill upgrade` / `git pull`). Policy and traceability tooling assume 1.0+.
+**Upgrade note (1.0):** If your installed skill is older than **1.0.0**, upgrade now. Policy and traceability tooling assume 1.0+. Prefer **2.0.0** for MCP API 2.0.0.
 
 Overview docs: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
 
@@ -148,6 +154,19 @@ testchimp-skills/
 │   ├── project-init-testchimp.md
 │   ├── run-qa.md            # /testchimp run QA (synonym: test)
 │   ├── upkeep.md            # /testchimp upkeep (synonym: evolve)
+│   ├── implement-requirement.md
+│   ├── author-plans.md
+│   ├── connect-to-test-env.md
+│   ├── execute-tests.md
+│   ├── run-smart-smoke.md
+│   ├── run-smart-regression.md  # legacy stub → run-smart-smoke
+│   ├── run-explorechimp.md
+│   ├── instrument-truecoverage.md
+│   ├── create-policy.md
+│   ├── policies-and-traceability.md
+│   ├── write-smarttests.md
+│   ├── auth-flows.md        # Sign-up / OTP / MFA / reset without real inboxes
+│   ├── cli.md
 │   └── …
 └── assets/
     ├── policies/            # Default policies seeded on init
@@ -309,7 +328,7 @@ Natural-language equivalents still route correctly (e.g. “Write tests for this
 
 During **`/testchimp init`**, agents keep a plugin-provided server if it is already connected. They do not write a second TestChimp entry. Full steps: **`references/init-testchimp.md`** (Workstation gate). Agents verify CLI compatibility via **Preamble checks** in **`SKILL.md`**.
 
-Policy / workflow MCP tools (CLI ≥ **0.1.21**, skill **`required_cli_version`** may be higher): **`get-policy`**, **`list-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-last-run-workflow-detail`**.
+Policy / workflow MCP tools (skill **2.0.0** requires MCP API **2.0.0** and **`@testchimp/cli` ≥ 2.0.0**): **`get-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-workflow-executions`** (`workflowId` + `latestOnly=true` for last run), **`list-issues`**.
 
 ---
 

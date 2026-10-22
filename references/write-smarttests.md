@@ -26,7 +26,8 @@ For **`plans/`** markdown, see **[`author-plans.md`](./author-plans.md)**.
 4. **Per remaining (`auto`) scenario** — Add or update a test; reuse existing page objects, fixtures, and env conventions in the repo.
 5. **Drive the real app with Playwright (no invented steps)** — Human input is often required **before** you start (URLs, accounts, feature flags, which environment to hit) **and sometimes during** a run (unexpected MFA, captcha, missing seed data, “which org should I use?”). Do not guess secrets or one-off values (unless you deem any random suitable guessed value should suffice for a specific step).
 
-   - **Discover values in the repo before asking:** Read **`.env-*`** files under the mapped tests folder (e.g. `.env-QA`) for **test-run** variables: `BASE_URL`, auth-related vars, feature toggles, etc. **Do not** store **`TESTCHIMP_API_KEY`** there — it belongs in the **shell** and MCP **`env`** (see **`SKILL.md`** Preamble **#4**). Skim **`setup/`** scripts and global setup for how auth state or data is created. Open **existing specs** in the same area to see which env vars, fixtures, and URLs peers use.
+   - **Auth flows (sign-up, verify, magic link, OTP, SMS, MFA, password reset):** Load [`auth-flows.md`](./auth-flows.md) before automating real inboxes or SMS. Prefer provider test mode, a guarded app flag, seeded verified users + `storageState`, or TOTP from CI secrets. Record the choice under **`## Auth flows`** in **`connect-to-test-env.policy.md`**. Do not buy numbers or inboxes; do not hardcode codes or TOTP seeds.
+   - **Discover values in the repo before asking:** Read **`.env-*`** files under the mapped tests folder (e.g. `.env-QA`) for **test-run** variables: `BASE_URL`, auth-related vars, feature toggles, etc. **Do not** store **`TESTCHIMP_API_KEY`** there — it belongs in the **shell** and MCP **`env`** (see **`SKILL.md`** Preamble **#4**). Skim **`setup/`** scripts and global setup for how auth state or data is created. Open **existing specs** in the same area to see which env vars, fixtures, and URLs peers use. Check **`## Auth flows`** in the connect-to-test-env policy when present.
    - **Ask early when something crucial is missing** — If authentication details, org/project identifiers, or other data the scenario depends on is not discoverable from the repo or plans, **ask the user before** driving the browser. If you only learn what is missing **while** interacting (e.g. login fails, wrong tenant), **stop and ask** rather than fabricating credentials or steps.
    - **Infer from codebase before giving up** — When the scenario itself is thin (e.g. a one-line title/description with no steps), still try to recover enough Arrange/Act/Assert detail from the **codebase and PR/branch changes**: touched routes/screens, UI components, APIs, existing specs/POMs/fixtures/seeds in the same feature area, and sibling scenarios under the same story. Prefer that path over asking the user to re-document the journey. In a **split-repo / multi-root** workspace, search **product workspace roots** for application source (not only the mapped TestChimp repo) — [`split-repo-workspaces.md`](./split-repo-workspaces.md).
    - **Fallback only when still stuck — manual session capture** — If, after reading the scenario/story **and** probing the codebase/changes, you still **cannot** author a credible SmartTest without inventing the user journey, **stop**. Do **not** fabricate steps. Suggest the Chrome-extension **manual session** path below (not headed Playwright takeover — that is for mid-run UI blockers when you already know the journey). Full product guide: [Creating SmartTests — from manual session capture](https://docs.testchimp.io/smart-tests/creating#2-from-manual-session-capture-chrome-extension). When the user pastes the prompt, follow [`author-test-from-manual-session.md`](./author-test-from-manual-session.md).
@@ -58,6 +59,8 @@ After they paste the prompt, load [`author-test-from-manual-session.md`](./autho
 Mark the blocked scenario on the branch plan (if any) as waiting on a manual session; continue other planned tests that have enough context.
 
 ### User takeover (headed) when the agent gets stuck
+
+For **OTP / MFA / email verify / magic link / SMS**, prefer a durable approach from [`auth-flows.md`](./auth-flows.md) (provider test mode, guarded flag, seeded user, or TOTP secret) over repeated human code entry. Use takeover only when that ladder has not yet been approved or as a one-off capture before converting to an automated mechanism.
 
 During interactive authoring, it is valid (and often necessary) to ask the user to temporarily **take over** to complete a journey segment (SSO/MFA, captcha, ambiguous UI, missing context). The key constraint is that the user must perform the actions **inside the same Playwright-controlled browser session** so the agent can incorporate them into the SmartTest.
 
@@ -133,7 +136,7 @@ Recommended takeover loop:
    });
    ```
 
-6b. **Suite tags from global policy (required when configured)** — In addition to scenario links, tag tests per **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `tags:`** (or **`get-policy --policy-file-name global.policy.md`**). These are Playwright **`tag`** options (`tag: '@smoke'`), **not** custom annotations. They organize the suite so CLI can filter (`npx playwright test --grep @smoke`); they do **not** replace scenario-link annotations.
+6b. **Suite tags from global policy (required when configured)** — In addition to scenario links, tag tests per **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `tags:`** (or **`get-policies --policy-file-name global.policy.md`**). These are Playwright **`tag`** options (`tag: '@smoke'`), **not** custom annotations. They organize the suite so CLI can filter (`npx playwright test --grep @smoke`); they do **not** replace scenario-link annotations.
 
    **Before authoring any SmartTest** in `create-tests` / `run-qa` / `upkeep` (or nested authorship):
 
@@ -172,7 +175,7 @@ Recommended takeover loop:
      2. Compare the visible UI to the **previous** stable checkpoint; if there is **no meaningful user-visible change**, skip a new marker.
      3. If the UI **did** change in a user-meaningful way: pick **`Screen`** and **`State`**. **Reuse** an exact **`(screen, state)`** from the fetched atlas when it still describes the surface truthfully.
      4. If no existing pair fits: **register new vocabulary before editing the spec** — call **`testchimp upsert-screen-states --json-input '…'`** (or MCP **`upsert-screen-states`**) with **`screenStates`**: `[{ "screen": "…", "states": ["…"] }, …]`, then use those **exact** strings in **`await markScreenState('Screen', 'State')`**. Upsert is **idempotent**; calling it when a teammate already added a similar entry is safe.
-     5. Ensure the test uses **`async ({ …, markScreenState })`** (see [Screen / state markers](#screen--state-markers-markscreenstate)), then insert **`await markScreenState('Screen', 'State?')`** immediately after the Playwright step that established that stable state.
+     5. Ensure the test uses **`async` ({ …, markScreenState })** (see [Screen / state markers](#screen--state-markers-markscreenstate)), then insert **`await markScreenState('Screen', 'State?')`** immediately after the Playwright step that established that stable state.
 
    - Prefer markers only at **meaningful** boundaries; skip transient overlays-only states.
 
@@ -202,7 +205,7 @@ SmartTests live under whatever folder the team mapped as **tests** in TestChimp 
 
 - **`pages/`** — Encapsulate navigation and selectors per page.
 - **`fixtures/`** — Shared **`test.extend`** modules merged via **`mergeTests`**; use for per-test seed/teardown via APIs ([`fixture-usage.md`](./fixture-usage.md), [`seeding-endpoints.md`](./seeding-endpoints.md)).
-- **`setup/`** — Global setup runs **before** browser tests via Playwright [project dependencies](https://playwright.dev/docs/test-global-setup-teardown#option-1-project-dependencies). Use for expensive one-time work (e.g. auth storage state). Usually excluded from the main test project with `testIgnore` in config.
+- **`setup/`** — Global setup runs **before** browser tests via Playwright [project dependencies](https://playwright.dev/docs/test-global-setup-teardown#option-1-project-dependencies). Use for expensive one-time work (e.g. auth storage state). Usually excluded from the main test project with `testIgnore` in config. Auth reuse patterns: [`auth-flows.md`](./auth-flows.md).
 - **`e2e/`** (and siblings) — SmartTests use **`*.spec.{js,ts}`** under the tests root.
 - **`assets/`** — Static files (uploads, etc.).
 - **`.env-*`** — Per-environment variables for **exercising the app under test** (e.g. **`BASE_URL`**); **QA** is a common default. Read with `process.env.VAR_NAME`. **Not** for **`TESTCHIMP_API_KEY`** (use shell + MCP config).

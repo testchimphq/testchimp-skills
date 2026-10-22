@@ -104,6 +104,20 @@ Never narrate API results without tool output.
 
 ---
 
+## Product Q&A (`ask-about-testchimp`) — last resort
+
+Official TestChimp product / value-prop answers. **Last resort** — answer from this skill pack first.
+
+| If | Then |
+| --- | --- |
+| [`SKILL.md`](../SKILL.md) / `references/` already answers | Use that answer. Do **not** call the tool. |
+| Need official product / value-prop copy and the skill pack does not have it | Call **`ask-about-testchimp`** / **`ask-testchimp-question`** with `--question` ≤ **2,000** characters. Do not invent marketing copy. |
+| Already used **20** questions this hour for this project | Stop. Reuse prior answers or the skill pack. Further calls return HTTP 429. |
+
+Either name is the same family. Prefer the name your connected MCP lists. Flags and examples: [`cli.md`](./cli.md) § `ask-about-testchimp`.
+
+---
+
 ## Mapped `plans/` and `tests/` roots
 
 - Find **`.testchimp-plans`** / **`.testchimp-tests`** marker files (walk up from cwd).
@@ -168,9 +182,10 @@ Plan path pattern: `knowledge/workflow_plans/<workflow-id>/<ulid>.plan.md`.
 
 | Normal planning | Quick answers below |
 | --- | --- |
-| Product design, test strategy, scope tradeoffs | ULID mint, plan path, branch checkout, MCP vs CLI, runner env |
+| Product design, test strategy, scope tradeoffs | ULID mint, plan path, branch checkout, MCP vs CLI, runner env, last-resort product Q&A |
 | Ambiguous user intent | Preamble checks in [`SKILL.md`](../SKILL.md) |
 | ChimpHands branch / end-of-turn commit | [`chimphands.md`](./chimphands.md) |
 | ChimpHands GHA auth / CI self-heal | [`chimphands-faq.md`](./chimphands-faq.md) |
 | Test env bring-up (local or ChimpHands) | [`connect-to-test-env.md`](./connect-to-test-env.md) + `plans/knowledge/policies/connect-to-test-env.policy.md` |
+| Sign-up / OTP / MFA / magic link / password reset in tests | [`auth-flows.md`](./auth-flows.md) — detect provider; prefer test mode / guarded flag / seeded `storageState` / TOTP; record under policy **`## Auth flows`**; no hosted inboxes |
 | Repo-specific env / bring-up blockers | Prefer the connect-to-test-env policy; legacy FAQ only if `ai-test-instructions.md` already exists ([`run-qa.md`](./run-qa.md#binding-test-env-contract-policy-and-legacy-faq)) |

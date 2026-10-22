@@ -46,9 +46,9 @@ Also accepted (resolve via CLI): `rootFilePath` + OAS `operationId`, or `rootFil
 
 ### Fetch coverage (required before authoring)
 
-1. **`list-api-operation-services`** — configured roots; empty → OAS not configured (`N/A` / ask user).
-2. **`list-api-operations --root-file-path <path>`** — same list payload as the Operations UI: `coverageSummary`, covering-test previews, and—when mapped—`obsMappingState` plus `runtimeObservation`. The runtime observation is the latest finalized **production daily summary**, with latest-hour fallback, and may include `windowStartMillis`, `windowEndMillis`, `requestCount`, `rpm`, `errorCount`, `errorRate`, `p50LatencyMs`, `p95LatencyMs`, `p99LatencyMs`, status-class counts, and `syncStatus`. Prefer low coverage / zero covering tests with high observed request volume or error rate. **Ignored gaps score as covered** (`gapIgnored` / score 100) — skip them when picking work. Always pass **`--root-file-path`** when more than one service exists.
-3. **`get-api-operation-detail --id <ULID>`** (or root + oas / method+path) — request/query/response fields and response codes with covering tests; `operation.runtimeObservation` carries the same observability summary.
+1. **`get-api-operations`** — configured roots; empty → OAS not configured (`N/A` / ask user).
+2. **`get-api-operations --root-file-path <path>`** — same list payload as the Operations UI: `coverageSummary`, covering-test previews, and—when mapped—`obsMappingState` plus `runtimeObservation`. The runtime observation is the latest finalized **production daily summary**, with latest-hour fallback, and may include `windowStartMillis`, `windowEndMillis`, `requestCount`, `rpm`, `errorCount`, `errorRate`, `p50LatencyMs`, `p95LatencyMs`, `p99LatencyMs`, status-class counts, and `syncStatus`. Prefer low coverage / zero covering tests with high observed request volume or error rate. **Ignored gaps score as covered** (`gapIgnored` / score 100) — skip them when picking work. Always pass **`--root-file-path`** when more than one service exists.
+3. **`get-api-operations --id <ULID>`** (or root + oas / method+path) — request/query/response fields and response codes with covering tests; `operation.runtimeObservation` carries the same observability summary.
 
 ### Observability-aware prioritization
 
@@ -61,8 +61,8 @@ Also accepted (resolve via CLI): `rootFilePath` + OAS `operationId`, or `rootFil
 
 | Prompt fragment | Resolve with |
 |---|---|
-| `… for service OpenAPI root <path>` | `list-api-operations --root-file-path <path>`; pick high-ROI uncovered ops; detail each via `--id` |
-| `… for TestChimp operation id <ULID>` | `get-api-operation-detail --id <ULID>` |
+| `… for service OpenAPI root <path>` | `get-api-operations --root-file-path <path>`; pick high-ROI uncovered ops; detail each via `--id` |
+| `… for TestChimp operation id <ULID>` | `get-api-operations --id <ULID>` |
 | `… for TestChimp operation id <ULID> request field </pointer>` | Detail by `--id`; focus on `requestFields` entry with that `jsonPointer` (and related uncovered siblings if high ROI) |
 | `… query param <name>` | Detail by `--id`; focus on `queryFields` |
 | `… response field </pointer> for response code <code>` | Detail by `--id`; focus on matching `responseFields` + that code |
@@ -81,7 +81,7 @@ Same rule as upkeep signal-only gaps and [`create-tests.md`](./create-tests.md) 
 2. Prefer **linking an existing scenario** (and story) when one fits; only propose **new** plan items when none exist.
 3. **Explicit user approval** before creating any new story/scenario.
 4. Create approved missing items as lifecycle **`ready`** + verification **`auto`**, then author/update SmartTests with scenario annotations. No duplicates / phantom ids.
-5. Soft-notify suite size via **`get-suite-execution-stats`** vs `global.policy.md` when over or within ~10% of a non-zero cap.
+5. Soft-notify suite size via **`get-execution-history` (`aggregate=true`)** vs `global.policy.md` when over or within ~10% of a non-zero cap.
 
 Then apply the [coverage strategy](#goal) above (update existing → new UI → new `api/` as needed).
 

@@ -1,6 +1,25 @@
-# TestChimp QA bot template changelog
+# Bonobi (TestChimp QA bot) template changelog
 
 Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
+
+## 1.0.7 — skill 2.0.0
+
+- Skill **2.0.0** requires **TestChimp MCP API 2.0.0** and **`@testchimp/cli` ≥ 2.0.0** (87 tools, including **`get-eaas-config`** and **`ask-about-testchimp`**). Tool names and params match Aware OpenAPI 2.0.0 (`ephemeral-environment` PROVISION|STATUS, `report-scan-findings` with `scanId`, `get-workflow-executions`, `get-policies`, `get-api-operations`, `list-meetings`, `set-entity-distinct`, `fetch-execution-report`, `get-execution-history`, `list-perf-runs`, `get-release`, `upsert-issue`, new `list-issues`). **`get-eaas-config` is kept unchanged** as the connectivity / first-run check.
+- Issue workflows (`fix-issue`, `implement`, weekday reminder) use `list-issues` (`searchText`, `statuses`, `severities`, `assignees`, `ordinalIds`, `labels`, …) and `upsert-issue` to create (omit `issueId`) or update (`issueId` + patch, including `addLabels` / `removeLabels`).
+- Release DevX matches CLI 2.0.0: `upsert-release` (`gitCommitSha`, `priorReleaseVersion`, `releaseType`), `manage-test-run` (omit `id` to create, then `commitRange` FIND, ask, then LINK).
+- `ask-about-testchimp` / `ask-testchimp-question` are last-resort product Q&A (≤ 2,000 characters per question; 20 per project per hour). Answer from the skill pack first.
+- Existing bots: skill self-update picks this up. Reload / re-authenticate the TestChimp connector if a tool call fails with unknown tool.
+
+## 1.0.6 — skill 1.0.75
+
+- The QA bot's name is **Bonobi**. Same bot, not a separate product. It adapts to the team's plan tier.
+- Role: friendly QA sidekick and the perfect user of TestChimp. Takes care of QA, explains gaps and unused capabilities, takes the driving seat on CI / envs / perf / monitoring, and uses `ask-about-testchimp` for product or value-prop context.
+- Indie tier: call `get-org-capabilities` at start (`planLabel`, `freeTrialActive`, `freeTrialExpiryTimestampMillis`, `trialDaysRemaining`, `chimphandsCredits`). On `indie`, do not ask for a role. Assume dev and enable everything.
+- Ongoing DevX: the user vibe-codes; Bonobi picks up AgentWatch requirement updates on git-push and writes/runs tests (local first, then CI, bot machine last).
+- Release DevX: `upsert-release` (create or update), `get-release` (omit version to list), `manage-test-run` (create on the release, `commitRange` FIND, ask, then LINK unlinked batches).
+- New daily adoption routine. During a free trial, one bundled daily nudge by email and bot.
+- Never describe TestChimp as an "AI QA engineer" or "AI QA platform". No em dashes.
+- Existing bots: replace the instructions with the 1.0.6 text (or reinstall from the template) and add the daily adoption routine.
 
 ## 1.0.5 — skill 1.0.61, CLI ≥ 0.1.88
 

@@ -46,7 +46,7 @@ If the user names a scenario (without a plan file), treat that scenario as the p
 
 **Two-pass Plan (design-first, wrap-second):**
 1. Author (or adopt) the **Product plan** — architecture, files, schema/DDL, API contracts, UI structure, committed decisions — at unconstrained depth.
-2. Then add the **Workflow envelope** — frontmatter (ULID), derived task titles for `create-issue`, Execute checklist, upsert, approval.
+2. Then add the **Workflow envelope** — frontmatter (ULID), derived task titles for `upsert-issue`, Execute checklist, upsert, approval.
 
 ### Phase gating
 
@@ -124,12 +124,12 @@ Author this **as if `/testchimp implement` were not involved** (same depth as Cu
 
 **Derive** from the Product plan — do **not** invent a separate thin plan:
 
-1. **Task breakdown** — concrete actionable **tasks** projected from the Product plan for platform `TASK_ISSUE` recording. For each task (before `create-issue`):
+1. **Task breakdown** — concrete actionable **tasks** projected from the Product plan for platform `TASK_ISSUE` recording. For each task (before `upsert-issue`):
    - **title** (e.g. `Add policy upsert API`)
    - **priority** (`critical` / `high` / `medium` / `low`) → maps to **`severity`** on create (see Execute)
-   - **category** (best-fit `BugCategory`, e.g. `FUNCTIONAL`, `SECURITY`, `PERFORMANCE` — see [`cli.md`](./cli.md) § `create-issue`)
+   - **category** (best-fit `BugCategory`, e.g. `FUNCTIONAL`, `SECURITY`, `PERFORMANCE` — see [`cli.md`](./cli.md) § `upsert-issue`)
    - Prefer task titles already listed in a supplied plan file. Task titles are a **projection** of the Product plan, not a substitute for it.
-   - Do **not** call **`create-issue`** yet — platform mutations wait until after Plan approval (same rule as stories/scenarios).
+   - Do **not** call **`upsert-issue`** yet — platform mutations wait until after Plan approval (same rule as stories/scenarios).
 2. **Execute checklist** — actionable `- [ ]` items (every task; optional self-review / smoke).
 3. **Frontmatter** — `workflow_execution_id: <ulid>`, `workflow_id: implement`, `LastRunOnCommit`, `PlanApproved` (plus story/scenario ordinals when known).
 4. **Write** the combined Product plan + envelope to **`<MAPPED_PLANS_ROOT>/knowledge/workflow_plans/implement/<workflow_execution_id>.plan.md`** (or adopt/update a user-supplied plan file and also copy/sync into that canonical path when executing as workflow `implement`).
@@ -149,7 +149,7 @@ Author this **as if `/testchimp implement` were not involved** (same depth as Cu
 
 **Goal:** File task issues (story/scenario-linked when ordinals are known; severity + category + `TestChimp Implement` label), implement the approved plan in the product codebase, mark tasks **`FIXED`** as work completes, then self-review.
 
-1. **Create task issues (required, immediately after Plan approval)** — For each planned task, MCP-first **`create-issue`** (CLI ≥ **0.1.17**; see [`cli.md`](./cli.md) § `create-issue`) with:
+1. **Create task issues (required, immediately after Plan approval)** — First call **`list-issues`** (`--statuses ACTIVE --labels "TestChimp Implement"`, plus story/scenario context in `--search` when useful) and **reuse** a matching open issue instead of filing a duplicate. `list-issues` has no `issueType` filter — match on label + title. For each remaining planned task, MCP-first **`upsert-issue`** (omit `issueId`; see [`cli.md`](./cli.md) § `list-issues` / `upsert-issue`) with:
    - **`issueType`:** `TASK_ISSUE`
    - **`status`:** `ACTIVE` (default)
    - **`title`:** the planned task title
@@ -160,13 +160,13 @@ Author this **as if `/testchimp implement` were not involved** (same depth as Cu
      - **Story:** when a story ordinal is known (from prompt or plan), include `{ "toEntityType": "STORY", "toEntityId": "<storyOrdinal>" }` (parent story even when the primary input was a scenario).
      - **Scenario(s):** when scenario ordinal(s) are in scope for this run, include one `{ "toEntityType": "SCENARIO", "toEntityId": "<scenarioOrdinal>" }` per in-scope scenario the task covers (at minimum: the primary scenario when input was scenario-scoped; when story-scoped, all in-scope scenario ordinals from the Plan unless the task is explicitly scoped to a subset).
      - **If neither story nor scenario ordinal is known:** omit `linkTargets` and record `N/A — no story/scenario id on plan/prompt` next to the task.
-   - **Traceability on the mutating call (P0):** nested **`agentTraceability`** (or CLI flags) **must** include both **`workflow_id: implement`** and the **same Plan `workflow_execution_id`** (the ULID from Phase 2 frontmatter) on every `create-issue` / `update-issue-status`. Also pass `--policy-file`, `--policy-version`, `--git-sha`, `--actor-type`, `--branch-name`, `--agent-model` when known — see [`policies-and-traceability.md`](./policies-and-traceability.md). **Never omit `workflow_execution_id`**; **never mint a new ULID per task** — that creates orphan RUNNING executions in workflow history. The server will not attach Activity without both ids (and will not invent an execution id).
+   - **Traceability on the mutating call (P0):** nested **`agentTraceability`** (or CLI flags) **must** include both **`workflow_id: implement`** and the **same Plan `workflow_execution_id`** (the ULID from Phase 2 frontmatter) on every `upsert-issue`. Also pass `--policy-file`, `--policy-version`, `--git-sha`, `--actor-type`, `--branch-name`, `--agent-model` when known — see [`policies-and-traceability.md`](./policies-and-traceability.md). **Never omit `workflow_execution_id`**; **never mint a new ULID per task** — that creates orphan RUNNING executions in workflow history. The server will not attach Activity without both ids (and will not invent an execution id).
    - Record each returned **`issueId`** / **`ordinalId`** next to the matching checklist item (e.g. `- [ ] Add policy upsert API → B-42`).
    - Do **not** invent issue ids; do **not** skip story/scenario linking when those ordinals **are** known; do **not** omit `severity`, `category`, or the **`TestChimp Implement`** label.
 
 2. Follow **`implement.policy.md`** and repo conventions (**minimal diffs on Execute** — match existing style; do not use “minimal” as an excuse to thin the Product plan in Phase 2).
 
-3. **Implement per task** — Work through checklist tasks in order (or a declared dependency order). As each task’s product work completes, MCP-first **`update-issue-status`** with that task’s **`issueId`** and **`status: FIXED`** (pass the **same** Plan `workflow_id` / `workflow_execution_id` and other traceability fields). Marking a task **`FIXED`** does **not** close the workflow execution — only Phase 4 **`ACTION_COMPLETED`** does. Optional: set **`IN_PROGRESS_BUG`** when starting a task; default path is **`ACTIVE` → `FIXED`** on completion. Abandoned tasks: mark **`N/A`** + one-line justification in the checklist (do not leave as silent `ACTIVE`).
+3. **Implement per task** — Work through checklist tasks in order (or a declared dependency order). As each task’s product work completes, MCP-first **`upsert-issue`** with that task’s **`issueId`** and **`status: FIXED`** (pass the **same** Plan `workflow_id` / `workflow_execution_id` and other traceability fields). Marking a task **`FIXED`** does **not** close the workflow execution — only Phase 4 **`ACTION_COMPLETED`** does. Optional: set **`IN_PROGRESS_BUG`** when starting a task; default path is **`ACTIVE` → `FIXED`** on completion. Abandoned tasks: mark **`N/A`** + one-line justification in the checklist (do not leave as silent `ACTIVE`).
 
 4. Implement behaviour for the story and in-scope scenarios (via the task loop above), following the approved / supplied plan.
 
@@ -178,7 +178,7 @@ Author this **as if `/testchimp implement` were not involved** (same depth as Cu
 
 6. Optionally run focused unit/integration/SmartTests if the plan called for them (**Preamble #4** for runner `TESTCHIMP_API_KEY`).
 
-7. After each material mutation, best-effort **`report-agent-action`** (`CREATED` / `UPDATED` on code-backed artifacts when applicable; prefer reporting on **`USER_STORY` / `SCENARIO`** once implementation for that entity is done — see Report). **`create-issue`** / **`update-issue-status`** already carry traceability on the mutating call.
+7. After each material mutation, best-effort **`report-agent-action`** (`CREATED` / `UPDATED` on code-backed artifacts when applicable; prefer reporting on **`USER_STORY` / `SCENARIO`** once implementation for that entity is done — see Report). **`upsert-issue`** already carries traceability on the mutating call.
 
 Do **not** invent story/scenario/issue ids.
 
@@ -212,7 +212,7 @@ Do **not** invent story/scenario/issue ids.
    - Policy may set `skip` / leave unchanged — do not call the tool in that case.
    - Do **not** use `mark-plan-items-implementation-done` here (`done` is for post-QA Validate).
 4. **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (required):
-   - Reconcile ledger vs `get-workflow-execution` (include actions).
+   - Reconcile ledger vs `get-workflow-executions` (include actions).
    - Emit any missing create/update/analyze/implement reports.
    - **`ACTION_COMPLETED`** with `entity_type: WORKFLOW`, `entity_identity: implement` (or `ACTION_FAILED` if aborting).
 
@@ -233,6 +233,6 @@ Actions appear on the story/scenario **Activity** tabs and the workflow executio
 - Story/scenario ordinals are platform-provisioned — never invent ids ([`author-plans.md`](./author-plans.md)).
 - Prefer MCP tools first; CLI fallback with **Preamble #4** (`TESTCHIMP_API_KEY` + `TESTCHIMP_BACKEND_URL` when configured).
 - Accept a **plan file** as primary input; resolve **`story`** / **`scenario`** from its frontmatter (or body fallback). **Adopt detailed plans wholesale** as Product plan; only wrap with envelope + derived tasks.
-- Break work into **`TASK_ISSUE`** issues via `create-issue` with story/scenario **`linkTargets`**, **`severity`**, **`category`**, and label **`TestChimp Implement`**; mark each **`FIXED`** via **`update-issue-status`** as that task completes — do not rely on a separate link tool. Task issues record the breakdown; they do **not** replace Product plan depth.
+- Break work into **`TASK_ISSUE`** issues via `list-issues` (reuse an open match) then `upsert-issue` with story/scenario **`linkTargets`**, **`severity`**, **`category`**, and label **`TestChimp Implement`**; mark each **`FIXED`** via **`upsert-issue`** as that task completes — do not rely on a separate link tool. Task issues record the breakdown; they do **not** replace Product plan depth.
 - Keep implement focused on **product implementation**; use `/testchimp run QA` for full author-plans → create-tests → ExploreChimp composites unless the implement policy nests a post-execute workflow.
 - Identity and action vocabulary: [`policies-and-traceability.md`](./policies-and-traceability.md) — no `detail_json`.

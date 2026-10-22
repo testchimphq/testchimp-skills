@@ -1,4 +1,4 @@
-# Build the "TestChimp QA bot" Grok Bot template
+# Build the "Bonobi" Grok Bot template
 
 **For Grok Bot.** You are building a new, generic Bot and then sharing it as a template. Read this whole file first, then work through the steps in order. Stop and ask the person who sent you here (the "maintainer") whenever a step says **ask**, or when Grok Bot can't do what a step needs. Don't improvise a workaround.
 
@@ -6,7 +6,7 @@ All paths below are relative to this repo: the folder that contains this file's 
 
 ## What the bot is
 
-A TestChimp QA bot is one team member's QA counterpart for one TestChimp project. TestChimp sends it event deliveries over a webhook (their git pushes, assigned issues and scenarios, test batch results, releases, meetings). The bot proposes the next QA step, waits for approval, then runs a `testchimp` skill workflow. It also runs a few scheduled routines.
+Bonobi is TestChimp's QA bot (the same QA bot, not a separate product): one team member's friendly QA sidekick for one TestChimp project. It adapts to the customer's plan tier. TestChimp sends it event deliveries over a webhook (their git pushes, assigned issues and scenarios, test batch results, releases, meetings). Bonobi takes care of QA, explains gaps, and runs `testchimp` skill workflows. It also runs a few scheduled routines.
 
 Every team member installs their own copy from the template. So the bot you build must be **generic**: no maintainer name, project, memories, credentials or connections in it.
 
@@ -16,9 +16,9 @@ Reference: [`grok-template.json`](./grok-template.json) is the checklist of ever
 
 ### 1. Create the Bot
 
-- Name: `TestChimp QA bot`
-- Title: `QA counterpart`
-- Description (from `grok-template.json` → `description`): "Your QA counterpart for one TestChimp project: receives TestChimp events, proposes QA work, and runs testchimp skill workflows after your approval."
+- Name: `Bonobi`
+- Title: `QA sidekick`
+- Description (from `grok-template.json` → `description`): "Bonobi is TestChimp's QA bot (the same QA bot) for one project: a friendly QA sidekick that adapts to your plan tier, watches posture, and runs testchimp skill workflows."
 - Avatar: leave the default unless the maintainer gives you one.
 
 ### 2. Instructions
@@ -35,13 +35,14 @@ Install the `testchimp` skill from this repo: the root folder with `SKILL.md`, i
 
 ### 4. Routines
 
-Create these three scheduled routines. Use the prompt text exactly (from `grok-template.json` → `routines`). Times are in the bot owner's timezone. If Grok Bot asks for a timezone at build time, pick UTC and note it in the report; each user can change times during onboarding.
+Create these four scheduled routines. Use the prompt text exactly (from `grok-template.json` → `routines`). Times are in the bot owner's timezone. If Grok Bot asks for a timezone at build time, pick UTC and note it in the report; each user can change times during onboarding.
 
 | Routine | Schedule | Prompt |
 |---|---|---|
 | Daily self-update | Daily 08:00 | Run the testchimp skill's references/bot-self-update.md: look up the latest published skill and CLI versions, compare them with what's installed, and update anything older on your cloud computer without asking (ask me before updating the CLI on my computer). Tell me only what was updated or what failed. |
 | Weekday reminder | Mon–Fri 09:00 | Run the weekday reminder from the testchimp skill's references/bot-playbook.md (get-my-tasks). Skip the message when nothing is pending. |
 | Weekly QA posture digest | Monday 09:30 | If QA_POSTURE is among my bot capabilities, send the weekly QA posture digest from the testchimp skill's references/bot-playbook.md (get-qa-posture), personalised to my role and responsibilities. |
+| Daily adoption check | Daily 09:15 | Run the adoption routine from the testchimp skill's references/bot-playbook.md: check feature utilisation, pick the next unused capability worth adopting, explain why (use ask-about-testchimp as a last resort for value-prop; 2k characters per question, 20 per project per hour), then set it up. During a free trial, send one bundled daily nudge by email and in this chat. Skip if we are past the first weeks and nothing new is unused. |
 
 The routines will fail until a user connects TestChimp. That's expected; don't try to make them pass now.
 

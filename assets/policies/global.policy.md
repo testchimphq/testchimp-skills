@@ -34,7 +34,7 @@ tags:
 ## Notes for agents
 
 When running run-qa / create-tests / upkeep, honor coverage target, prioritization
-signals, and suite size limits above. Prefer get-suite-execution-stats for bloat
+signals, and suite size limits above. Prefer get-execution-history (`aggregate=true`) for bloat
 checks; if over or within ~10% of a non-zero cap, inform the user (soft hint).
 For top-N requirement gaps, expand lifecycle_status into get-requirement-coverage
 --lifecycle-statuses (ready → ready; draft/Draft+ → draft,ready) plus consider_*

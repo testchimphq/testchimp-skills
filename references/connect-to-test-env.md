@@ -49,8 +49,9 @@ If **`## CI / Cloud`** only documents “how PR checks run Playwright” and has
 2. Run documented provision / local-up / connect steps; wait for **healthy**.
 3. Export or document **`BASE_URL`** / backend URLs for the runner (Preamble **#4** still required for Playwright/Mobilewright).
 4. Persist learnings into **`connect-to-test-env.policy.md`** when steps changed or were discovered (upsert-policy). Do **not** create `ai-test-instructions.md` for this.
-5. Best-effort **`report-agent-action`** when provisioning creates/updates env artifacts worth tracing.
-6. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `connect-to-test-env` (nested: parent closes).
+5. **Auth flows (when relevant):** If the product uses sign-up / email verify / magic link / OTP / SMS / MFA / password reset, run detection and record the chosen approach under **`## Auth flows`** in the same policy — see [`auth-flows.md`](./auth-flows.md). Prefer provider test mode or guarded app flags; do not buy inboxes or SMS numbers. Ask only for what detection cannot resolve.
+6. Best-effort **`report-agent-action`** when provisioning creates/updates env artifacts worth tracing.
+7. **Standalone only:** **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `connect-to-test-env` (nested: parent closes).
 
 ## Performance-test guidance
 

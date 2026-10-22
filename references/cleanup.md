@@ -90,7 +90,7 @@ Stop and request **explicit user approval** before Phase 3. Paste a short summar
 For each pair in plan section 2:
 
 ```bash
-testchimp mark-semantic-tests-distinct --json-input '{
+testchimp set-entity-distinct --json-input '{
   "focusTest": { "folderPath": ["auth"], "fileName": "login.spec.ts", "testName": "user can log in" },
   "distinctTest": { "folderPath": ["auth"], "fileName": "signin.spec.ts", "testName": "login flow" }
 }'
@@ -117,13 +117,13 @@ If deletions occurred, run affected specs.
 
 ## CLI reference
 
-See [`cli.md`](./cli.md) for `list-semantic-similar-tests` and `mark-semantic-tests-distinct` flags and `--json-input` examples.
+See [`cli.md`](./cli.md) for `list-semantic-similar-tests` and `set-entity-distinct` (`entityType=TEST`) flags and `--json-input` examples.
 
 ## MCP tools
 
 | Tool | Endpoint |
 |------|----------|
 | `list-semantic-similar-tests` | `POST /api/mcp/list_semantic_similar_tests` |
-| `mark-semantic-tests-distinct` | `POST /api/mcp/mark_semantic_tests_distinct` |
+| `set-entity-distinct` (`entityType=TEST`) | `POST /api/mcp/set_entity_distinct` |
 
 Agent marks use **`marked_by_user_id = "0"`** (distinct from real user ids in audit).

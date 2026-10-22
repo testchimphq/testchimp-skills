@@ -28,7 +28,7 @@ Bump **`version`** of the policy when changing guidance so **`report-agent-actio
 2. Ask clarifying questions about the **behaviour the team wants agents to adhere to** for that workflow.
 3. For feasibility of product capabilities, use skill **`references/`** and [TestChimp docs](https://docs.testchimp.io/) — do not invent unsupported features.
 4. Write the policy file; then **push it to the platform immediately** with CLI/MCP **`upsert-policy`** (see below). Git push later also syncs the file, but upsert makes it available on the platform right away.
-5. Confirm with **`get-policy` / `list-policies`**.
+5. Confirm with **`get-policies` / `get-policies`**.
 6. Best-effort **`report-agent-action`** for the policy (`entity_type: POLICY`, `action_type: CREATED` / `UPDATED`, `entityIdentity` = filename) with a minted ULID when this is a standalone `/testchimp create policy` run; then **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — **`ACTION_COMPLETED`** with `WORKFLOW` + `create-policy`.
 
 ### After write — platform upsert (required when API key is available)
@@ -143,4 +143,4 @@ When the user asks about what is possible, check skill references and [docs.test
 ## See also
 
 - [`policies-and-traceability.md`](./policies-and-traceability.md) — resolution and ULID / `report-agent-action`
-- [`cli.md`](./cli.md) — `upsert-policy`, `get-policy`, `list-policies`
+- [`cli.md`](./cli.md) — `upsert-policy`, `get-policies`

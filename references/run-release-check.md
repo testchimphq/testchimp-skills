@@ -10,7 +10,7 @@ Use this playbook when the user (or Release Checks modal) asks to run:
 /testchimp run security scan for <scan_id>
 ```
 
-Requires **`@testchimp/cli` ≥ 0.1.15** (`get-security-scan-config`, `update-scan-progress`, `report-dast-findings`, `report-sast-findings`, `report-secrets-findings`, `report-deps-findings`, EaaS tools when ephemeral sandbox is requested).
+Requires **`@testchimp/cli` ≥ 0.1.15** (`get-security-scan-config`, `update-scan-progress`, `report-scan-findings` with `scanner=DAST` | `SAST` | `SECRETS` | `DEPS`, EaaS tools when ephemeral sandbox is requested).
 
 **Statuses** (exact strings for `update-scan-progress --status`):
 
@@ -18,7 +18,7 @@ Requires **`@testchimp/cli` ≥ 0.1.15** (`get-security-scan-config`, `update-sc
 |--------|------|
 | `QUEUED` | Created in UI; do not set unless resetting |
 | `IN_PROGRESS` | Scan work started (orchestrator sets this) |
-| `COMPLETED` | Single checker playbook finished successfully (playbook sets this after `report-*-findings`) |
+| `COMPLETED` | Single checker playbook finished successfully (playbook sets this after `report-scan-findings`) |
 | `EXCEPTION` | Hard failure that stops the scan |
 
 Allowed transitions: `QUEUED` → `IN_PROGRESS` \| `EXCEPTION`; `IN_PROGRESS` → `COMPLETED` \| `EXCEPTION`. Terminal: `COMPLETED`, `EXCEPTION`.
@@ -29,8 +29,8 @@ Each scan has **exactly one** check config (`dastCheckConfig` **or** `sastCheckC
 
 Treat steps 4–5 as a **try / finally**: always run cleanup (step 5) even when step 4 throws into `EXCEPTION`.
 
-1. **`testchimp update-scan-progress --id '<scan_id>' --status IN_PROGRESS`**
-2. **`testchimp get-security-scan-config --id '<scan_id>'`** — response shape (camelCase):
+1. **`testchimp update-scan-progress --id '<scan_id>' --status IN_PROGRESS`** (CLI `--id` maps to MCP **`scanId`**)
+2. **`testchimp get-security-scan-config --id '<scan_id>'`** (MCP **`scanId`**) — response shape (camelCase):
    - Prefer top-level **`dastCheckConfig`** when present (also mirrored under `detail.dastCheckConfig`).
    - **`detail.sastCheckConfig`** for SAST; **`detail.depsCheckConfig`** for deps; **`detail.leaksCheckConfig`** for secrets.
    - Legacy scans may still have `detail.securityScanDetail`; the server also materializes top-level `dastCheckConfig` from it when possible.
@@ -48,6 +48,6 @@ Treat steps 4–5 as a **try / finally**: always run cleanup (step 5) even when 
 ## Notes
 
 - Do **not** invent separate slash commands per check type; one orchestrator reads nested config from the scan id.
-- Agents run scanners **locally** (ZAP / Semgrep / Gitleaks / Trivy). Use only **`report-*-findings`** to upload JSON — there are no `run-*-scan` tools.
+- Agents run scanners **locally** (ZAP / Semgrep / Gitleaks / Trivy). Use only **`report-scan-findings`** to upload JSON — there are no `run-*-scan` tools.
 - Point the user at Release Checks on the release detail page; **View Bugs** opens `/bugs` scoped to the scan id. **Report** opens the stored scanner JSON in the UI viewer.
 - Queued / in-progress rows expose **Copy prompt** so the user can re-run the agent without recreating the scan.

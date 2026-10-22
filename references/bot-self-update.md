@@ -1,4 +1,4 @@
-# QA bot self-update
+# Bonobi self-update
 
 Run by the **daily self-update routine** and on **bot startup** (first delivery / first conversation of the day). Updates on **your cloud computer** (the skill and the CLI installed there) are **automatic**: the user approved them by installing the bot, so don't ask. Updates on **your user's computer** still need their approval. Never downgrade.
 

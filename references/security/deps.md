@@ -74,13 +74,13 @@ trivy fs --scanners vuln --format json --output /tmp/trivy-report-<scan_id>.json
    4. Write the filtered result as Trivy-shaped JSON (`{"Results":[…]}` with filtered `Vulnerabilities`) to `/tmp/trivy-report-<scan_id>.json` for upload.
    5. If the baseline snapshot of a target is missing (file did not exist at baseline), treat all current vulns for that target as new.
 
-7. **`testchimp report-deps-findings --id '<scan_id>' --report-file <path>`** — upload the **entire** JSON file (must be an object with a `Results` array).
+7. **`testchimp report-scan-findings --scanner DEPS --scan-id '<scan_id>' --report-file <path>`** — upload the **entire** JSON file (must be an object with a `Results` array).
 
 8. On successful report → **`testchimp update-scan-progress --id '<scan_id>' --status COMPLETED`**. On hard failure → `EXCEPTION`.
 
 ## Notes
 
-- `report-deps-findings` does **not** set scan status; this playbook does immediately after a successful report.
+- `report-scan-findings` (`scanner=DEPS`) does **not** set scan status; this playbook does immediately after a successful report.
 - Do **not** use any `run-*-scan` tools — scanners run locally; only report tools upload results.
 - Duplicate findings (same bug hash) are skipped project-wide; the raw report is still stored for the report viewer.
 - Server re-applies severity / ignore-unfixed filters on ingest — the Report UI may show more findings than bugs filed.

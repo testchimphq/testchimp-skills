@@ -52,9 +52,12 @@ ready
 - **Task issues (required):** After the Product plan exists, **derive** concrete
   task titles with **priority** (`critical`/`high`/`medium`/`low`) and
   **category** (BugCategory enum). Tasks are a projection of the Product plan,
-  not a substitute. Do not call `create-issue` before Plan approval, unless the
-  user already asked to implement a supplied plan. After approval, for each task
-  call `create-issue` with `issueType: TASK_ISSUE`, `labels: ["TestChimp Implement"]`
+  not a substitute. Do not call `upsert-issue` before Plan approval, unless the
+  user already asked to implement a supplied plan. After approval, call
+  `list-issues` (`statuses: [ACTIVE]`, label `TestChimp Implement`, search the
+  title) first and reuse an open matching `TASK_ISSUE` (same title / label
+  / story) instead of filing a duplicate. For each remaining task
+  call `upsert-issue` with `issueType: TASK_ISSUE`, `labels: ["TestChimp Implement"]`
   (do **not** use `source: testchimp-implement`), `severity` mapped from priority
   (`critical`→`CRITICAL_SEVERITY`, `high`→`HIGH_SEVERITY`, `medium`→`MEDIUM_SEVERITY`,
   `low`→`LOW_SEVERITY`; default `MEDIUM_SEVERITY`), `category` from the Plan
@@ -63,7 +66,7 @@ ready
   **When scenario ordinal(s) are in scope**, also include
   `{ toEntityType: SCENARIO, toEntityId: <scenarioOrdinal> }` for each. When neither
   story nor scenario id is resolvable, omit `linkTargets` and note that on the
-  checklist. As each task’s code work completes, call `update-issue-status` with
+  checklist. As each task’s code work completes, call `upsert-issue` with
   `FIXED`. Abandoned tasks need checklist `N/A` + justification — do not leave
   them silently `ACTIVE`.
 - After `IMPLEMENTED` reports: call `update-plan-items-lifecycle-status` once per

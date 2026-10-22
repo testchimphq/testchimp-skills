@@ -5,13 +5,13 @@
     "email": "nuwansam@testchimp.io",
     "url": "https://testchimp.io"
   },
-  "description": "TestChimp: the QA platform for coding agents.",
-  "version": "1.0.74",
+  "description": "TestChimp: QA posture monitoring and feedback-loop orchestration for coding agents.",
+  "version": "2.0.0",
   "plugins": [
     {
       "name": "testchimp",
       "source": "./",
-      "description": "QA platform for coding agents. Claude Code: /testchimp project-init once per repo, then /testchimp init per developer.",
+      "description": "QA posture monitoring and feedback-loop orchestration for coding agents. Claude Code: /testchimp project-init once per repo, then /testchimp init per developer.",
       "author": {
         "name": "TestChimp",
         "email": "nuwansam@testchimp.io",

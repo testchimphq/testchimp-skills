@@ -24,7 +24,7 @@ Resolve **what to work on** in this order. This rule is **not** workflow-specifi
 1. **Explicit scope** — user (or trigger) named plans paths, scenario/story ordinals, files, plain-English focus, or similar → use that as the scope.
 2. **Feature / PR branch** (no explicit scope) — scope = **changes on this branch** (diff vs the merge base / default branch): touched plans, code, and linked tests.
 3. **Default branch** (no explicit scope) — scope = **changes since the last run of the same workflow**:
-   - Call **`get-last-run-workflow-detail`** (`workflowId`, optional `branchName`, optional `userId`).
+   - Call **`get-workflow-executions` (`workflowId` + `latestOnly=true`)** (`workflowId`, optional `branchName`, optional `userId`).
    - For **`run-smart-smoke`**: prefer `workflowId: run-smart-smoke`; if no last run, **fall back once** to `workflowId: run-smart-regression` (one-release legacy id).
    - If a last run exists and is a useful bound, use commits/changes since that run’s git SHA / start.
    - If missing, stale, or ambiguous: **ask the user** whether to focus on the last few commits (and since when) vs a broader window — get consent before proceeding. In **non-interactive** mode, prefer the last-run bound when available; otherwise use a short recent window (e.g. last few commits) rather than blocking.
@@ -42,7 +42,7 @@ version: <semver string, e.g. 1.0.0>
 ---
 ```
 
-**Global policy** (`plans/knowledge/policies/global.policy.md`) is different: frontmatter uses **`policy-kind: global`** and **`version`** — **no** `workflow-id`. It holds project-wide suite goals (coverage target, prioritization signals, suite size / tag constraints). Fetch via **`get-policy --policy-file-name global.policy.md`** (or `--json-input '{"policyFileName":"global.policy.md"}'`). Default seed: [`assets/policies/global.policy.md`](../assets/policies/global.policy.md).
+**Global policy** (`plans/knowledge/policies/global.policy.md`) is different: frontmatter uses **`policy-kind: global`** and **`version`** — **no** `workflow-id`. It holds project-wide suite goals (coverage target, prioritization signals, suite size / tag constraints). Fetch via **`get-policies --policy-file-name global.policy.md`** (or `--json-input '{"policyFileName":"global.policy.md"}'`). Default seed: [`assets/policies/global.policy.md`](../assets/policies/global.policy.md).
 
 ### Global policy → suite tags (required when authoring tests)
 
@@ -59,7 +59,7 @@ For **each** tag entry in the policy:
 
 **Apply on every new/changed SmartTest:**
 
-1. Read local **`plans/knowledge/policies/global.policy.md`** (or **`get-policy --policy-file-name global.policy.md`**).
+1. Read local **`plans/knowledge/policies/global.policy.md`** (or **`get-policies --policy-file-name global.policy.md`**).
 2. Prefer **`tags:`**. If `tags:` is missing but legacy **`annotations:`** exists, treat each listed `values` entry (or free-form instruction) as a tag value — still emit Playwright **`tag`**, never `{ type: 'group' }`.
 3. For each configured tag, decide whether to apply it using that entry’s **`instructions`**.
 4. Add matching Playwright tags on the test options: `tag: '@smoke'` or `tag: ['@smoke', '@p0']`.
@@ -91,7 +91,7 @@ Default composites shipped in the skill: [`assets/policies/run-qa.policy.md`](..
 3. Any other `*.policy.md` whose frontmatter **`workflow-id`** matches (prefer oldest/default rules if multiple—platform marks `<workflow-id>.policy.md` as default when present).
 4. Fallback: decisions in **`plans/knowledge/ai-test-instructions.md`** (backward compatible when policies are absent).
 
-CLI/MCP: **`get-policy`**, **`list-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**. Env hint: **`POLICY_FILE`** when a host/runner injects the chosen policy path.
+CLI/MCP: **`get-policies`**, **`get-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**. Env hint: **`POLICY_FILE`** when a host/runner injects the chosen policy path.
 
 After authoring a policy on disk, call **`upsert-policy`** so it is available on the platform immediately (git push also syncs later). See [`create-policy.md`](./create-policy.md) and [`cli.md`](./cli.md).
 
@@ -204,7 +204,7 @@ Legacy (read-only / migrate opportunistically): `knowledge/branch_test_plans/`, 
 
 ## Inline `agentTraceability` on mutating CRUDs (preferred)
 
-For **`create-issue`**, **`create-user-story`**, **`create-test-scenario`**, **`update-user-story`**, **`update-test-scenario`**, and **`update-issue-status`**, pass policy/traceability **on the mutating call** via nested **`agentTraceability`** (or flat CLI flags: `--workflow-id`, `--workflow-execution-id`, `--policy-file`, `--policy-version`, `--git-sha`, `--actor-type`, `--branch-name`, `--agent-model`, `--skill-version`, `--cli-version`).
+For **`upsert-issue`**, **`create-user-story`**, **`create-test-scenario`**, **`update-user-story`**, and **`update-test-scenario`**, pass policy/traceability **on the mutating call** via nested **`agentTraceability`** (or flat CLI flags: `--workflow-id`, `--workflow-execution-id`, `--policy-file`, `--policy-version`, `--git-sha`, `--actor-type`, `--branch-name`, `--agent-model`, `--skill-version`, `--cli-version`).
 
 **Required for Activity attachment:** both **`workflow_id`** and **`workflow_execution_id`** (the stable Plan ULID for the whole run). Omitting `workflow_execution_id` does **not** create a workflow execution and does **not** record inline Activity — the server never auto-mints an execution id (that previously spawned orphan RUNNING rows per mutation). Pass the **same** ULID on every mutating call in the run.
 
@@ -253,7 +253,7 @@ Do **not** send `entityIdentity: project-init` or `init` with `POLICY` — that 
 
 `entityType: WORKFLOW` is **only** valid with `ACTION_COMPLETED` / `ACTION_FAILED` (and `entityIdentity` must equal `workflowId`). **`WORKFLOW` + `ANALYZED` is rejected** by the MCP client schema. `ANALYZED` is for `USER_STORY` / `SCENARIO` / `POLICY` / other non-workflow entities.
 
-**Since last run:** **`get-last-run-workflow-detail`** (`workflow_id`, optional `branch_name`, optional `user_id`).
+**Since last run:** **`get-workflow-executions` (`workflowId` + `latestOnly=true`)** (`workflow_id`, optional `branch_name`, optional `user_id`).
 
 ## Report workflow execution
 
@@ -263,9 +263,9 @@ Do **not** send `entityIdentity: project-init` or `init` with `POLICY` — that 
 
 ### Steps (blocking before “done”)
 
-1. **Reconcile ledger** — List material mutations from this run (issue status changes, story/scenario CRUD, SmartTest create/update/delete, policy upsert, analyze, implement, …). Call **`get-workflow-execution`** with `includeActions: true` for this `workflow_execution_id` when available.
+1. **Reconcile ledger** — List material mutations from this run (issue status changes, story/scenario CRUD, SmartTest create/update/delete, policy upsert, analyze, implement, …). Call **`get-workflow-executions`** with `includeActions: true` for this `workflow_execution_id` when available.
 2. **Emit missing reports** — For each material mutation not already on the timeline:
-   - Prefer **inline `agentTraceability`** on mutating CRUDs (`update-issue-status`, `create-issue`, story/scenario create/update) — do **not** also RAA the same CREATED/UPDATED.
+   - Prefer **inline `agentTraceability`** on mutating CRUDs (`upsert-issue`, story/scenario create/update) — do **not** also RAA the same CREATED/UPDATED.
    - Otherwise call **`report-agent-action`** (`CREATED` / `UPDATED` / `DELETED` / `ANALYZED` / `IMPLEMENTED` as appropriate). SmartTests use `test` TestLocator; issues/stories/scenarios use ordinal `entityIdentity` (no `US-`/`TS-`/`#B-` prefix).
 3. **Close the run** — **`report-agent-action`** with:
    - `action_type`: **`ACTION_COMPLETED`** (success) or **`ACTION_FAILED`** (abort / hard failure)

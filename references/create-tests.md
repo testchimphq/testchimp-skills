@@ -32,7 +32,7 @@ Use the skill-wide rule ([`policies-and-traceability.md`](./policies-and-traceab
 
 1. **Explicit scope** — plans paths, story/scenario ordinals (including **`create a smarttest for scenario: <n>`**), plain-English focus, **or API operation scope** (see [`api-testing.md`](./api-testing.md) → *API operation coverage scopes*).
 2. **Feature / PR branch** — requirements and surface area tied to the branch diff.
-3. **Default branch** — since last `create-tests` via `get-last-run-workflow-detail`, or ask the user (non-interactive: last-run / recent commits).
+3. **Default branch** — since last `create-tests` via `get-workflow-executions` (`workflowId` + `latestOnly=true`), or ask the user (non-interactive: last-run / recent commits).
 4. **Release** — when the prompt names a release, use that git commit range / release catalog entry.
 
 When nested under run-qa / upkeep, inherit the **parent** scope and plan.
@@ -55,9 +55,10 @@ In both cases: scenario ordinal from the prompt (when present) is the authoring 
 | UI SmartTests | [`write-smarttests.md`](./write-smarttests.md), [`fixture-usage.md`](./fixture-usage.md), [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) |
 | Mobile UI | [`mobilewright-smarttests.md`](./mobilewright-smarttests.md) |
 | API tests / **API operation coverage scopes** | [`api-testing.md`](./api-testing.md) (coverage strategy: update existing UI or API tests; dedicated `api/` specs are one option) |
+| Auth flows (sign-up, verify, OTP, MFA, reset) | [`auth-flows.md`](./auth-flows.md) — detect provider / test hooks; decision ladder; record in connect-to-test-env policy |
 | Seeds / probes | [`seeding-endpoints.md`](./seeding-endpoints.md) |
 | Environment | [`connect-to-test-env.md`](./connect-to-test-env.md) |
-| Suite tags / goals | Project **`plans/knowledge/policies/global.policy.md`** (seed: [`assets/policies/global.policy.md`](../assets/policies/global.policy.md); or **`get-policy --policy-file-name global.policy.md`**) — coverage target, prioritization, **`tags:`** |
+| Suite tags / goals | Project **`plans/knowledge/policies/global.policy.md`** (seed: [`assets/policies/global.policy.md`](../assets/policies/global.policy.md); or **`get-policies --policy-file-name global.policy.md`**) — coverage target, prioritization, **`tags:`** |
 
 For Arrange → Act → Assert planning and Execute batching when running as part of run-qa, reuse the Execute guidance in [`run-qa.md`](./run-qa.md) without re-running Analyze/Plan.
 
@@ -65,7 +66,7 @@ For Arrange → Act → Assert planning and Execute batching when running as par
 
 Before writing or updating any SmartTest:
 
-1. Read **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `tags:`** (CLI: **`get-policy --policy-file-name global.policy.md`**). If `tags:` is missing, treat legacy **`annotations:`** `values` as tags.
+1. Read **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `tags:`** (CLI: **`get-policies --policy-file-name global.policy.md`**). If `tags:` is missing, treat legacy **`annotations:`** `values` as tags.
 2. For each tag, use its **`instructions`** to decide whether to apply it. A test may receive multiple tags.
 3. Put `tag: '@<value>'` (or `tag: ['@a', '@b']`) on every new/changed test. Keep scenario links as `{ type: 'scenario', description: '#TS-…' }` on `annotation` only.
 4. Do not invent tag values outside the policy. Never emit `{ type: 'group', description: '…' }`. If `tags:` is empty (and no legacy `annotations:`), suite tags are **`N/A`**.
@@ -101,7 +102,7 @@ After Plan approval (standalone) or when the parent hands off (nested):
 1. **[`@testchimp/playwright` upgrade](#testchimpplaywright-upgrade-autonomous)** — complete before any new/changed specs or runner invocations.
 2. **[`connect-to-test-env.md`](./connect-to-test-env.md)** when the parent has not already brought the env up.
 3. **Filter by verification strategy (required before authoring):** After the in-scope scenario ordinals are known (from coverage, plans, or the approved plan), call **`get-spec-lifecycle-details --scenario-ids …`** (CLI ≥ **0.1.30** / MCP `get-spec-lifecycle-details`) in one batch. For each scenario, read `lifecycleFields.verification_strategy`. **Skip** scenarios where the value is **`manual`**. Missing / empty → treat as **`auto`**. Only author SmartTests for **`auto`** scenarios. Note skipped manual scenarios on the plan. Do **not** infer this from plan markdown frontmatter — it is platform lifecycle only.
-4. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan (automated scenarios only) — include **suite tags** from [Global policy tags](#global-policy-tags-blocking-before-authoring).
+4. Author / update SmartTests and fixtures per [Authoring references](#authoring-references) and the approved plan (automated scenarios only) — include **suite tags** from [Global policy tags](#global-policy-tags-blocking-before-authoring). If the scope includes auth journeys (sign-up, verify, OTP, MFA, reset), follow [`auth-flows.md`](./auth-flows.md) and reuse / update **`## Auth flows`** in the connect-to-test-env policy.
 5. Run and triage with the real runner until green (or explicit blockers). On the **final green Validate** of new/changed specs: pin `TESTCHIMP_BATCH_INVOCATION_ID`, capture `[TestChimp] Batch invocation view:` from that spawn, then **`unset TESTCHIMP_BATCH_INVOCATION_ID`**. Upsert the PR/MR comment per [`policies-and-traceability.md`](./policies-and-traceability.md)#authored-tests-pr-comment (after the PR exists; soft-fail if no PR/URL).
 6. **Write `plans/smart-smoke/<branch>/related-tests.json` (BLOCKING)** — see [Related-tests.json (required)](#related-testsjson-required). Do **not** close create-tests (standalone or nested) without this file for the current branch.
 7. Report workflow completion when standalone.
@@ -121,7 +122,8 @@ After Plan approval (standalone) or when the parent hands off (nested):
 2. **Impact-related existing tests** — from PR/scope analysis: scenarios sharing the same feature area / journey / APIs as the change, then specs linked via `annotation: { type: 'scenario', description: '#TS-…' }` (see [`run-smart-smoke.md`](./run-smart-smoke.md) → *Analyze impact* / *Write `related-tests.json`*).
 
 **Format:** JSON array of TestLocators, or `{ "relatedTests": [ … ] }` / `{ "related_tests": [ … ] }`.  
-`folderPath` is relative to the SmartTests root and **must not** prefix `tests/` (e.g. `["auth"]`, not `["tests","auth"]`).
+`folderPath` is relative to the SmartTests root and **must not** prefix `tests/` (e.g. `["auth"]`, not `["tests","auth"]`).  
+`folderPath` and `testSuite` must be **JSON arrays** — a single describe is `["My suite"]`, never a bare string `"My suite"`.
 
 **Also:** set / document **`TESTCHIMP_BRANCH_NAME=<branch>`** so runners load this path. Do **not** author `.testchimp-smart-smoke-selection.json` (plugin temp sidecar only).
 
@@ -141,12 +143,12 @@ When the prompt is `/testchimp create tests for …` with an **API operation** i
 
 1. **Immediately** load [`api-testing.md`](./api-testing.md) → *API operation coverage scopes* (and *Prompt → CLI mapping*).
 2. Treat any `Hint: …` line after the prompt as human-readable context only — scope identity is the `for …` clause.
-3. Fetch coverage with CLI/MCP: `list-api-operation-services`, `list-api-operations`, `get-api-operation-detail` (CLI ≥ **0.1.80** for observability-aware guidance). Read available `runtimeObservation` daily summaries and prioritize uncovered high-volume/high-error operations; route elevated p95/p99 latency to performance-test creation/upkeep. Check the observation window/sync status and treat missing telemetry as unknown, not zero. Do not invent coverage without these tools.
+3. Fetch coverage with CLI/MCP: `get-api-operations` (CLI ≥ **0.1.80** for observability-aware guidance). Read available `runtimeObservation` daily summaries and prioritize uncovered high-volume/high-error operations; route elevated p95/p99 latency to performance-test creation/upkeep. Check the observation window/sync status and treat missing telemetry as unknown, not zero. Do not invent coverage without these tools.
 4. **Check existing plan items first (required):** search mapped `plans/`, `get-test-scenarios` / `get-requirement-coverage` / semantic-nearby if useful for a scenario (or story) that already matches the signal (same journey, operation, field, or response path). Prefer **linking an existing scenario** when one fits.
 5. Only when **no suitable scenario exists**, propose new scenario(s) — and a parent **story** only if no relevant story exists (link an existing story when one fits). Record titles, rationale, linked signal, and that the existence check found none.
 6. **Explicit user approval** (Plan → approve) before creating any new story/scenario. Do not create plan entities on a silent path.
 7. Close gaps by **updating existing tests** and/or **authoring new ones** (UI e2e that hits the API counts). Prefer extending an existing journey; a dedicated API test is not required per gap. Create **only approved missing** plan items as lifecycle **`ready`** + verification **`auto`**, then author SmartTests with scenario `annotation` links. No phantom ids; never duplicate a scenario that already covers the gap. Operation-level covering tests do **not** imply field/response-code coverage — use detail for those gaps.
-8. **Suite size soft hint:** call `get-suite-execution-stats` vs `global.policy.md` caps; if over or within ~10% of a non-zero cap, inform the user (not a hard blocker).
+8. **Suite size soft hint:** call `get-execution-history` (`aggregate=true`) vs `global.policy.md` caps; if over or within ~10% of a non-zero cap, inform the user (not a hard blocker).
 9. **Standalone Plan** for API scopes: list the target operation(s)/fields, existence-check outcome, chosen vehicle tests (update vs new, UI vs `api/`), and Arrange/Act/Assert for each new or changed test — then upsert + approve as usual.
 
 ---

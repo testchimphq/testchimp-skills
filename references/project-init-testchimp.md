@@ -144,7 +144,7 @@ If **`get-project-init-status`** shows required items already **`PROJECT_INIT_IT
 
 Verify the **project** can talk to TestChimp APIs from this agent session (not every teammate’s laptop). Prefer the **plugin/extension-provided** hosted MCP (`https://mcp.testchimp.io/mcp`) when TestChimp is already installed as a plugin — do **not** write a second project-level server or require a stdio API key for these calls.
 
-1. **`get-eaas-config`** `{}` — must **not** return **401** (empty config is OK).
+1. **`get-eaas-config`** `{}` — must **not** return **401** (empty config is OK). Do **not** use `ephemeral-environment action=CONFIG`.
 2. **`get-project-credentials`** (when the connection is OAuth) — confirm `projectName` / `projectId` with the user. That is the project picked on the consent screen; every later tool call is scoped to it. If **`<git root>/.testchimp/mcp.json`** already has a real key for this project, leave it. If it is missing and runners will need a key, save it now using [Save the runner key](./init-testchimp.md#save-the-runner-key) — do not put the key in a shell command.
 3. **`get-project-init-status`** — baseline current progress.
 4. **Project mismatch (blocking)** — if this repo already has `.testchimp-plans` / `.testchimp-tests`, a gitignored `.testchimp/mcp.json` with a different `TESTCHIMP_PROJECT_ID`, or `get-git-folder-mapping` points at another `owner/repo` than this tree's remotes, the user signed in to the wrong project. Stop and tell them to re-authenticate via [Host MCP sign-in](./init-testchimp.md#workstation-gate-always-first), picking **this** repo's project. Then re-run this area.
@@ -211,6 +211,7 @@ Decide and record **in `connect-to-test-env.policy.md`** (then **`upsert-policy`
 
 - **Local — Test Authoring** (`## Local Agent`): single agent-runnable **local up** command + **wait-for-healthy** criteria + URL mapping (`BASE_URL`, backends).
 - **CI — Test Execution** (`## CI / Cloud`): persistent vs ephemeral (EaaS/Bunnyshell, Branch Management preview URLs, on-runner spin-up) per [`environment-management.md`](./environment-management.md).
+- **Auth flows** (`## Auth flows`, when the product has sign-up / verify / OTP / MFA / reset): detect provider and existing test hooks; choose a ladder step; ask only for gaps; record provider, env/secret **names**, and setup/`storageState` paths. Full playbook: [`auth-flows.md`](./auth-flows.md). Do **not** plan hosted inboxes or rented SMS numbers.
 
 If a legacy **`## Environment Provision Strategy`** exists in `ai-test-instructions.md`, migrate usable content into the policy rather than duplicating forever.
 

@@ -24,7 +24,7 @@ Follow the **overarching** scoping rule in [`policies-and-traceability.md`](./po
 
 1. **Explicit scope** — user-provided plans folder path(s), scenario ids, or plain-English focus → limit affected scenarios and linked tests to that focus.
 2. **Feature branch** (no explicit scope) — likely affected scenarios from **PR/branch diff** + related `plans/stories/` / `plans/scenarios/` (same as identification below).
-3. **Default / main branch** (no explicit scope) — **`get-last-run-workflow-detail`** with **`workflow-id: run-smart-smoke`** first (or parent `run-qa` when nested). **One-release fallback:** if no last run for `run-smart-smoke`, call again with **`workflow-id: run-smart-regression`**. Optional `branch-name` / `user-id` on both. If last run is missing or too far back, ask the user for since-when (recent commits vs broader).
+3. **Default / main branch** (no explicit scope) — **`get-workflow-executions` (`workflowId` + `latestOnly=true`)** with **`workflow-id: run-smart-smoke`** first (or parent `run-qa` when nested). **One-release fallback:** if no last run for `run-smart-smoke`, call again with **`workflow-id: run-smart-regression`**. Optional `branch-name` / `user-id` on both. If last run is missing or too far back, ask the user for since-when (recent commits vs broader).
 4. **Nested under run-qa** — use the branch plan **§6 Smart smoke scope** and the identification steps below (PR + plans); still bound by the composite’s single chosen scope.
 
 ---
@@ -67,7 +67,7 @@ From the SmartTests root (directory containing **`.testchimp-tests`**):
 2. For each matching **test** (not only the file), build a **TestLocator** relative to the SmartTests / mapped tests root:
    - **`folderPath`** / **`folder_path`**: path segments **under the mapped tests root** — **do not** prefix `tests/` (e.g. `["auth"]` or `["checkout","cart"]`, never `["tests","auth"]`).
    - **`fileName`** / **`file_name`**: spec basename (e.g. `login.spec.ts`)
-   - **`testSuite`** / **`test_suite`**: nested `test.describe` titles (array; empty if none)
+   - **`testSuite`** / **`test_suite`**: nested `test.describe` titles as a **JSON array** (empty `[]` if none). A single describe must be `["My suite"]` — **never** a bare string (`"My suite"`), which breaks smart-smoke selection.
    - **`testName`** / **`test_name`**: the test title
 3. **Also include** every **new or materially changed** SmartTest from this run / PR (always).
 4. Deduplicate by locator identity; record the list under completion notes on the plan.
@@ -84,6 +84,7 @@ plans/smart-smoke/<branch>/related-tests.json
 
 - **`<branch>`** = current git branch name. Keep path segments literally when the branch contains `/` (nested dirs).
 - File body: either a **JSON array** of TestLocators, or `{ "relatedTests": [ … ] }` / `{ "related_tests": [ … ] }`.
+- **`folderPath`** and **`testSuite`** must be **arrays**, not strings (even for a single segment / describe).
 
 Example:
 
@@ -93,7 +94,7 @@ Example:
     {
       "folderPath": ["auth"],
       "fileName": "login.spec.ts",
-      "testSuite": [],
+      "testSuite": ["Login page"],
       "testName": "user can log in"
     }
   ]
