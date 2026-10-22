@@ -34,8 +34,8 @@
     "name": "testchimp",
     "repo": "https://github.com/testchimphq/testchimp-skills",
     "version": "2.0.1",
-    "branch": "develop",
-    "setup": "Installed with the template; the bot instructions also self-install it from the repo on first run if missing. The daily self-update routine replaces it with the latest develop automatically."
+    "branch": "main",
+    "setup": "Installed with the template; the bot instructions also self-install it from the repo on first run if missing. The daily self-update routine replaces it with the latest main automatically."
   },
   "optionalTools": {
     "agentwatch": {
@@ -50,7 +50,7 @@
     "required": "Access to the user's own computer, granted by the user in the bot host",
     "requirements": [
       "Node.js >= 20",
-      "@testchimp/cli >= 0.1.88",
+      "@testchimp/cli >= 2.0.1",
       "local clone of the project's repo"
     ],
     "commands": [
