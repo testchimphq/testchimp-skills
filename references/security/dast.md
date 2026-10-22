@@ -17,7 +17,7 @@ Also load **`releaseLabel`** from the top-level scan config response for `get-re
 
 ## Steps
 
-1. **`testchimp get-release --version '<release_label>'`** — cut SHA, prior SHA, focus areas (needed for `RELEASE_SCOPE` and useful context for all scopes).
+1. **`testchimp get-release --release '<release_label>'`** — cut SHA, prior SHA, focus areas (needed for `RELEASE_SCOPE` and useful context for all scopes). MCP field remains `version`.
 
 2. **Resolve DAST base URL**
    - If **`useEphemeralSandbox` is true and `allowActiveScan` is true**:

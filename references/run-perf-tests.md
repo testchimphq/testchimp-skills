@@ -136,7 +136,7 @@ example `/testchimp run performance tests for release <label>`:
 
 1. Parse the release label from `for release …` / `targeting release '…'`
    (or equivalent wording).
-2. Fetch catalog details: **`testchimp get-release --version '<name>'`**
+2. Fetch catalog details: **`testchimp get-release --release '<name>'`** (MCP field remains `version`)
    (cut git SHA, prior release SHA, focus areas / metadata).
 3. Use **prior SHA → cut SHA** as the git range (`git log` / `git diff`
    `<prior>..<cut>`). Identify **code and contract changes** in that range:

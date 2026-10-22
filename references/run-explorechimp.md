@@ -107,7 +107,7 @@ Standalone **`/testchimp explore`:** if no branch plan exists, still inform or a
 When the user pastes a Release Checks prompt (or otherwise names a release):
 
 1. Parse the release label from `targeting release '…'` (or equivalent wording).
-2. Fetch release details: **`testchimp get-release --version '<name>'`** (cut SHA, prior release SHA, focus areas / metadata).
+2. Fetch release details: **`testchimp get-release --release '<name>'`** (cut SHA, prior release SHA, focus areas / metadata). MCP field remains `version`.
 3. Use **prior SHA → cut SHA** as the git range to choose which UI SmartTests to explore (diff + existing **`markScreenState`** rules).
 4. Set **`TESTCHIMP_RELEASE=<name>`** on the ExploreChimp runner process so local analyze stamps **`explorations.release_label`**.
 5. Set **`TESTCHIMP_BRANCH_NAME`**, **`TESTCHIMP_BATCH_INVOCATION_ID`**, **`EXPLORECHIMP_ENABLED`**, and run as usual.
