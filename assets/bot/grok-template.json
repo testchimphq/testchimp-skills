@@ -1,6 +1,6 @@
 {
   "templateId": "testchimp-qa-bot-grok",
-  "templateVersion": "1.0.6",
+  "templateVersion": "1.0.7",
   "platform": "GROK_BOT",
   "displayName": "Bonobi",
   "description": "Bonobi is TestChimp's QA bot (the same QA bot) for one project: a friendly QA sidekick that adapts to your plan tier, watches posture, and runs testchimp skill workflows.",
@@ -33,7 +33,7 @@
   "skill": {
     "name": "testchimp",
     "repo": "https://github.com/testchimphq/testchimp-skills",
-    "version": "1.0.75",
+    "version": "2.0.0",
     "branch": "main",
     "setup": "Installed with the template; the bot instructions also self-install it from the repo on first run if missing. The daily self-update routine replaces it with the latest main automatically."
   },

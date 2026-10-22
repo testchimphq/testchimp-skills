@@ -66,7 +66,7 @@ When the user says to **create a release**:
 4. On that test run, call **`manage-test-run`** again with `commitRange: FIND`. That discovers the test batch executions in the prior-release-to-current commit range. Show the user what was found (counts, already-linked vs unlinked).
 5. Ask whether to link the **unlinked** ones to this run. That link is what builds the release coverage picture.
 6. If they say yes, **`manage-test-run`** with `commitRange: LINK` to attach the unlinked batches.
-7. Then get the QA posture view for the release (`get-qa-posture` / `get-release-details`) and coordinate next steps (gaps, blockers, ExploreChimp, security scans, verification).
+7. Then get the QA posture view for the release (`get-qa-posture` / `get-release` (`detail=GATE`)) and coordinate next steps (gaps, blockers, ExploreChimp, security scans, verification).
 
 To update an existing release, `upsert-release` with the same `version`. To list releases, `get-release` with `version` omitted. To work on an existing test run, pass its id to `manage-test-run`.
 
@@ -156,7 +156,7 @@ Your bot host runs you on its own (cloud) computer. Your user's computer is a di
 | `meeting-started` | USER | (context only) | `adder eq me` | none |
 | `issue-assigned` | USER | ISSUE_FIX | `assignee eq me` | [`fix-issue.md`](./fix-issue.md) |
 | `scenario-assigned` | USER | MANUAL_TEST_COORDINATION | `assignee eq me` | Manual coordination (inline below); optional [`create-tests.md`](./create-tests.md) to automate |
-| `e2e-batch-completed` | USER (latest branch author) | TEST_BATCH_FIX | none | [`fix-test-execution.md`](./fix-test-execution.md); `create-issue` for product bugs |
+| `e2e-batch-completed` | USER (latest branch author) | TEST_BATCH_FIX | none | [`fix-test-execution.md`](./fix-test-execution.md); `upsert-issue` for product bugs |
 | `k6-batch-completed` | USER | TEST_BATCH_FIX | none | Perf investigation: [`run-perf-tests.md`](./run-perf-tests.md#baseline-and-comparison) comparison → [`upkeep-perf.md`](./upkeep-perf.md) |
 | `release-created` / `release-status-updated` | BROADCAST | QA_POSTURE | none | Posture heads-up (inline below); [`run-release-check.md`](./run-release-check.md) on request |
 | `workflow-execution-assigned` | USER | all roles (default subscription) | `recipient eq me` | Inform + coordinate (inline below); `update-workflow-execution-assignees` to hand off |
@@ -274,7 +274,7 @@ Tell the user what was assigned: "`<scenarioCount>` scenario(s) in test run *<te
 
 Payload: `{ issueId, ordinalId, title, severity, status, assigneeEmail, url }`. `severity` / `status` are enum names (e.g. `HIGH_SEVERITY`, `ACTIVE`).
 
-`get-issue-details --issue-id <ordinalId>` (takes the ordinal, not `issueId`), summarise severity, repro, and suspected area in 2–3 lines with `url`, and propose `/testchimp fix issue: <ordinalId>` ([`fix-issue.md`](./fix-issue.md)). Do not change issue status until the user approves the plan. Ack.
+`get-issue-details --issue-id <ordinalId>` (takes the ordinal, not `issueId`), summarise severity, repro, and suspected area in 2–3 lines with `url`, and propose `/testchimp fix issue: <ordinalId>` ([`fix-issue.md`](./fix-issue.md)). If the user asks about other open issues, call **`list-issues`** then `get-issue-details` for the ones they pick. Do not change issue status until the user approves the plan (`upsert-issue` with `issueId` + status). Ack.
 
 ### `workflow-execution-assigned`: you own (or are CC'd on) a workflow execution
 
@@ -296,7 +296,7 @@ Payload:
 
 **`role: ASSIGNEE`**
 
-1. `get-workflow-execution --workflow-execution-id <id>` for the current status, task and plan path.
+1. `get-workflow-executions --workflow-execution-id <id>` for the current status, task and plan path.
 2. Tell your user in two or three lines: they now own this execution (and who handed it over, if `REASSIGNED`), what the workflow is doing (`workflowId`, task), its status, and `url`.
 3. Suggest the next step by status, then wait for approval:
    - `PLANNED` → the plan needs review. Offer a short summary of the plan (`get-plans-support-file` for `planFilePath`), edits, or approval in the UI via `url` (approve / reject stays a human action in TestChimp).
@@ -308,7 +308,7 @@ Payload:
 
 **`role: CC`** → one-line FYI ("You were CC'd on *<workflowId>* (`status`)" + `url`). No proposal unless the user asks.
 
-Ack after informing. Open assigned executions also show in the weekday reminder (`list-workflow-executions --json-input '{"assignedToMeOnly":true,"pendingApprovalOnly":true}'`). The user can also get this as email / Slack (User Settings → Notifications → Assignments).
+Ack after informing. Open assigned executions also show in the weekday reminder (`get-workflow-executions --json-input '{"assignedToMeOnly":true,"pendingApprovalOnly":true}'`). The user can also get this as email / Slack (User Settings → Notifications → Assignments).
 
 ### `e2e-batch-completed`: E2E batch result
 
@@ -330,7 +330,7 @@ Sent to the latest author on `branch`.
 - **Failures**:
   1. Summarise: counts, `url`, and the `failedTests` names with one-line errors (`failedTestsTruncated: true` → say more failed and link `url`).
   2. Triage quickly with `get-execution-history` / `fetch-execution-report` for those tests: test needs update vs product bug vs flaky/infra.
-  3. Propose: `/testchimp fix test failure` for test-side causes ([`fix-test-execution.md`](./fix-test-execution.md)); `create-issue` for product bugs; a re-run for suspected flakes. Take corrective action once the user agrees, or immediately on indie when the failure is clearly test-side.
+  3. Propose: `/testchimp fix test failure` for test-side causes ([`fix-test-execution.md`](./fix-test-execution.md)); `upsert-issue` for product bugs; a re-run for suspected flakes. Take corrective action once the user agrees, or immediately on indie when the failure is clearly test-side.
   4. Ack. Run the approved workflow afterwards.
 
 ### `k6-batch-completed`: performance batch result
@@ -340,14 +340,14 @@ Payload: `{ batchId, branch, commitSha, environment, release, status, url, total
 - **All passed** (`failed = 0` and no `thresholdBreaches`) → brief note or silent, same preference as E2E. Ack.
 - **Failures or breaches**:
   1. Summarise counts, `url`, and each breach (`metric` vs `threshold`).
-  2. Propose the perf investigation: compare to the baseline (`compare-perf-to-baseline`, [`run-perf-tests.md`](./run-perf-tests.md#baseline-and-comparison)), then `/testchimp upkeep-perf` scoped to the breached journeys ([`upkeep-perf.md`](./upkeep-perf.md): diagnose threshold failures and regressions; never weaken thresholds without explicit approval). A product regression → propose `create-issue`.
+  2. Propose the perf investigation: compare to the baseline (`compare-perf-to-baseline`, [`run-perf-tests.md`](./run-perf-tests.md#baseline-and-comparison)), then `/testchimp upkeep-perf` scoped to the breached journeys ([`upkeep-perf.md`](./upkeep-perf.md): diagnose threshold failures and regressions; never weaken thresholds without explicit approval). A product regression → propose `upsert-issue`.
   3. Ack. Run the approved workflow afterwards.
 
 ### `release-created` / `release-status-updated`: release posture heads-up
 
 Payload: `{ releaseId, version, lifecycleStatus, previousLifecycleStatus, dueDateMillis, url }` (`previousLifecycleStatus` on status updates only).
 
-For QA_POSTURE users (always on indie), `get-release-details` and give a short heads-up tuned to the role, with `url`:
+For QA_POSTURE users (always on indie), `get-release` (`detail=GATE`) and give a short heads-up tuned to the role, with `url`:
 
 - **Indie / Developer:** issues on their plate (`get-my-tasks`), failing areas they own, and the release coverage picture if batches were linked.
 - **PM:** go / no-go signal in 2–3 lines (blocking issues, failing priority scenarios, due date).
@@ -382,9 +382,9 @@ Once a day (and on startup): [`bot-self-update.md`](./bot-self-update.md). Updat
 `testchimp --bot <botId> get-my-tasks` (the bot's user is implied; MCP fallback: `get-my-tasks` with the binding arguments). Send a short digest only when there is something to say:
 
 - Manual scenarios assigned (title + test run link), oldest first.
-- Issues assigned (ordinal, severity, due date; overdue first).
+- Issues assigned (ordinal, severity, due date; overdue first). `get-my-tasks` is enough for the digest; use **`list-issues`** when they ask to search or filter beyond the assigned set.
 - Tests awaiting verification (count + top few).
-- Workflow executions assigned to them and waiting for approval: `list-workflow-executions --json-input '{"assignedToMeOnly":true,"pendingApprovalOnly":true}'` (workflow, status, link).
+- Workflow executions assigned to them and waiting for approval: `get-workflow-executions --json-input '{"assignedToMeOnly":true,"pendingApprovalOnly":true}'` (workflow, status, link).
 
 Nothing pending → skip the message.
 
@@ -395,7 +395,7 @@ Nothing pending → skip the message.
 - **Indie / Developer / QA engineer:** issues on their plate (`get-my-tasks`) and failing areas they own, plus a short gap + action-item list.
 - **PM:** release health in a few lines: upcoming/active releases, blocking issues, overall trend.
 - **QA lead:** blockers, failing areas, open test runs, tests awaiting verification.
-- `responsibilities` mention **API coverage** → add a line from `list-api-operations` (posture has no coverage section).
+- `responsibilities` mention **API coverage** → add a line from `get-api-operations` (posture has no coverage section).
 
 Keep it scannable (5–10 lines), and link to TestChimp pages rather than pasting raw JSON. This is the proactive posture review: gaps and recommended action items, not a raw dump.
 

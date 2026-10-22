@@ -2,6 +2,12 @@
 
 Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
 
+## 1.0.7 — skill 2.0.0
+
+- Skill **2.0.0** requires **TestChimp MCP API 2.0.0**. Tool names and params match the 2.0.0 catalog (`ephemeral-environment`, `report-scan-findings`, `get-workflow-executions`, `get-policies`, `get-api-operations`, `list-meetings`, `set-entity-distinct`, `fetch-execution-report`, `get-execution-history`, `list-perf-runs`, `get-release`, `upsert-issue`, new `list-issues`).
+- Issue workflows (`fix-issue`, `implement`, weekday reminder) use `list-issues` to search/filter and `upsert-issue` to create (omit `issueId`) or update (`issueId` + patch).
+- Existing bots: skill self-update picks this up. Reload / re-authenticate the TestChimp connector if a tool call fails with unknown tool.
+
 ## 1.0.6 — skill 1.0.75
 
 - The QA bot's name is **Bonobi**. Same bot, not a separate product. It adapts to the team's plan tier.

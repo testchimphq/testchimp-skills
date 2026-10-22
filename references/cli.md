@@ -2,11 +2,13 @@
 
 Use the **CLI** when the agent runs **shell commands** (CI, scripts, or hosts without MCP). Use **MCP** when the IDE/agent host exposes MCP tools. Both call the same TestChimp **`/api/mcp/*`** HTTP APIs.
 
+**MCP API 2.0.0:** this skill (`metadata.required_mcp_version`) documents the **2.0.0** tool names and params. Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release.
+
 This page lists **every subcommand and flag** as implemented in the CLI (kebab-case flags; request bodies use **camelCase**). **`--json-input`** is available on every tool subcommand below except where noted; it merges **over** flags (JSON wins on conflicts).
 
 **Screen-state atlas** (for **`markScreenState`** / ExploreChimp vocabulary): see § [**Screen-state atlas (SmartTests, traces, ExploreChimp)**](#screen-state-atlas-smarttests-traces-explorechimp) — **`list-screen-states`**, **`upsert-screen-states`**.
 
-**Release catalog** (Release Checks / ExploreChimp targeting a release): **`upsert-release`** (create or update) — see § [**upsert-release**](#upsert-release); **`get-release`** (thin catalog metadata; omit `version` to list) — see § [**get-release**](#get-release); **`manage-test-run`** (create a run, FIND then LINK batches in the prior-to-current commit range) — see § [**manage-test-run**](#manage-test-run). For **release gating** (per-environment priority×status test stats, open-issue stats, scan summaries, in-scope scenario/issue records) use **`get-release-details`** (CLI ≥ **0.1.18**) — see § [**get-release-details**](#get-release-details).
+**Release catalog** (Release Checks / ExploreChimp targeting a release): **`upsert-release`** (create or update) — see § [**upsert-release**](#upsert-release); **`get-release`** (omit `version` to list; pass `version` for thin catalog metadata; `version` + `detail=GATE` for release gating) — see § [**get-release**](#get-release); **`manage-test-run`** (create a run, FIND then LINK batches in the prior-to-current commit range) — see § [**manage-test-run**](#manage-test-run).
 
 ## Install
 
@@ -77,7 +79,7 @@ Subcommand help is the **runtime** source of truth if a flag is added in a newer
 ## Output contract
 
 - **stdout:** Final JSON response from the API (machine-parseable).
-- **stderr:** Human-readable progress for long operations, especially **`provision-ephemeral-environment-and-wait`** (poll / “still waiting” lines). Errors go to stderr with a non-zero exit code.
+- **stderr:** Human-readable progress for long operations, especially **`ephemeral-environment` (`action=PROVISION`)** (poll / “still waiting” lines). Errors go to stderr with a non-zero exit code.
 
 ## Global CLI
 
@@ -144,33 +146,6 @@ testchimp get-org-capabilities
 
 ---
 
-## `get-suite-execution-stats`
-
-Full-suite execution rollup for **bloat checks** against **`global.policy.md`** (`max_full_suite_duration_minutes`, `max_test_count`). Client-side aggregate of **`list_execution_history`** `testStats` (same timing math as the Tests UI execution-stats pane / `ExecutionTimingSummary`).
-
-**Soft notify (not a hard blocker):** When planning/authoring new tests (`upkeep`, `create-tests`, `run-qa`), compare stats to policy caps. If over **or close** (e.g. within ~10% of a non-zero cap), **inform the user** and prefer prune/consolidate suggestions. Treat **`0`** as unlimited.
-
-**Availability:** Prefer **`@testchimp/cli@latest`** (package ≥ **0.1.30**). If the command/tool is missing, bump MCP to `@latest` and reload.
-
-**API:** `POST /api/mcp/list_execution_history` (tool rolls up `testStats` locally — there is no separate `get_suite_execution_stats` HTTP route)
-
-| Flag | Required | Notes |
-|------|----------|-------|
-| `--folder-path` / `--file-paths` / `--branch-name` / `--platform` / … | No | Same filters as **`get-execution-history`** |
-| `--json-input …` | No | Full filter object |
-
-**Response fields:** `testCount`, `timedTestCount`, `sumSuccessMeanSecs`, `sumFailMeanSecs`, `maxSuccessMeanSecs`, `slowTestCount` (success mean > 30s).
-
-**Agent rule:** Call before planning large suite growth in **`/testchimp upkeep`**. Compare `sumSuccessMeanSecs` / `testCount` to **`global.policy.md`** yourself (this tool only returns stats — do not expect `exceedsLimit`); **notify the user** when limits are exceeded (`0` = unlimited for count caps). See [`upkeep.md`](./upkeep.md).
-
-**Example:**
-
-```bash
-testchimp get-suite-execution-stats --folder-path tests
-```
-
----
-
 ## Coverage and execution
 
 ### `get-requirement-coverage`
@@ -230,6 +205,9 @@ testchimp get-requirement-coverage \
 | `--file-paths <csv>` | No | `scope.filePaths` | Comma-separated under platform tests or plans root. |
 | `--folder-path <path>` | No | `scope.folderPath` | Slash-separated; same normalization as coverage. |
 | `--json-input …` | No | (merge) | e.g. `dimensionFilters` (`[{ "dimension": "PLATFORM_EXECUTION_JOB_FILTER_DIMENSION", "values": ["WEB"] }]`), `limit`, `offset`. |
+| `--aggregate` | No | `aggregate` | `true` rolls up full-suite duration / test-count (`testCount`, `sumSuccessMeanSecs`, `slowTestCount`, …) for bloat checks vs `global.policy.md`. Same filters as the list. |
+
+**`aggregate=true`:** full-suite execution rollup for **bloat checks** against **`global.policy.md`** (`max_full_suite_duration_minutes`, `max_test_count`). Soft notify (not a hard blocker) when planning/authoring new tests (`upkeep`, `create-tests`, `run-qa`). Treat **`0`** as unlimited. Call before planning large suite growth in **`/testchimp upkeep`**. Compare `sumSuccessMeanSecs` / `testCount` to policy yourself (this tool only returns stats). Example: `testchimp get-execution-history --aggregate --folder-path tests`.
 
 **There is no separate “list failing tests” command.** For **`/testchimp upkeep`** / fix-recent-failures discovery: call with `--folder-path tests` (or scoped paths), group `records[]` by `testId`, keep tests whose **latest** `status` is `SMART_TEST_EXECUTION_FAILED`, then deepen with **`fetch-execution-report --job-id <executionJobId>`** and optional **`--test-id`** history. See [`upkeep.md`](./upkeep.md) § Recently failing tests and [`fix-test-execution.md`](./fix-test-execution.md) §0.
 
@@ -253,27 +231,11 @@ Used by [`fix-test-execution.md`](./fix-test-execution.md). Provide **exactly on
 | `--batch-invocation-id <id>` | `batchInvocationId` | Batch run from the webapp URL. |
 | `--job-id <id>` | `jobId` | Single test execution job. |
 
-Returns only **failing** tests: `jobId`, `testId`, `testName`, `testFilePath`, `errors[]`, `traceViewerUrl` (when available).
+Returns only **failing** tests: `jobId`, `testId`, `testName`, `testFilePath`, `errors[]`, `traceViewerUrl` (when available). When called with `--batch-invocation-id`, the response also includes **`batchViewUrl`** — the batch execution viewer deeplink (prefer this over hand-building URLs).
 
 ```bash
 testchimp fetch-execution-report --batch-invocation-id "<id>"
 testchimp fetch-execution-report --job-id "<id>"
-```
-
-### `get-batch-view-url`
-
-**API:** `POST /api/mcp/get_batch_view_url`
-
-Resolve the TestChimp batch execution viewer deeplink for the authenticated project (includes `project_id` from the API key). Prefer this over hand-building URLs so route changes stay server-side.
-
-| Flag | Maps to JSON field | Notes |
-|------|-------------------|--------|
-| `--batch-invocation-id <id>` | `batchInvocationId` | Batch invocation id from a test run. |
-
-**Response:** `batchViewUrl` — open in chat when reporting run results to the user.
-
-```bash
-testchimp get-batch-view-url --batch-invocation-id "<batch-invocation-id>"
 ```
 
 ### `upload-attachment`
@@ -457,7 +419,8 @@ Fetch release catalog details for a version/label in the current project (cut gi
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|-------|
-| `--version <version>` | No | `version` | Release catalog label / version string. Omit to list. |
+| `--version <version>` | No | `version` | Release catalog label / version string. Omit to list. Required when `detail=GATE`. |
+| `--detail GATE` | No | `detail` | Gate-oriented payload: focus-area scope, per-environment priority×status test aggregations, open-issue stats, release-scan summaries, in-scope scenario/issue records. Use for CI/agent **release gating**. |
 | `--json-input …` | No | (merge) | Optional extra body fields. |
 
 **Example:**
@@ -468,6 +431,8 @@ testchimp get-release
 # stdout: JSON list of catalog releases
 testchimp get-release --version '1.2.0'
 # stdout: JSON McpGetReleaseResponse with full ReleaseDetail
+testchimp get-release --detail GATE --version '1.2.0'
+# stdout: JSON gate-oriented summary + detailedResults
 ```
 
 ### `manage-test-run`
@@ -494,25 +459,6 @@ testchimp manage-test-run --id 01TESTRUN0000000000000001 --commit-range FIND
 testchimp manage-test-run --id 01TESTRUN0000000000000001 --commit-range LINK
 ```
 
-### `get-release-details`
-
-**API:** `POST /api/mcp/get_release_details`
-
-Fetch **gate-oriented** release details for a version/label: focus-area scope, per-environment priority×status test aggregations, open-issue stats, release-scan summaries, and detailed in-scope scenario/issue records. Use for CI/agent **release gating** (pass/fail decisions). Thin catalog metadata remains on `get-release`.
-
-| Flag | Required | Maps to JSON field | Notes |
-|------|----------|-------------------|-------|
-| `--version <version>` | **Yes** | `version` | Release catalog label / version string. |
-| `--json-input …` | No | (merge) | Optional extra body fields. |
-
-**Example:**
-
-```bash
-export TESTCHIMP_API_KEY=…   # from MCP config walk-up; never echo
-testchimp get-release-details --version '1.2.0'
-# stdout: JSON McpGetReleaseDetailsResponse (summary + detailedResults)
-```
-
 ### `get-security-scan-config`
 
 **API:** `POST /api/mcp/get_security_scan_config`
@@ -535,7 +481,7 @@ testchimp get-release-details --version '1.2.0'
 
 **`leaksCheckConfig` fields:** `scope` (`RELEASE_CHANGES` \| `ALL_REPOSITORY_SECRETS`), `baselineGitCommitSha` (required for release changes).
 
-Agents must **honour** the matching playbook under [`security/`](./security/). Scanners run locally — there are no `run-*-scan` tools; use `report-*-findings` only.
+Agents must **honour** the matching playbook under [`security/`](./security/). Scanners run locally — there are no `run-*-scan` tools; use `report-scan-findings` only.
 
 See [`run-release-check.md`](./run-release-check.md).
 
@@ -544,55 +490,23 @@ See [`run-release-check.md`](./run-release-check.md).
 **API:** `POST /api/mcp/update_scan_progress`
 
 **Requires `@testchimp/cli` ≥ `0.1.14`.** Status: `QUEUED` \| `IN_PROGRESS` \| `COMPLETED` \| `EXCEPTION`.
-Each scan is a **single** checker type; the category playbook sets `COMPLETED` after a successful `report-*-findings` (or `EXCEPTION` on hard failure).
+Each scan is a **single** checker type; the category playbook sets `COMPLETED` after a successful `report-scan-findings` (or `EXCEPTION` on hard failure).
 
 | Flag | Required | Maps to JSON field |
 |------|----------|-------------------|
 | `--id <scanId>` | **Yes** | `scanId` |
 | `--status <status>` | **Yes** | `status` |
 
-### `report-dast-findings`
+### `report-scan-findings`
 
-**API:** `POST /api/mcp/report_dast_findings`
+**API:** `POST /api/mcp/report_scan_findings`
 
-**Requires `@testchimp/cli` ≥ `0.1.14`.** Reads ZAP Traditional JSON from disk (not argv). Does **not** set scan status — DAST playbook calls `update-scan-progress COMPLETED` after success.
-
-| Flag | Required | Maps to JSON field |
-|------|----------|-------------------|
-| `--id <scanId>` | **Yes** | `scanId` |
-| `--report-file <path>` | **Yes** | (file → `reportJson`) |
-
-### `report-sast-findings`
-
-**API:** `POST /api/mcp/report_sast_findings`
-
-**Requires `@testchimp/cli` ≥ `0.1.15`.** Reads full Semgrep CLI JSON from disk. Does **not** set scan status — SAST playbook calls `update-scan-progress COMPLETED` after success.
+**Requires `@testchimp/cli` ≥ `0.1.14`** (SAST / SECRETS / DEPS ≥ **0.1.15**). One tool for every scanner. Set **`scanner`** to `DAST` (ZAP Traditional JSON), `SAST` (Semgrep CLI JSON), `SECRETS` (Gitleaks JSON; server redacts secret payloads), or `DEPS` (Trivy JSON). Reads the report from disk (not argv). Does **not** set scan status — the matching playbook calls `update-scan-progress COMPLETED` after success.
 
 | Flag | Required | Maps to JSON field |
 |------|----------|-------------------|
 | `--id <scanId>` | **Yes** | `scanId` |
-| `--report-file <path>` | **Yes** | (file → `reportJson`) |
-
-### `report-secrets-findings`
-
-**API:** `POST /api/mcp/report_secrets_findings`
-
-**Requires `@testchimp/cli` ≥ `0.1.15`.** Reads full Gitleaks JSON from disk. Server redacts secret payloads before storing. Does **not** set scan status — secrets playbook calls `update-scan-progress COMPLETED` after success.
-
-| Flag | Required | Maps to JSON field |
-|------|----------|-------------------|
-| `--id <scanId>` | **Yes** | `scanId` |
-| `--report-file <path>` | **Yes** | (file → `reportJson`) |
-
-### `report-deps-findings`
-
-**API:** `POST /api/mcp/report_deps_findings`
-
-**Requires `@testchimp/cli` ≥ `0.1.15`.** Reads full Trivy JSON from disk. Does **not** set scan status — deps playbook calls `update-scan-progress COMPLETED` after success.
-
-| Flag | Required | Maps to JSON field |
-|------|----------|-------------------|
-| `--id <scanId>` | **Yes** | `scanId` |
+| `--scanner <DAST\|SAST\|SECRETS\|DEPS>` | **Yes** | `scanner` |
 | `--report-file <path>` | **Yes** | (file → `reportJson`) |
 
 See [`run-release-check.md`](./run-release-check.md).
@@ -820,11 +734,15 @@ testchimp get-meeting-transcript --meeting-id "<meeting-id>"
 
 Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
 
-### `get-meeting-set`
+### `list-meetings`
+
+One tool. Pass **`meetingSetId`** for a saved set; **`includeFilterOptions=true`** for filter values; otherwise search team-wide meetings.
+
+#### Saved set (`meetingSetId`)
 
 Requires `@testchimp/cli` ≥ **0.1.82**.
 
-**API:** `POST /api/mcp/get_meeting_set`
+**API:** `POST /api/mcp/list_meetings`
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
@@ -838,12 +756,12 @@ Requires `@testchimp/cli` ≥ **0.1.82**.
 **Example:**
 
 ```bash
-testchimp get-meeting-set --meeting-set-id "01J9Z3X5V4ABCDEF0123456789"
+testchimp list-meetings --meeting-set-id "01J9Z3X5V4ABCDEF0123456789"
 ```
 
 Then fetch each relevant meeting with `get-meeting-transcript --summary-only`, and the full transcript only when needed. Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md).
 
-### `list-meetings`
+#### Search
 
 Requires `@testchimp/cli` ≥ **0.1.83**.
 
@@ -856,7 +774,7 @@ Lists and searches **team-wide** Meeting Bots meetings (visibility: all team mem
 | `--from <date>` | No | `startDateMillis` | Inclusive. `YYYY-MM-DD` (local start of day), ISO datetime, or epoch millis. JSON may pass `from` or raw `startDateMillis`. |
 | `--to <date>` | No | `endDateMillis` | Inclusive. `YYYY-MM-DD` (local end of day), ISO datetime, or epoch millis. JSON may pass `to` or raw `endDateMillis`. |
 | `--label <label>` | No | `labels[]` | Repeatable or comma-separated; case-insensitive. |
-| `--participant <emailOrUserId>` | No | `participantKeys[]` | Repeatable or comma-separated. Participant `key` from `list-meeting-filter-options`, or an email. |
+| `--participant <emailOrUserId>` | No | `participantKeys[]` | Repeatable or comma-separated. Participant `key` from `list-meetings` (`includeFilterOptions=true`), or an email. |
 | `--domain <domain>` | No | `participantDomains[]` | Repeatable or comma-separated (e.g. `acme.com`). |
 | `--search <text>` | No | `searchText` | Full-text over title + transcript (web-search syntax). |
 | `--page-size <n>` | No | `pageSize` | Default 50, max 200 (max 25 with `--search`). |
@@ -874,16 +792,26 @@ testchimp list-meetings --label Sales --search "pricing" --page-size 25
 
 Then call `get-meeting-transcript --summary-only` per relevant hit. Full playbook: [`meeting-transcripts.md`](./meeting-transcripts.md) § Search meetings.
 
-### `list-meeting-filter-options`
+#### Filter options (`includeFilterOptions=true`)
 
 Requires `@testchimp/cli` ≥ **0.1.83**.
 
-**API:** `POST /api/mcp/list_meeting_filter_options`
+**API:** `POST /api/mcp/list_meetings`
 
 No flags. Returns the filter values seen on team-wide meetings: `labels[]`, `participants[]` (`key`, `userId`, `email`, `displayName`; pass `key` to `list-meetings --participant`), and `domains[]`.
 
 ```bash
-testchimp list-meeting-filter-options
+testchimp list-meetings --include-filter-options
+```
+
+### `list-issues`
+
+Search and filter issues in the current project (MCP API **2.0.0**). Use when the user describes an issue by title, status, assignee, or label; when `/testchimp fix issue` has no ordinal; or before **`upsert-issue`** (create) so you do not file a duplicate. Once you have an `issueId` / ordinal, call **`get-issue-details`**.
+
+Pass filters via **`--json-input`** (search text, status, assignee, labels, issue type, and similar). Prefer MCP **`list-issues`** with the same JSON fields.
+
+```bash
+testchimp list-issues --json-input '{"status":"ACTIVE"}'
 ```
 
 ### `get-issue-details`
@@ -908,37 +836,31 @@ testchimp get-issue-details --issue-id "#B-123"
 testchimp get-issue-details --issue-id 123
 ```
 
-### `update-issue-status`
+### `upsert-issue`
 
-Requires `@testchimp/cli` ≥ **0.1.16**.
+Requires `@testchimp/cli` ≥ **0.1.16** to update; create fields need ≥ **0.1.17**.
 
-**API:** `POST /api/mcp/update_issue_status`
+**API:** `POST /api/mcp/upsert_issue`
+
+One tool for create and update. **Omit `issueId` to create** (`title` required). **Pass `issueId` plus patch fields to update** (status, title, description, …). Call **`list-issues`** first when creating so you reuse an existing open match.
+
+**When to create:** File a **new** TestChimp issue in the current project (MCP preferred; CLI fallback). Use when the user asks to create/file a bug, suggestion, observation, or task — or when an agent finds a product defect that is **not** already auto-filed (e.g. ExploreChimp pipeline bugs). **`/testchimp implement`** creates one **`TASK_ISSUE`** per planned task with **`severity`**, **`category`**, label **`TestChimp Implement`**, and **`linkTargets`** to the parent **story** and in-scope **scenario(s)** (see [`implement-requirement.md`](./implement-requirement.md)).
+
+**When to update:** `/testchimp fix issue` sets `IN_PROGRESS_BUG` after applying a code fix and `FIXED` only after user confirmation or after commits are pushed. Same activity logging path as the UI.
+
+**Update flags:**
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
-| `--issue-id <id>` | **Yes**\* | `issueId` | Same flexible formats as `get-issue-details`. |
-| `--status <status>` | **Yes**\* | `status` | `ACTIVE` \| `IGNORED` \| `FIXED` \| `DUPLICATE` \| `IN_PROGRESS_BUG` \| `ARCHIVED_BUG` \| `BLOCKED`. |
+| `--issue-id <id>` | **Yes** when updating | `issueId` | Same flexible formats as `get-issue-details`. |
+| `--status <status>` | No | `status` | `ACTIVE` \| `IGNORED` \| `FIXED` \| `DUPLICATE` \| `IN_PROGRESS_BUG` \| `ARCHIVED_BUG` \| `BLOCKED`. |
 | `--ignore-reason <reason>` | No | `ignoreReason` | When `status=IGNORED`: `INTENDED_BEHAVIOUR` \| `INACCURATE_ASSESSMENT` \| `NOT_IMPORTANT`. |
 | `--json-input …` | No | (merge) | May supply fields instead of flags. |
 
-\*Required via flags or JSON.
-
-**Status side effects:** updates the issue in the project DB (same activity logging path as the UI). For `/testchimp fix issue`, set `IN_PROGRESS_BUG` after applying a code fix; set `FIXED` only after user confirmation or after commits are pushed.
-
-**Example:**
-
 ```bash
-testchimp update-issue-status --issue-id B-123 --status IN_PROGRESS_BUG
-testchimp update-issue-status --issue-id 123 --status FIXED
+testchimp upsert-issue --issue-id B-123 --status IN_PROGRESS_BUG
+testchimp upsert-issue --issue-id 123 --status FIXED
 ```
-
-### `create-issue`
-
-Requires `@testchimp/cli` ≥ **0.1.17**.
-
-**API:** `POST /api/mcp/create_issue`
-
-**When to use:** File a **new** TestChimp issue in the current project (MCP preferred; CLI fallback). Use when the user asks to create/file a bug, suggestion, observation, or task — or when an agent finds a product defect that is **not** already auto-filed (e.g. ExploreChimp pipeline bugs). **`/testchimp implement`** creates one **`TASK_ISSUE`** per planned task with **`severity`**, **`category`**, label **`TestChimp Implement`**, and **`linkTargets`** to the parent **story** and in-scope **scenario(s)** (see [`implement-requirement.md`](./implement-requirement.md)). Do **not** use this to update an existing issue (use `update-issue-status` / `get-issue-details`) or to fix one (`/testchimp fix issue`).
 
 **Agent rules:**
 - **`title` is required** (flag or JSON). Prefer a concrete, actionable title.
@@ -956,7 +878,7 @@ Requires `@testchimp/cli` ≥ **0.1.17**.
 | `--issue-type <type>` | No | `issueType` | `BUG_ISSUE` \| `SUGGESTION_ISSUE` \| `OBSERVATION_ISSUE` \| `TASK_ISSUE`. |
 | `--category <category>` | No | `category` | `FUNCTIONAL` \| `SECURITY` \| `ACCESSIBILITY` \| `PERFORMANCE` \| `VISUAL` \| `NETWORK` \| `USABILITY` \| `COMPATIBILITY` \| `DATA_INTEGRITY` \| `INTERACTION` \| `LOCALIZATION` \| `RESPONSIVENESS` \| `LAYOUT` \| `VISUAL_REGRESSION` \| `MEMORY` \| `PERFORMANCE_REGRESSION` \| `MEMORY_REGRESSION` \| `FORM_VALIDATION_BUG` \| `OTHER`. |
 | `--severity <severity>` | No | `severity` | `LOW_SEVERITY` \| `MEDIUM_SEVERITY` \| `HIGH_SEVERITY` \| `CRITICAL_SEVERITY`. |
-| `--status <status>` | No | `status` | Same enum as `update-issue-status`. Default **`ACTIVE`**. |
+| `--status <status>` | No | `status` | Same enum as `upsert-issue`. Default **`ACTIVE`**. |
 | `--reported-release-id <id>` | No | `reportedReleaseId` | Release label/id. |
 | `--due-date-millis <ms>` | No | `dueDateMillis` | UTC epoch millis. |
 | `--assignee <userId>` | No | `assignee` | Platform user id. |
@@ -973,10 +895,10 @@ Requires `@testchimp/cli` ≥ **0.1.17**.
 
 ```bash
 # Minimal
-testchimp create-issue --title "Checkout button disabled on empty cart"
+testchimp upsert-issue --title "Checkout button disabled on empty cart"
 
 # Typed bug with severity + category
-testchimp create-issue \
+testchimp upsert-issue \
   --title "XSS in profile bio" \
   --description "Bio renders unsanitized HTML." \
   --issue-type BUG_ISSUE \
@@ -985,7 +907,7 @@ testchimp create-issue \
   --source agent-qa
 
 # Full contract (links + optional fields) via JSON
-testchimp create-issue --json-input '{
+testchimp upsert-issue --json-input '{
   "title": "Flaky login redirect",
   "description": "Observed after seed user login.",
   "issueType": "BUG_ISSUE",
@@ -1001,7 +923,7 @@ testchimp create-issue --json-input '{
 }'
 
 # Implement workflow: task linked to story + scenario, with severity/category/label
-testchimp create-issue --json-input '{
+testchimp upsert-issue --json-input '{
   "title": "Add policy upsert API",
   "issueType": "TASK_ISSUE",
   "status": "ACTIVE",
@@ -1014,10 +936,10 @@ testchimp create-issue --json-input '{
   ]
 }'
 # After that task's code work completes:
-testchimp update-issue-status --issue-id B-42 --status FIXED
+testchimp upsert-issue --issue-id B-42 --status FIXED
 ```
 
-MCP: `create-issue` with the same JSON fields (no CLI flag mapping).
+MCP: `upsert-issue` with the same JSON fields (no CLI flag mapping).
 
 ### `create-user-story`
 
@@ -1072,13 +994,24 @@ Same requirement as **`update-user-story`**: provide content via flag(s) or JSON
 
 ## Branch URL and EaaS (BunnyShell)
 
-### `get-eaas-config`
+### `ephemeral-environment`
 
-**API:** `POST /api/mcp/get_eaas_config`
+**API:** `POST /api/mcp/ephemeral_environment`
 
-| Flag | Required | Notes |
-|------|----------|--------|
-| `--json-input …` | No | Body is normally empty; JSON merge rarely needed. |
+One tool. Set **`action`** to `CONFIG`, `PROVISION`, or `STATUS`.
+
+| `action` | Wait / extra fields | Notes |
+|----------|---------------------|-------|
+| `CONFIG` | — | Read EaaS config. Body is normally empty. |
+| `PROVISION` | `wait` defaults **true** (poll until ready; `--poll-interval-seconds`, `--max-wait-minutes`). Pass `wait=false` to return immediately. Optional `--branch-name`. | |
+| `STATUS` | **`bnsEnvironmentId`** required (`--bns-environment-id`) | |
+
+```bash
+testchimp ephemeral-environment --json-input '{"action":"CONFIG"}'
+testchimp ephemeral-environment --json-input '{"action":"PROVISION"}'
+testchimp ephemeral-environment --json-input '{"action":"PROVISION","wait":false,"branchName":"feat/login"}'
+testchimp ephemeral-environment --json-input '{"action":"STATUS","bnsEnvironmentId":"<id>"}'
+```
 
 ### `get-branch-specific-endpoint-config`
 
@@ -1087,35 +1020,6 @@ Same requirement as **`update-user-story`**: provide content via flag(s) or JSON
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
 | `--branch-name <s>` | No | `branchName` | |
-| `--json-input …` | No | (merge) | |
-
-### `provision-ephemeral-environment-and-wait`
-
-**API:** orchestrates provision + poll (stderr progress).
-
-| Flag | Required | Maps to JSON field | Notes |
-|------|----------|-------------------|--------|
-| `--branch-name <s>` | No | `branchName` | |
-| `--poll-interval-seconds <n>` | No | `pollIntervalSeconds` | Number. |
-| `--max-wait-minutes <n>` | No | `maxWaitMinutes` | Number. |
-| `--json-input …` | No | (merge) | |
-
-### `provision-ephemeral-environment`
-
-**API:** `POST /api/mcp/provision_ephemeral_environment`
-
-| Flag | Required | Maps to JSON field | Notes |
-|------|----------|-------------------|--------|
-| `--branch-name <s>` | No | `branchName` | |
-| `--json-input …` | No | (merge) | |
-
-### `get-ephemeral-environment-status`
-
-**API:** `POST /api/mcp/get_ephemeral_environment_status`
-
-| Flag | Required | Maps to JSON field | Notes |
-|------|----------|-------------------|--------|
-| `--bns-environment-id <id>` | **Yes** | `bnsEnvironmentId` | |
 | `--json-input …` | No | (merge) | |
 
 ### `destroy-ephemeral-environment`
@@ -1357,26 +1261,18 @@ Deeper product context: [instrument-truecoverage.md](./instrument-truecoverage.m
 
 Policies live under **`plans/knowledge/policies/*.policy.md`**. See [`policies-and-traceability.md`](./policies-and-traceability.md) and [`create-policy.md`](./create-policy.md).
 
-### `get-policy`
+### `get-policies`
 
-**API:** `POST /api/mcp/get_policy`
+**API:** `POST /api/mcp/get_policies`
 
-| Flag | Required | Body field | Notes |
-|------|----------|------------|-------|
-| `--policy-file-name <name>` | Yes* | `policyFileName` | e.g. `connect-to-test-env.policy.md`, **`global.policy.md`**. Server coerces to `*.policy.md` (same rules as `upsert-policy`). |
-| `--json-input` | Yes* | `policyFileName` | Alternative to `--policy-file-name`. |
-
-\*Provide **`policyFileName`** via flag or JSON.
-
-**Global policy:** `testchimp get-policy --policy-file-name global.policy.md` — frontmatter is **`policy-kind: global`** (no `workflow-id`). See [`policies-and-traceability.md`](./policies-and-traceability.md).
-
-### `list-policies`
-
-**API:** `POST /api/mcp/list_policies`
+Pass **`policyFileName`** for one file. **Omit `policyFileName` to list** (optional `workflowId` filter).
 
 | Flag | Required | Body field | Notes |
 |------|----------|------------|-------|
-| `--json-input` | Optional | `workflowId` | Filter by frontmatter `workflow-id` |
+| `--policy-file-name <name>` | No | `policyFileName` | e.g. `connect-to-test-env.policy.md`, **`global.policy.md`**. Server coerces to `*.policy.md` (same rules as `upsert-policy`). Omit to list. |
+| `--json-input` | No | `policyFileName` / `workflowId` | Alternative to `--policy-file-name`; `workflowId` filters the list by frontmatter `workflow-id`. |
+
+**Global policy:** `testchimp get-policies --policy-file-name global.policy.md` — frontmatter is **`policy-kind: global`** (no `workflow-id`). See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 ### `upsert-policy`
 
@@ -1470,7 +1366,7 @@ testchimp upsert-plans-support-file \
 
 Lists catalog workflows with Active / Disabled / Missing Config for the project. Use `--json-input '{}'` when no flags are needed.
 
-Also related (flags vary): **`report-agent-action`**, **`get-last-run-workflow-detail`**, **`list-workflow-executions`**, **`get-workflow-execution`** — see `testchimp <cmd> -h`. `list-workflow-executions` accepts `pendingApprovalOnly` and (CLI ≥ **0.1.91**) `assignedToMeOnly` (executions whose assignee is the calling user: OAuth user, or the bot's owner with `--bot`).
+Also related (flags vary): **`report-agent-action`**, **`get-workflow-executions`** (list filters; `workflowExecutionId` for one; `workflowId` + `latestOnly=true` for last run) — see `testchimp <cmd> -h`. `get-workflow-executions` accepts `pendingApprovalOnly` and (CLI ≥ **0.1.91**) `assignedToMeOnly` (executions whose assignee is the calling user: OAuth user, or the bot's owner with `--bot`).
 
 ### `update-project-init-status`
 
@@ -1521,57 +1417,37 @@ Use fresh successful volume/error metrics to rank uncovered API operations. Use 
 
 Playbooks: [`api-testing.md`](./api-testing.md), [`create-tests.md`](./create-tests.md), [`upkeep.md`](./upkeep.md).
 
-### `list-api-operation-services`
+### `get-api-operations`
 
-**API:** `POST /api/mcp/list_api_operation_services`
+**API:** `POST /api/mcp/get_api_operations`
 
-```bash
-testchimp list-api-operation-services
-```
+One tool. Identity args choose the mode:
 
-Returns `services[]` with `rootFilePath`, `serviceKey`, `infoTitle`, `operationCount`.
-
-### `list-api-operations`
-
-**API:** `POST /api/mcp/list_api_operations`
+- **No identity args** — list services (`services[]` with `rootFilePath`, `serviceKey`, `infoTitle`, `operationCount`).
+- **`rootFilePath` / `serviceKey`** — list operations for that service (each has `id`, method/path, `coveringTestsPreview`, `coverageSummary`, observability fields when available).
+- **`id`**, or **`oasOperationId`**, or **`method` + `path`** — operation detail (request/query/response field trees and response codes). The CLI rejects a detail call with no lookup identity.
 
 | Flag | Description |
 |------|-------------|
-| `--root-file-path <path>` | Preferred service resource id (repo-relative OpenAPI root). |
+| `--id <ulid>` | **Preferred** for detail — TestChimp operation id. |
+| `--root-file-path <path>` | Preferred service resource id (repo-relative OpenAPI root). Required with `--http-method` + `--path-template`; preferred with `--oas-operation-id`. |
 | `--service-key <key>` | Internal service key alias. |
+| `--oas-operation-id <id>` | OpenAPI operationId (prefer scoped by root/service; project-wide fallback if service omitted). |
+| `--http-method <METHOD>` | With `--path-template` **and** root/service. |
+| `--path-template <path>` | OpenAPI path template. |
 | `--include-manual` | Include MANUAL test_mode coverage in previews. |
 | `--include-removed` | Include soft-deleted operations. |
 
 ```bash
-testchimp list-api-operations --root-file-path services/featureservice/openapi/featureservice.json
-```
-
-Each operation includes `id` (TestChimp ULID), method/path, `coveringTestsPreview`, `coverageSummary` (scores), and observability fields above when available.
-
-Omit `--root-file-path` / `--service-key` only when intentionally listing **all** services; prefer a root when more than one service is configured.
-
-### `get-api-operation-detail`
-
-**API:** `POST /api/mcp/get_api_operation_detail`
-
-| Flag | Description |
-|------|-------------|
-| `--id <ulid>` | **Preferred** — TestChimp operation id. |
-| `--root-file-path <path>` | Required with `--http-method` + `--path-template`; preferred with `--oas-operation-id`. |
-| `--service-key <key>` | Alias for root resolution. |
-| `--oas-operation-id <id>` | OpenAPI operationId (prefer scoped by root/service; project-wide fallback if service omitted). |
-| `--http-method <METHOD>` | With `--path-template` **and** root/service. |
-| `--path-template <path>` | OpenAPI path template. |
-| `--include-manual` / `--include-removed` | Same semantics as list. |
-
-```bash
-testchimp get-api-operation-detail --id 01HXYZ...
-testchimp get-api-operation-detail \
+testchimp get-api-operations
+testchimp get-api-operations --root-file-path services/featureservice/openapi/featureservice.json
+testchimp get-api-operations --id 01HXYZ...
+testchimp get-api-operations \
   --root-file-path services/featureservice/openapi/featureservice.json \
-  --http-method POST --path-template /api/mcp/list_api_operations
+  --http-method POST --path-template /api/mcp/get_api_operations
 ```
 
-Returns request/query/response field trees and response codes with covering-test tags. `operation.runtimeObservation` carries the same latest daily summary when available. The CLI rejects calls with no lookup identity.
+Omit `--root-file-path` / `--service-key` only when intentionally listing **all** services; prefer a root when more than one service is configured. `operation.runtimeObservation` carries the latest daily summary when available.
 
 ### `list-api-operation-interactions`
 
@@ -1591,7 +1467,7 @@ Soft-gate with `get-org-capabilities` → `PERFORMANCE_TESTING`. Compare prints 
 
 ```bash
 testchimp list-perf-runs --testchimp-id checkout-journey --kind JOURNEY --limit 20
-testchimp get-perf-run --run-id 01ABC --include-raw
+testchimp list-perf-runs --run-id 01ABC --include-raw
 testchimp list-perf-baselines --testchimp-id checkout-journey
 testchimp promote-perf-baseline --run-id 01ABC --env-class CI
 testchimp compare-perf-to-baseline --run-id 01ABC --env-class CI --max-p95-regression-percent 10
@@ -1621,12 +1497,12 @@ testchimp list-semantic-similar-tests --json-input '{ "scope": { "folderPath": [
 
 Response records use camelCase TestLocators and `similarTests` with `classification` (`POTENTIAL_DUPLICATE` or `SIMILAR`). Pairs are deduped (A→B only when A.testId < B.testId).
 
-### `mark-semantic-tests-distinct`
+### `set-entity-distinct` (`entityType=TEST`)
 
 Mark two tests as legitimately distinct (symmetric). Agent/API calls use `marked_by_user_id = "0"`.
 
 ```bash
-testchimp mark-semantic-tests-distinct --json-input '{
+testchimp set-entity-distinct --json-input '{
   "focusTest": {
     "folderPath": ["auth"],
     "fileName": "login.spec.ts",
@@ -1695,12 +1571,12 @@ testchimp list-semantic-nearby --json-input '{
 
 Response buckets include `similarity`, `potentialDuplicate` (same-type), and identity fields (`test` / `ordinalId` / `eventTitle`).
 
-### `mark-entity-distinct` / `unmark-entity-distinct`
+### `set-entity-distinct`
 
-Same identity rules as nearby. Prefer these for cross-type cleanup; `mark-semantic-tests-distinct` remains the TestLocator-only TEST wrapper.
+Same identity rules as nearby. **`distinct` defaults true** (mark as distinct). Pass **`distinct=false`** to unmark. Prefer this for cross-type cleanup; `entityType=TEST` plus the two locators remains the TestLocator-only TEST wrapper.
 
 ```bash
-testchimp mark-entity-distinct --json-input '{
+testchimp set-entity-distinct --json-input '{
   "entityType": "TEST",
   "focusTest": { "folderPath": ["auth"], "fileName": "a.spec.ts", "testName": "a" },
   "otherTest": { "folderPath": ["auth"], "fileName": "b.spec.ts", "testName": "b" }
@@ -1863,7 +1739,7 @@ testchimp send-feedback --category USER_STRUGGLE --agent-name "Cursor" \
 
 ## MCP parity (tool names)
 
-MCP tool **names** match CLI **subcommands** (kebab-case), e.g. **`get-requirement-coverage`**, **`upsert-policy`**, **`upsert-plans-support-file`**, **`get-plans-support-file`**, **`create-user-story`**, **`list-rum-environments`**.
+MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0**, e.g. **`get-requirement-coverage`**, **`upsert-policy`**, **`upsert-plans-support-file`**, **`get-plans-support-file`**, **`create-user-story`**, **`list-rum-environments`**, **`list-issues`**, **`upsert-issue`**, **`ephemeral-environment`**, **`report-scan-findings`**, **`get-workflow-executions`**, **`get-policies`**, **`get-api-operations`**, **`list-meetings`**, **`set-entity-distinct`**, **`get-release`**, **`get-execution-history`**, **`fetch-execution-report`**, **`list-perf-runs`**.
 
 ## Related
 

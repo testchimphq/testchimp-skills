@@ -78,20 +78,20 @@ If the team explicitly chooses to run E2E only post-merge (discouraged, but allo
 
 ## EaaS (Bunnyshell) workflow
 
-1. Call **`get-eaas-config`**. Empty `{}` means BunnyShell integration is not set up.
-2. When configured, **prefer `provision-ephemeral-environment-and-wait`** (optional `branchName`, `pollIntervalSeconds` default 60, `maxWaitMinutes` default 25). It provisions and polls until the environment is **deployed** with **`component_urls_json`** populated, then returns a single JSON: `outcome` (`success` \| `failed` \| `timeout`), `failure_phase` (`provision` \| `deploy` \| `wait`), `message` for the user, and `component_urls_json` on success. Provisioning often takes **~5–10 minutes**—the MCP server emits progress logs while waiting.
-3. **Fallback (only if** the wait tool is missing, errors, or the host kills long MCP calls**):** call **`provision-ephemeral-environment`**, then poll **`get-ephemeral-environment-status`** about **once per minute** for up to **~25 minutes** with the same success criteria (deployed + component URLs or terminal failure).
+1. Call **`ephemeral-environment` (`action=CONFIG`)**. Empty `{}` means BunnyShell integration is not set up.
+2. When configured, **prefer `ephemeral-environment` (`action=PROVISION`)** (optional `branchName`, `pollIntervalSeconds` default 60, `maxWaitMinutes` default 25). It provisions and polls until the environment is **deployed** with **`component_urls_json`** populated, then returns a single JSON: `outcome` (`success` \| `failed` \| `timeout`), `failure_phase` (`provision` \| `deploy` \| `wait`), `message` for the user, and `component_urls_json` on success. Provisioning often takes **~5–10 minutes**—the MCP server emits progress logs while waiting.
+3. **Fallback (only if** the wait tool is missing, errors, or the host kills long MCP calls**):** call **`ephemeral-environment` (`action=PROVISION`, `wait=false`)**, then poll **`ephemeral-environment` (`action=STATUS`)** about **once per minute** for up to **~25 minutes** with the same success criteria (deployed + component URLs or terminal failure).
 4. Parse **`component_urls_json`** to set `BASE_URL`, `BACKEND_URL`, and any `*_SERVICE_BACKEND_URL` vars your repo uses for seeds and tests (see [`fixture-usage.md`](./fixture-usage.md), [`seeding-endpoints.md`](./seeding-endpoints.md)).
 5. Use **`destroy-ephemeral-environment`** when done.
 
 ### Troubleshooting failed or stuck ephemeral deploy
 
-When **`provision-ephemeral-environment-and-wait`** returns **`failed`** or **`timeout`**, or deploy is stuck:
+When **`ephemeral-environment` (`action=PROVISION`)** returns **`failed`** or **`timeout`**, or deploy is stuck:
 
 1. **`list-bunnyshell-environment-events`** — pass the same **`bnsEnvironmentId`**. The tool returns the **BunnyShell response body as-is** (same shape as calling their API). Filter with optional **`eventStatus`** (`fail` is most useful) or **`eventType`** (e.g. deploy-related types). Official BunnyShell event filters: [event list](https://documentation.bunnyshell.com/reference/eventlist).
 2. **`list-bunnyshell-workflow-jobs`** — same **`bnsEnvironmentId`**; response body is raw BunnyShell JSON — find a relevant **`workflowJobId`** (field name depends on their payload).
 3. **`get-bunnyshell-workflow-job-logs`** — **`bnsEnvironmentId`** + **`workflowJobId`**. Response body is the **raw BunnyShell logs payload** (no TestChimp wrapping or truncation).
-4. Fix the underlying issue in the repo (e.g. Helm/YAML, image, resources), **push** to the branch, then re-run **`provision-ephemeral-environment-and-wait`** (or manual provision + status polling fallback).
+4. Fix the underlying issue in the repo (e.g. Helm/YAML, image, resources), **push** to the branch, then re-run **`ephemeral-environment` (`action=PROVISION`)** (or manual provision + status polling fallback).
 
 Kubernetes **pod/container** logs in the BunnyShell UI are not exposed by these MCP tools yet; workflow job logs cover the deploy pipeline.
 

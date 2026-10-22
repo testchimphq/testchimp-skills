@@ -57,8 +57,8 @@ resolved `create-perf-tests.policy.md`.
    `get-requirement-coverage --include-perf` when ranking perf gaps. Prefer high-priority,
    semantically novel automated scenarios; explain exceptions.
 4. Where `API_CONTRACT_COVERAGE` is available (or trial is active), call
-   `list-api-operations` for implicated services and use
-   `get-api-operation-detail` for shortlisted operations. Rank missing perf
+   `get-api-operations` for implicated services and use
+   `get-api-operations` for shortlisted operations. Rank missing perf
    coverage using fresh successful `runtimeObservation`: p95/p99 latency
    first, then request volume and error exposure. Check window/sync status;
    absent/stale/non-success telemetry is unknown, not zero. Then use
@@ -77,7 +77,7 @@ resolved `create-perf-tests.policy.md`.
    Capability-gate TrueCoverage independently; absence never blocks perf
    authoring.
 6. Inspect existing perf catalog, history, baseline, and compare tools:
-   `list-related-perf-tests`, `list-perf-runs`, `get-perf-run`,
+   `list-related-perf-tests`, `list-perf-runs`, `list-perf-runs` (`runId`),
    `list-perf-baselines`, `compare-perf-to-baseline` (CLI exits nonzero when
    `comparison.regressed` is true). Use them to avoid duplicates and preserve
    existing thresholds. Missing history means “no baseline,” not permission to

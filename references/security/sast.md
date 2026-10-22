@@ -49,11 +49,11 @@ semgrep scan --json -o /tmp/semgrep-report-<scan_id>.json \
 - Do **not** pass `--time` by default.
 - **Exit codes:** Semgrep exit `1` when findings exist is **success** for this playbook (still report). Treat only crashes / missing binary / failed upload as hard failures.
 
-5. **`testchimp report-sast-findings --id '<scan_id>' --report-file <path>`** — upload the **entire** JSON file.
+5. **`testchimp report-scan-findings --scanner SAST --id '<scan_id>' --report-file <path>`** — upload the **entire** JSON file.
 
 6. On successful report → **`testchimp update-scan-progress --id '<scan_id>' --status COMPLETED`**. On hard failure → `EXCEPTION`.
 
 ## Notes
 
-- `report-sast-findings` does **not** set scan status; this playbook does immediately after a successful report.
+- `report-scan-findings` (`scanner=SAST`) does **not** set scan status; this playbook does immediately after a successful report.
 - Duplicate findings (same bug hash) are skipped project-wide; the raw report is still stored for the report viewer.
