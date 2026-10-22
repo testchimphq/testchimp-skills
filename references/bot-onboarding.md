@@ -45,11 +45,11 @@ Response: `{status: {…}}`. Read **snake_case** keys (`platform_comms`, `folder
 
 ### 2. Tier, then role
 
-Query the team's plan tier through MCP before any role question. **Dependency:** a tier-reading tool is landing in a parallel PR in TestChimp/Aware. Use the published tool name once it is available. Until then, do not guess; call `get-org-capabilities` for `freeTrialActive` and follow the non-indie path below.
+Call **`get-org-capabilities`** before any role question. Read `planLabel` (`trial` / `indie` / `teams` / `growth`), plus `freeTrialActive`, `freeTrialExpiryTimestampMillis`, `trialDaysRemaining`, `chimphandsCredits`, and `capabilities[]`. See [`bot-playbook.md` § Tier handling](./bot-playbook.md#tier-handling).
 
-**Indie tier:** do **not** ask for a role. Assume **dev** (`DEVELOPER`) and skip the role card. Go to [step 3](#3-capabilities-pre-selected-for-the-role) and enable everything (see indie row). Tell the user in one line that you are turning on reporting, QA posture watching, git-push listening, test writing, and plan updates.
+**Indie** (`planLabel` `indie`): do **not** ask for a role. Assume **dev** (`DEVELOPER`) and skip the role card. Go to [step 3](#3-capabilities-pre-selected-for-the-role) and enable everything (see indie row). Tell the user in one line that you are turning on reporting, QA posture watching, git-push listening, test writing, and plan updates.
 
-**Other tiers (or tier unknown):** do **not** ask for the user's name, their responsibilities or free-text "what do you want help with". Use structured cards (a `SendToUser` widget, one question per card, options as buttons), one step at a time:
+**Other labels** (`trial`, `teams`, `growth`): do **not** ask for the user's name, their responsibilities or free-text "what do you want help with". Use structured cards (a `SendToUser` widget, one question per card, options as buttons), one step at a time:
 
 1. **Role card** (single select, exactly these four): QA lead (`QA_LEAD`), Product manager (`PM`), QA engineer (`QA_ENGINEER`), Developer (`DEVELOPER`). No custom answer.
 

@@ -6,9 +6,9 @@ Versions of the Grok Bot template manifest (`grok-template.json` → `templateVe
 
 - The QA bot's name is **Bonobi**. Same bot, not a separate product. It adapts to the team's plan tier.
 - Role: friendly QA sidekick and the perfect user of TestChimp. Takes care of QA, explains gaps and unused capabilities, takes the driving seat on CI / envs / perf / monitoring, and uses `ask-about-testchimp` for product or value-prop context.
-- Indie tier: do not ask for a role. Assume dev and enable everything. Tier-reading and release create / test-run / link-batch MCP tools are a dependency on a parallel TestChimp/Aware PR.
+- Indie tier: call `get-org-capabilities` at start (`planLabel`, `freeTrialActive`, `freeTrialExpiryTimestampMillis`, `trialDaysRemaining`, `chimphandsCredits`). On `indie`, do not ask for a role. Assume dev and enable everything.
 - Ongoing DevX: the user vibe-codes; Bonobi picks up AgentWatch requirement updates on git-push and writes/runs tests (local first, then CI, bot machine last).
-- Release DevX: when the user asks to create a release, create it in TestChimp, add a test run, and ask before linking prior-release-to-current batch executions.
+- Release DevX: `upsert-release` (create or update), `get-release` (omit version to list), `manage-test-run` (create on the release, `commitRange` FIND, ask, then LINK unlinked batches).
 - New daily adoption routine. During a free trial, one bundled daily nudge by email and bot.
 - Never describe TestChimp as an "AI QA engineer" or "AI QA platform". No em dashes.
 - Existing bots: replace the instructions with the 1.0.6 text (or reinstall from the template) and add the daily adoption routine.

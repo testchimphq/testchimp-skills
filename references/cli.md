@@ -6,7 +6,7 @@ This page lists **every subcommand and flag** as implemented in the CLI (kebab-c
 
 **Screen-state atlas** (for **`markScreenState`** / ExploreChimp vocabulary): see § [**Screen-state atlas (SmartTests, traces, ExploreChimp)**](#screen-state-atlas-smarttests-traces-explorechimp) — **`list-screen-states`**, **`upsert-screen-states`**.
 
-**Release catalog** (Release Checks / ExploreChimp targeting a release): **`get-release`** (thin catalog metadata) — see § [**get-release**](#get-release). For **release gating** (per-environment priority×status test stats, open-issue stats, scan summaries, in-scope scenario/issue records) use **`get-release-details`** (CLI ≥ **0.1.18**) — see § [**get-release-details**](#get-release-details).
+**Release catalog** (Release Checks / ExploreChimp targeting a release): **`upsert-release`** (create or update) — see § [**upsert-release**](#upsert-release); **`get-release`** (thin catalog metadata; omit `version` to list) — see § [**get-release**](#get-release); **`manage-test-run`** (create a run, FIND then LINK batches in the prior-to-current commit range) — see § [**manage-test-run**](#manage-test-run). For **release gating** (per-environment priority×status test stats, open-issue stats, scan summaries, in-scope scenario/issue records) use **`get-release-details`** (CLI ≥ **0.1.18**) — see § [**get-release-details**](#get-release-details).
 
 ## Install
 
@@ -113,7 +113,7 @@ Requires `@testchimp/cli` ≥ **0.1.29**.
 
 **API:** `POST /api/mcp/get_org_capabilities`
 
-Fetch the organization's enabled **capabilities** (not tier/plan name) plus **`freeTrialActive`**. Call this **before** relying on TrueCoverage or API contract coverage insights so playbooks can **soft-skip** gated work instead of failing — see [`instrument-truecoverage.md`](./instrument-truecoverage.md), [`upkeep.md`](./upkeep.md), and [`run-qa.md`](./run-qa.md).
+Fetch the organization's enabled **capabilities**, **`planLabel`**, trial window, and ChimpHands credits. Call this **before** relying on TrueCoverage or API contract coverage insights so playbooks can **soft-skip** gated work instead of failing — see [`instrument-truecoverage.md`](./instrument-truecoverage.md), [`upkeep.md`](./upkeep.md), and [`run-qa.md`](./run-qa.md). Bonobi calls it at start to adapt onboarding (indie assumes dev and enables everything) — see [`bot-playbook.md`](./bot-playbook.md) § Tier handling.
 
 | Flag | Required | Notes |
 |------|----------|-------|
@@ -125,16 +125,20 @@ Fetch the organization's enabled **capabilities** (not tier/plan name) plus **`f
 |-------|------|-------|
 | `organizationId` | string | |
 | `capabilities` | string[] | Enabled capability names, e.g. `TRUE_COVERAGE`, `API_CONTRACT_COVERAGE`. Treat unlisted capabilities as **off**. |
+| `planLabel` | string | Plan tier: `trial` / `indie` / `teams` / `growth` (treat case-insensitively). Bonobi uses this for role/capability onboarding. |
 | `freeTrialActive` | boolean | When `true`, gated capabilities may still be usable under trial even if not listed — do not hard-fail solely on capability absence without also checking this flag. |
+| `freeTrialExpiryTimestampMillis` | number | Trial end, epoch millis. Present when a trial window is known. |
+| `trialDaysRemaining` | number | Whole days left on the trial window. |
+| `chimphandsCredits` | number | Remaining ChimpHands credits. Context only; do not invent a spend policy. |
 
 **Example:**
 
 ```bash
 testchimp get-org-capabilities
-# stdout: {"organizationId":"...","capabilities":["TRUE_COVERAGE","API_CONTRACT_COVERAGE"],"freeTrialActive":false}
+# stdout: {"organizationId":"...","capabilities":["TRUE_COVERAGE","API_CONTRACT_COVERAGE"],"planLabel":"indie","freeTrialActive":true,"freeTrialExpiryTimestampMillis":1790000000000,"trialDaysRemaining":12,"chimphandsCredits":40}
 ```
 
-**Agent rule:** Always check **`capabilities`**, never infer from a separate "tier" field — this API is the single source of truth for what a workflow may rely on. When a capability is missing **and** `freeTrialActive` is `false`, soft-skip only the gated insight/analysis (mark **N/A** + reason); never abort the surrounding workflow.
+**Agent rule:** Soft-gate features from **`capabilities`** plus **`freeTrialActive`**. Do **not** skip TrueCoverage / API contract / perf solely from `planLabel`. When a capability is missing **and** `freeTrialActive` is `false`, soft-skip only the gated insight/analysis (mark **N/A** + reason); never abort the surrounding workflow. Bonobi reads **`planLabel`** for indie vs role-card onboarding.
 
 **Not capability-gated:** Only the capabilities listed in the response gate anything. **ExploreChimp has no org capability** (there is no `EXPLORECHIMP` value) — never skip or block ExploreChimp because it is absent from `capabilities`. ExploreChimp is limited only by org **credits**; when credits run out, analyze calls return a `…_CREDIT_LIMIT` skip status rather than an HTTP error (see [`run-explorechimp.md`](./run-explorechimp.md#availability-no-org-capability-required)).
 
@@ -421,25 +425,73 @@ testchimp list-screen-states
 
 With **`--environment <s>`** when your project uses env-scoped vocabulary (forward-compatible; optional on v1).
 
+### `upsert-release`
+
+**API:** `POST /api/mcp/upsert_release`
+
+Create or update a release in the project catalog. Same `version` updates the existing row.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|-------|
+| `--version <version>` | **Yes** | `version` | Release catalog label / version string. |
+| `--git-commit-sha <sha>` | No | `gitCommitSha` | Cut SHA for this release. |
+| `--prior-release-version <version>` | No | `priorReleaseVersion` | Previous catalog version (drives the prior-to-current commit range). |
+| `--lifecycle-status <status>` | No | `lifecycleStatus` | Omit when the user did not name one; let the platform default. |
+| `--json-input …` | No | (merge) | Optional extra body fields. |
+
+**Example:**
+
+```bash
+testchimp upsert-release --version '2026.10' --git-commit-sha abcdef1 --prior-release-version '2026.09'
+```
+
+Bonobi uses this when the user asks to create a release — see [`bot-playbook.md`](./bot-playbook.md) § Release DevX.
+
 ### `get-release`
 
 **API:** `POST /api/mcp/get_release`
 
 **Requires `@testchimp/cli` ≥ `0.1.13`.**
 
-Fetch release catalog details for a version/label in the current project (cut git SHA, prior release + SHA, focus areas, payload). Used when running ExploreChimp or **performance tests** **targeting a release**.
+Fetch release catalog details for a version/label in the current project (cut git SHA, prior release + SHA, focus areas, payload). Used when running ExploreChimp or **performance tests** **targeting a release**. **Omit `version` to list** catalog releases (Bonobi uses the list to pick `priorReleaseVersion` and avoid clobbering a name).
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|-------|
-| `--version <version>` | **Yes** | `version` | Release catalog label / version string. |
+| `--version <version>` | No | `version` | Release catalog label / version string. Omit to list. |
 | `--json-input …` | No | (merge) | Optional extra body fields. |
 
 **Example:**
 
 ```bash
 export TESTCHIMP_API_KEY=…   # from MCP config walk-up; never echo
+testchimp get-release
+# stdout: JSON list of catalog releases
 testchimp get-release --version '1.2.0'
 # stdout: JSON McpGetReleaseResponse with full ReleaseDetail
+```
+
+### `manage-test-run`
+
+**API:** `POST /api/mcp/manage_test_run`
+
+Create or update a named test run on a release, and discover / attach batch executions in the prior-release-to-current commit range.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|-------|
+| `--id <id>` | No | `id` | Omit to **create**. Pass the id to update, FIND, or LINK that run. |
+| `--release <version>` | Yes when creating | `release` | Catalog version the run belongs to. |
+| `--status <status>` | No | `status` | Set when the user asked for a status. |
+| `--commit-range FIND\|LINK` | No | `commitRange` | `FIND` discovers batches in the prior-to-current release commit range. `LINK` attaches the **unlinked** ones after the user agrees. |
+| `--json-input …` | No | (merge) | Optional extra body fields. |
+
+**Bonobi sequence:** omit `id` to create (with `release`) → `commitRange: FIND` → show already-linked vs unlinked and ask → `commitRange: LINK` if they say yes. Never LINK without asking. See [`bot-playbook.md`](./bot-playbook.md) § Release DevX.
+
+**Example:**
+
+```bash
+testchimp manage-test-run --release '2026.10'
+testchimp manage-test-run --id 01TESTRUN0000000000000001 --commit-range FIND
+testchimp manage-test-run --id 01TESTRUN0000000000000001 --commit-range LINK
 ```
 
 ### `get-release-details`
