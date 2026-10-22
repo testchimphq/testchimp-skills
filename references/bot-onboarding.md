@@ -1,8 +1,8 @@
-# QA bot onboarding (US-243)
+# Bonobi onboarding (US-243)
 
-Run on the bot's **first conversation** (profile has no role / capabilities yet) and again whenever the user wants to **change focus** ("stop watching my pushes", "I'm a QA lead now", "also help with issue fixes"), or when a flow reports the local folder is not mapped (`project_not_mapped` → [step 6](#6-per-user-init-local-repo-folder) only).
+Bonobi is TestChimp's QA bot (the same bot, not a separate product). Run on Bonobi's **first conversation** (profile has no role / capabilities yet) and again whenever the user wants to **change focus** ("stop watching my pushes", "I'm a QA lead now", "also help with issue fixes"), or when a flow reports the local folder is not mapped (`project_not_mapped` → [step 6](#6-per-user-init-local-repo-folder) only).
 
-Event handling after onboarding → [`bot-playbook.md`](./bot-playbook.md). Version checks → [`bot-self-update.md`](./bot-self-update.md). CLI shapes → [`cli.md`](./cli.md) § QA bots.
+Event handling after onboarding → [`bot-playbook.md`](./bot-playbook.md). Version checks → [`bot-self-update.md`](./bot-self-update.md). CLI shapes → [`cli.md`](./cli.md) § QA bots. Tier, standing go-ahead, and the first-run message live in the playbook.
 
 Steps 5b, 6 and 6b run on the **user's own computer** through the bot host's access to it, never on the bot's cloud computer ([`bot-playbook.md` § Where commands run](./bot-playbook.md#where-commands-run)).
 
@@ -43,9 +43,13 @@ Response: `{status: {…}}`. Read **snake_case** keys (`platform_comms`, `folder
 - `overall_complete` (or `overallComplete`) is `…_DONE` / `DONE` / `true` → say so in one line and continue. Do not re-run project init.
 - Otherwise → list the items still `…_INCOMPLETE` (or missing), one line each, and say you'll walk them through project init once the bot is set up for events ([step 5b](#5b-project-init-when-incomplete)). Remember the result; don't start project init yet.
 
-### 2. Role
+### 2. Tier, then role
 
-Do **not** ask for the user's name, their responsibilities or free-text "what do you want help with". Use structured cards (a `SendToUser` widget, one question per card, options as buttons), one step at a time:
+Query the team's plan tier through MCP before any role question. **Dependency:** a tier-reading tool is landing in a parallel PR in TestChimp/Aware. Use the published tool name once it is available. Until then, do not guess; call `get-org-capabilities` for `freeTrialActive` and follow the non-indie path below.
+
+**Indie tier:** do **not** ask for a role. Assume **dev** (`DEVELOPER`) and skip the role card. Go to [step 3](#3-capabilities-pre-selected-for-the-role) and enable everything (see indie row). Tell the user in one line that you are turning on reporting, QA posture watching, git-push listening, test writing, and plan updates.
+
+**Other tiers (or tier unknown):** do **not** ask for the user's name, their responsibilities or free-text "what do you want help with". Use structured cards (a `SendToUser` widget, one question per card, options as buttons), one step at a time:
 
 1. **Role card** (single select, exactly these four): QA lead (`QA_LEAD`), Product manager (`PM`), QA engineer (`QA_ENGINEER`), Developer (`DEVELOPER`). No custom answer.
 
@@ -53,21 +57,24 @@ Do **not** ask for the user's name, their responsibilities or free-text "what do
 
 | Role | Pre-selected capabilities |
 |---|---|
+| Indie (no role card; store `DEVELOPER`) | **All six:** QA_POSTURE, REQUIREMENTS_UPDATE, E2E_AUTHORING, ISSUE_FIX, TEST_BATCH_FIX, MANUAL_TEST_COORDINATION |
 | QA_LEAD | QA_POSTURE, TEST_BATCH_FIX, MANUAL_TEST_COORDINATION |
 | PM | QA_POSTURE, REQUIREMENTS_UPDATE |
 | QA_ENGINEER | E2E_AUTHORING, TEST_BATCH_FIX, MANUAL_TEST_COORDINATION |
-| DEVELOPER | E2E_AUTHORING, ISSUE_FIX, REQUIREMENTS_UPDATE |
+| DEVELOPER (non-indie) | E2E_AUTHORING, ISSUE_FIX, REQUIREMENTS_UPDATE |
 
 | Capability | What the bot does | Subscriptions it needs |
 |---|---|---|
-| REQUIREMENTS_UPDATE | Keep requirements up to date based on your dev-agent conversations | `git-push` (`author eq me`), `meeting-ended` (`adder eq me`) |
-| E2E_AUTHORING | Proposes E2E tests for your pushed changes | `git-push` (`author eq me`) |
-| ISSUE_FIX | Proposes fixes for issues assigned to you | `issue-assigned` (`assignee eq me`) |
+| REQUIREMENTS_UPDATE | Keep requirements up to date based on your coding-agent conversations | `git-push` (`author eq me`), `meeting-ended` (`adder eq me`) |
+| E2E_AUTHORING | Writes and runs E2E tests for your pushed changes | `git-push` (`author eq me`) |
+| ISSUE_FIX | Fixes issues assigned to you | `issue-assigned` (`assignee eq me`) |
 | MANUAL_TEST_COORDINATION | Tracks manual scenarios assigned to you | `scenario-assigned` (`assignee eq me`) |
 | TEST_BATCH_FIX | Triages failed E2E and k6 batches on your branches | `e2e-batch-completed`, `k6-batch-completed` |
-| QA_POSTURE | Release heads-ups and a weekly posture digest | `release-created`, `release-status-updated` |
+| QA_POSTURE | Release heads-ups, posture watching, and a weekly digest | `release-created`, `release-status-updated` |
 
-Present the capabilities as cards, based on the role they picked:
+**Indie:** do not show capability cards. Register all six plus `workflow-execution-assigned`. Mention each in the summary in plain words.
+
+**Other tiers:** present the capabilities as cards, based on the role they picked:
 
 1. **Defaults card** (single select): list the role's pre-selected activities in plain words (use the "What the bot does" column) and offer **Looks good** (primary) and **Change activities**.
 2. **Only if they choose Change activities:** a **multi-select card** with all six capabilities as options (label plus the "What the bot does" text as the description). In the prompt, say which ones were the role's defaults. Use exactly the ones they pick as the new set.
@@ -173,11 +180,13 @@ To revoke later: `testchimp bot disconnect --project-id <projectId>`.
 
 Confirm back in a few lines:
 
-- Project, role, capabilities.
+- Project, role (indie: assumed dev), capabilities.
 - Project init status (complete, or what's still left), and who was invited if you ran its last step.
-- What you will watch for and what you will propose for each (from the capability table).
+- What you will watch for and what you will do for each (from the capability table).
 - Webhook status, mapped folder, routine times.
-- Nothing mutating happens without their approval. They can pause from their bot settings page (link it: `settingsUrl` from `get-bot-profile`) or say "change my focus" anytime.
+- They can pause from their bot settings page (link it: `settingsUrl` from `get-bot-profile`) or say "change my focus" anytime.
+
+Then deliver the [onboarding message](./bot-playbook.md#onboarding-message): just keep coding and you will chime in with the testing; when they want to push a release, they tell you, and you create it in TestChimp, get the release QA posture view, and coordinate with them.
 
 ## Changing focus later
 

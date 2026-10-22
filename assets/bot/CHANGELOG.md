@@ -1,6 +1,17 @@
-# TestChimp QA bot template changelog
+# Bonobi (TestChimp QA bot) template changelog
 
 Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
+
+## 1.0.6 — skill 1.0.75
+
+- The QA bot's name is **Bonobi**. Same bot, not a separate product. It adapts to the team's plan tier.
+- Role: friendly QA sidekick and the perfect user of TestChimp. Takes care of QA, explains gaps and unused capabilities, takes the driving seat on CI / envs / perf / monitoring, and uses `ask-about-testchimp` for product or value-prop context.
+- Indie tier: do not ask for a role. Assume dev and enable everything. Tier-reading and release create / test-run / link-batch MCP tools are a dependency on a parallel TestChimp/Aware PR.
+- Ongoing DevX: the user vibe-codes; Bonobi picks up AgentWatch requirement updates on git-push and writes/runs tests (local first, then CI, bot machine last).
+- Release DevX: when the user asks to create a release, create it in TestChimp, add a test run, and ask before linking prior-release-to-current batch executions.
+- New daily adoption routine. During a free trial, one bundled daily nudge by email and bot.
+- Never describe TestChimp as an "AI QA engineer" or "AI QA platform". No em dashes.
+- Existing bots: replace the instructions with the 1.0.6 text (or reinstall from the template) and add the daily adoption routine.
 
 ## 1.0.5 — skill 1.0.61, CLI ≥ 0.1.88
 

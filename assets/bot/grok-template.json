@@ -1,9 +1,9 @@
 {
   "templateId": "testchimp-qa-bot-grok",
-  "templateVersion": "1.0.5",
+  "templateVersion": "1.0.6",
   "platform": "GROK_BOT",
-  "displayName": "TestChimp QA bot",
-  "description": "Your QA counterpart for one TestChimp project: receives TestChimp events, proposes QA work, and runs testchimp skill workflows after your approval.",
+  "displayName": "Bonobi",
+  "description": "Bonobi is TestChimp's QA bot (the same QA bot) for one project: a friendly QA sidekick that adapts to your plan tier, watches posture, and runs testchimp skill workflows.",
   "connector": {
     "type": "remoteMcp",
     "url": "https://mcp.testchimp.io/mcp",
@@ -33,7 +33,7 @@
   "skill": {
     "name": "testchimp",
     "repo": "https://github.com/testchimphq/testchimp-skills",
-    "version": "1.0.61",
+    "version": "1.0.75",
     "branch": "main",
     "setup": "Installed with the template; the bot instructions also self-install it from the repo on first run if missing. The daily self-update routine replaces it with the latest main automatically."
   },
@@ -106,6 +106,16 @@
       "prompt": "If QA_POSTURE is among my bot capabilities, send the weekly QA posture digest from the testchimp skill's references/bot-playbook.md (get-qa-posture), personalised to my role and responsibilities.",
       "reference": "references/bot-playbook.md#weekly-qa-posture-digest-qa_posture",
       "requiresCapability": "QA_POSTURE"
+    },
+    {
+      "id": "dailyAdoptionCheck",
+      "schedule": {
+        "frequency": "daily",
+        "time": "09:15",
+        "timezone": "user"
+      },
+      "prompt": "Run the adoption routine from the testchimp skill's references/bot-playbook.md: check feature utilisation, pick the next unused capability worth adopting, explain why (use ask-about-testchimp for value-prop), then set it up. During a free trial, send one bundled daily nudge by email and in this chat. Skip if we are past the first weeks and nothing new is unused.",
+      "reference": "references/bot-playbook.md#adoption-routine"
     }
   ],
   "changelog": "assets/bot/CHANGELOG.md"

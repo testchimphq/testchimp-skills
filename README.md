@@ -1,6 +1,6 @@
 # testchimp-skills
 
-TestChimp is the QA platform for coding agents. This repository is the **Claude Code plugin** (skill + hosted MCP) and the same skill pack other agents install from Git. Agents run pre-defined playbooks under **`references/`**; project-specific decisions live in **`plans/knowledge/policies/*.policy.md`**.
+TestChimp is QA posture monitoring and feedback-loop orchestration for coding agents. This repository is the **Claude Code plugin** (skill + hosted MCP) and the same skill pack other agents install from Git. Agents run pre-defined playbooks under **`references/`**; project-specific decisions live in **`plans/knowledge/policies/*.policy.md`**. Bonobi is TestChimp's QA bot (the same bot, not a separate product) and lives in the skill's bot playbooks.
 
 The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth: you pick the TestChimp project on the consent screen, and every tool call is scoped to that project. Type **`/testchimp project-init`** and **`/testchimp init`** (same as other hosts). Claude Code’s `/` menu also lists **`/testchimp:<name>`** aliases for core QA commands (`commands/*.md`). One person runs project-init once per repo. Everyone else runs only init. Plain language such as “set up TestChimp for this repo” also starts the skill.
 
@@ -25,7 +25,7 @@ Install from this marketplace, then sign in, then init. Do not invent extra comm
 
    On the consent screen:
    - Pick the TestChimp project for **this** repository from the dropdown. That project is written into the token; every tool call is scoped to it. There is one global URL and no project IDs in the MCP config.
-   - Leave **Use this connection as my QA bot** **unticked**. That box is for Grok Bot. Ticking it binds the connection as a QA bot instead of a normal coding-agent login.
+   - Leave **Use this connection as my QA bot** **unticked**. That box is for Bonobi (TestChimp's QA bot, typically on Grok). Ticking it binds the connection as Bonobi instead of a normal coding-agent login.
 
    If you later open a repo that belongs to a different TestChimp project, `/testchimp init` will detect the mismatch and tell you to re-authenticate through **`/mcp`** and pick that repo's project.
 
