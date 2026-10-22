@@ -243,6 +243,8 @@ At end of every **standalone** Execute (or when aborting), report **`ACTION_COMP
 
 **First successful report** for a client-supplied `workflow_execution_id` **creates** the DB workflow execution (`execution_created: true`); later reports with that **same** id append actions. The server **requires** `workflow_execution_id` on every `report-agent-action` (no auto-mint). **`upsert-plans-support-file` alone does not create a workflow execution** — without RAA / inline `agentTraceability` (with both workflow id + execution id), the platform shows no run.
 
+**User input on a cloud run:** when the playbook is executing on a cloud agent and no live UI session is attached, call `ask-user-question-async` (CLI ≥ **2.0.2**) with that same `workflow_execution_id`. Do not call it from a local IDE. The user answers on the workflow execution page (or in the ChimpHands session when that is the invoke strategy); the platform sends the answer back to the agent.
+
 **First-row RAA (project-init and any catalog start):** send a **non-`WORKFLOW`** entity so the row is created without closing the run. When `entityType` is **`POLICY`**, the server requires `entityIdentity` to be a real **`*.policy.md` filename** for the policy this step is acting on — not a catalog workflow id. Example the server accepts:
 
 - `entityType`: **`POLICY`**

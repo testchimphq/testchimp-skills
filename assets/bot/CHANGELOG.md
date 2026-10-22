@@ -2,6 +2,13 @@
 
 Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
 
+## 1.0.9 — skill 2.0.2
+
+- Skill **2.0.2** requires **`@testchimp/cli` ≥ 2.0.2**. MCP API stays **2.0.0**.
+- CLI **2.0.2** adds **`ask-user-question-async`** (88 tools). A cloud agent with no live UI asks with structured choices on the workflow execution. A live UI or a local IDE asks in the conversation.
+- Webhook deliveries are paced: a push usually arrives about 5 to 10 minutes later. Queued in My Bots during that window is normal.
+- Existing bots: the daily self-update picks up the skill and the CLI on the bot's computer.
+
 ## 1.0.8 — skill 2.0.1
 
 - Skill **2.0.1** requires **`@testchimp/cli` ≥ 2.0.1**. Release-catalog CLI flags are **`--release <label>`** (alias **`--release-version`**). The old `--version <label>` collided with the global CLI `--version` (package version). MCP field names stay `version`.

@@ -87,7 +87,9 @@ If the worktree is **dirty** at the end of your turn (any staged/unstaged/untrac
 
 **When `CHIMPHANDS_UI_ATTACHED=false` (async):** this end-of-turn commit+push is especially critical — the user reviews via PR / **Files changed**, not a live worktree. Do not end the turn with a dirty tree.
 
-**When `CHIMPHANDS_UI_ATTACHED=true`:** still commit+push after turns that changed files. Live streaming does **not** replace git history; Files changed / PR review need commits on the remote `testchimp-*` branch.
+**When `CHIMPHANDS_UI_ATTACHED=true`:** still commit+push after turns that changed files. Live streaming does **not** replace git history; Files changed / PR review need commits on the remote `testchimp-*` branch. Ask the user in this conversation. Do **not** call `ask-user-question-async`.
+
+**When you must wait on the user and no UI is attached** (`CHIMPHANDS_UI_ATTACHED=false` or another cloud agent with `--workflow-execution-id`): call `ask-user-question-async` (CLI ≥ **2.0.2**; question + choices, recommended choice first). Local IDE sessions ask in chat instead.
 
 **Plan-file turns:** Writing `plans/knowledge/workflow_plans/...plan.md` (and upsert) still counts as a file change — commit + push that plan file on the agent branch the same turn.
 
