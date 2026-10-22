@@ -50,7 +50,7 @@ Also load **`releaseLabel`** from the top-level scan config response for `get-re
 
 7. Export **Traditional JSON** (`traditional-json`, not HTML; avoid `traditional-json-plus` unless needed).
 
-8. **`testchimp report-scan-findings --scanner DAST --id '<scan_id>' --report-file <path>`**
+8. **`testchimp report-scan-findings --scanner DAST --scan-id '<scan_id>' --report-file <path>`**
 
 9. On successful report → **`testchimp update-scan-progress --id '<scan_id>' --status COMPLETED`**. On hard failure of a required step → `EXCEPTION`.
 

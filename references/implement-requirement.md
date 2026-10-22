@@ -149,7 +149,7 @@ Author this **as if `/testchimp implement` were not involved** (same depth as Cu
 
 **Goal:** File task issues (story/scenario-linked when ordinals are known; severity + category + `TestChimp Implement` label), implement the approved plan in the product codebase, mark tasks **`FIXED`** as work completes, then self-review.
 
-1. **Create task issues (required, immediately after Plan approval)** — First call **`list-issues`** (`--issue-type TASK_ISSUE --labels "TestChimp Implement"` / `--status ACTIVE`, plus story/scenario context in `--search` when useful) and **reuse** a matching open issue instead of filing a duplicate. For each remaining planned task, MCP-first **`upsert-issue`** (omit `issueId`; see [`cli.md`](./cli.md) § `list-issues` / `upsert-issue`) with:
+1. **Create task issues (required, immediately after Plan approval)** — First call **`list-issues`** (`--statuses ACTIVE --labels "TestChimp Implement"`, plus story/scenario context in `--search` when useful) and **reuse** a matching open issue instead of filing a duplicate. `list-issues` has no `issueType` filter — match on label + title. For each remaining planned task, MCP-first **`upsert-issue`** (omit `issueId`; see [`cli.md`](./cli.md) § `list-issues` / `upsert-issue`) with:
    - **`issueType`:** `TASK_ISSUE`
    - **`status`:** `ACTIVE` (default)
    - **`title`:** the planned task title

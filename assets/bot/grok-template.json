@@ -114,7 +114,7 @@
         "time": "09:15",
         "timezone": "user"
       },
-      "prompt": "Run the adoption routine from the testchimp skill's references/bot-playbook.md: check feature utilisation, pick the next unused capability worth adopting, explain why (use ask-about-testchimp for value-prop), then set it up. During a free trial, send one bundled daily nudge by email and in this chat. Skip if we are past the first weeks and nothing new is unused.",
+      "prompt": "Run the adoption routine from the testchimp skill's references/bot-playbook.md: check feature utilisation, pick the next unused capability worth adopting, explain why (use ask-about-testchimp for value-prop when the host lists it), then set it up. During a free trial, send one bundled daily nudge by email and in this chat. Skip if we are past the first weeks and nothing new is unused.",
       "reference": "references/bot-playbook.md#adoption-routine"
     }
   ],

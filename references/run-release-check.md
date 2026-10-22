@@ -29,8 +29,8 @@ Each scan has **exactly one** check config (`dastCheckConfig` **or** `sastCheckC
 
 Treat steps 4–5 as a **try / finally**: always run cleanup (step 5) even when step 4 throws into `EXCEPTION`.
 
-1. **`testchimp update-scan-progress --id '<scan_id>' --status IN_PROGRESS`**
-2. **`testchimp get-security-scan-config --id '<scan_id>'`** — response shape (camelCase):
+1. **`testchimp update-scan-progress --id '<scan_id>' --status IN_PROGRESS`** (CLI `--id` maps to MCP **`scanId`**)
+2. **`testchimp get-security-scan-config --id '<scan_id>'`** (MCP **`scanId`**) — response shape (camelCase):
    - Prefer top-level **`dastCheckConfig`** when present (also mirrored under `detail.dastCheckConfig`).
    - **`detail.sastCheckConfig`** for SAST; **`detail.depsCheckConfig`** for deps; **`detail.leaksCheckConfig`** for secrets.
    - Legacy scans may still have `detail.securityScanDetail`; the server also materializes top-level `dastCheckConfig` from it when possible.

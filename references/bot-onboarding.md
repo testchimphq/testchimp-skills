@@ -45,7 +45,7 @@ Response: `{status: {…}}`. Read **snake_case** keys (`platform_comms`, `folder
 
 ### 2. Tier, then role
 
-Call **`get-org-capabilities`** before any role question. Read `planLabel` (`trial` / `indie` / `teams` / `growth`), plus `freeTrialActive`, `freeTrialExpiryTimestampMillis`, `trialDaysRemaining`, `chimphandsCredits`, and `capabilities[]`. See [`bot-playbook.md` § Tier handling](./bot-playbook.md#tier-handling).
+Call **`get-org-capabilities`** before any role question. Read `planLabel` (`trial` / `indie` / `teams` / `growth`), plus `freeTrialActive`, `freeTrialExpiryTimestampMillis`, `trialDaysRemaining`, `chimphandsCredits` (object: `remainingUsd`, `includedUsd`, …), and `capabilities[]`. See [`bot-playbook.md` § Tier handling](./bot-playbook.md#tier-handling).
 
 **Indie** (`planLabel` `indie`): do **not** ask for a role. Assume **dev** (`DEVELOPER`) and skip the role card. Go to [step 3](#3-capabilities-pre-selected-for-the-role) and enable everything (see indie row). Tell the user in one line that you are turning on reporting, QA posture watching, git-push listening, test writing, and plan updates.
 

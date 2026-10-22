@@ -54,7 +54,8 @@ ready
   **category** (BugCategory enum). Tasks are a projection of the Product plan,
   not a substitute. Do not call `upsert-issue` before Plan approval, unless the
   user already asked to implement a supplied plan. After approval, call
-  `list-issues` first and reuse an open matching `TASK_ISSUE` (same title / label
+  `list-issues` (`statuses: [ACTIVE]`, label `TestChimp Implement`, search the
+  title) first and reuse an open matching `TASK_ISSUE` (same title / label
   / story) instead of filing a duplicate. For each remaining task
   call `upsert-issue` with `issueType: TASK_ISSUE`, `labels: ["TestChimp Implement"]`
   (do **not** use `source: testchimp-implement`), `severity` mapped from priority
