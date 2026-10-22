@@ -104,6 +104,20 @@ Never narrate API results without tool output.
 
 ---
 
+## Product Q&A (`ask-about-testchimp`) — last resort
+
+Official TestChimp product / value-prop answers. **Last resort** — answer from this skill pack first.
+
+| If | Then |
+| --- | --- |
+| [`SKILL.md`](../SKILL.md) / `references/` already answers | Use that answer. Do **not** call the tool. |
+| Need official product / value-prop copy and the skill pack does not have it | Call **`ask-about-testchimp`** / **`ask-testchimp-question`** with `--question` ≤ **2,000** characters. Do not invent marketing copy. |
+| Already used **20** questions this hour for this project | Stop. Reuse prior answers or the skill pack. Further calls return HTTP 429. |
+
+Either name is the same family. Prefer the name your connected MCP lists. Flags and examples: [`cli.md`](./cli.md) § `ask-about-testchimp`.
+
+---
+
 ## Mapped `plans/` and `tests/` roots
 
 - Find **`.testchimp-plans`** / **`.testchimp-tests`** marker files (walk up from cwd).
@@ -140,15 +154,17 @@ Use the real commit — **never fabricate** a SHA:
 git rev-parse HEAD
 ```
 
+Prefer **`git -C <dir> …`** over `cd <dir> && git …` (Claude Code warns when a command changes directory before a VCS command).
+
 For branch scope vs default branch, use merge-base / `git log` as in [`policies-and-traceability.md`](./policies-and-traceability.md#scoping-overarching--all-workflows).
 
 ---
 
 ## `/testchimp` composer command → `workflow-id`
 
-| User command (after `/testchimp`) | `workflow-id` |
+| User command (after `/testchimp` or `/testchimp:`) | `workflow-id` |
 | --- | --- |
-| `project init` | `project-init` |
+| `project-init` / `project init` | `project-init` |
 | `author plan` | `author-plans` |
 | `run qa` / `test` | `run-qa` |
 | `upkeep` / `evolve` | `upkeep` |
@@ -166,7 +182,7 @@ Plan path pattern: `knowledge/workflow_plans/<workflow-id>/<ulid>.plan.md`.
 
 | Normal planning | Quick answers below |
 | --- | --- |
-| Product design, test strategy, scope tradeoffs | ULID mint, plan path, branch checkout, MCP vs CLI, runner env |
+| Product design, test strategy, scope tradeoffs | ULID mint, plan path, branch checkout, MCP vs CLI, runner env, last-resort product Q&A |
 | Ambiguous user intent | Preamble checks in [`SKILL.md`](../SKILL.md) |
 | ChimpHands branch / end-of-turn commit | [`chimphands.md`](./chimphands.md) |
 | ChimpHands GHA auth / CI self-heal | [`chimphands-faq.md`](./chimphands-faq.md) |

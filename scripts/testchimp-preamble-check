@@ -18,6 +18,12 @@ _is_placeholder() {
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export SKILL_DIR
 
+# Cursor plugin-cache / marketplace installs must not self-update via git pull.
+CURSOR_PLUGIN_INSTALL=no
+if echo "$SKILL_DIR" | grep -qE '\.cursor/plugins|\.cursor/extensions'; then
+  CURSOR_PLUGIN_INSTALL=yes
+fi
+
 # --- Skill update check (git-based; canonical source of truth) ---
 LOCAL_VERSION=""
 REMOTE_VERSION=""
@@ -32,7 +38,9 @@ NODE
   )"
 fi
 
-if [ -d "$SKILL_DIR/.git" ]; then
+if [ "${CURSOR_PLUGIN_INSTALL}" = "yes" ]; then
+  _say "CURSOR_PLUGIN_INSTALL: yes. Update through Cursor's Plugins panel or the marketplace listing, not git pull"
+elif [ -d "$SKILL_DIR/.git" ]; then
   git -C "$SKILL_DIR" fetch origin main >/dev/null 2>&1 || true
   if command -v node >/dev/null 2>&1; then
     REMOTE_VERSION="$(SKILL_DIR="$SKILL_DIR" node - <<'NODE' 2>/dev/null || true
@@ -172,19 +180,58 @@ if [ -z "${MCP_JSON:-}" ]; then
   done
 fi
 
-# Check user-level / plugin MCP locations for testchimp server
+# Hosted / plugin HTTP (session MCP) vs local creds file (.testchimp/mcp.json).
+# Always detect both: a runner creds file is stdio-shaped and must not hide the
+# plugin's hosted server (https://mcp.testchimp.io/mcp).
+_is_hosted_testchimp_mcp() {
+  local f="$1"
+  [ -f "$f" ] || return 1
+  command -v node >/dev/null 2>&1 || return 1
+  MCP_CANDIDATE="$f" node - <<'NODE' 2>/dev/null
+const fs=require('fs');
+try{
+  const j=JSON.parse(fs.readFileSync(process.env.MCP_CANDIDATE,'utf8'));
+  const servers=j?.mcpServers||j?.servers||{};
+  const entries=Object.entries(servers);
+  for (const [name, s] of entries) {
+    const looksTc = name==='testchimp' || (Array.isArray(s?.args) && s.args.some(a=>String(a).includes('@testchimp/cli')));
+    if (!looksTc || !s || typeof s!=='object') continue;
+    const remoteUrl=[s.url, s.httpUrl, s.serverUrl].find(u=>typeof u==='string') || '';
+    const hostedHost=/mcp\.testchimp\.io/i.test(remoteUrl);
+    const httpType=/^(http|streamable-http)$/i.test(String(s.type||''));
+    if ((remoteUrl || httpType) && !s.command) process.exit(0);
+    if (hostedHost) process.exit(0);
+  }
+}catch{}
+process.exit(1);
+NODE
+}
+
 USER_LEVEL_TESTCHIMP="no"
+HOSTED_MCP="no"
 PLUGIN_SOURCE=""
-if [ -z "${MCP_JSON:-}" ] || [ "${HAS_SERVER:-no}" = "no" ]; then
-  # Check if the skill itself is running from a plugin cache (signal that plugins are in use)
-  if echo "$SKILL_DIR" | grep -qE '\.claude/plugins|\.cursor/plugins|\.gemini/extensions'; then
-    USER_LEVEL_TESTCHIMP="yes"
-    PLUGIN_SOURCE="skill location ($SKILL_DIR under plugin cache)"
+HOSTED_SOURCE=""
+
+_mark_hosted() {
+  HOSTED_MCP="yes"
+  if [ -z "${HOSTED_SOURCE:-}" ]; then
+    HOSTED_SOURCE="$1"
   fi
-  
-  # Check Claude Code plugins (enabled plugins in settings.json, .mcp.json in plugin cache)
-  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -f "$HOME/.claude/settings.json" ] && command -v node >/dev/null 2>&1; then
-    _claude_check=$(SETTINGS="$HOME/.claude/settings.json" node - <<'NODE' 2>/dev/null || echo "no"
+  USER_LEVEL_TESTCHIMP="yes"
+  if [ -z "${PLUGIN_SOURCE:-}" ]; then
+    PLUGIN_SOURCE="$1"
+  fi
+}
+
+# Plugin / extension already registered the hosted HTTP server
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  _mark_hosted "CLAUDE_PLUGIN_ROOT ($CLAUDE_PLUGIN_ROOT)"
+elif echo "$SKILL_DIR" | grep -qE '\.claude/plugins|\.cursor/plugins|\.gemini/extensions'; then
+  _mark_hosted "skill location ($SKILL_DIR under plugin cache)"
+fi
+
+if [ "${HOSTED_MCP}" = "no" ] && [ -f "$HOME/.claude/settings.json" ] && command -v node >/dev/null 2>&1; then
+  _claude_check=$(SETTINGS="$HOME/.claude/settings.json" node - <<'NODE' 2>/dev/null || echo "no"
 const fs=require('fs');
 try {
   const s=JSON.parse(fs.readFileSync(process.env.SETTINGS,'utf8'));
@@ -194,53 +241,58 @@ try {
   else process.stdout.write('no');
 } catch { process.stdout.write('no'); }
 NODE
-    )
-    if [ "$_claude_check" = "yes" ]; then
-      USER_LEVEL_TESTCHIMP="yes"
-      PLUGIN_SOURCE="Claude Code plugin (testchimp in enabledPlugins)"
+  )
+  if [ "$_claude_check" = "yes" ]; then
+    _mark_hosted "Claude Code plugin (testchimp in enabledPlugins)"
+  fi
+fi
+
+if [ "${HOSTED_MCP}" = "no" ] && [ -d "$HOME/.gemini/extensions" ]; then
+  for ext_dir in "$HOME/.gemini/extensions"/*; do
+    if [ -f "$ext_dir/gemini-extension.json" ] && grep -q "testchimp" "$ext_dir/gemini-extension.json" 2>/dev/null; then
+      _mark_hosted "Gemini extension ($ext_dir)"
+      break
     fi
+  done
+fi
+
+if [ "${HOSTED_MCP}" = "no" ] && [ -d "$HOME/.cursor/extensions" ]; then
+  for plugin_dir in "$HOME/.cursor/extensions"/*testchimp*; do
+    if [ -d "$plugin_dir" ]; then
+      _mark_hosted "Cursor plugin ($plugin_dir)"
+      break
+    fi
+  done
+fi
+
+# Project / user HTTP manifests (not the skill pack's own .mcp.json — that would
+# mark every git-clone install as hosted). Plugin cache already marked above.
+for hosted_candidate in \
+  "${CLAUDE_PLUGIN_ROOT:+$CLAUDE_PLUGIN_ROOT/.mcp.json}" \
+  "${CLAUDE_PLUGIN_ROOT:+$CLAUDE_PLUGIN_ROOT/mcp.json}" \
+  "${TOP:+$TOP/.mcp.json}" \
+  "${TOP:+$TOP/mcp.json}" \
+  "${TOP:+$TOP/.cursor/mcp.json}" \
+  "${TOP:+$TOP/.vscode/mcp.json}" \
+  "$HOME/.cursor/mcp.json" \
+  "$HOME/.claude/mcp.json" \
+  "$HOME/.kiro/mcp.json"
+do
+  [ -n "$hosted_candidate" ] || continue
+  case "$hosted_candidate" in
+    *.testchimp/mcp.json) continue ;;
+  esac
+  if _is_hosted_testchimp_mcp "$hosted_candidate"; then
+    _mark_hosted "hosted HTTP config ($hosted_candidate)"
+    break
   fi
-  
-  # Check Gemini extensions
-  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -d "$HOME/.gemini/extensions" ]; then
-    for ext_dir in "$HOME/.gemini/extensions"/*; do
-      if [ -f "$ext_dir/gemini-extension.json" ] && grep -q "testchimp" "$ext_dir/gemini-extension.json" 2>/dev/null; then
-        USER_LEVEL_TESTCHIMP="yes"
-        PLUGIN_SOURCE="Gemini extension ($ext_dir)"
-        break
-      fi
-    done
-  fi
-  
-  # Check Cursor plugins (verify location - may be ~/.cursor/extensions or similar)
-  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ] && [ -d "$HOME/.cursor/extensions" ]; then
-    for plugin_dir in "$HOME/.cursor/extensions"/*testchimp*; do
-      if [ -d "$plugin_dir" ]; then
-        USER_LEVEL_TESTCHIMP="yes"
-        PLUGIN_SOURCE="Cursor plugin ($plugin_dir)"
-        break
-      fi
-    done
-  fi
-  
-  # Fallback: user-level mcp.json files (less common for plugins)
-  if [ "${USER_LEVEL_TESTCHIMP}" = "no" ]; then
-    for user_config in \
-      "$HOME/.cursor/mcp.json" \
-      "$HOME/.claude/mcp.json" \
-      "$HOME/.kiro/mcp.json"
-    do
-      if [ -f "$user_config" ] && _is_testchimp_mcp "$user_config"; then
-        USER_LEVEL_TESTCHIMP="yes"
-        PLUGIN_SOURCE="user-level config ($user_config)"
-        break
-      fi
-    done
-  fi
-  
-  if [ "${USER_LEVEL_TESTCHIMP}" = "yes" ]; then
-    _say "USER_LEVEL_TESTCHIMP: $PLUGIN_SOURCE"
-  fi
+done
+
+if [ "${USER_LEVEL_TESTCHIMP}" = "yes" ]; then
+  _say "USER_LEVEL_TESTCHIMP: $PLUGIN_SOURCE"
+fi
+if [ "${HOSTED_MCP}" = "yes" ]; then
+  _say "TESTCHIMP_HOSTED_MCP: $HOSTED_SOURCE"
 fi
 
 if [ -n "${MCP_JSON:-}" ] && command -v node >/dev/null 2>&1; then
@@ -307,21 +359,42 @@ try{
 }
 NODE
   )"
+  _creds_file="no"
+  case "${MCP_JSON:-}" in
+    *.testchimp/mcp.json) _creds_file="yes" ;;
+  esac
   if [ "${HAS_SERVER:-no}" != "yes" ]; then
-    if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ]; then
+    if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ] || [ "${HOSTED_MCP:-no}" = "yes" ]; then
       _say "NOTE: No project-level testchimp server found, but plugin/user-level server detected ($PLUGIN_SOURCE). If testchimp MCP tools are available in your session, MCP is satisfied. Do not write a second server at project level unless you need per-project config (e.g. stdio with different API keys)."
+      _say "TESTCHIMP_SERVER_MODE: hosted / plugin HTTP (session MCP)"
     else
       _warn "BLOCKER (unless the testchimp MCP tools are already available in this session, e.g. via a plugin): mcpServers.testchimp missing at project level — run /testchimp init Workstation gate or merge assets/sample-mcp.json"
     fi
   else
-    _say "TESTCHIMP_SERVER_MODE: $([ "${IS_REMOTE:-no}" = "yes" ] && echo "remote (OAuth)" || echo "stdio (local process)")"
+    if [ "${HOSTED_MCP:-no}" = "yes" ]; then
+      if [ "${_creds_file}" = "yes" ]; then
+        _say "TESTCHIMP_SERVER_MODE: hosted / plugin HTTP (session MCP); local creds file present ($MCP_JSON)"
+      elif [ "${IS_REMOTE:-no}" = "yes" ]; then
+        _say "TESTCHIMP_SERVER_MODE: hosted / plugin HTTP (session MCP)"
+      else
+        _say "TESTCHIMP_SERVER_MODE: hosted / plugin HTTP (session MCP); local MCP config is stdio-shaped ($MCP_JSON)"
+      fi
+    elif [ "${IS_REMOTE:-no}" = "yes" ]; then
+      _say "TESTCHIMP_SERVER_MODE: remote (OAuth)"
+    else
+      _say "TESTCHIMP_SERVER_MODE: stdio (local process)"
+    fi
   fi
-  if [ "${IS_REMOTE:-no}" = "yes" ]; then
+  _session_hosted="no"
+  if [ "${HOSTED_MCP:-no}" = "yes" ] || [ "${IS_REMOTE:-no}" = "yes" ]; then
+    _session_hosted="yes"
+  fi
+  if [ "${_session_hosted}" = "yes" ]; then
     if [ "${HAS_KEY:-no}" = "yes" ]; then
       _say "TESTCHIMP_API_KEY: present in config (not needed for MCP but useful for test runners; not printed)"
     else
-      _say "MCP: remote (OAuth) entry${REMOTE_PROJECT_ID:+, projectId $REMOTE_PROJECT_ID} — no key in IDE config (expected)"
-      _warn "ACTION: runner key not saved yet — call MCP get-project-credentials, then pipe projectApiKey to: testchimp workspace save-creds --folder <git root> --project-id <projectId> --backend-url <backendUrl> --ingress-url <ingressUrl> (writes .testchimp/mcp.json; SKILL.md Preamble #4). Never print the key."
+      _say "MCP: hosted / remote (OAuth) session${REMOTE_PROJECT_ID:+, projectId $REMOTE_PROJECT_ID} — no key in IDE config (expected)"
+      _warn "ACTION: runner key not saved yet — hosted/plugin: get-project-credentials then write .testchimp/mcp.json with the file-write tool; chmod 700 .testchimp && chmod 600 .testchimp/mcp.json; append only .testchimp/ to .gitignore (no markdown ---). stdio: save-workspace-creds {folder} if listed, else the hosted path. Never put the key in a shell command. Never print the key. See init-testchimp.md Save the runner key."
     fi
   else
     if [ "${HAS_KEY:-no}" = "yes" ]; then
@@ -333,13 +406,13 @@ NODE
   if [ "${HAS_USER_ID:-no}" = "yes" ]; then
     _say "TESTCHIMP_USER_ID: present (not printed)"
   else
-    if [ "${IS_STDIO:-no}" = "yes" ]; then
+    if [ "${IS_STDIO:-no}" = "yes" ] && [ "${_session_hosted}" != "yes" ]; then
       _warn "WARN: TESTCHIMP_USER_ID missing/placeholder (needed for get-my-tasks / list-tests-awaiting-verification and run attribution)"
     fi
   fi
   if [ "${HAS_PROJECT_ID:-no}" = "yes" ]; then
     _say "TESTCHIMP_PROJECT_ID: present (not printed)"
-  elif [ "${IS_REMOTE:-no}" = "yes" ]; then
+  elif [ "${_session_hosted}" = "yes" ]; then
     :
   else
     _warn "WARN: TESTCHIMP_PROJECT_ID missing/placeholder (needed for TrueCoverage RUM instrumentation)"
@@ -357,7 +430,8 @@ NODE
     _say "TESTCHIMP_INGRESS_URL: not set in MCP (reporter uses ingress default or SaaS featureservice→ingress rewrite)"
   fi
 else
-  if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ]; then
+  if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ] || [ "${HOSTED_MCP:-no}" = "yes" ]; then
+    _say "TESTCHIMP_SERVER_MODE: hosted / plugin HTTP (session MCP)"
     _say "NOTE: No project-level MCP config found, but plugin/user-level testchimp server detected ($PLUGIN_SOURCE). If testchimp MCP tools are available in your session, MCP is satisfied."
   else
     _warn "WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp). If testchimp MCP tools are not available via a plugin, run /testchimp init to create project-level config from assets/sample-mcp.json"

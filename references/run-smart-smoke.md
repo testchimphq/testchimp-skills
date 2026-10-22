@@ -24,7 +24,7 @@ Follow the **overarching** scoping rule in [`policies-and-traceability.md`](./po
 
 1. **Explicit scope** — user-provided plans folder path(s), scenario ids, or plain-English focus → limit affected scenarios and linked tests to that focus.
 2. **Feature branch** (no explicit scope) — likely affected scenarios from **PR/branch diff** + related `plans/stories/` / `plans/scenarios/` (same as identification below).
-3. **Default / main branch** (no explicit scope) — **`get-last-run-workflow-detail`** with **`workflow-id: run-smart-smoke`** first (or parent `run-qa` when nested). **One-release fallback:** if no last run for `run-smart-smoke`, call again with **`workflow-id: run-smart-regression`**. Optional `branch-name` / `user-id` on both. If last run is missing or too far back, ask the user for since-when (recent commits vs broader).
+3. **Default / main branch** (no explicit scope) — **`get-workflow-executions` (`workflowId` + `latestOnly=true`)** with **`workflow-id: run-smart-smoke`** first (or parent `run-qa` when nested). **One-release fallback:** if no last run for `run-smart-smoke`, call again with **`workflow-id: run-smart-regression`**. Optional `branch-name` / `user-id` on both. If last run is missing or too far back, ask the user for since-when (recent commits vs broader).
 4. **Nested under run-qa** — use the branch plan **§6 Smart smoke scope** and the identification steps below (PR + plans); still bound by the composite’s single chosen scope.
 
 ---

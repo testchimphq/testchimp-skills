@@ -1,40 +1,105 @@
 # testchimp-skills
 
-TestChimp skill for **policy-backed QA workflows** (skill **≥ 1.0.0**). Agents run pre-defined playbooks under **`references/`**; project-specific decisions live in **`plans/knowledge/policies/*.policy.md`**. Use with **`@testchimp/cli`** (≥ **`required_cli_version`** in **`SKILL.md`**) and **`TESTCHIMP_API_KEY`**.
+TestChimp is QA posture monitoring and feedback-loop orchestration for coding agents. This repository is the **Claude Code plugin** (skill + hosted MCP) and the same skill pack other agents install from Git. Agents run pre-defined playbooks under **`references/`**; project-specific decisions live in **`plans/knowledge/policies/*.policy.md`**. Bonobi is TestChimp's QA bot (the same bot, not a separate product) and lives in the skill's bot playbooks.
 
-**Primary commands**
+The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth: you pick the TestChimp project on the consent screen, and every tool call is scoped to that project. Type **`/testchimp project-init`** and **`/testchimp init`** (same as other hosts). Claude Code’s `/` menu also lists **`/testchimp:<name>`** aliases for core QA commands (`commands/*.md`). One person runs project-init once per repo. Everyone else runs only init. Plain language such as “set up TestChimp for this repo” also starts the skill.
+
+## Claude Code plugin
+
+Install from this marketplace, then sign in, then init. Do not invent extra commands.
+
+1. **Install the plugin**
+
+   ```
+   /plugin marketplace add testchimphq/testchimp-skills
+   /plugin install testchimp@testchimp
+   ```
+
+   On Claude Code v2.1.275+ you can do both in one step: `/plugin install testchimp --marketplace testchimphq/testchimp-skills`.
+
+   **Restart the Claude Code session** after install. A session that is already running does not pick up the plugin until you quit and start it again.
+
+2. **Sign in to the hosted MCP**
+
+   Run **`/mcp`**, choose **`plugin:testchimp:testchimp`**, then **Authenticate**. The browser opens `https://mcp.testchimp.io/mcp` (OAuth through `https://featureservice.testchimp.io`).
+
+   On the consent screen:
+   - Pick the TestChimp project for **this** repository from the dropdown. That project is written into the token; every tool call is scoped to it. There is one global URL and no project IDs in the MCP config.
+   - Leave **Use this connection as my QA bot** **unticked**. That box is for Bonobi (TestChimp's QA bot, typically on Grok). Ticking it binds the connection as Bonobi instead of a normal coding-agent login.
+
+   If you later open a repo that belongs to a different TestChimp project, `/testchimp init` will detect the mismatch and tell you to re-authenticate through **`/mcp`** and pick that repo's project.
+
+3. **Init**
+
+   | Who | Command | What it does |
+   | --- | --- | --- |
+   | One person, once per project | `/testchimp project-init` | Folder mapping, shared test env, CI, optional imports, team invites |
+   | Every other teammate | `/testchimp init` | Confirm the plugin MCP, save a runner API key, wire the local stack |
+
+   In Claude Code you can type those same commands, or pick **`/testchimp:project-init`** / **`/testchimp:init`** (and the other core QA **`/testchimp:<name>`** aliases) from the `/` menu. Other hosts use `/testchimp project init` / `/testchimp init`. Do not use `/testchimp:testchimp …`.
+
+   **Time:** project-init with one-by-one tool approvals typically takes about **20 minutes** and on the order of **60 approval prompts**. Init is shorter. Pre-allow TestChimp's MCP tools (below) so you are not clicking through every call.
+
+   Test runners (Playwright, k6, the CLI) still need a project API key. On hosted / plugin MCP, init calls `get-project-credentials` and writes the gitignored `.testchimp/mcp.json` with the file-write tool (never a shell command that contains the key). On local stdio MCP, it calls `save-workspace-creds` with only the folder. It does **not** write a second TestChimp server into the project's `.mcp.json`.
+
+### Fewer approval prompts (Claude Code)
+
+Add this to project **`.claude/settings.json`** or user settings so TestChimp MCP tools from this plugin do not prompt on every call ([permission rules](https://code.claude.com/docs/en/permissions), [plugin MCP names](https://code.claude.com/docs/en/mcp)):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_testchimp_testchimp__*"
+    ]
+  }
+}
+```
+
+That rule is `mcp__plugin_<plugin-name>_<server-name>__*`. This plugin's server key is `testchimp`, so the server segment is `plugin_testchimp_testchimp`. A single tool would be `mcp__plugin_testchimp_testchimp__get-project-init-status`. You can also choose **Always allow** the first time Claude Code asks for a TestChimp tool.
+
+Update the plugin with `/plugin marketplace update testchimp`.
+
+### What this plugin runs, sends and fetches
+
+Installing the plugin loads this skill (`SKILL.md` and `references/`) and one remote MCP server:
+
+- **Hosted MCP:** `https://mcp.testchimp.io/mcp` (Streamable HTTP). Claude Code signs in with OAuth. The authorization server is `https://featureservice.testchimp.io`. Tool calls send coverage, plans, issues, environments and similar QA data for the project you picked at consent.
+- **Test runners / CLI (optional, after init):** `@testchimp/cli` on npm when a workflow runs CLI commands, plus the project's TestChimp API key stored in gitignored `.testchimp/mcp.json`. Ingress for reporters is `https://ingress.testchimp.io` unless the project overrides it.
+- **Skill updates:** git fetch of `https://github.com/testchimphq/testchimp-skills` when you or the agent check for a newer skill version.
+
+The plugin does not run a local MCP process and does not put an API key in Claude Code config.
+
+## Primary commands
 
 | Command | Workflow id | What it does |
 |---------|-------------|--------------|
-| `/testchimp init` | `init` (One-Off) | Set up QA infra, seed default policies, MCP / workstation gate |
-| `/testchimp project init` | `project-init` (One-Off) | One-time project setup: folder mapping, shared env, CI, optional imports |
-| `/testchimp import` | `import` (One-Off) | Import existing E2E into SmartTests (Playwright as-is or translate) |
-| `/testchimp import-perf-tests` | `import-perf-tests` (One-Off) | Import existing Locust/k6/JMeter/etc. into the TestChimp `k6/` folder |
-| `/testchimp run QA` | `run-qa` | Full PR QA composite (plans → env → tests → smart smoke → ExploreChimp → TrueCoverage) |
-| `/testchimp upkeep` | `upkeep` | Coverage / TrueCoverage / cleanup composite (periodic maintenance) |
-| `/testchimp implement` | `implement` | Implement a story/scenario or a finetuned plan file end-to-end |
-| `/testchimp explore` | `run-explorechimp` | ExploreChimp UX analytics on SmartTest pathways |
-| `/testchimp instrument` | `instrument-truecoverage` | TrueCoverage / RUM instrumentation |
-| `/testchimp create tests` | `create-tests` | Author/update SmartTests for a scope (plans, PR, or **API operation coverage**) |
-| `/testchimp create policy` | `create-policy` | Author a `*.policy.md` for a catalog workflow |
+| `/testchimp init` (Claude Code menu: `/testchimp:init`) | `init` (One-Off) | Per-developer workstation: MCP sign-in, runner key, local env |
+| `/testchimp project-init` (Claude Code menu: `/testchimp:project-init`) / `/testchimp project init` | `project-init` (One-Off) | One-time project setup: folder mapping, shared env, CI, optional imports |
+| `/testchimp import` (Claude Code menu: `/testchimp:import-tests`) | `import` (One-Off) | Import existing E2E into SmartTests (Playwright as-is or translate) |
+| `/testchimp import plans` (Claude Code menu: `/testchimp:import-plans`) | `import-plans` (One-Off) | Import existing plan markdown into mapped `plans/` |
+| `/testchimp import-perf-tests` | `import-perf-tests` (One-Off) | Import existing Locust/k6/JMeter/etc. into the TestChimp `k6/` folder (skill-only; no Claude Code plugin command) |
+| `/testchimp run QA` (Claude Code menu: `/testchimp:run-qa`) | `run-qa` | Full PR QA composite (plans → env → tests → smart smoke → ExploreChimp → TrueCoverage) |
+| `/testchimp upkeep` (Claude Code menu: `/testchimp:upkeep`) | `upkeep` | Coverage / TrueCoverage / cleanup composite (periodic maintenance) |
+| `/testchimp implement` | `implement` | Implement a story/scenario or a finetuned plan file end-to-end (skill-only; no Claude Code plugin command) |
+| `/testchimp explore` (Claude Code menu: `/testchimp:explore`) | `run-explorechimp` | ExploreChimp UX analytics on SmartTest pathways |
+| `/testchimp instrument` (Claude Code menu: `/testchimp:instrument-truecoverage`) | `instrument-truecoverage` | TrueCoverage / RUM instrumentation |
+| `/testchimp create tests` (Claude Code menu: `/testchimp:create-tests`) | `create-tests` | Author/update SmartTests for a scope (plans, PR, or **API operation coverage**) |
+| `/testchimp create policy` | `create-policy` | Author a `*.policy.md` for a catalog workflow (skill-only; no Claude Code plugin command) |
 
 **Synonyms (same workflow):** `/testchimp test` → **`run QA`**; `/testchimp evolve` (legacy `/testchimp audit`) → **`upkeep`**; `/testchimp plan` → **`author plans`**.
 
 Thin / nested playbooks (also invokable on their own): **`connect-to-test-env`**, **`create-tests`**, **`execute-tests`**, **`run-smart-smoke`**, **`author-plans`**, **`fix-test-execution`**, **`fix-issue`**, **`cleanup`**, security scans, requirement quality, and more — see [Command routing](SKILL.md#command-routing) in **`SKILL.md`**.
 
-Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environments-skill](https://github.com/bunnyshell/bunnyshell-environments-skill)): **`SKILL.md` at the repository root**, with **`references/`** and **`assets/`** beside it. **`name` in `SKILL.md` is `testchimp`**, so the install directory must be named **`testchimp`** (see [Agent Skills spec — `name` matches directory](https://agentskills.io/specification)).
+Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environments-skill](https://github.com/bunnyshell/bunnyshell-environments-skill)): **`SKILL.md` at the repository root**, with **`references/`** and **`assets/`** beside it. **`name` in `SKILL.md` is `testchimp`**, so a git-clone install directory must be named **`testchimp`** (see [Agent Skills spec — `name` matches directory](https://agentskills.io/specification)).
 
-**Recommended install:** **git clone** into **`<skills-parent>/testchimp`** and keep **`.git`** so agents can **`git pull`** for updates (`/testchimp skill upgrade`).
-
-**Claude Code plugin:** run `/plugin marketplace add testchimphq/testchimp-skills`, then `/plugin install testchimp@testchimp`. It installs the same skill; update it with `/plugin marketplace update testchimp` instead of `git pull`.
-
-### Install by host
+## Install by host
 
 | Host | Install |
 | --- | --- |
-| Any agent (skill) | `npx skills add testchimphq/testchimp-skills` |
-| Claude Code | `/plugin marketplace add testchimphq/testchimp-skills` then `/plugin install testchimp@testchimp` |
-| Cursor | Cursor Marketplace (search TestChimp), or clone this repo as a Cursor plugin |
+| Claude Code | `/plugin marketplace add testchimphq/testchimp-skills` then `/plugin install testchimp@testchimp`, then **restart the session** |
+| Any agent (skill only) | `npx skills add testchimphq/testchimp-skills` |
+| Cursor | [cursor.directory/plugins/testchimp](https://cursor.directory/plugins/testchimp), or clone this repo into `~/.cursor/plugins/local/testchimp` |
 | Gemini CLI | `gemini extensions install https://github.com/testchimphq/testchimp-skills` |
 | Kiro | Powers panel: import this repo (Agent Plugins `plugin.json`) |
 | VS Code / GitHub Copilot | Install from the agent plugins gallery, or add the MCP server below |
@@ -44,11 +109,15 @@ Layout matches common single-skill repos (e.g. [bunnyshell/bunnyshell-environmen
 
 See [`llms-install.md`](llms-install.md) for copy-paste MCP config.
 
-**Install the MCP server per project, not globally.** TestChimp API keys are scoped to one project. For the hosted server (OAuth), you pick the project during sign-in; plugin installs register it at user level and bind to one project across all workspaces. For stdio, configure at project level (Cursor: `.cursor/mcp.json`; Claude Code: `.mcp.json`) with `TESTCHIMP_API_KEY` and `TESTCHIMP_USER_ID` for that project.
-
 **Entrypoint:** `SKILL.md` — then load the matching `references/*.md` (and default policy under `assets/policies/` when seeding).
 
 ---
+
+## What’s new in 2.0.0 (MCP API 2.0.0)
+
+Skill **2.0.0** is a breaking MCP tool rename. Hosted / plugin MCP at `https://mcp.testchimp.io/mcp` must be **API 2.0.0** (`SKILL.md` `metadata.required_mcp_version`). `@testchimp/cli` **2.0.0** exposes **87** kebab-case tools (includes **`get-eaas-config`** and **`ask-about-testchimp`**). **`get-eaas-config` is kept unchanged** as the connectivity / first-run check (do not use `ephemeral-environment action=CONFIG` for that). Consolidated tools include `ephemeral-environment` (`PROVISION` | `STATUS`), `report-scan-findings` (`scanId`), `get-workflow-executions`, `get-policies`, `get-api-operations`, `list-meetings`, `set-entity-distinct`, `fetch-execution-report`, `get-execution-history`, `list-perf-runs`, `get-release` (omit `version` to list), `upsert-release` (`gitCommitSha`, `priorReleaseVersion`), `manage-test-run` (no `action`; `commitRange` FIND\|LINK), `upsert-issue` (`addLabels` / `removeLabels`), plus new **`list-issues`** (`statuses` / `severities` / `assignees` / `ordinalIds`). See [`references/cli.md`](references/cli.md).
+
+**Upgrade note:** If your installed skill is older than **2.0.0**, upgrade now (`/testchimp skill upgrade` / `git pull`). Tool names from skill 1.x will fail against MCP 2.0.0.
 
 ## What’s new in 1.0.x (policy-aware skill)
 
@@ -58,9 +127,9 @@ From **v1.0.0** onward the skill is organized as a **modular workflow catalog**,
 2. **Policies** — team overrides in the mapped repo under **`plans/knowledge/policies/<workflow-id>.policy.md`**. Init seeds defaults from **`assets/policies/`**. When a policy is missing, **`plans/knowledge/ai-test-instructions.md`** remains the fallback.
 3. **Composites** — **`run-qa`** and **`upkeep`** declare **subflows** in their policy (e.g. author-plans → connect-to-test-env → create-tests → …). Agents follow the composite order and can still run a subflow alone.
 4. **Traceability** — Plan phases mint a **`workflow_execution_id`** (ULID); plans live under **`plans/knowledge/workflow_plans/<workflow-id>/`**; upload via **`upsert-plans-support-file`** before Execute; mutating work reports via **`report-agent-action`** / inline **`agentTraceability`**. Details: [`references/policies-and-traceability.md`](references/policies-and-traceability.md).
-5. **CLI/MCP** — workflow tools (`get-policy`, `list-policies`, `upsert-policy`, `list-workflow-catalog`, `get-last-run-workflow-detail`, …) plus **API operation coverage** (`list-api-operation-services`, `list-api-operations`, `get-api-operation-detail`, CLI ≥ **0.1.28**). Pin **`@testchimp/cli`** to at least **`required_cli_version`** in **`SKILL.md`**.
+5. **CLI/MCP** — MCP API **2.0.0** / **`@testchimp/cli` ≥ 2.0.0** workflow tools (`get-policies`, `upsert-policy`, `list-workflow-catalog`, `get-workflow-executions`, `list-issues`, …) plus **API operation coverage** (`get-api-operations`). Pin **`@testchimp/cli`** to at least **`required_cli_version`** (**2.0.0**) in **`SKILL.md`**. Hosted MCP must be **2.0.0**.
 
-**Upgrade note:** If your installed skill is older than **1.0.0**, upgrade now (`/testchimp skill upgrade` / `git pull`). Policy and traceability tooling assume 1.0+.
+**Upgrade note (1.0):** If your installed skill is older than **1.0.0**, upgrade now. Policy and traceability tooling assume 1.0+. Prefer **2.0.0** for MCP API 2.0.0.
 
 Overview docs: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
 
@@ -70,13 +139,19 @@ Overview docs: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/
 
 ```text
 testchimp-skills/
+├── .claude-plugin/
+│   ├── plugin.json          # Claude Code / directory manifest
+│   └── marketplace.json     # self-hosted marketplace "testchimp"
+├── .mcp.json                # hosted MCP, global URL
 ├── SKILL.md                 # Entrypoint: preamble, routing, guardrails
+├── commands/                # Claude Code only: core QA /testchimp:<name> menu aliases (see SKILL.md Command routing)
 ├── README.md                # Install + 1.0 overview (this file)
 ├── LICENSE
-├── bin/
+├── scripts/
 │   └── testchimp-preamble-check
 ├── references/              # One playbook (or deep dive) per concern
 │   ├── init-testchimp.md
+│   ├── project-init-testchimp.md
 │   ├── run-qa.md            # /testchimp run QA (synonym: test)
 │   ├── upkeep.md            # /testchimp upkeep (synonym: evolve)
 │   ├── implement-requirement.md
@@ -95,11 +170,11 @@ testchimp-skills/
 │   └── …
 └── assets/
     ├── policies/            # Default policies seeded on init
-    │   ├── run-qa.policy.md
-    │   ├── upkeep.policy.md
-    │   ├── connect-to-test-env.policy.md
-    │   └── implement.policy.md
+    ├── logo-512.png
     ├── sample-mcp.json
+    ├── sample-mcp.remote.json
+    ├── template_smarttests.yml
+    ├── guide/SAMPLE_PLANS.md
     └── template_*.config.*
 ```
 
@@ -117,9 +192,9 @@ Product: [testchimp.io](https://testchimp.io)
 
 ---
 
-## Installation
+## Skill-only install (git clone)
 
-**Repository:** [https://github.com/testchimphq/testchimp-skills](https://github.com/testchimphq/testchimp-skills)  
+**Repository:** [https://github.com/testchimphq/testchimp-skills](https://github.com/testchimphq/testchimp-skills)
 **Default branch:** `main`
 
 Clone **into a directory literally named `testchimp`** under your host’s skills parent:
@@ -148,7 +223,7 @@ git clone https://github.com/testchimphq/testchimp-skills.git <skills-parent>/te
 
 ### Copy-paste examples
 
-**Claude Code (global):**
+**Claude Code (global skill, not the plugin):**
 
 ```bash
 mkdir -p ~/.claude/skills
@@ -183,7 +258,7 @@ Restart the IDE or CLI session if the skill does not appear.
 
 ## Updating
 
-Use this when the user or workflow wants the **latest skill content** from `main` (same as **`/testchimp skill upgrade`** / **`/testchimp update`**).
+Use this when the user or workflow wants the **latest skill content** from `main` (same as **`/testchimp skill upgrade`** / **`/testchimp update`**). Claude Code plugin installs should use **`/plugin marketplace update testchimp`** instead. Cursor plugin installs should update from Cursor's Plugins panel, or from the marketplace listing once it is listed.
 
 1. Resolve the skill root **`SKILL_DIR`** (the directory that contains **`SKILL.md`** and **`.git`**), e.g. `~/.claude/skills/testchimp` or `.cursor/skills/testchimp`.
 2. Run:
@@ -201,7 +276,7 @@ git -C "$SKILL_DIR" pull origin main
 
 3. **Restart** the IDE or agent session if the host caches skill files.
 
-**If `SKILL_DIR` has no `.git`** (old copy-only install): run a fresh **clone** into a temp path, then replace the skill folder contents, or remove **`SKILL_DIR`** and re-run [Installation](#installation).
+**If `SKILL_DIR` has no `.git`** (old copy-only install): run a fresh **clone** into a temp path, then replace the skill folder contents, or remove **`SKILL_DIR`** and re-run [Skill-only install](#skill-only-install-git-clone).
 
 **Agents:** Search the user machine for **`testchimp/SKILL.md`** under known parents (`~/.claude/skills`, `~/.cursor/skills`, `~/.kiro/skills`, `~/.agents/skills`, project `.claude/skills`, `.cursor/skills`, `.kiro/skills`, `.agents/skills`, `.github/skills`) and use that directory as **`SKILL_DIR`**.
 
@@ -226,6 +301,10 @@ Repeat that block (or re-clone) when you need updates.
 
 ```
 /testchimp init
+/testchimp:init
+/testchimp project-init
+/testchimp:project-init
+/testchimp project init
 /testchimp run QA
 /testchimp upkeep
 /testchimp implement US-12
@@ -243,18 +322,30 @@ Natural-language equivalents still route correctly (e.g. “Write tests for this
 
 **Two modes supported:**
 
-1. **Hosted (OAuth)**: `https://mcp.testchimp.io/mcp` with `type: http` or `streamable-http`. No API key in MCP config. User picks the TestChimp project during sign-in. Plugin manifests in this repo (`.mcp.json`, `.cursor-plugin/plugin.json`, `gemini-extension.json`, `.codex-plugin/plugin.json`) register the hosted server. Test runners still need `TESTCHIMP_API_KEY` in the runner process environment.
+1. **Hosted (OAuth)** — recommended, and what the Claude Code plugin bundles: `https://mcp.testchimp.io/mcp` with `type: http`. No API key in MCP config. The user picks the TestChimp project during sign-in. Plugin manifests in this repo (`.mcp.json`, `.cursor-plugin/plugin.json`, `gemini-extension.json`, `.codex-plugin/plugin.json`) register that same global URL. Test runners still need `TESTCHIMP_API_KEY` in the runner process environment.
 
-2. **Stdio (local process)**: `npx -y @testchimp/cli@latest mcp` with `TESTCHIMP_API_KEY`, `TESTCHIMP_USER_ID`, and `TESTCHIMP_PROJECT_ID` in the server's `env` block. Use at project level (`.cursor/mcp.json` or `.mcp.json`) when you need per-project MCP config. Template: `assets/sample-mcp.json`.
+2. **Stdio (local process)**: `npx -y @testchimp/cli@latest mcp` with `TESTCHIMP_API_KEY`, `TESTCHIMP_USER_ID`, and `TESTCHIMP_PROJECT_ID` in the server's `env` block. Use at project level (`.cursor/mcp.json` or `.mcp.json`) only when you are not using the plugin. Template: `assets/sample-mcp.json`.
 
-During **`/testchimp init`**, agents check for an existing testchimp server (plugin or project config). If none exists, they offer hosted vs stdio and write the chosen config at project level. Full steps: **`references/init-testchimp.md`** (Workstation gate). Agents verify CLI compatibility via **Preamble checks** in **`SKILL.md`**.
+During **`/testchimp init`**, agents keep a plugin-provided server if it is already connected. They do not write a second TestChimp entry. Full steps: **`references/init-testchimp.md`** (Workstation gate). Agents verify CLI compatibility via **Preamble checks** in **`SKILL.md`**.
 
-Policy / workflow MCP tools (CLI ≥ **0.1.21**, skill **`required_cli_version`** may be higher): **`get-policy`**, **`list-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-last-run-workflow-detail`**.
+Policy / workflow MCP tools (skill **2.0.0** requires MCP API **2.0.0** and **`@testchimp/cli` ≥ 2.0.0**): **`get-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-workflow-executions`** (`workflowId` + `latestOnly=true` for last run), **`list-issues`**.
 
 ---
+
+## Data handling
+
+The hosted MCP server at https://mcp.testchimp.io/mcp uses OAuth. You pick the TestChimp project on the consent page, so no API key goes in the IDE config.
+
+`/testchimp init` may save the project's runner API key to a gitignored `<repo>/.testchimp/mcp.json` (mode 600, never printed) so local Playwright runs can authenticate.
+
+Data is hosted in the US. The SOC 2 Type 2 audit is in progress.
+
+- **Privacy policy:** https://testchimp.io/privacy-policy
+- **Terms:** https://testchimp.io/terms-conditions
 
 ## Privacy and support
 
 - **Privacy policy:** https://testchimp.io/privacy-policy
-- **Support:** contact@testchimp.io, or open an issue at https://github.com/testchimphq/testchimp-skills/issues
+- **Terms:** https://testchimp.io/terms-conditions
+- **Support:** https://testchimp.io/contact-us, contact@testchimp.io, or open an issue at https://github.com/testchimphq/testchimp-skills/issues
 - **Docs:** https://docs.testchimp.io

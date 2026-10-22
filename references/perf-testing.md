@@ -293,7 +293,7 @@ and runs all journeys (`PERF_IMPACTED_STRICT=1` fails instead).
 - `list-api-operation-interactions` may provide **REAL E2E** interaction
   shapes. Preserve only redacted method/path-template/schema/status/timing
   evidence; never copy raw values into tests or datasets.
-- `list-api-operations` and `get-api-operation-detail` may provide
+- `get-api-operations` and `get-api-operations` may provide
   `runtimeObservation` from the latest finalized production daily summary
   (latest-hour fallback). Check `windowStartMillis` / `windowEndMillis` and
   `syncStatus`; missing or non-success data is unknown, not zero. Rank
@@ -302,7 +302,7 @@ and runs all journeys (`PERF_IMPACTED_STRICT=1` fails instead).
   separate evidence sets unless environment, workload, window, and all
   comparison dimensions are demonstrably equivalent; never label a direct
   unmatched comparison a regression or improvement.
-- Use `list-perf-runs`, `get-perf-run`, `list-perf-baselines`,
+- Use `list-perf-runs` (optional `runId`), `list-perf-baselines`,
   `promote-perf-baseline`, `compare-perf-to-baseline`, and
   `list-related-perf-tests`. Installed MCP/CLI help is authoritative for
   schemas. Compare requires `envClass` (same as promote). Compare runs only

@@ -136,7 +136,7 @@ Recommended takeover loop:
    });
    ```
 
-6b. **Suite tags from global policy (required when configured)** — In addition to scenario links, tag tests per **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `tags:`** (or **`get-policy --policy-file-name global.policy.md`**). These are Playwright **`tag`** options (`tag: '@smoke'`), **not** custom annotations. They organize the suite so CLI can filter (`npx playwright test --grep @smoke`); they do **not** replace scenario-link annotations.
+6b. **Suite tags from global policy (required when configured)** — In addition to scenario links, tag tests per **`plans/knowledge/policies/global.policy.md`** → **`## Test suite management` → `tags:`** (or **`get-policies --policy-file-name global.policy.md`**). These are Playwright **`tag`** options (`tag: '@smoke'`), **not** custom annotations. They organize the suite so CLI can filter (`npx playwright test --grep @smoke`); they do **not** replace scenario-link annotations.
 
    **Before authoring any SmartTest** in `create-tests` / `run-qa` / `upkeep` (or nested authorship):
 
@@ -175,7 +175,7 @@ Recommended takeover loop:
      2. Compare the visible UI to the **previous** stable checkpoint; if there is **no meaningful user-visible change**, skip a new marker.
      3. If the UI **did** change in a user-meaningful way: pick **`Screen`** and **`State`**. **Reuse** an exact **`(screen, state)`** from the fetched atlas when it still describes the surface truthfully.
      4. If no existing pair fits: **register new vocabulary before editing the spec** — call **`testchimp upsert-screen-states --json-input '…'`** (or MCP **`upsert-screen-states`**) with **`screenStates`**: `[{ "screen": "…", "states": ["…"] }, …]`, then use those **exact** strings in **`await markScreenState('Screen', 'State')`**. Upsert is **idempotent**; calling it when a teammate already added a similar entry is safe.
-     5. Ensure the test uses **`async ({ …, markScreenState })`** (see [Screen / state markers](#screen--state-markers-markscreenstate)), then insert **`await markScreenState('Screen', 'State?')`** immediately after the Playwright step that established that stable state.
+     5. Ensure the test uses **`async` ({ …, markScreenState })** (see [Screen / state markers](#screen--state-markers-markscreenstate)), then insert **`await markScreenState('Screen', 'State?')`** immediately after the Playwright step that established that stable state.
 
    - Prefer markers only at **meaningful** boundaries; skip transient overlays-only states.
 

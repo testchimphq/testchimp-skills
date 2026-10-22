@@ -12,7 +12,9 @@ Reuse init guidance — do **not** invent a parallel CI story.
 
 1. **Discover** existing CI (e.g. `.github/workflows/`, other CI configs) for Playwright / Mobilewright / TestChimp runs. Report what you find first.
 2. If CI is **missing or incomplete**, follow **Key Area 4 — CI setup** and Phase 3 § **CI setup** in [`project-init-testchimp.md`](./project-init-testchimp.md):
-   - Author or adjust a workflow that **`cd`**s into the **mapped SmartTests folder** (directory with **`.testchimp-tests`**).
+   - Copy [`../assets/template_smarttests.yml`](../assets/template_smarttests.yml) to **`.github/workflows/smarttests.yml`**. Change `working-directory` / `cache-dependency-path` from `tests` to the **mapped SmartTests folder** (directory with **`.testchimp-tests`**) when it is not `tests`. Do not invent a draft and patch it with `sed`.
+   - Use job **`defaults.run.working-directory`** (or a step `working-directory`) — do **not** `cd` into the folder in the `run:` script.
+   - Prefer **`git -C <dir>`** over `cd <dir> && git …`.
    - Pass **`BASE_URL`** (and env strategy) per [`environment-management.md`](./environment-management.md) / project policy.
    - Require **`TESTCHIMP_API_KEY`** (and related reporter env) on the job so `@testchimp/playwright` reports executions.
    - Set **`TESTCHIMP_EXECUTION_SOURCE=CI`** on true pipeline / testrunner jobs so batch automations (e.g. `fix-test-execution`) can fire. Do **not** set `CI` from the skill — agent runs use `LOCAL_AGENT` / `CLOUD_AGENT`.

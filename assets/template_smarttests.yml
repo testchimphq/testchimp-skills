@@ -1,0 +1,44 @@
+# Copy to .github/workflows/smarttests.yml (or the host's workflow path).
+# Replace SMARTTESTS_DIR with the mapped SmartTests folder (directory that
+# contains .testchimp-tests). Leave it as tests if that is the mapped root.
+# Do not sed-patch after copy — this file is already valid.
+# Prefer working-directory over `cd … &&`. Prefer `git -C <dir>` over `cd … && git`.
+
+name: SmartTests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  smarttests:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.title != 'TestChimp Platform Sync [Plans]' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run SmartTests
+        env:
+          TESTCHIMP_API_KEY: ${{ secrets.TESTCHIMP_API_KEY }}
+          TESTCHIMP_EXECUTION_SOURCE: CI
+          TESTCHIMP_ENV: QA
+          BASE_URL: ${{ vars.BASE_URL }}
+        run: npx playwright test

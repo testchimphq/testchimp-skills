@@ -6,13 +6,13 @@ Given a TestChimp issue ordinal id (from the Fix CTA **Copy fix prompt**, or pas
 
 **Workflow id:** `fix-issue`. Not blocked on [`connect-to-test-env`](./connect-to-test-env.md) — run that only when fix validation in a live environment is needed (policy-controlled; often default off).
 
-> **Traceability:** Persist a **ULID** `workflow_execution_id` before Execute; write the plan at **`knowledge/workflow_plans/fix-issue/<workflow_execution_id>.plan.md`**, call **`upsert-plans-support-file`** (blocking), then seek **explicit user approval** (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). On every **`update-issue-status`**, pass **inline `agentTraceability`** (`--workflow-id fix-issue`, `--workflow-execution-id`, `--git-sha`, `--actor-type`, `--branch-name`, policy fields when resolved). Report SmartTest / other non-CRUD mutations via **`report-agent-action`**. Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `fix-issue`). Vocabulary: [`policies-and-traceability.md`](./policies-and-traceability.md).
+> **Traceability:** Persist a **ULID** `workflow_execution_id` before Execute; write the plan at **`knowledge/workflow_plans/fix-issue/<workflow_execution_id>.plan.md`**, call **`upsert-plans-support-file`** (blocking), then seek **explicit user approval** (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). On every **`upsert-issue`**, pass **inline `agentTraceability`** (`--workflow-id fix-issue`, `--workflow-execution-id`, `--git-sha`, `--actor-type`, `--branch-name`, policy fields when resolved). Report SmartTest / other non-CRUD mutations via **`report-agent-action`**. Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (reconcile ledger → emit missing reports → `ACTION_COMPLETED` with `WORKFLOW` + `fix-issue`). Vocabulary: [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 **Plan → approve → execute → report:** Mint `workflow_execution_id`, write **`knowledge/workflow_plans/fix-issue/<workflow_execution_id>.plan.md`** (scope, investigation notes, proposed fix), **`upsert-plans-support-file`** (blocking), then explicit user approval before applying code changes — unless `--mode=non-interactive` or policy `allow-execute-without-approval: true`. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
 This playbook is **not** the same as [`fix-test-execution.md`](fix-test-execution.md) (`/testchimp fix test failure` for raw SmartTest execution reports by `batch_invocation_id` / `job_id`). An ordinal-based issue can describe a test failure or any other product issue.
 
-To **file a new** issue (not fix an existing one), use MCP/CLI **`create-issue`** — see [`cli.md`](cli.md) § `create-issue` (requires `@testchimp/cli` ≥ **0.1.17**).
+To **file a new** issue (not fix an existing one), call **`list-issues`** first to reuse an open match, then MCP/CLI **`upsert-issue`** (omit `issueId`; `title` required) — see [`cli.md`](cli.md) § `list-issues` / `upsert-issue`.
 
 ## Inputs
 
@@ -23,15 +23,16 @@ To **file a new** issue (not fix an existing one), use MCP/CLI **`create-issue`*
 
 | Status | Who sets it | When |
 |--------|-------------|------|
-| `IN_PROGRESS_BUG` | Agent via `update-issue-status` | **After** a code fix has been applied (before re-verification / before asking the user to confirm) |
+| `IN_PROGRESS_BUG` | Agent via `upsert-issue` | **After** a code fix has been applied (before re-verification / before asking the user to confirm) |
 | `FIXED` | User after commits are pushed, **or** agent after **explicit user confirmation** | Terminal success for the fix workflow |
 
 Do **not** set `FIXED` automatically after applying code without user confirmation. Do **not** set `IN_PROGRESS_BUG` before the code change exists.
 
 ## Workflow
 
-### 1) Fetch issue details (MCP preferred)
+### 1) Resolve and fetch issue details (MCP preferred)
 
+- If the prompt has **no ordinal** (or the user describes the issue by title / status / assignee), call **`list-issues`** first and pick the matching row. Then load that id.
 - MCP tool **`get-issue-details`** with `issueId: "<id>"`
 - CLI fallback:
 
@@ -69,7 +70,7 @@ Response includes:
 After the code fix is applied:
 
 ```bash
-testchimp update-issue-status \
+testchimp upsert-issue \
   --issue-id "<id>" \
   --status IN_PROGRESS_BUG \
   --workflow-id fix-issue \
@@ -79,7 +80,7 @@ testchimp update-issue-status \
   --branch-name "$(git branch --show-current)"
 ```
 
-MCP: `update-issue-status` with `issueId`, `status: "IN_PROGRESS_BUG"`, and nested **`agentTraceability`** (same fields). Do **not** also RAA a separate UPDATED for this status change.
+MCP: `upsert-issue` with `issueId`, `status: "IN_PROGRESS_BUG"`, and nested **`agentTraceability`** (same fields). Do **not** also RAA a separate UPDATED for this status change.
 
 ### 5) Confirm with the user → FIXED (with traceability)
 
@@ -87,7 +88,7 @@ MCP: `update-issue-status` with `issueId`, `status: "IN_PROGRESS_BUG"`, and nest
 - Only after confirmation (or after the user has pushed / marked fixed):
 
 ```bash
-testchimp update-issue-status \
+testchimp upsert-issue \
   --issue-id "<id>" \
   --status FIXED \
   --workflow-id fix-issue \
@@ -101,7 +102,7 @@ testchimp update-issue-status \
 
 Before treating the run as done, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)**:
 
-- Reconcile ledger vs `get-workflow-execution` (include actions).
+- Reconcile ledger vs `get-workflow-executions` (include actions).
 - Emit any missing SmartTest / analyze reports.
 - **`ACTION_COMPLETED`** with `entity_type: WORKFLOW`, `entity_identity: fix-issue` (or `ACTION_FAILED` if aborting).
 

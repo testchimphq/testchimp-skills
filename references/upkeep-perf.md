@@ -45,7 +45,7 @@ resolved `upkeep-perf.policy.md`.
    settings. Flag missing/stale scenario links and high-priority novel
    journeys that have no perf representation.
 4. For affected services, capability-gate API insights and call
-   `list-api-operations`; use `get-api-operation-detail` for shortlisted
+   `get-api-operations`; use `get-api-operations` for shortlisted
    operations. Read `runtimeObservation` window/sync status, request volume,
    error rate/count, status classes, and p95/p99 latency. Prioritize:
    - high-latency operations with no journey or stale performance coverage;
@@ -63,7 +63,7 @@ resolved `upkeep-perf.policy.md`.
    - mature/stable → rank journey demand and review relative composite
      membership/weights.
    New relative demand never changes absolute load automatically.
-6. Use `list-perf-runs`, `get-perf-run`, and `list-perf-baselines` per
+6. Use `list-perf-runs` (optional `runId`) and `list-perf-baselines` per
    selected test. Use `compare-perf-to-baseline` only for comparable runs
    with the same `envClass` used at promote (CLI exits nonzero when
    `comparison.regressed` is true). Diagnose threshold

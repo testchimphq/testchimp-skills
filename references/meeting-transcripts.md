@@ -47,7 +47,7 @@ Created from the Meetings page (filter or search, then **Start Chat**):
 /testchimp using meeting-set context <meeting-set-id>, [do the following]
 ```
 
-1. Call MCP / CLI **`get-meeting-set --meeting-set-id <meeting-set-id>`** (CLI ≥ **0.1.82**, `POST /api/mcp/get_meeting_set`).
+1. Call MCP / CLI **`list-meetings` (`meetingSetId`) --meeting-set-id <meeting-set-id>`** (CLI ≥ **0.1.82**, `POST /api/mcp/list_meetings`).
 2. The response `meetingSet` contains:
    - `filters`: what the user filtered on (`labels`, `startDateMillis` / `endDateMillis`, `participants`, `participantDomains`, `searchText`). Use these to understand the intent; `searchText` tells you what to look for inside transcripts.
    - `meetings[]`: `meetingId`, `title`, `startMillis`, newest first.
@@ -66,7 +66,7 @@ Use when the user asks about meetings without giving a meeting id or meeting-set
 **Scope:** only meetings shared with **all team members** are returned. Private meetings (participants only / specific users) never appear. If the user expects a private meeting, ask them to share it team-wide or create a meeting set from the Meetings page (**Start Chat**).
 
 1. **Discover exact filter values** (when the prompt names a customer, person, or label):
-   `list-meeting-filter-options` (`POST /api/mcp/list_meeting_filter_options`) returns `labels[]`, `participants[]` (`key`, `email`, `displayName`), and `domains[]` seen on team-wide meetings. Map the user's words to these values: a company name maps to a `domains` entry, and a person maps to a participant `key` (their email also works).
+   `list-meetings` (`includeFilterOptions=true`) (`POST /api/mcp/list_meetings`) returns `labels[]`, `participants[]` (`key`, `email`, `displayName`), and `domains[]` seen on team-wide meetings. Map the user's words to these values: a company name maps to a `domains` entry, and a person maps to a participant `key` (their email also works).
 2. **List / search:**
    `list-meetings` (`POST /api/mcp/list_meetings`), newest first. All filters combine with AND; values within one filter combine with OR.
    - `--from` / `--to`: inclusive; `YYYY-MM-DD` means whole local days, or pass an ISO datetime or epoch millis. Resolve relative phrases ("last month") to concrete dates yourself.
@@ -77,7 +77,7 @@ Use when the user asks about meetings without giving a meeting id or meeting-set
 4. Cite meetings by title and date when reporting findings. If there are no results, say which filters you applied and suggest loosening them rather than guessing.
 
 ```bash
-testchimp list-meeting-filter-options
+testchimp list-meetings --include-filter-options
 testchimp list-meetings --from 2026-09-01 --to 2026-09-30 --domain acme.com
 testchimp list-meetings --label Sales --search "pricing OR discount" --page-size 25
 ```

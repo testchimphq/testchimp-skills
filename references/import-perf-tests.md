@@ -164,7 +164,7 @@ Fill every imported file so related selection and ingest work:
 | Field | Source |
 |-------|--------|
 | `testchimp.paths` | HTTP path **templates** from the source (normalize IDs: `/orders/{id}` not `/orders/123`) |
-| `testchimp.operations` | OpenAPI operation ids when `list-api-operations` / repo OpenAPI can resolve the path |
+| `testchimp.operations` | OpenAPI operation ids when `get-api-operations` / repo OpenAPI can resolve the path |
 | `testchimp.testTypes` | `load` and/or `volume` from what the source actually does (many concurrent users vs one user/lots of data). Ask when unclear. Never set both merely to make a test “heavier.” |
 | k6 `{ tags: { name: '<step>' } }` on each `http.*` | Locust `@tag`, JMeter transaction name, Gatling request name, Artillery flow name — preserves grouping in summaries |
 

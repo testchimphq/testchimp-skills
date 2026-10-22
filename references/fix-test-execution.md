@@ -6,7 +6,7 @@
 
 > **Composite nesting:** When invoked as a subflow under `/testchimp upkeep` / `evolve`, do **not** open a second Plan → approve cycle — execute under the parent composite’s approved plan (section **Recently failing tests**) and reuse its `workflow_execution_id`. Standalone still uses Plan → approve → Execute below.
 
-> **Traceability:** Persist a **ULID** `workflow_execution_id` before Execute; write the plan at **`knowledge/workflow_plans/fix-test-execution/<workflow_execution_id>.plan.md`**, call **`upsert-plans-support-file`** (blocking), then seek **explicit user approval** (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). On **`create-issue`** / **`update-issue-status`**, pass **inline `agentTraceability`**. Report SmartTest mutations via **`report-agent-action`**. Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `fix-test-execution`). Vocabulary: [`policies-and-traceability.md`](./policies-and-traceability.md). Nested under upkeep: parent closes.
+> **Traceability:** Persist a **ULID** `workflow_execution_id` before Execute; write the plan at **`knowledge/workflow_plans/fix-test-execution/<workflow_execution_id>.plan.md`**, call **`upsert-plans-support-file`** (blocking), then seek **explicit user approval** (unless `--mode=non-interactive` or policy `allow-execute-without-approval`). On **`upsert-issue`**, pass **inline `agentTraceability`**. Report SmartTest mutations via **`report-agent-action`**. Before finishing, run **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** (`ACTION_COMPLETED` with `WORKFLOW` + `fix-test-execution`). Vocabulary: [`policies-and-traceability.md`](./policies-and-traceability.md). Nested under upkeep: parent closes.
 
 **Plan → approve → execute → report:** Mint `workflow_execution_id`, write **`knowledge/workflow_plans/fix-test-execution/<workflow_execution_id>.plan.md`** (failures, hypothesized causes, fix steps), **`upsert-plans-support-file`** (blocking), then explicit user approval before applying fixes — unless `--mode=non-interactive` or policy `allow-execute-without-approval: true`. See [`policies-and-traceability.md`](./policies-and-traceability.md).
 
@@ -107,7 +107,7 @@ For each failure / cluster, decide one of:
 
 1. Tell the user clearly (what broke, evidence from errors + history, linked test/job/batch ids).
 2. Ask whether to create TestChimp issue(s) for tracking.
-3. **Only after explicit approval**, create issues via MCP/CLI **`create-issue`** (see [`cli.md`](./cli.md) § `create-issue`):
+3. **Only after explicit approval**, call **`list-issues`** to reuse an open match, then create remaining issues via MCP/CLI **`upsert-issue`** (omit `issueId`; see [`cli.md`](./cli.md) § `list-issues` / `upsert-issue`):
    - `issueType: BUG_ISSUE`
    - Concrete title + description (errors, history pattern, repro)
    - `linkTargets`: `TEST` (`testId`), `TEST_EXECUTION` (`jobId`), and/or `BATCH_INVOCATION` when applicable
