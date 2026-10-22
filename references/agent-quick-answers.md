@@ -59,6 +59,8 @@ Leading `plans/` in CLI paths is stripped automatically — pass path relative t
 | `CHIMPHANDS_UI_ATTACHED=false` | **Async** — runner is up but nobody is watching live. End-of-turn commit+push is critical for PR / **Files changed** |
 | `GITHUB_ACTIONS` / `TESTCHIMP_EXECUTION_SOURCE=CLOUD_AGENT` | Where you execute — **not** the same as UI attached |
 
+**Ask the user only in the live conversation when a UI is attached.** When you are on a cloud agent (`CHIMPHANDS_UI_ATTACHED=false`, `GITHUB_ACTIONS`, or `TESTCHIMP_EXECUTION_SOURCE=CLOUD_AGENT`) and you have a `--workflow-execution-id`, call **`ask-user-question-async`** (CLI ≥ **2.0.2**) with a question and structured choices (recommended choice first). Do **not** call it from a local IDE chat or when `CHIMPHANDS_UI_ATTACHED=true` / `TESTCHIMP_EXECUTION_SOURCE=LOCAL_AGENT` — ask in chat instead. The platform notifies the automation's humans, or shows the question in the open ChimpHands session when one is attached.
+
 **Always** commit + push at end of any ChimpHands turn with a dirty worktree (UI attached or not). Full contract: [`chimphands.md`](./chimphands.md). Host fallback commit exists — do **not** rely on it.
 
 ---

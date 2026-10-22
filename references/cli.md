@@ -2,7 +2,7 @@
 
 Use the **CLI** when the agent runs **shell commands** (CI, scripts, or hosts without MCP). Use **MCP** when the IDE/agent host exposes MCP tools. Both call the same TestChimp **`/api/mcp/*`** HTTP APIs.
 
-**MCP API 2.0.0 / CLI 2.0.0:** this skill (`metadata.required_mcp_version` and `metadata.required_cli_version`) documents the **2.0.0** tool names and flags from `@testchimp/cli` 2.0.0 (87 tools, kebab-case parity; includes **`get-eaas-config`** and **`ask-about-testchimp`**; verified against Aware OpenAPI 2.0.0 and client PR #29). Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release.
+**MCP API 2.0.0 / CLI ≥ 2.0.2:** this skill (`metadata.required_mcp_version` **2.0.0**, `metadata.required_cli_version` **2.0.2**) documents the **2.0.0** tool names and flags, plus **`ask-user-question-async`** added in `@testchimp/cli` **2.0.2** (88 tools, kebab-case parity; includes **`get-eaas-config`** and **`ask-about-testchimp`**). Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release.
 
 This page lists **every subcommand and flag** as implemented in the CLI (kebab-case flags; request bodies use **camelCase**). **`--json-input`** is available on every tool subcommand below except where noted; it merges **over** flags (JSON wins on conflicts).
 
@@ -1547,6 +1547,22 @@ Returns the updated `WorkflowExecution` (`assigneeUserId`, `ccUserIds`, `assignm
 testchimp --bot <botId> update-workflow-execution-assignees --workflow-execution-id 01J... --assignee dana@acme.com --add-cc lee@acme.com
 ```
 
+### `ask-user-question-async` (CLI ≥ **2.0.2**)
+
+**API:** `POST /api/mcp/ask_user_question_async`. **Mutating.** Requires `@testchimp/cli` ≥ **2.0.2**. Ask a person a question with structured choices when this workflow is running on a cloud agent and no live UI is attached. Requires `workflowExecutionId`. Do not call it from a local IDE chat, when `CHIMPHANDS_UI_ATTACHED=true`, or when `TESTCHIMP_EXECUTION_SOURCE=LOCAL_AGENT` — ask in the conversation instead. Put the recommended choice first. One open question per execution. The platform notifies the automation's humans, or shows the question in an open ChimpHands session.
+
+| Flag | Required | Notes |
+|------|----------|--------|
+| `--workflow-execution-id <id>` | Yes | Same id as the rest of the run |
+| `--question <text>` | Yes | |
+| `--choices <json>` | Yes | JSON array of `{id,label}` |
+| `--recommended-choice-id <id>` | No | Moved first; label gains ` (recommended)` if missing |
+| `--chimphands-session-id <id>` | No | When the run is a ChimpHands session |
+
+```bash
+testchimp ask-user-question-async --workflow-execution-id 01J... --question "Which suite?" --choices '[{"id":"smoke","label":"Smoke"},{"id":"full","label":"Full"}]' --recommended-choice-id smoke
+```
+
 ---
 
 ## API operations coverage (CLI ≥ **0.1.28**; observability-aware guidance ≥ **0.1.80**)
@@ -1904,7 +1920,7 @@ testchimp send-feedback --category USER_STRUGGLE --agent-name "Cursor" \
 
 ## MCP parity (tool names)
 
-MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (87 tools, including **`get-eaas-config`** and last-resort **`ask-about-testchimp`** / **`ask-testchimp-question`**). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names.
+MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (88 tools on CLI **2.0.2**, including **`get-eaas-config`**, last-resort **`ask-about-testchimp`** / **`ask-testchimp-question`**, and **`ask-user-question-async`**). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names.
 
 ## Related
 

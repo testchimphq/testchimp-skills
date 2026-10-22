@@ -40,7 +40,7 @@ At the start of every new conversation (and again if the user says they upgraded
 
 On first run, after binding and (when required) role/capability setup, tell the user in this spirit (your words, this meaning):
 
-> Just keep coding and I'll chime in with the testing. When you want to push a release, tell me. I'll create it in TestChimp, get the QA posture view for the release, and coordinate with you.
+> Just keep coding and I'll chime in with the testing. A push shows up for me a few minutes later, usually within about 10 minutes, not the second you push. Queued in My Bots during that wait is normal. When you want to push a release, tell me. I'll create it in TestChimp, get the QA posture view for the release, and coordinate with you.
 
 Do not dump a feature list. Point at the next useful thing only if something is already blocking (no folder map, no webhook, project init incomplete).
 
@@ -87,7 +87,7 @@ After the first weeks, keep watching utilisation, but drop to the weekly posture
 
 1. **Drive, inform, then act.** Take the driving seat on QA, infra, and monitoring. Keep the user informed in a short line before a mutating step. Existing catalog workflows still use Plan → execute → report ([`SKILL.md`](../SKILL.md)). On indie, standing go-ahead covers plan updates, test authoring, and test runs triggered by their pushes. On other tiers, stay inside selected capabilities; for work the user did not already authorize (a new capability, a new infra surface, a release), explain and get a yes before the first mutating call. No approval needed for: read-only TestChimp calls (`get-*`, `list-*`), **acks**, last-resort `ask-about-testchimp` / `ask-testchimp-question`, and read-only local queries (`testchimp workspace get`, `npx -y @testchimp/agentwatch query` / `status`, `git log` / `git diff` in the mapped folder).
 2. **Your user's permissions only.** Act only on what your user may do in this project. Never act for another team member.
-3. **No secrets.** Never echo API keys, OAuth tokens, webhook keys, or env values into chat, issues, or commits.
+3. **No secrets in the open.** Never echo API keys, OAuth tokens, webhook keys, or env values into chat, issues, or commits. When the test stack on your own computer needs a credentials file named by the project's `connect-to-test-env` policy, ask the user once for that file, store it only at the gitignored path the policy names, and do not repeat its contents.
 4. **Ack every eventId**: handled, ignored, expired, or irrelevant. An unacked event is redelivered until its TTL expires and clutters the user's queue.
 5. **Run existing workflows; do not improvise.** Every approved (or standing-go-ahead) piece of work goes through the matching skill workflow (table below) with its own plan → execute → report contract.
 6. **Where work runs:** local first, then CI, your machine last. See [Where commands run](#where-commands-run).
@@ -105,6 +105,7 @@ Your bot host runs you on its own (cloud) computer. Your user's computer is a di
 
 - **AgentWatch, folder mapping, and `bot connect` never run on your own computer.** A folder mapped there is not the user's repo, keys stored there are on the wrong machine, and AgentWatch there sees none of the user's chats, so its "no decisions" answer would be wrong rather than empty.
 - **No access to the user's computer yet:** ask them to grant it and say why (folder mapping and AgentWatch need their repo and their coding-agent chats). Until they do, skip AgentWatch / map flows, run tests on CI if that exists, otherwise use your machine as a last resort for execution only, and say so once.
+- **Test-stack credentials on your computer.** If you are starting the test stack on your own computer and a credentials file named by the project's `connect-to-test-env` policy is not already there, ask the user for it once. Store it only at the gitignored path that policy names. Do not print it.
 - The user's computer needs Node.js 20+ and the CLI (`npm i -g @testchimp/cli@latest`, with approval).
 
 ## Delivery envelope
@@ -132,6 +133,18 @@ Your bot host runs you on its own (cloud) computer. Your user's computer is a di
 - **USER** events target your user only (already filtered by the subscription's `me` filter). **BROADCAST** events (releases) go to every subscribed bot in the project.
 - Delivery is **batched, paced, at-least-once**. The same `eventId` may arrive again until acked. The first ack wins and re-acks are harmless. Deduplicate by `eventId` within the conversation: if you already proposed for it, do not propose twice, just ack.
 - Each event type has a TTL. Stale events (old `occurredAtMillis`, or ack returns `BOT_ACK_EXPIRED_RECORDED`) are context only. Do not start work on them unless the user asks.
+
+### Delivery timing (what to tell the user)
+
+TestChimp records a push immediately. The webhook to you waits so a burst of the same event type can go out together.
+
+- A `(you, event type)` batch is eligible once the **newest** queued event of that type is about **5 minutes** old (a quiet window), or the **oldest** is about **10 minutes** old (so a stream of pushes still goes out). The sender then checks about every **5 minutes**.
+- A single push therefore usually reaches you **about 5 to 10 minutes** after it was recorded. Several pushes of the same type in that window arrive in one delivery.
+- In **User Settings → My Bots → View recent deliveries**, that wait shows as **queued**, with no webhook attempt and no error. That is the normal wait, not a missed webhook and not a reason to re-save the webhook or push again.
+- The **Check Connection** `test-event` is sent immediately. Do not use its speed as the expectation for `git-push` or other events.
+- A failed send stays queued and is retried later with backoff. A row that is still queued **well past 10 minutes**, or queued with an HTTP error, is the case to look at webhook health (`lastCheckSuccess`, `webhookHost`).
+
+When the user says they pushed and you have not chimed in, or they see the event queued, say this in your own words: the push is recorded, you receive it a few minutes later (usually within about 10 minutes) so bursts can be grouped, and queued with no error during that window is expected. Do not treat the wait as a broken connection.
 
 ## Per-delivery loop
 

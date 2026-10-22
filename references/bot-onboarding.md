@@ -129,7 +129,7 @@ Events only reach the bot once TestChimp knows where to deliver them. From the p
 
 Example: "Open the **TestChimp deliveries** routine and copy its webhook URL and key. Then open <settingsUrl>, paste both and click **Save webhook**. TestChimp checks the connection right away, and I'll acknowledge the test event when it arrives."
 
-The same page shows the subscriptions you registered and the **Pause all** switch; **View recent deliveries** lists the latest 50 events.
+The same page shows the subscriptions you registered and the **Pause all** switch; **View recent deliveries** lists the latest 50 events. A real event (a git push, an assignment, a batch) can sit on **queued** for several minutes before it is sent. That wait is normal. Explain it with [Delivery timing](./bot-playbook.md#delivery-timing-what-to-tell-the-user). The connection-check `test-event` is the one that arrives immediately.
 
 ### 5b. Project init (when incomplete)
 
