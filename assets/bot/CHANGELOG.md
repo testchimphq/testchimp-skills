@@ -4,7 +4,7 @@ Versions of the Grok Bot template manifest (`grok-template.json` → `templateVe
 
 ## 1.0.7 — skill 2.0.0
 
-- Skill **2.0.0** requires **TestChimp MCP API 2.0.0** and **`@testchimp/cli` ≥ 2.0.0** (85 tools). Tool names and params match Aware OpenAPI 2.0.0 (`ephemeral-environment`, `report-scan-findings` with `scanId`, `get-workflow-executions`, `get-policies`, `get-api-operations`, `list-meetings`, `set-entity-distinct`, `fetch-execution-report`, `get-execution-history`, `list-perf-runs`, `get-release`, `upsert-issue`, new `list-issues`).
+- Skill **2.0.0** requires **TestChimp MCP API 2.0.0** and **`@testchimp/cli` ≥ 2.0.0** (85 tools). Tool names and params match Aware OpenAPI 2.0.0 (`ephemeral-environment` PROVISION|STATUS, `report-scan-findings` with `scanId`, `get-workflow-executions`, `get-policies`, `get-api-operations`, `list-meetings`, `set-entity-distinct`, `fetch-execution-report`, `get-execution-history`, `list-perf-runs`, `get-release`, `upsert-issue`, new `list-issues`). **`get-eaas-config` is kept unchanged** as the connectivity / first-run check.
 - Issue workflows (`fix-issue`, `implement`, weekday reminder) use `list-issues` (`searchText`, `statuses`, `severities`, `assignees`, `ordinalIds`, `labels`, …) and `upsert-issue` to create (omit `issueId`) or update (`issueId` + patch, including `addLabels` / `removeLabels`).
 - Release DevX matches CLI 2.0.0: `upsert-release` (`gitCommitSha`, `priorReleaseVersion`, `releaseType`), `manage-test-run` (omit `id` to create, then `commitRange` FIND, ask, then LINK).
 - `ask-about-testchimp` / `ask-testchimp-question` are last-resort product Q&A (≤ 2,000 characters per question; 20 per project per hour). Answer from the skill pack first.

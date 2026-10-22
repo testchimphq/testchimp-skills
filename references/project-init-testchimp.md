@@ -144,7 +144,7 @@ If **`get-project-init-status`** shows required items already **`PROJECT_INIT_IT
 
 Verify the **project** can talk to TestChimp APIs from this agent session (not every teammate’s laptop). Prefer the **plugin/extension-provided** hosted MCP (`https://mcp.testchimp.io/mcp`) when TestChimp is already installed as a plugin — do **not** write a second project-level server or require a stdio API key for these calls.
 
-1. **`ephemeral-environment` (`action=CONFIG`)** `{}` — must **not** return **401** (empty config is OK).
+1. **`get-eaas-config`** `{}` — must **not** return **401** (empty config is OK). Do **not** use `ephemeral-environment action=CONFIG`.
 2. **`get-project-credentials`** (when the connection is OAuth) — confirm `projectName` / `projectId` with the user. That is the project picked on the consent screen; every later tool call is scoped to it. If **`<git root>/.testchimp/mcp.json`** already has a real key for this project, leave it. If it is missing and runners will need a key, save it now using [Save the runner key](./init-testchimp.md#save-the-runner-key) — do not put the key in a shell command.
 3. **`get-project-init-status`** — baseline current progress.
 4. **Project mismatch (blocking)** — if this repo already has `.testchimp-plans` / `.testchimp-tests`, a gitignored `.testchimp/mcp.json` with a different `TESTCHIMP_PROJECT_ID`, or `get-git-folder-mapping` points at another `owner/repo` than this tree's remotes, the user signed in to the wrong project. Stop and tell them to re-authenticate via [Host MCP sign-in](./init-testchimp.md#workstation-gate-always-first), picking **this** repo's project. Then re-run this area.
@@ -264,7 +264,7 @@ Don't discover or ask anything here in Phase 1. Just list it as the last plan it
 
 ### Phase 1 completion gate
 
-- [ ] **Key Area 1** — platform comms verified (`ephemeral-environment` (`action=CONFIG`) not 401); signed-in project matches this repo; init status baseline read.
+- [ ] **Key Area 1** — platform comms verified (`get-eaas-config` not 401); signed-in project matches this repo; init status baseline read.
 - [ ] **Key Area 2** — mapping state discovered; agent CLI path or fallback documented.
 - [ ] **Key Area 3** — env strategy decided enough for Phase 2; connect-to-test-env policy gate satisfied or authoring planned.
 - [ ] **Key Area 4** — CI discovery + intended direction recorded.
@@ -291,7 +291,7 @@ Optional (when planned): **Import plans**, **Import tests**, **Smoke validation*
 
 **Platform comms**
 
-- `ephemeral-environment` (`action=CONFIG`) succeeds (not 401). Plugin / OAuth sessions use the consent-chosen project; a mismatch with this repo is resolved via Host MCP sign-in before continuing.
+- `get-eaas-config` succeeds (not 401). Plugin / OAuth sessions use the consent-chosen project; a mismatch with this repo is resolved via Host MCP sign-in before continuing.
 - `update-project-init-status` with `platform_comms: PROJECT_INIT_ITEM_STATUS_DONE` when complete. Verify the returned status.
 
 **Folder mapping**
@@ -342,7 +342,7 @@ Execute in order; after each area, verify acceptance criteria, call **`update-pr
 
 ### 1. Platform comms
 
-- Re-verify **`ephemeral-environment` (`action=CONFIG`)**.
+- Re-verify **`get-eaas-config`**.
 - Mark `platform_comms: PROJECT_INIT_ITEM_STATUS_DONE` (full enum; verify the returned status).
 - Ensure the plan ULID run already exists (first **`report-agent-action`** / mutating call with `workflowId: project-init`) — do not close with `ACTION_COMPLETED` until End state.
 
@@ -378,7 +378,7 @@ Follow [`connect-to-test-env.md`](./connect-to-test-env.md) / [`environment-mana
 
 - Author or confirm **`connect-to-test-env.policy.md`** with Local Agent + CI / Cloud sections (local-up, wait-for-healthy, URL mapping). Call **`upsert-policy`**.
 - Do **not** also invent **`## Environment Provision Strategy`** in a new `ai-test-instructions.md`. If that legacy file already has strategy content, migrate it into the policy.
-- For ephemeral EaaS: confirm `ephemeral-environment` (`action=CONFIG`) payload; Bunnyshell / Branch Management as applicable.
+- For ephemeral EaaS: confirm `get-eaas-config` payload; Bunnyshell / Branch Management as applicable.
 
 Mark `connect_to_test_env: PROJECT_INIT_ITEM_STATUS_DONE` when strategy is documented and verified (or policy + local-up contract exists for later provisioning). Verify the returned status.
 

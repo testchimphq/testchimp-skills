@@ -44,7 +44,7 @@ Include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-aut
    - **`get-git-folder-mapping`**: `repository` / `repository_full_name` against this repo's remotes (`git remote -v`, `owner/repo`)
    - On-disk **`.testchimp-plans`** / **`.testchimp-tests`** markers that already map this tree, while the signed-in project's folder mapping points at a different repo
    If any of those disagree with the signed-in `projectId`, **stop**. Tell the user this session is signed in to **project A** while this repo is bound to **project B**. They must re-authenticate via **Host MCP sign-in** above (clear authentication first if the host offers it), and pick **this** repo's project on the consent dropdown. Do not write a `?projectId=` URL or a second server. After they sign in again, re-run this gate.
-4. **CLI connectivity** — **`ephemeral-environment` (`action=CONFIG`)** `{}` (auth gate). Empty config is OK.
+4. **CLI connectivity** — **`get-eaas-config`** `{}` (auth gate). Empty config is OK. Do **not** use `ephemeral-environment action=CONFIG`.
 5. **Runner key** — confirm **Preamble checks #4** resolves **`TESTCHIMP_API_KEY`** for runners. If the key is missing, follow [Save the runner key](#save-the-runner-key).
 6. **Optional gaps** — call **`get-project-init-status`**. Read snake_case keys; if a key is missing, accept the camelCase twin (`overallComplete` for `overall_complete`, and the same for the item keys — [Reading init status](./project-init-testchimp.md#progress-tracking-platform)). If overall is not complete, summarize missing required items and ask whether to run **`/testchimp project-init`** / **`/testchimp:project-init`** now or defer.
 
@@ -149,7 +149,7 @@ TrueCoverage is **not** part of thin init — use **`/testchimp setup truecovera
 
 Thin init is **done** when:
 
-- MCP works (`ephemeral-environment` (`action=CONFIG`) succeeds) against **this** repo's TestChimp project, and runners have the API key (**Preamble checks #4**; plugin / remote MCP: `.testchimp/mcp.json` saved).
+- MCP works (`get-eaas-config` succeeds) against **this** repo's TestChimp project, and runners have the API key (**Preamble checks #4**; plugin / remote MCP: `.testchimp/mcp.json` saved).
 - Local test env strategy is documented or verified on this machine.
 - User knows how to run **`/testchimp test`** and where project-level status lives (`get-project-init-status`).
 

@@ -16,7 +16,6 @@ Old 1.x tool names are gone. Use the 2.0.0 name and params below (same table as 
 
 | Old tool | New tool | Notes |
 |---|---|---|
-| `get-eaas-config` | `ephemeral-environment` | `action=CONFIG` |
 | `provision-ephemeral-environment` | `ephemeral-environment` | `action=PROVISION`, `wait=false` |
 | `provision-ephemeral-environment-and-wait` | `ephemeral-environment` | `action=PROVISION` (`wait` defaults true) |
 | `get-ephemeral-environment-status` | `ephemeral-environment` | `action=STATUS`, `bnsEnvironmentId` |
@@ -44,6 +43,8 @@ Old 1.x tool names are gone. Use the 2.0.0 name and params below (same table as 
 | `get-release-details` | `get-release` | `version` + `detail=GATE` |
 | `create-issue` | `upsert-issue` | omit `issueId`; `title` required |
 | `update-issue-status` | `upsert-issue` | `issueId` + patch fields |
+
+**Kept unchanged:** **`get-eaas-config`** is still the connectivity / first-run / auth-gate check (empty body; empty `{}` is OK, **401** is not). Do **not** replace it with `ephemeral-environment action=CONFIG`. See § [**get-eaas-config**](#get-eaas-config).
 
 New / reshaped in 2.0.0: `list-issues`, `upsert-release`, `manage-test-run`, `ingest-scenario-execution`, `list-execution-job-dimension-values`, `list-test-planning-trends`, `select-smart-smoke-tests`. `get-org-capabilities` is unchanged as a tool name (empty body) and now includes `planLabel`, trial fields, and `chimphandsCredits`. Product Q&A tools **`ask-about-testchimp`** and **`ask-testchimp-question`** are a last-resort lookup — see § [**ask-about-testchimp**](#ask-about-testchimp--ask-testchimp-question).
 
@@ -1094,16 +1095,30 @@ Same requirement as **`update-user-story`**: provide content via flag(s) or JSON
 
 ## Branch URL and EaaS (BunnyShell)
 
+### `get-eaas-config`
+
+**API:** `POST /api/mcp/get_eaas_config`
+
+**Kept unchanged in 2.0.0.** Connectivity / first-run / auth-gate check. Empty body. Empty `{}` is OK (no EaaS setup). **401** means the connection is wrong. Do **not** use `ephemeral-environment action=CONFIG` for this.
+
+| Flag | Required | Notes |
+|------|----------|--------|
+| `--json-input …` | No | Body is normally empty; JSON merge rarely needed. |
+
+```bash
+testchimp get-eaas-config
+```
+
 ### `ephemeral-environment`
 
 **API:** `POST /api/mcp/ephemeral_environment`
 
-One tool. **`--action`** is required (`CONFIG` | `PROVISION` | `STATUS`). CLI ≥ **2.0.0**.
+One tool for provision / status. **`--action`** is required (`PROVISION` | `STATUS`). CLI ≥ **2.0.0**. Connectivity checks stay on **`get-eaas-config`**.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
-| `--action CONFIG\|PROVISION\|STATUS` | **Yes** | `action` | |
-| `--branch-name <s>` | No | `branchName` | PROVISION / CONFIG. |
+| `--action PROVISION\|STATUS` | **Yes** | `action` | Not the connectivity check. |
+| `--branch-name <s>` | No | `branchName` | PROVISION. |
 | `--wait` / `--no-wait` | No | `wait` | PROVISION only. Defaults **true** (poll until ready). `--no-wait` returns immediately. |
 | `--bns-environment-id <id>` | STATUS | `bnsEnvironmentId` | Required when `action=STATUS`. |
 | `--poll-interval-seconds <n>` | No | `pollIntervalSeconds` | PROVISION wait. |
@@ -1111,7 +1126,6 @@ One tool. **`--action`** is required (`CONFIG` | `PROVISION` | `STATUS`). CLI �
 | `--json-input …` | No | (merge) | |
 
 ```bash
-testchimp ephemeral-environment --action CONFIG
 testchimp ephemeral-environment --action PROVISION
 testchimp ephemeral-environment --action PROVISION --no-wait --branch-name feat/login
 testchimp ephemeral-environment --action STATUS --bns-environment-id "<id>"

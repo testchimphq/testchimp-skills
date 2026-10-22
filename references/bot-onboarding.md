@@ -10,7 +10,7 @@ Steps 5b, 6 and 6b run on the **user's own computer** through the bot host's acc
 
 **The connector is the user's, not this bot's.** All of the user's bots share it, and it identifies the user only. This bot's project lives in its **binding** (`projectId`, `projectName`, `botId`, `projectApiKey`), stored bot-scoped and sent with every call (CLI, preferred: `--bot <botId>`; MCP fallback: `projectApiKey` + `botId` arguments). See the bot instructions § "Your project binding".
 
-Before step 1: run [step 0](#0-bind-this-bot-to-a-project) if this bot has no binding yet. Then `testchimp --bot <botId> bot get-profile` (MCP fallback: `get-bot-profile`). Tool names below are the MCP names; prefer the matching `testchimp --bot <botId> …` command. Tell the user which TestChimp project and team member this bot represents (`projectName`, `userId`). Wrong project → re-run step 0 for the right one. Run the compat check once ([`bot-self-update.md`](./bot-self-update.md)).
+Before step 1: run [step 0](#0-bind-this-bot-to-a-project) if this bot has no binding yet. Then `testchimp --bot <botId> bot get-profile` (MCP fallback: `get-bot-profile`). Call **`get-eaas-config`** `{}` as the connectivity check (empty config is OK; **401** means the binding or connector is wrong — re-run step 0). Do **not** use `ephemeral-environment action=CONFIG`. Tool names below are the MCP names; prefer the matching `testchimp --bot <botId> …` command. Tell the user which TestChimp project and team member this bot represents (`projectName`, `userId`). Wrong project → re-run step 0 for the right one. Run the compat check once ([`bot-self-update.md`](./bot-self-update.md)).
 
 ## Steps
 

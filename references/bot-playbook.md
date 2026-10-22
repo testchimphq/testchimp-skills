@@ -26,7 +26,7 @@ You are a friendly QA sidekick and the **perfect user of TestChimp**. Your job i
 
 ## Tier handling
 
-At the start of every new conversation (and again if the user says they upgraded), call **`get-org-capabilities`** before any role question or capability choice. Read `planLabel`, `freeTrialActive`, `freeTrialExpiryTimestampMillis`, `trialDaysRemaining`, `chimphandsCredits`, and `capabilities[]`.
+At the start of every new conversation (and again if the user says they upgraded), call **`get-eaas-config`** `{}` as the connectivity check (empty config is OK; **401** is not — do **not** use `ephemeral-environment action=CONFIG`). Then call **`get-org-capabilities`** before any role question or capability choice. Read `planLabel`, `freeTrialActive`, `freeTrialExpiryTimestampMillis`, `trialDaysRemaining`, `chimphandsCredits`, and `capabilities[]`.
 
 `planLabel` is one of `trial` / `indie` / `teams` / `growth` (treat case-insensitively).
 

@@ -2,7 +2,7 @@
 
 _Moved from the `compatibility` frontmatter field of SKILL.md (v1.0.57) so that field stays short and YAML-safe. Only change: em dashes replaced with colons._
 
-**MCP API 2.0.0 / CLI 2.0.0:** skill **2.0.0** requires TestChimp MCP API **2.0.0** (`metadata.required_mcp_version`) and **`@testchimp/cli` ≥ 2.0.0** (`metadata.required_cli_version`, 85 tools). Hosted / plugin MCP at `https://mcp.testchimp.io/mcp` must be on 2.0.0. Tool names, `list-issues` filters (`statuses` / `severities` / `assignees` / `ordinalIds`), `upsert-release` (`gitCommitSha`, `priorReleaseVersion`), `manage-test-run` (no `action`; `commitRange` FIND\|LINK), and scan `scanId` match [`cli.md`](./cli.md) and Aware OpenAPI 2.0.0.
+**MCP API 2.0.0 / CLI 2.0.0:** skill **2.0.0** requires TestChimp MCP API **2.0.0** (`metadata.required_mcp_version`) and **`@testchimp/cli` ≥ 2.0.0** (`metadata.required_cli_version`, 85 tools). Hosted / plugin MCP at `https://mcp.testchimp.io/mcp` must be on 2.0.0. Tool names, `list-issues` filters (`statuses` / `severities` / `assignees` / `ordinalIds`), `upsert-release` (`gitCommitSha`, `priorReleaseVersion`), `manage-test-run` (no `action`; `commitRange` FIND\|LINK), and scan `scanId` match [`cli.md`](./cli.md) and Aware OpenAPI 2.0.0. **`get-eaas-config` is kept unchanged** as the connectivity / first-run / auth-gate check (empty `{}` is OK; do not use `ephemeral-environment action=CONFIG`).
 
 **`ask-about-testchimp` / `ask-testchimp-question`:** last-resort product Q&A. Answer from this skill pack first. Limits: ≤ **2,000** characters per question; **20** questions per project per hour. See [`cli.md`](./cli.md) § `ask-about-testchimp` and [`agent-quick-answers.md`](./agent-quick-answers.md).
 

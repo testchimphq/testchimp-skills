@@ -21,7 +21,7 @@ Also load **`releaseLabel`** from the top-level scan config response for `get-re
 
 2. **Resolve DAST base URL**
    - If **`useEphemeralSandbox` is true and `allowActiveScan` is true**:
-     - Follow the EaaS (Bunnyshell) workflow in [`../environment-management.md`](../environment-management.md): **`ephemeral-environment` (`action=CONFIG`)** → if `{}`, **STOP** with a clear message that Bunnyshell is not configured (do not invent a URL) → **`ephemeral-environment` (`action=PROVISION`)** → map `component_urls_json` to `BASE_URL` / `BACKEND_URL`.
+     - Follow the EaaS (Bunnyshell) workflow in [`../environment-management.md`](../environment-management.md): **`get-eaas-config`** → if `{}`, **STOP** with a clear message that Bunnyshell is not configured (do not invent a URL) → **`ephemeral-environment` (`action=PROVISION`)** → map `component_urls_json` to `BASE_URL` / `BACKEND_URL`.
      - Keep the scan’s **`environment` tag** as the label; the ephemeral deploy is an **instance** of that tag — do **not** fall back to shared `.env*` `BASE_URL` when sandbox was requested.
      - Remember the provisioned env id / handle so the parent orchestrator can **`destroy-ephemeral-environment`** in cleanup (**always**, including on failure).
    - Else (no sandbox):

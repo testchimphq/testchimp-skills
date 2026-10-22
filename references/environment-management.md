@@ -78,7 +78,7 @@ If the team explicitly chooses to run E2E only post-merge (discouraged, but allo
 
 ## EaaS (Bunnyshell) workflow
 
-1. Call **`ephemeral-environment` (`action=CONFIG`)**. Empty `{}` means BunnyShell integration is not set up.
+1. Call **`get-eaas-config`**. Empty `{}` means BunnyShell integration is not set up. Do **not** use `ephemeral-environment action=CONFIG`.
 2. When configured, **prefer `ephemeral-environment` (`action=PROVISION`)** (optional `branchName`, `pollIntervalSeconds` default 60, `maxWaitMinutes` default 25). It provisions and polls until the environment is **deployed** with **`component_urls_json`** populated, then returns a single JSON: `outcome` (`success` \| `failed` \| `timeout`), `failure_phase` (`provision` \| `deploy` \| `wait`), `message` for the user, and `component_urls_json` on success. Provisioning often takes **~5–10 minutes**—the MCP server emits progress logs while waiting.
 3. **Fallback (only if** the wait tool is missing, errors, or the host kills long MCP calls**):** call **`ephemeral-environment` (`action=PROVISION`, `wait=false`)**, then poll **`ephemeral-environment` (`action=STATUS`)** about **once per minute** for up to **~25 minutes** with the same success criteria (deployed + component URLs or terminal failure).
 4. Parse **`component_urls_json`** to set `BASE_URL`, `BACKEND_URL`, and any `*_SERVICE_BACKEND_URL` vars your repo uses for seeds and tests (see [`fixture-usage.md`](./fixture-usage.md), [`seeding-endpoints.md`](./seeding-endpoints.md)).
