@@ -27,7 +27,7 @@
   },
   "cli": {
     "package": "@testchimp/cli",
-    "minVersion": "0.1.88",
+    "minVersion": "2.0.0",
     "install": "npm i -g @testchimp/cli@latest on both the bot's cloud computer and the user's computer. The CLI is the bot's preferred way to call TestChimp; the MCP connector is used for binding, AgentWatch pairing approval, and as a fallback. The daily self-update routine keeps the bot's copy on the latest version automatically and asks before updating the user's."
   },
   "skill": {

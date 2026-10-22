@@ -2,13 +2,13 @@
 
 Use the **CLI** when the agent runs **shell commands** (CI, scripts, or hosts without MCP). Use **MCP** when the IDE/agent host exposes MCP tools. Both call the same TestChimp **`/api/mcp/*`** HTTP APIs.
 
-**MCP API 2.0.0:** this skill (`metadata.required_mcp_version`) documents the **2.0.0** tool names and params. Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release.
+**MCP API 2.0.0 / CLI 2.0.0:** this skill (`metadata.required_mcp_version` and `metadata.required_cli_version`) documents the **2.0.0** tool names and flags from `@testchimp/cli` 2.0.0 (81 tools, kebab-case parity). Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release.
 
 This page lists **every subcommand and flag** as implemented in the CLI (kebab-case flags; request bodies use **camelCase**). **`--json-input`** is available on every tool subcommand below except where noted; it merges **over** flags (JSON wins on conflicts).
 
 **Screen-state atlas** (for **`markScreenState`** / ExploreChimp vocabulary): see § [**Screen-state atlas (SmartTests, traces, ExploreChimp)**](#screen-state-atlas-smarttests-traces-explorechimp) — **`list-screen-states`**, **`upsert-screen-states`**.
 
-**Release catalog** (Release Checks / ExploreChimp targeting a release): **`upsert-release`** (create or update) — see § [**upsert-release**](#upsert-release); **`get-release`** (omit `version` to list; pass `version` for thin catalog metadata; `version` + `detail=GATE` for release gating) — see § [**get-release**](#get-release); **`manage-test-run`** (create a run, FIND then LINK batches in the prior-to-current commit range) — see § [**manage-test-run**](#manage-test-run).
+**Release catalog** (Release Checks / ExploreChimp targeting a release): **`upsert-release`** (create or update) — see § [**upsert-release**](#upsert-release); **`get-release`** (omit `version` to list; pass `version` for catalog metadata; `version` + `detail=GATE` for release gating) — see § [**get-release**](#get-release); **`manage-test-run`** (`CREATE` / `UPDATE` / `COMPLETE` / `ADD_SCENARIOS`) — see § [**manage-test-run**](#manage-test-run).
 
 ## Install
 
@@ -396,15 +396,18 @@ Create or update a release in the project catalog. Same `version` updates the ex
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|-------|
 | `--version <version>` | **Yes** | `version` | Release catalog label / version string. |
-| `--git-commit-sha <sha>` | No | `gitCommitSha` | Cut SHA for this release. |
-| `--prior-release-version <version>` | No | `priorReleaseVersion` | Previous catalog version (drives the prior-to-current commit range). |
+| `--name <name>` | No | `name` | Display name. |
+| `--git-sha <sha>` | No | `gitSha` | Cut SHA. Same flag as agent-traceability `--git-sha` (not a second Commander option). |
+| `--prior-version <version>` | No | `priorVersion` | Previous catalog version. |
+| `--due-date-millis <ms>` | No | `dueDateMillis` | UTC epoch millis. |
 | `--lifecycle-status <status>` | No | `lifecycleStatus` | Omit when the user did not name one; let the platform default. |
-| `--json-input …` | No | (merge) | Optional extra body fields. |
+| `--focus-areas <csv>` | No | `focusAreas` | Comma-separated focus areas. |
+| `--json-input …` | No | (merge) | Optional extra body fields (`payload`, …). |
 
 **Example:**
 
 ```bash
-testchimp upsert-release --version '2026.10' --git-commit-sha abcdef1 --prior-release-version '2026.09'
+testchimp upsert-release --version '2026.10' --git-sha abcdef1 --prior-version '2026.09'
 ```
 
 Bonobi uses this when the user asks to create a release — see [`bot-playbook.md`](./bot-playbook.md) § Release DevX.
@@ -415,12 +418,12 @@ Bonobi uses this when the user asks to create a release — see [`bot-playbook.m
 
 **Requires `@testchimp/cli` ≥ `0.1.13`.**
 
-Fetch release catalog details for a version/label in the current project (cut git SHA, prior release + SHA, focus areas, payload). Used when running ExploreChimp or **performance tests** **targeting a release**. **Omit `version` to list** catalog releases (Bonobi uses the list to pick `priorReleaseVersion` and avoid clobbering a name).
+Fetch release catalog details for a version/label in the current project (cut git SHA, prior release + SHA, focus areas, payload). Used when running ExploreChimp or **performance tests** **targeting a release**. **Omit `version` to list** catalog releases (Bonobi uses the list to pick `priorVersion` and avoid clobbering a name).
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|-------|
 | `--version <version>` | No | `version` | Release catalog label / version string. Omit to list. Required when `detail=GATE`. |
-| `--detail GATE` | No | `detail` | Gate-oriented payload: focus-area scope, per-environment priority×status test aggregations, open-issue stats, release-scan summaries, in-scope scenario/issue records. Use for CI/agent **release gating**. |
+| `--detail CATALOG\|GATE` | No | `detail` | `CATALOG` (default when `version` is set) or `GATE` (gate-oriented: per-environment stats, open-issue stats, scan summaries). |
 | `--json-input …` | No | (merge) | Optional extra body fields. |
 
 **Example:**
@@ -439,24 +442,27 @@ testchimp get-release --detail GATE --version '1.2.0'
 
 **API:** `POST /api/mcp/manage_test_run`
 
-Create or update a named test run on a release, and discover / attach batch executions in the prior-release-to-current commit range.
+Create or update a named test run. CLI / schema **2.0.0**: `action` is required.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|-------|
-| `--id <id>` | No | `id` | Omit to **create**. Pass the id to update, FIND, or LINK that run. |
-| `--release <version>` | Yes when creating | `release` | Catalog version the run belongs to. |
-| `--status <status>` | No | `status` | Set when the user asked for a status. |
-| `--commit-range FIND\|LINK` | No | `commitRange` | `FIND` discovers batches in the prior-to-current release commit range. `LINK` attaches the **unlinked** ones after the user agrees. |
+| `--action CREATE\|UPDATE\|COMPLETE\|ADD_SCENARIOS` | **Yes** | `action` | `CREATE` needs `name` and/or `release`. Other actions need `namedTestRunId`. |
+| `--named-test-run-id <id>` | Yes except CREATE | `namedTestRunId` | Existing run id. |
+| `--name <name>` | CREATE | `name` | Test run name. |
+| `--release <label>` | CREATE (or with name) | `release` | Catalog version the run belongs to. |
+| `--environment <name>` | No | `environment` | Env tag. |
+| `--assignee <userId>` | No | `assignee` | Assignee user id. |
+| `--scenario-ordinal-ids <csv>` | ADD_SCENARIOS | `scenarioOrdinalIds` | Comma-separated TS-`<n>` numeric ids. |
 | `--json-input …` | No | (merge) | Optional extra body fields. |
 
-**Bonobi sequence:** omit `id` to create (with `release`) → `commitRange: FIND` → show already-linked vs unlinked and ask → `commitRange: LINK` if they say yes. Never LINK without asking. See [`bot-playbook.md`](./bot-playbook.md) § Release DevX.
+**Bonobi sequence:** `action=CREATE` with `release` (and a name if they gave one) → `UPDATE` / `ADD_SCENARIOS` as the run changes → `COMPLETE` when they close it. See [`bot-playbook.md`](./bot-playbook.md) § Release DevX.
 
 **Example:**
 
 ```bash
-testchimp manage-test-run --release '2026.10'
-testchimp manage-test-run --id 01TESTRUN0000000000000001 --commit-range FIND
-testchimp manage-test-run --id 01TESTRUN0000000000000001 --commit-range LINK
+testchimp manage-test-run --action CREATE --release '2026.10' --name 'RC1'
+testchimp manage-test-run --action ADD_SCENARIOS --named-test-run-id 01TESTRUN0000000000000001 --scenario-ordinal-ids 101,107
+testchimp manage-test-run --action COMPLETE --named-test-run-id 01TESTRUN0000000000000001
 ```
 
 ### `get-security-scan-config`
@@ -806,12 +812,32 @@ testchimp list-meetings --include-filter-options
 
 ### `list-issues`
 
-Search and filter issues in the current project (MCP API **2.0.0**). Use when the user describes an issue by title, status, assignee, or label; when `/testchimp fix issue` has no ordinal; or before **`upsert-issue`** (create) so you do not file a duplicate. Once you have an `issueId` / ordinal, call **`get-issue-details`**.
+Requires `@testchimp/cli` ≥ **2.0.0**.
 
-Pass filters via **`--json-input`** (search text, status, assignee, labels, issue type, and similar). Prefer MCP **`list-issues`** with the same JSON fields.
+**API:** `POST /api/mcp/list_issues`
+
+Search and filter issues in the current project. Use when the user describes an issue by title, status, assignee, or label; when `/testchimp fix issue` has no ordinal; or before **`upsert-issue`** (create) so you do not file a duplicate. Once you have an `issueId` / ordinal, call **`get-issue-details`**.
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--search <text>` | No | `searchText` | Full-text search. |
+| `--issue-id <id>` | No | `issueId` | Issue ordinal (`#B-123`, `B-123`, `123`). |
+| `--status <status>` | No | `status` | `ACTIVE` \| `IGNORED` \| `FIXED` \| `DUPLICATE` \| `IN_PROGRESS_BUG` \| `ARCHIVED_BUG` \| `BLOCKED`. JSON may pass **`statuses`** (array) instead. |
+| `--issue-type <type>` | No | `issueType` | `BUG_ISSUE` \| `SUGGESTION_ISSUE` \| `OBSERVATION_ISSUE` \| `TASK_ISSUE`. |
+| `--category <category>` | No | `category` | Same enum as `upsert-issue`. |
+| `--severity <severity>` | No | `severity` | `LOW_SEVERITY` \| `MEDIUM_SEVERITY` \| `HIGH_SEVERITY` \| `CRITICAL_SEVERITY`. |
+| `--assignee <userId>` | No | `assignee` | Assignee user id. |
+| `--labels <csv>` | No | `labels` | Comma-separated → string array. |
+| `--release <label>` | No | `release` | Release label. |
+| `--environment <name>` | No | `environment` | Env tag. |
+| `--limit <n>` | No | `limit` | Max 200. |
+| `--offset <n>` | No | `offset` | Pagination offset. |
+| `--json-input …` | No | (merge) | Full body including `statuses`. |
 
 ```bash
-testchimp list-issues --json-input '{"status":"ACTIVE"}'
+testchimp list-issues --status ACTIVE --issue-type TASK_ISSUE --labels "TestChimp Implement"
+testchimp list-issues --search "checkout" --severity HIGH_SEVERITY --limit 20
+testchimp list-issues --json-input '{"statuses":["ACTIVE","IN_PROGRESS_BUG"],"assignee":"<userId>"}'
 ```
 
 ### `get-issue-details`
@@ -838,7 +864,7 @@ testchimp get-issue-details --issue-id 123
 
 ### `upsert-issue`
 
-Requires `@testchimp/cli` ≥ **0.1.16** to update; create fields need ≥ **0.1.17**.
+Requires `@testchimp/cli` ≥ **2.0.0**.
 
 **API:** `POST /api/mcp/upsert_issue`
 
@@ -998,19 +1024,23 @@ Same requirement as **`update-user-story`**: provide content via flag(s) or JSON
 
 **API:** `POST /api/mcp/ephemeral_environment`
 
-One tool. Set **`action`** to `CONFIG`, `PROVISION`, or `STATUS`.
+One tool. **`--action`** is required (`CONFIG` | `PROVISION` | `STATUS`). CLI ≥ **2.0.0**.
 
-| `action` | Wait / extra fields | Notes |
-|----------|---------------------|-------|
-| `CONFIG` | — | Read EaaS config. Body is normally empty. |
-| `PROVISION` | `wait` defaults **true** (poll until ready; `--poll-interval-seconds`, `--max-wait-minutes`). Pass `wait=false` to return immediately. Optional `--branch-name`. | |
-| `STATUS` | **`bnsEnvironmentId`** required (`--bns-environment-id`) | |
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|--------|
+| `--action CONFIG\|PROVISION\|STATUS` | **Yes** | `action` | |
+| `--branch-name <s>` | No | `branchName` | PROVISION / CONFIG. |
+| `--wait` / `--no-wait` | No | `wait` | PROVISION only. Defaults **true** (poll until ready). `--no-wait` returns immediately. |
+| `--bns-environment-id <id>` | STATUS | `bnsEnvironmentId` | Required when `action=STATUS`. |
+| `--poll-interval-seconds <n>` | No | `pollIntervalSeconds` | PROVISION wait. |
+| `--max-wait-minutes <n>` | No | `maxWaitMinutes` | PROVISION wait. |
+| `--json-input …` | No | (merge) | |
 
 ```bash
-testchimp ephemeral-environment --json-input '{"action":"CONFIG"}'
-testchimp ephemeral-environment --json-input '{"action":"PROVISION"}'
-testchimp ephemeral-environment --json-input '{"action":"PROVISION","wait":false,"branchName":"feat/login"}'
-testchimp ephemeral-environment --json-input '{"action":"STATUS","bnsEnvironmentId":"<id>"}'
+testchimp ephemeral-environment --action CONFIG
+testchimp ephemeral-environment --action PROVISION
+testchimp ephemeral-environment --action PROVISION --no-wait --branch-name feat/login
+testchimp ephemeral-environment --action STATUS --bns-environment-id "<id>"
 ```
 
 ### `get-branch-specific-endpoint-config`
@@ -1366,7 +1396,33 @@ testchimp upsert-plans-support-file \
 
 Lists catalog workflows with Active / Disabled / Missing Config for the project. Use `--json-input '{}'` when no flags are needed.
 
-Also related (flags vary): **`report-agent-action`**, **`get-workflow-executions`** (list filters; `workflowExecutionId` for one; `workflowId` + `latestOnly=true` for last run) — see `testchimp <cmd> -h`. `get-workflow-executions` accepts `pendingApprovalOnly` and (CLI ≥ **0.1.91**) `assignedToMeOnly` (executions whose assignee is the calling user: OAuth user, or the bot's owner with `--bot`).
+Also related: **`report-agent-action`**, **`get-workflow-executions`** — see below and `testchimp <cmd> -h`.
+
+### `get-workflow-executions`
+
+Requires `@testchimp/cli` ≥ **2.0.0**.
+
+**API:** `POST /api/mcp/get_workflow_executions`
+
+List executions, fetch one by id, or get the last run (`workflowId` + `latestOnly=true`).
+
+| Flag | Maps to JSON field | Notes |
+|------|-------------------|--------|
+| `--workflow-execution-id <id>` | `workflowExecutionId` | Fetch one execution. |
+| `--workflow-id <id>` | `workflowId` | Catalog workflow id. |
+| `--branch-name <name>` | `branchName` | Optional branch filter. |
+| `--user-id <id>` | `userId` | Optional per-user last run. |
+| `--latest-only` | `latestOnly` | Last execution for `workflowId`. |
+| `--include-actions` | `includeActions` | Include the action timeline. |
+| `--limit <n>` / `--offset <n>` | `limit` / `offset` | Limit max 200. |
+| `--pending-approval-only` | `pendingApprovalOnly` | Only `PENDING_INVOKE_APPROVAL` / `PLANNED`. |
+| `--assigned-to-me-only` | `assignedToMeOnly` | Executions assigned to the caller (OAuth user, or the bot's owner with `--bot`). |
+
+```bash
+testchimp get-workflow-executions --workflow-id run-qa --latest-only
+testchimp get-workflow-executions --workflow-execution-id 01J... --include-actions
+testchimp get-workflow-executions --assigned-to-me-only --pending-approval-only
+```
 
 ### `update-project-init-status`
 
@@ -1465,6 +1521,23 @@ testchimp list-api-operation-interactions --operation-id 01XYZ --interaction-typ
 
 Soft-gate with `get-org-capabilities` → `PERFORMANCE_TESTING`. Compare prints JSON to stdout; the CLI sets exit code `1` when `comparison.regressed` is `true` (or a flat `regressed: true`). A missing/incompatible baseline is an API error, not a silent pass.
 
+### `list-perf-runs`
+
+Requires `@testchimp/cli` ≥ **2.0.0** for `runId` / `includeRaw`. Omit `runId` to list; pass `--run-id` for one run.
+
+| Flag | Maps to JSON field | Notes |
+|------|-------------------|--------|
+| `--run-id <id>` | `runId` | Fetch one run. |
+| `--include-raw` | `includeRaw` | Include the raw performance payload. |
+| `--testchimp-id <id>` | `testchimpId` | Journey / composite id. |
+| `--kind JOURNEY\|COMPOSITE` | `kind` | |
+| `--branch-name <name>` | `branchName` | |
+| `--profile <name>` | `profile` | |
+| `--dataset <name>` | `dataset` | |
+| `--llm-mode <mode>` | `llmMode` | |
+| `--environment <name>` | `environment` | |
+| `--limit <n>` / `--offset <n>` | `limit` / `offset` | Limit max 100. |
+
 ```bash
 testchimp list-perf-runs --testchimp-id checkout-journey --kind JOURNEY --limit 20
 testchimp list-perf-runs --run-id 01ABC --include-raw
@@ -1497,12 +1570,20 @@ testchimp list-semantic-similar-tests --json-input '{ "scope": { "folderPath": [
 
 Response records use camelCase TestLocators and `similarTests` with `classification` (`POTENTIAL_DUPLICATE` or `SIMILAR`). Pairs are deduped (A→B only when A.testId < B.testId).
 
-### `set-entity-distinct` (`entityType=TEST`)
+### `set-entity-distinct`
 
-Mark two tests as legitimately distinct (symmetric). Agent/API calls use `marked_by_user_id = "0"`.
+Requires `@testchimp/cli` ≥ **2.0.0**. **`distinct` defaults true**. `--no-distinct` / `distinct=false` unmarks. Locators go in **`--json-input`**.
+
+| Flag / JSON field | Notes |
+|-------------------|--------|
+| `--entity-type STORY\|SCENARIO\|TEST\|ISSUE\|EVENT` | Optional when both TEST locators are present (inferred `TEST`). |
+| `--distinct` / `--no-distinct` | Mark (default) or unmark. |
+| `focusTest` + `otherTest` or `distinctTest` | TEST locators. |
+| `focusOrdinalId` / `otherOrdinalId` | Story / scenario / issue ordinals. |
+| `focusEventTitle` / `otherEventTitle` | EVENT titles. |
 
 ```bash
-testchimp set-entity-distinct --json-input '{
+testchimp set-entity-distinct --entity-type TEST --json-input '{
   "focusTest": {
     "folderPath": ["auth"],
     "fileName": "login.spec.ts",
@@ -1514,6 +1595,11 @@ testchimp set-entity-distinct --json-input '{
     "fileName": "signin.spec.ts",
     "testName": "login flow"
   }
+}'
+testchimp set-entity-distinct --no-distinct --json-input '{
+  "entityType": "TEST",
+  "focusTest": { "folderPath": ["auth"], "fileName": "a.spec.ts", "testName": "a" },
+  "otherTest": { "folderPath": ["auth"], "fileName": "b.spec.ts", "testName": "b" }
 }'
 ```
 
@@ -1571,17 +1657,7 @@ testchimp list-semantic-nearby --json-input '{
 
 Response buckets include `similarity`, `potentialDuplicate` (same-type), and identity fields (`test` / `ordinalId` / `eventTitle`).
 
-### `set-entity-distinct`
-
-Same identity rules as nearby. **`distinct` defaults true** (mark as distinct). Pass **`distinct=false`** to unmark. Prefer this for cross-type cleanup; `entityType=TEST` plus the two locators remains the TestLocator-only TEST wrapper.
-
-```bash
-testchimp set-entity-distinct --json-input '{
-  "entityType": "TEST",
-  "focusTest": { "folderPath": ["auth"], "fileName": "a.spec.ts", "testName": "a" },
-  "otherTest": { "folderPath": ["auth"], "fileName": "b.spec.ts", "testName": "b" }
-}'
-```
+Cross-type cleanup uses the same **`set-entity-distinct`** tool (ordinals / event titles via `--json-input`). See § [`set-entity-distinct`](#set-entity-distinct).
 
 ---
 

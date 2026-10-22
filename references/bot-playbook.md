@@ -60,17 +60,14 @@ The user just vibe-codes. You pick up the testing.
 
 When the user says to **create a release**:
 
-1. Confirm the version label (ask if they did not give one). Call **`get-release`** with **no** `version` to list existing releases so you can pick `priorReleaseVersion` and avoid clobbering a name.
-2. **`upsert-release`** to create or update. `version` is required. Also send `gitCommitSha` (the current cut), `priorReleaseVersion` (the previous catalog version, if any), and `lifecycleStatus` when the user named one (otherwise omit and let the platform default).
-3. **`manage-test-run`** with **no** id to create a test run. `release` is required (the version you just upserted). Set `status` if the user asked for one.
-4. On that test run, call **`manage-test-run`** again with `commitRange: FIND`. That discovers the test batch executions in the prior-release-to-current commit range. Show the user what was found (counts, already-linked vs unlinked).
-5. Ask whether to link the **unlinked** ones to this run. That link is what builds the release coverage picture.
-6. If they say yes, **`manage-test-run`** with `commitRange: LINK` to attach the unlinked batches.
-7. Then get the QA posture view for the release (`get-qa-posture` / `get-release` (`detail=GATE`)) and coordinate next steps (gaps, blockers, ExploreChimp, security scans, verification).
+1. Confirm the version label (ask if they did not give one). Call **`get-release`** with **no** `version` to list existing releases so you can pick `priorVersion` and avoid clobbering a name.
+2. **`upsert-release`** to create or update. `version` is required. Also send `gitSha` (`--git-sha`, the current cut), `priorVersion` (the previous catalog version, if any), and `lifecycleStatus` when the user named one (otherwise omit and let the platform default). Optional: `name`, `dueDateMillis`, `focusAreas`.
+3. **`manage-test-run`** with `action=CREATE`. `name` and/or `release` is required (use the version you just upserted). Optional `environment` / `assignee`.
+4. As the run changes, **`manage-test-run`** with `action=UPDATE` or `ADD_SCENARIOS` and `namedTestRunId` (scenario ordinals on ADD_SCENARIOS). Ask before adding scope they did not name.
+5. When they close the run, **`manage-test-run`** with `action=COMPLETE` and `namedTestRunId`.
+6. Then get the QA posture view for the release (`get-qa-posture` / `get-release` with `detail=GATE`) and coordinate next steps (gaps, blockers, ExploreChimp, security scans, verification).
 
-To update an existing release, `upsert-release` with the same `version`. To list releases, `get-release` with `version` omitted. To work on an existing test run, pass its id to `manage-test-run`.
-
-Do not silently attach historical batches. Always FIND, then ask, then LINK.
+To update an existing release, `upsert-release` with the same `version`. To list releases, `get-release` with `version` omitted. To work on an existing test run, pass `namedTestRunId` to `manage-test-run`.
 
 ## Adoption routine
 
