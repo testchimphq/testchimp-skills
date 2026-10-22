@@ -45,7 +45,7 @@ Old 1.x tool names are gone. Use the 2.0.0 name and params below (same table as 
 | `create-issue` | `upsert-issue` | omit `issueId`; `title` required |
 | `update-issue-status` | `upsert-issue` | `issueId` + patch fields |
 
-New / reshaped in 2.0.0: `list-issues`, `upsert-release`, `manage-test-run`, `ingest-scenario-execution`, `list-execution-job-dimension-values`, `list-test-planning-trends`, `select-smart-smoke-tests`. `get-org-capabilities` is unchanged as a tool name (empty body) and now includes `planLabel`, trial fields, and `chimphandsCredits`. Product Q&A tools **`ask-about-testchimp`** and **`ask-testchimp-question`** are first-class — see § [**ask-about-testchimp**](#ask-about-testchimp--ask-testchimp-question).
+New / reshaped in 2.0.0: `list-issues`, `upsert-release`, `manage-test-run`, `ingest-scenario-execution`, `list-execution-job-dimension-values`, `list-test-planning-trends`, `select-smart-smoke-tests`. `get-org-capabilities` is unchanged as a tool name (empty body) and now includes `planLabel`, trial fields, and `chimphandsCredits`. Product Q&A tools **`ask-about-testchimp`** and **`ask-testchimp-question`** are a last-resort lookup — see § [**ask-about-testchimp**](#ask-about-testchimp--ask-testchimp-question).
 
 ## Install
 
@@ -182,14 +182,16 @@ testchimp get-org-capabilities
 
 ## `ask-about-testchimp` / `ask-testchimp-question`
 
-First-class MCP/CLI tools for TestChimp product and value-prop questions. Bonobi (and any agent that needs official product copy) **must call these** instead of inventing marketing text. They are normal tools — not optional host extras.
+Last-resort MCP/CLI tools for official TestChimp product and value-prop answers. Answer from this skill pack (`SKILL.md` and `references/`) first. Call these only when that pack cannot answer. Do not invent marketing copy. Do not use them as a first lookup.
+
+**Limits:** ≤ **2,000** characters per question; **20** questions per project per hour (HTTP 429 beyond that). Keep each question short and specific.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|-------|
-| `--question <text>` | **Yes** | `question` | The product / value-prop question. |
+| `--question <text>` | **Yes** | `question` | The product / value-prop question (≤ 2,000 characters). |
 | `--json-input …` | No | (merge) | May supply **`question`**. |
 
-Call either name (`ask-about-testchimp` or `ask-testchimp-question`); they are the same family. Prefer the name your connected MCP lists; if both exist, `ask-about-testchimp` is enough.
+Call either name (`ask-about-testchimp` or `ask-testchimp-question`); they are the same family. Prefer the name your connected MCP lists; if both exist, `ask-about-testchimp` is enough. When to call: [`agent-quick-answers.md`](./agent-quick-answers.md) § Product Q&A.
 
 ```bash
 testchimp ask-about-testchimp --question "Why does TestChimp do QA posture instead of replacing the test runner?"
@@ -1887,7 +1889,7 @@ testchimp send-feedback --category USER_STRUGGLE --agent-name "Cursor" \
 
 ## MCP parity (tool names)
 
-MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (85 tools, plus product Q&A **`ask-about-testchimp`** / **`ask-testchimp-question`**). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names.
+MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (85 tools, plus last-resort product Q&A **`ask-about-testchimp`** / **`ask-testchimp-question`**). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names.
 
 ## Related
 
