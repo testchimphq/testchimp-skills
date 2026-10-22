@@ -42,7 +42,7 @@ gitleaks detect --source . --report-path /tmp/gitleaks-report-<scan_id>.json --r
   [--log-opts '<baselineGitCommitSha>..HEAD']
 ```
 
-- If `scope` is `RELEASE_CHANGES` (or absent / unknown): require `baselineGitCommitSha`. Fetch enough git history so the baseline exists (`git fetch --unshallow` / deepen as needed). Prefer `get-release --version '<releaseLabel>'` for cut/prior context when useful.
+- If `scope` is `RELEASE_CHANGES` (or absent / unknown): require `baselineGitCommitSha`. Fetch enough git history so the baseline exists (`git fetch --unshallow` / deepen as needed). Prefer `get-release --release '<releaseLabel>'` for cut/prior context when useful. MCP field remains `version`.
 - If `scope` is `ALL_REPOSITORY_SECRETS`: omit `--log-opts`.
 - **Exit codes:** Gitleaks exit `1` when leaks are found is **success** for this playbook (still report). Treat only crashes / missing binary / failed upload as hard failures.
 - **Empty findings:** if Gitleaks writes no file or an empty file, write `[]` to the report path before upload. Empty array is valid and still `COMPLETED`.

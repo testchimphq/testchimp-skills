@@ -1,6 +1,6 @@
 {
   "name": "testchimp",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "QA platform for coding agents: coverage signals, in-repo test plans, verified tests and release governance.",
   "mcpServers": {
     "testchimp": { "httpUrl": "https://mcp.testchimp.io/mcp" }

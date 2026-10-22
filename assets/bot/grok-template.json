@@ -1,6 +1,6 @@
 {
   "templateId": "testchimp-qa-bot-grok",
-  "templateVersion": "1.0.7",
+  "templateVersion": "1.0.8",
   "platform": "GROK_BOT",
   "displayName": "Bonobi",
   "description": "Bonobi is TestChimp's QA bot (the same QA bot) for one project: a friendly QA sidekick that adapts to your plan tier, watches posture, and runs testchimp skill workflows.",
@@ -27,13 +27,13 @@
   },
   "cli": {
     "package": "@testchimp/cli",
-    "minVersion": "2.0.0",
+    "minVersion": "2.0.1",
     "install": "npm i -g @testchimp/cli@latest on both the bot's cloud computer and the user's computer. The CLI is the bot's preferred way to call TestChimp; the MCP connector is used for binding, AgentWatch pairing approval, and as a fallback. The daily self-update routine keeps the bot's copy on the latest version automatically and asks before updating the user's."
   },
   "skill": {
     "name": "testchimp",
     "repo": "https://github.com/testchimphq/testchimp-skills",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "branch": "develop",
     "setup": "Installed with the template; the bot instructions also self-install it from the repo on first run if missing. The daily self-update routine replaces it with the latest develop automatically."
   },
