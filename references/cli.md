@@ -2,7 +2,7 @@
 
 Use the **CLI** when the agent runs **shell commands** (CI, scripts, or hosts without MCP). Use **MCP** when the IDE/agent host exposes MCP tools. Both call the same TestChimp **`/api/mcp/*`** HTTP APIs.
 
-**MCP API 2.0.0 / CLI 2.0.0:** this skill (`metadata.required_mcp_version` and `metadata.required_cli_version`) documents the **2.0.0** tool names and flags from `@testchimp/cli` 2.0.0 (87 tools, kebab-case parity; includes **`get-eaas-config`** and **`ask-about-testchimp`**; verified against Aware OpenAPI 2.0.0 and client PR #29). Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release.
+**MCP API 2.0.0 / CLI 2.0.1:** this skill (`metadata.required_mcp_version` and `metadata.required_cli_version`) documents the **2.0.0** tool names and the **2.0.1** flags from `@testchimp/cli` ≥ 2.0.1 (87 tools, kebab-case parity; includes **`get-eaas-config`** and **`ask-about-testchimp`**; verified against Aware OpenAPI 2.0.0 and client PR #29). Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release. Release-catalog CLI flags use **`--release <label>`** (alias **`--release-version`**) and map to MCP field **`version`**. Do not pass a release label as `--version` — that is the global CLI package-version flag.
 
 This page lists **every subcommand and flag** as implemented in the CLI (kebab-case flags; request bodies use **camelCase**). **`--json-input`** is available on every tool subcommand below except where noted; it merges **over** flags (JSON wins on conflicts).
 
@@ -124,7 +124,7 @@ Subcommand help is the **runtime** source of truth if a flag is added in a newer
 
 | Flag | Description |
 |------|-------------|
-| `-V`, `--version` | CLI package version. |
+| `-V`, `--version` | CLI package version (`testchimp --version`). Not a release-catalog flag. |
 | `-h`, `--help` | Help for the root program or a subcommand (`testchimp <cmd> -h`). |
 
 ---
@@ -449,11 +449,11 @@ With **`--environment <s>`** when your project uses env-scoped vocabulary (forwa
 
 **API:** `POST /api/mcp/upsert_release`
 
-Create a catalog release when `version` is new, or update fields and lifecycle status when it already exists. **No `action` enum.** Response is `{ release, created }`. There is **no** `agentTraceability` on this tool.
+Create a catalog release when `version` is new, or update fields and lifecycle status when it already exists. **No `action` enum.** Response is `{ release, created }`. There is **no** `agentTraceability` on this tool. CLI ≥ **2.0.1** uses **`--release <label>`** (alias **`--release-version`**) for the catalog label; MCP field remains `version`.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|-------|
-| `--version <version>` | **Yes** | `version` | Release catalog label / version string. |
+| `--release <label>` | **Yes** | `version` | Release catalog label. Alias `--release-version`. Do **not** use `--version` here (that is the global CLI package-version flag). |
 | `--git-commit-sha <sha>` | No | `gitCommitSha` | Cut SHA. `--git-sha` is a CLI alias that also sets `gitCommitSha`. |
 | `--prior-release-version <version>` | No | `priorReleaseVersion` | Previous catalog version. |
 | `--release-type MAJOR\|MINOR\|HOTFIX` | No | `releaseType` | Omit when the user did not name one. |
@@ -468,7 +468,7 @@ There is no `name`, `gitSha`, `priorVersion`, or `focusAreas` field on this API.
 **Example:**
 
 ```bash
-testchimp upsert-release --version '2026.10' --git-commit-sha abcdef1 --prior-release-version '2026.09' --release-type MINOR
+testchimp upsert-release --release '2026.10' --git-commit-sha abcdef1 --prior-release-version '2026.09' --release-type MINOR
 ```
 
 Bonobi uses this when the user asks to create a release — see [`bot-playbook.md`](./bot-playbook.md) § Release DevX.
@@ -477,13 +477,13 @@ Bonobi uses this when the user asks to create a release — see [`bot-playbook.m
 
 **API:** `POST /api/mcp/get_release`
 
-**Requires `@testchimp/cli` ≥ `0.1.13`.**
+**Requires `@testchimp/cli` ≥ `2.0.1`** for **`--release`** / **`--release-version`** (maps to MCP `version`). Older CLIs used `--version <label>`, which collided with the global CLI `--version`.
 
 When `version` is set, return that catalog entry. **Omit `version` to list** releases (Bonobi uses the list to pick `priorReleaseVersion` and avoid clobbering a name). `get-release` with `version` + `detail=GATE` returns gate-oriented stats (scope, per-environment stats, open-issue stats, scan summaries).
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|-------|
-| `--version <version>` | No | `version` | Release catalog label / version string. Omit to list. Required when `detail=GATE`. |
+| `--release <label>` | No | `version` | Release catalog label. Alias `--release-version`. Omit to list. Required when `detail=GATE`. Do **not** use `--version` here (that is the global CLI package-version flag). |
 | `--detail CATALOG\|GATE` | No | `detail` | Agent-facing `CATALOG` / `GATE` (sent as `MCP_RELEASE_VIEW_*`). |
 | `--environment <name>` | No | `environment` | List filter. |
 | `--page-size <n>` | No | `pageSize` | List page size. |
@@ -499,9 +499,9 @@ When `version` is set, return that catalog entry. **Omit `version` to list** rel
 export TESTCHIMP_API_KEY=…   # from MCP config walk-up; never echo
 testchimp get-release
 # stdout: JSON list of catalog releases
-testchimp get-release --version '1.2.0'
+testchimp get-release --release '1.2.0'
 # stdout: JSON McpGetReleaseResponse with full ReleaseDetail
-testchimp get-release --detail GATE --version '1.2.0'
+testchimp get-release --detail GATE --release '1.2.0'
 # stdout: JSON gate-oriented summary + detailedResults
 ```
 

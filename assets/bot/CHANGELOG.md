@@ -2,6 +2,11 @@
 
 Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
 
+## 1.0.8 — skill 2.0.1
+
+- Skill **2.0.1** requires **`@testchimp/cli` ≥ 2.0.1**. Release-catalog CLI flags are **`--release <label>`** (alias **`--release-version`**). The old `--version <label>` collided with the global CLI `--version` (package version). MCP field names stay `version`.
+- Existing bots: skill self-update picks this up. Upgrade the CLI to 2.0.1+ so `upsert-release` / `get-release` examples match the new flag.
+
 ## 1.0.7 — skill 2.0.0
 
 - Skill **2.0.0** requires **TestChimp MCP API 2.0.0** and **`@testchimp/cli` ≥ 2.0.0** (87 tools, including **`get-eaas-config`** and **`ask-about-testchimp`**). Tool names and params match Aware OpenAPI 2.0.0 (`ephemeral-environment` PROVISION|STATUS, `report-scan-findings` with `scanId`, `get-workflow-executions`, `get-policies`, `get-api-operations`, `list-meetings`, `set-entity-distinct`, `fetch-execution-report`, `get-execution-history`, `list-perf-runs`, `get-release`, `upsert-issue`, new `list-issues`). **`get-eaas-config` is kept unchanged** as the connectivity / first-run check.
