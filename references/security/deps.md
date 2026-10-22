@@ -51,7 +51,7 @@ Server also filters on ingest using the same profile (+ ignore-unfixed). Prefer 
      - `composer.json` / `composer.lock`
      - `*.csproj` / `packages.lock.json` / `packages.config`
      Scan the **directories containing** those changed manifests (unique parent dirs), or the manifests themselves with `trivy fs`. If no matching manifests changed, still produce an empty Trivy JSON (`{"Results":[]}`), upload it, and mark `COMPLETED`.
-     Fetch enough git history for the baseline commit when needed. Prefer `get-release --version '<releaseLabel>'` for cut/prior context when useful.
+     Fetch enough git history for the baseline commit when needed. Prefer `get-release --release '<releaseLabel>'` for cut/prior context when useful. MCP field remains `version`.
 
 5. Run Trivy (write full JSON — include all `Results` metadata; do **not** strip fields). **Always** pass `--scanners vuln` so secret findings are not mixed into the deps report:
 

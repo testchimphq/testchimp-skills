@@ -75,8 +75,12 @@ Confirm each item and record the result in the report:
 
 - The instructions match `instructions.md` exactly.
 - The `testchimp` skill is installed and enabled, and the Bot can open `references/bot-onboarding.md` from it.
-- The three scheduled routines exist with the right schedules and prompts.
-- The webhook routine exists (or you stopped at step 5).
+- These five routines exist with the right schedules and prompts (from `grok-template.json` → `routines`, plus the webhook in step 5):
+  - Daily self-update (daily 08:00)
+  - Weekday reminder (weekdays 09:00)
+  - Weekly QA posture digest (Monday 09:30)
+  - Daily adoption check (daily 09:15)
+  - TestChimp deliveries (webhook)
 - No connector, memories or secrets are attached.
 
 ### 8. Share as template
