@@ -2,7 +2,7 @@
 
 Use the **CLI** when the agent runs **shell commands** (CI, scripts, or hosts without MCP). Use **MCP** when the IDE/agent host exposes MCP tools. Both call the same TestChimp **`/api/mcp/*`** HTTP APIs.
 
-**MCP API 2.0.0 / CLI 2.0.0:** this skill (`metadata.required_mcp_version` and `metadata.required_cli_version`) documents the **2.0.0** tool names and flags from `@testchimp/cli` 2.0.0 (85 tools, kebab-case parity; verified against Aware OpenAPI 2.0.0). Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release.
+**MCP API 2.0.0 / CLI 2.0.0:** this skill (`metadata.required_mcp_version` and `metadata.required_cli_version`) documents the **2.0.0** tool names and flags from `@testchimp/cli` 2.0.0 (87 tools, kebab-case parity; includes **`get-eaas-config`** and **`ask-about-testchimp`**; verified against Aware OpenAPI 2.0.0 and client PR #29). Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release.
 
 This page lists **every subcommand and flag** as implemented in the CLI (kebab-case flags; request bodies use **camelCase**). **`--json-input`** is available on every tool subcommand below except where noted; it merges **over** flags (JSON wins on conflicts).
 
@@ -16,6 +16,7 @@ Old 1.x tool names are gone. Use the 2.0.0 name and params below (same table as 
 
 | Old tool | New tool | Notes |
 |---|---|---|
+| `get-eaas-config` | unchanged | standalone connectivity check; `POST /api/mcp/get_eaas_config` |
 | `provision-ephemeral-environment` | `ephemeral-environment` | `action=PROVISION`, `wait=false` |
 | `provision-ephemeral-environment-and-wait` | `ephemeral-environment` | `action=PROVISION` (`wait` defaults true) |
 | `get-ephemeral-environment-status` | `ephemeral-environment` | `action=STATUS`, `bnsEnvironmentId` |
@@ -478,7 +479,7 @@ Bonobi uses this when the user asks to create a release — see [`bot-playbook.m
 
 **Requires `@testchimp/cli` ≥ `0.1.13`.**
 
-When `version` is set, return that catalog entry. **Omit `version` to list** releases (Bonobi uses the list to pick `priorReleaseVersion` and avoid clobbering a name). `detail=GATE` (version required) returns the former `get-release-details` payload (scope, per-environment stats, open-issue stats, scan summaries).
+When `version` is set, return that catalog entry. **Omit `version` to list** releases (Bonobi uses the list to pick `priorReleaseVersion` and avoid clobbering a name). `get-release` with `version` + `detail=GATE` returns gate-oriented stats (scope, per-environment stats, open-issue stats, scan summaries).
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|-------|
@@ -1903,7 +1904,7 @@ testchimp send-feedback --category USER_STRUGGLE --agent-name "Cursor" \
 
 ## MCP parity (tool names)
 
-MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (85 tools, plus last-resort product Q&A **`ask-about-testchimp`** / **`ask-testchimp-question`**). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names.
+MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (87 tools, including **`get-eaas-config`** and last-resort **`ask-about-testchimp`** / **`ask-testchimp-question`**). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names.
 
 ## Related
 
