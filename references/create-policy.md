@@ -136,7 +136,7 @@ Ask relevant questions about agent **adherence** for that workflow, then write t
 - **`run-explorechimp`** — common issue types that should not be captured; areas to focus more thoroughly on; screens/paths to skip.
 - **`create-tests` / `run-smart-smoke`** — naming, folder conventions, mocks vs live, flaky-test handling.
 - **`cleanup`** — aggressiveness, retention, paths never to delete.
-- Composites (**`run-qa` / `upkeep`**) — which subflows to include/skip and order overrides (see default assets).
+- Composites (**`run-qa` / `upkeep` / `create-release`**) — which subflows to include/skip and order overrides (see default assets). For **`create-release`**, start from the seed banner skeleton ([`../assets/policies/create-release.policy.md`](../assets/policies/create-release.policy.md)); lock tag convention, scope defaults (MAJOR full / MINOR+HOTFIX changed), and the per-type matrix (upkeep, suite_execution, explorechimp, perf, security_static, security_dast). Remove the `[SEED POLICY - REQUIRE USER DECISIONS TO LOCK-IN]` banner once decisions are locked.
 
 When the user asks about what is possible, check skill references and [docs.testchimp.io](https://docs.testchimp.io/) before promising behaviour.
 

@@ -14,7 +14,7 @@ When init starts, tell the user:
 
 - This flow sets up **their machine** (MCP sign-in, runner API key, local stack / env) so they can run TestChimp workflows from their coding agent.
 - **One-time project setup** (if not done) is **`/testchimp project-init`** (Claude Code menu **`/testchimp:project-init`**) — ChimpHands or a lead dev runs it once per repo.
-- After both are done, they mainly run **`/testchimp test`** on PRs; periodically **`/testchimp upkeep`** / **`/testchimp evolve`**.
+- After both are done, they mainly run **`/testchimp test`** / **`/testchimp run QA`** after each PR, and **`/testchimp create release`** when shipping. Use **`/testchimp upkeep`** / **`/testchimp evolve`** for suite maintenance (gaps, cleanup)—not as the ship loop.
 - If the user declines a tool call, continue to the next step. Do not stall.
 
 Include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
