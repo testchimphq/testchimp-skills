@@ -2,6 +2,13 @@
 
 Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
 
+## 1.0.10 — skill 2.0.3
+
+- Skill **2.0.3** requires **`@testchimp/cli` ≥ 2.0.3** (89 tools). MCP API stays **2.0.0**.
+- **`/testchimp create release`** is the compound release QA posture workflow (policy lock-in, nested suite / ExploreChimp / perf / security, GATE summary). Release DevX follows that playbook.
+- CLI adds **`create-security-scan`** and **`upsert-release` `focusAreas`**.
+- Existing bots: the daily self-update picks up the skill and the CLI on the bot's computer.
+
 ## 1.0.9 — skill 2.0.2
 
 - Skill **2.0.2** requires **`@testchimp/cli` ≥ 2.0.2**. MCP API stays **2.0.0**.

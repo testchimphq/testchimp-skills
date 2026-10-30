@@ -2,13 +2,13 @@
 
 Use the **CLI** when the agent runs **shell commands** (CI, scripts, or hosts without MCP). Use **MCP** when the IDE/agent host exposes MCP tools. Both call the same TestChimp **`/api/mcp/*`** HTTP APIs.
 
-**MCP API 2.0.0 / CLI ≥ 2.0.2:** this skill (`metadata.required_mcp_version` **2.0.0**, `metadata.required_cli_version` **2.0.2**) documents the **2.0.0** tool names, the **2.0.1** **`--release`** flag, and **`ask-user-question-async`** added in `@testchimp/cli` **2.0.2** (88 tools, kebab-case parity; includes **`get-eaas-config`** and **`ask-about-testchimp`**). Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release. Release-catalog CLI flags use **`--release <label>`** (alias **`--release-version`**) and map to MCP field **`version`**. Do not pass a release label as `--version` — that is the global CLI package-version flag.
+**MCP API 2.0.0 / CLI ≥ 2.0.3:** this skill (`metadata.required_mcp_version` **2.0.0**, `metadata.required_cli_version` **2.0.3**) documents the **2.0.0** tool names, the **2.0.1** **`--release`** flag, **`ask-user-question-async`** (CLI **2.0.2**), and **`create-security-scan`** + `upsert-release` **`focusAreas`** (CLI **2.0.3**) (89 tools, kebab-case parity; includes **`get-eaas-config`** and **`ask-about-testchimp`**). Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release. Release-catalog CLI flags use **`--release <label>`** (alias **`--release-version`**) and map to MCP field **`version`**. Do not pass a release label as `--version` — that is the global CLI package-version flag.
 
 This page lists **every subcommand and flag** as implemented in the CLI (kebab-case flags; request bodies use **camelCase**). **`--json-input`** is available on every tool subcommand below except where noted; it merges **over** flags (JSON wins on conflicts).
 
 **Screen-state atlas** (for **`markScreenState`** / ExploreChimp vocabulary): see § [**Screen-state atlas (SmartTests, traces, ExploreChimp)**](#screen-state-atlas-smarttests-traces-explorechimp) — **`list-screen-states`**, **`upsert-screen-states`**.
 
-**Release catalog** (Release Checks / ExploreChimp targeting a release): **`upsert-release`** (create or update) — see § [**upsert-release**](#upsert-release); **`get-release`** (omit `version` to list; pass `version` for catalog metadata; `version` + `detail=GATE` for release gating) — see § [**get-release**](#get-release); **`manage-test-run`** (omit `id` to create; `commitRange` `FIND` \| `LINK`) — see § [**manage-test-run**](#manage-test-run).
+**Release catalog** (Release Checks / ExploreChimp targeting a release / **`/testchimp create release`**): **`upsert-release`** (create or update; optional `focusAreas`) — see § [**upsert-release**](#upsert-release); **`create-security-scan`** — see § [**create-security-scan**](#create-security-scan); **`get-release`** (omit `version` to list; pass `version` for catalog metadata; `version` + `detail=GATE` for release gating) — see § [**get-release**](#get-release); **`manage-test-run`** (omit `id` to create; `commitRange` `FIND` \| `LINK`) — see § [**manage-test-run**](#manage-test-run).
 
 ## MCP 2.0.0 migration map
 
@@ -461,9 +461,10 @@ Create a catalog release when `version` is new, or update fields and lifecycle s
 | `--environment <name>` | No | `environment` | **Create only.** |
 | `--due-date-millis <ms>` | No | `dueDateMillis` | **Update only.** UTC epoch millis (int64 JSON string). |
 | `--branch-id <id>` | No | `branchId` | **Update only.** int64 JSON string. |
-| `--json-input …` | No | (merge) | Optional extra body fields. |
+| `--focus-areas <json>` | No | `focusAreas` | JSON array of plans `FileScope` entries. Prefer `--json-input`. Non-empty replaces; omit on create = full; omit/empty on update = unchanged. |
+| `--json-input …` | No | (merge) | Optional extra body fields (preferred for `focusAreas`). |
 
-There is no `name`, `gitSha`, `priorVersion`, or `focusAreas` field on this API.
+There is no `name`, `gitSha`, or `priorVersion` field on this API. CLI ≥ **2.0.3** for `focusAreas`.
 
 **Example:**
 
@@ -471,7 +472,26 @@ There is no `name`, `gitSha`, `priorVersion`, or `focusAreas` field on this API.
 testchimp upsert-release --release '2026.10' --git-commit-sha abcdef1 --prior-release-version '2026.09' --release-type MINOR
 ```
 
-Bonobi uses this when the user asks to create a release — see [`bot-playbook.md`](./bot-playbook.md) § Release DevX.
+Used by **`/testchimp create release`** — see [`create-release.md`](./create-release.md) and [`bot-playbook.md`](./bot-playbook.md) § Release DevX.
+
+### `create-security-scan`
+
+**API:** `POST /api/mcp/create_security_scan`
+
+**Requires `@testchimp/cli` ≥ `2.0.3`.**
+
+Create a queued security scan on a release. Provide **exactly one** of `dastCheckConfig`, `sastCheckConfig`, `depsCheckConfig`, or `leaksCheckConfig`. Response is `{ scanId, prompt }`. Then run [`run-release-check.md`](./run-release-check.md) / `/testchimp run security scan for <scanId>`. **Ask before creating DAST scans.**
+
+| Flag | Required | Maps to JSON field | Notes |
+|------|----------|-------------------|-------|
+| `--release <label>` | **Yes** | `version` | Release catalog label. Alias `--release-version`. |
+| `--json-input …` | Usually | (merge) | Supply the check config body here. |
+
+**Example:**
+
+```bash
+testchimp create-security-scan --release '2026.10' --json-input '{"sastCheckConfig":{"scope":"RELEASE_SCOPED","rules":"STANDARD"}}'
+```
 
 ### `get-release`
 
@@ -1920,7 +1940,7 @@ testchimp send-feedback --category USER_STRUGGLE --agent-name "Cursor" \
 
 ## MCP parity (tool names)
 
-MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (88 tools on CLI **2.0.2**, including **`get-eaas-config`**, last-resort **`ask-about-testchimp`** / **`ask-testchimp-question`**, and **`ask-user-question-async`**). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names.
+MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (89 tools on CLI **2.0.3**, including **`get-eaas-config`**, last-resort **`ask-about-testchimp`** / **`ask-testchimp-question`**, **`ask-user-question-async`**, and **`create-security-scan`**). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names.
 
 ## Related
 

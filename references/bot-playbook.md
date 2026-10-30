@@ -58,17 +58,11 @@ The user just vibe-codes. You pick up the testing.
 
 ## Release DevX
 
-When the user says to **create a release**:
+When the user says to **create a release**, follow the full compound workflow **[`create-release.md`](./create-release.md)** (`/testchimp create release`) — policy lock-in, `upsert-release` (with `gitCommitSha` / `focusAreas` / `releaseType`), named test run, nested suite / ExploreChimp / perf / security per policy, then GATE + `get-qa-posture` summary.
 
-1. Confirm the version label (ask if they did not give one). Call **`get-release`** with **no** `version` to list existing releases so you can pick `priorReleaseVersion` and avoid clobbering a name.
-2. **`upsert-release`** to create or update. `version` is required. Also send `gitCommitSha` (the current cut), `priorReleaseVersion` (the previous catalog version, if any), `releaseType` (`MAJOR` \| `MINOR` \| `HOTFIX`) when they named one, and `lifecycleStatus` when they named one (otherwise omit and let the platform default). On create, optional `environment`. On update, optional `dueDateMillis` / `branchId`. Response is `{ release, created }`.
-3. **`manage-test-run`** to **create** the run: omit `id`, pass `release` (the version you just upserted). Optional `title`, `environment`, `dueDate`. There is no `action` enum.
-4. **`manage-test-run`** with that run `id` and **`commitRange: FIND`**. Show the user `discoveredBatchInvocationIds` (and the prior/current SHAs). Ask which batches to attach.
-5. After they confirm, **`manage-test-run`** with **`commitRange: LINK`** (or explicit `batchInvocationIds`). Do not LINK without asking.
-6. When they close the run, **`manage-test-run`** with `id` and `status: COMPLETED` (or `ARCHIVED`).
-7. Then get the QA posture view for the release (`get-qa-posture` / `get-release` with `detail=GATE`) and coordinate next steps (gaps, blockers, ExploreChimp, security scans, verification).
+Do **not** use a short-cut create-only path that skips policy and nested QA posture unless the user explicitly asks only to register a catalog label.
 
-To update an existing release, `upsert-release` with the same `version`. To list releases, `get-release` with `version` omitted. To work on an existing test run, pass `id` to `manage-test-run`.
+Quick MCP reminders used inside that playbook: **`get-release`** (omit `version` to list), **`upsert-release`**, **`manage-test-run`** (create → FIND → LINK), **`create-security-scan`** then **`run-release-check`**, **`get-release` `detail=GATE`**, **`get-qa-posture`**.
 
 ## Adoption routine
 
