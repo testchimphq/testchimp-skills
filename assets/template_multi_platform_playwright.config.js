@@ -23,6 +23,10 @@ export default defineConfig({
     actionTimeout: 15 * 1000,
     trace: 'retain-on-failure',
     screenshot: 'on',
+    video: {
+      mode: 'on',
+      size: { width: 800, height: 450 },
+    },
     /* Smart-smoke defaults. Never auto-enable — set TESTCHIMP_SMART_SMOKE_ENABLED=true (or 1) per run. */
     testchimpSmartSmoke: {
       suitePercentage: 20,

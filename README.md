@@ -113,6 +113,10 @@ See [`llms-install.md`](llms-install.md) for copy-paste MCP config.
 
 ---
 
+## What’s new in 2.0.4
+
+Skill **2.0.4** keeps **`@testchimp/cli` ≥ 2.0.3**. Playwright scaffold templates enable always-on video at reduced resolution (`video: { mode: 'on', size: { width: 800, height: 450 } }`) so execution recordings upload to TestChimp for verification replay.
+
 ## What’s new in 2.0.3
 
 Skill **2.0.3** requires **`@testchimp/cli` ≥ 2.0.3**. Adds **`/testchimp create release`** (composite release QA posture workflow + seed policy), MCP **`create-security-scan`**, and **`upsert-release` `focusAreas`** (89 tools).
@@ -129,7 +133,7 @@ Skill **2.0.1** requires **`@testchimp/cli` ≥ 2.0.1**. The release-catalog CLI
 
 Skill **2.0.0** is a breaking MCP tool rename. Hosted / plugin MCP at `https://mcp.testchimp.io/mcp` must be **API 2.0.0** (`SKILL.md` `metadata.required_mcp_version`). `@testchimp/cli` **2.0.0** exposes **87** kebab-case tools (includes **`get-eaas-config`** and **`ask-about-testchimp`**). **`get-eaas-config` is kept unchanged** as the connectivity / first-run check (do not use `ephemeral-environment action=CONFIG` for that). Consolidated tools include `ephemeral-environment` (`PROVISION` | `STATUS`), `report-scan-findings` (`scanId`), `get-workflow-executions`, `get-policies`, `get-api-operations`, `list-meetings`, `set-entity-distinct`, `fetch-execution-report`, `get-execution-history`, `list-perf-runs`, `get-release` (omit `version` to list), `upsert-release` (`gitCommitSha`, `priorReleaseVersion`), `manage-test-run` (no `action`; `commitRange` FIND\|LINK), `upsert-issue` (`addLabels` / `removeLabels`), plus new **`list-issues`** (`statuses` / `severities` / `assignees` / `ordinalIds`). See [`references/cli.md`](references/cli.md).
 
-**Upgrade note:** If your installed skill is older than **2.0.0**, upgrade now (`/testchimp skill upgrade` / `git pull`). Tool names from skill 1.x will fail against MCP 2.0.0. Prefer **2.0.3** for `/testchimp create release`, `create-security-scan`, and `upsert-release` focus areas.
+**Upgrade note:** If your installed skill is older than **2.0.0**, upgrade now (`/testchimp skill upgrade` / `git pull`). Tool names from skill 1.x will fail against MCP 2.0.0. Prefer **2.0.4** for Playwright video scaffold defaults (plus **2.0.3** release / security-scan features).
 
 ## What’s new in 1.0.x (policy-aware skill)
 
@@ -340,7 +344,7 @@ Natural-language equivalents still route correctly (e.g. “Write tests for this
 
 During **`/testchimp init`**, agents keep a plugin-provided server if it is already connected. They do not write a second TestChimp entry. Full steps: **`references/init-testchimp.md`** (Workstation gate). Agents verify CLI compatibility via **Preamble checks** in **`SKILL.md`**.
 
-Policy / workflow MCP tools (skill **2.0.3** requires MCP API **2.0.0** and **`@testchimp/cli` ≥ 2.0.3**): **`get-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-workflow-executions`** (`workflowId` + `latestOnly=true` for last run), **`list-issues`**, **`create-security-scan`**, **`upsert-release`** (`focusAreas`).
+Policy / workflow MCP tools (skill **2.0.4** requires MCP API **2.0.0** and **`@testchimp/cli` ≥ 2.0.3**): **`get-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-workflow-executions`** (`workflowId` + `latestOnly=true` for last run), **`list-issues`**, **`create-security-scan`**, **`upsert-release`** (`focusAreas`).
 
 ---
 

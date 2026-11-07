@@ -53,6 +53,11 @@ export default defineConfig({
     trace: 'retain-on-failure',
     /* Capture screenshots when tests fail */
     screenshot: 'on',
+    /* Record video every run at reduced resolution so uploads stay reasonably small. */
+    video: {
+      mode: 'on',
+      size: { width: 800, height: 450 },
+    },
     /* Smart-smoke defaults. Never auto-enable — set TESTCHIMP_SMART_SMOKE_ENABLED=true (or 1) per run. */
     testchimpSmartSmoke: {
       suitePercentage: 20,

@@ -2,6 +2,12 @@
 
 Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
 
+## 1.0.11 — skill 2.0.4
+
+- Skill **2.0.4** keeps **`@testchimp/cli` ≥ 2.0.3**. MCP API stays **2.0.0**.
+- Playwright scaffold templates enable always-on video at 800x450 so TestChimp can retain execution recordings for verification.
+- Existing bots: the daily self-update picks up the skill on the bot's computer.
+
 ## 1.0.10 — skill 2.0.3
 
 - Skill **2.0.3** requires **`@testchimp/cli` ≥ 2.0.3** (89 tools). MCP API stays **2.0.0**.

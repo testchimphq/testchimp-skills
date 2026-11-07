@@ -83,7 +83,7 @@ Use [`assets/template_playwright.config.js`](../assets/template_playwright.confi
 
 - **`playwright.config.*` inside** the mapped SmartTests folder
 - **Reporter:** `['@testchimp/playwright/reporter', { verbose: false }]`
-- **Reporting:** `screenshot: 'on'`, `trace: 'retain-on-failure'`
+- **Reporting:** `screenshot: 'on'`, `trace: 'retain-on-failure'`, `video: { mode: 'on', size: { width: 800, height: 450 } }`
 - **Projects:** `setup` → browser project(s) with `dependencies: ['setup']`, `testIgnore: ['**/setup/**']`
 - Install **`@testchimp/playwright`** (≥ **0.1.8**; prefer ≥ **0.2.0**) at the package root that owns `@playwright/test`
 - **Fixtures-first:** every `*.spec.{js,ts}` imports `{ test, expect }` from the correct fixture barrel (`fixtures/index.js` or scaffold-specific barrel) with **`installTestChimp(mergeTests(...))`** — never root `test` from `@playwright/test` in specs. See [`fixture-usage.md`](./fixture-usage.md), [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md).
