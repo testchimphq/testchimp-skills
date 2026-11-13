@@ -23,7 +23,7 @@ This is the compound workflow for **creating a release and getting release QA po
 
 1. Lock release **label**, **type** (`MAJOR` \| `MINOR` \| `HOTFIX`), **tag convention**, **scope**, and **create-release policy**.
 2. Create the catalog release (`upsert-release`) with `gitCommitSha` and focus-area scope.
-3. Create a named test run on that release.
+3. Create a named test run titled **`default`** on that release.
 4. Drive policy-selected nested QA actions so the suite has executed for the release (CI attach or local).
 5. Summarise release QA posture (`get-release` `detail=GATE` + `get-qa-posture`).
 
@@ -76,7 +76,7 @@ This is the compound workflow for **creating a release and getting release QA po
 ## Phase C — Must-do Execute
 
 1. **`upsert-release`** with `version`, `gitCommitSha`, `priorReleaseVersion`, `releaseType`, and `focusAreas` when scoped. Check response `created`; if not created and user did not approve update, stop.
-2. **`manage-test-run`** omit `id`, pass `release` (= version), optional title e.g. `Create release <label>`. Keep the returned **`id`** as `TESTCHIMP_TEST_RUN_ID` for later runs.
+2. **`manage-test-run`** omit `id`, pass `release` (= version), and **`title`: `default`**. Keep the returned **`id`** as `TESTCHIMP_TEST_RUN_ID` for later runs.
 
 ---
 
@@ -138,7 +138,7 @@ Suggested static defaults when creating scans (adjust to project norms): release
 - [ ] Tag convention locked when previously unset
 - [ ] Project `create-release.policy.md` locked (no seed banner) before nested actions
 - [ ] Release created/updated with `gitCommitSha` (+ `focusAreas` when changed-scope)
-- [ ] Named test run created on the release
+- [ ] Named test run titled `default` created on the release
 - [ ] Suite coverage ensured (CI LINK and/or local execute / smart-smoke with release + test-run env tags)
 - [ ] Nested ExploreChimp / perf / security only when policy enables; DAST always confirmed
 - [ ] GATE + QA posture summarised to the user
