@@ -1543,6 +1543,10 @@ Only **snake_case** is supported on **write**. Do **not** send camelCase (`platf
 
 **Reading `get-project-init-status`:** prefer the snake_case keys above. If a snake_case key is absent, accept the camelCase twin. Treat `PROJECT_INIT_ITEM_STATUS_DONE` as complete (also accept bare `DONE` or boolean `true` on read).
 
+### `get-onboarding-status`
+
+**API:** `POST /api/mcp/get_onboarding_status`, body `{ "userId"?: string }` (CLI `--user-id`; defaults to `TESTCHIMP_USER_ID`). Read-only. Returns the project's setup launchpad: `steps[]` (`{ id: LAUNCHPAD_STEP_*, state: LAUNCHPAD_TODO | LAUNCHPAD_IN_PROGRESS | LAUNCHPAD_DONE | LAUNCHPAD_SKIPPED | LAUNCHPAD_STUCK }`), `completed`, and `nextStepCommand` (the `/testchimp …` command to suggest next; empty when the next step is in the UI). Works for every project, whether or not the dashboard shows the launchpad. Use at the end of workflows — [`onboarding-next-step.md`](./onboarding-next-step.md). Needs an MCP client with this tool; treat a missing tool or 404 as "skip".
+
 ### `report-agent-action` (first row vs close)
 
 First successful RAA for a `workflowExecutionId` **creates** the run. Start with a non-`WORKFLOW` entity (`POLICY` + `CREATED` / `UPDATED` / `ANALYZED` and `entityIdentity` a real **`*.policy.md` filename**, e.g. `connect-to-test-env.policy.md`). Catalog ids such as `project-init` or `init` are **rejected** on `POLICY` (`POLICY entity_identity must be a *.policy.md filename`). Close with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity` equal to `workflowId`. **`WORKFLOW` + `ANALYZED` is rejected** by the MCP schema.
