@@ -21,8 +21,10 @@ Skip it in `--mode=non-interactive` runs and for any other workflow.
    - `nextStepCommand` — the `/testchimp …` command to suggest next. Empty means the next step happens in the TestChimp UI, or setup is done.
    - `steps[]` — `{ id, state }` with ids `LAUNCHPAD_STEP_*` and states `LAUNCHPAD_TODO | LAUNCHPAD_IN_PROGRESS | LAUNCHPAD_DONE | LAUNCHPAD_SKIPPED | LAUNCHPAD_STUCK`.
    - `completed` — every required step is done or skipped.
-3. Tell the user in one or two lines, using the first that applies:
-   - `LAUNCHPAD_STEP_FIRST_RESULTS` is `LAUNCHPAD_STUCK`: "Tests ran but no results reached TestChimp. The test runner needs `TESTCHIMP_API_KEY` in its own environment — export it in the shell that runs Playwright, then run the tests again."
+   - `visible` — the project is on the setup launchpad (new projects only).
+3. If `visible` is not `true`, stop: existing projects get no hand-back.
+4. Tell the user in one or two lines, using the first that applies:
+   - `LAUNCHPAD_STEP_FIRST_RESULTS` is `LAUNCHPAD_STUCK`: "Tests ran but no results reached TestChimp. The test runner needs `TESTCHIMP_API_KEY` in its own environment — export it in the shell that runs Playwright (or add it as a repository secret when tests run in CI), then run the tests again."
    - `nextStepCommand` is non-empty: "Next: run `<nextStepCommand>`." plus a short reason taken from the step it belongs to.
    - First open step is `LAUNCHPAD_STEP_CONNECT_REPO`: "Next: connect your repo in TestChimp (Project Settings → Integrations)."
    - First open step is `LAUNCHPAD_STEP_FIRST_RESULTS`: "Next: run the tests so results reach TestChimp."
