@@ -100,9 +100,21 @@ Never commit to default or base branch. One **`testchimp-*`** agent branch + one
 | Order | Action |
 | --- | --- |
 | 1 | **MCP tools** (preferred) |
-| 2 | **`testchimp` CLI** only if MCP fails — after exporting MCP `env` (`TESTCHIMP_API_KEY`, `TESTCHIMP_BACKEND_URL`, `TESTCHIMP_INGRESS_URL`) into the shell |
+| 2 | **`testchimp` CLI** only if MCP fails — after exporting MCP `env` (`TESTCHIMP_API_KEY`, `TESTCHIMP_USER_ID`, `TESTCHIMP_BACKEND_URL`, `TESTCHIMP_INGRESS_URL`) into the shell, using the CLI resolved below |
 
 Never narrate API results without tool output.
+
+**A tool is missing from MCP** but the project's MCP config pins a CLI version that has it (e.g. after the user edited `.mcp.json`): the session has not reloaded the server. Tell the user once to restart the agent session; meanwhile use the resolved CLI.
+
+### Resolving the CLI to run
+
+Every CLI call (MCP fallback, `testchimp …` in playbooks, runners) uses the **same** CLI, picked in this order:
+
+1. The **`@testchimp/cli@<version>`** spec in the `args` of the project's TestChimp MCP entry (see SKILL.md § Finding project MCP config) → `npx -y @testchimp/cli@<version> <subcommand>`.
+2. Else the repo's installed CLI when `node_modules/.bin/testchimp` exists → `npx testchimp <subcommand>`.
+3. Else `npx -y @testchimp/cli@latest <subcommand>`.
+
+Never use a globally installed `testchimp` from `PATH` for project calls — it may be older than the project's pin. When a playbook writes `testchimp <subcommand>` or `npx @testchimp/cli@latest <subcommand>`, run it with the resolved CLI.
 
 ---
 

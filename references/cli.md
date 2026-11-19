@@ -56,7 +56,7 @@ npm install -D @testchimp/cli@0.1.6
 # or: npm install -D @testchimp/cli@latest
 ```
 
-Invoke via `npx @testchimp/cli@latest <subcommand>` or the **`testchimp`** binary from `node_modules/.bin` after a local install.
+Invoke with the CLI resolved per [`agent-quick-answers.md`](./agent-quick-answers.md#resolving-the-cli-to-run): the version pinned in the project's MCP config, else the repo's `node_modules/.bin/testchimp`, else `npx -y @testchimp/cli@latest <subcommand>`. Never a global `testchimp` from `PATH`.
 
 **Minimum for platform execution reporting:** **`@testchimp/cli` ≥ 0.1.6** (this doc) and **`@testchimp/playwright` ≥ 0.2.0** on the SmartTests package (reporter sends `executionContext` on each test end).
 
