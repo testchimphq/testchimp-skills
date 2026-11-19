@@ -1901,9 +1901,9 @@ testchimp workspace get --project-id "$PROJECT_ID" | jq -r '.folders[0].path'
 
 ### `invite-team-members`
 
-**API:** `POST /api/mcp/invite_team_members`. **Mutating** (sends invite emails). Invites teammates to the organisation; members can open every project in it. Used as the last step of project init ([`project-init-testchimp.md` § 7](./project-init-testchimp.md#7-final--invite-team-members)).
+**API:** `POST /api/mcp/invite_team_members`. **Mutating** (sends invite emails). Invites teammates to the organisation; members can open every project in it. Used by **`/testchimp invite team`** ([`invite-team.md`](./invite-team.md)).
 
-Needs an **OAuth user session** (hosted MCP, or a QA bot's connector) whose user is an **org admin**. A project API key can't invite, including with a `bot-id` header, so QA bots call the **MCP tool** with their binding arguments, not `testchimp --bot …`. API-key callers get 403 with the Team Settings link.
+The inviter must be an **org admin**: the OAuth user (hosted MCP, or a QA bot's connector), or — with a project API key (stdio MCP / CLI) — the user in **`TESTCHIMP_USER_ID`** (sent as the `user-id` header; CLI ≥ 2.0.5). Without `TESTCHIMP_USER_ID` an API-key call gets 400; a user id outside the project's organisation gets 403. QA bots keep using the **MCP tool** with their binding arguments.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|
