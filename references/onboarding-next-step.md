@@ -33,6 +33,7 @@ Skip it in `--mode=non-interactive` runs and for any other workflow.
    - First open step is `LAUNCHPAD_STEP_VERIFY_TEST`: "Next: open a test in TestChimp, watch its run video and Verify it."
    - `completed` is true: "Setup is done — see the suggested next steps in TestChimp (release health, inviting the team, CI)." Say it once per session at most.
    - Never suggest `/testchimp init`.
+   - If you just ran `/testchimp check connectivity` and `nextStepCommand` is still `/testchimp check connectivity`, do not repeat it: follow [`check-connectivity.md`](./check-connectivity.md) (missing `TESTCHIMP_USER_ID` or an old CLI) and name the step after it.
 
 ## Failure handling
 

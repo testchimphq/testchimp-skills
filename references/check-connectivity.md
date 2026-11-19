@@ -16,6 +16,7 @@ Not a catalog workflow: no plan file, no approval, no `report-agent-action`.
    - **Tool missing**: the MCP server is not loaded in this session.
 3. Tell the user, in one or two lines:
    - Success: "Connected to TestChimp for this project." Then do the [hand-back](./onboarding-next-step.md) (usually **`/testchimp project-init`**, or **`/testchimp author plans`** when project init is already done).
+   - **Never answer "Next: run `/testchimp check connectivity`" right after this command.** If the hand-back still shows `LAUNCHPAD_STEP_CONNECT_AGENT` as `LAUNCHPAD_TODO`, the call worked but TestChimp could not tell who you are: with a project API key, add **`TESTCHIMP_USER_ID`** to the MCP config `env` (copy the `mcp.json` again from TestChimp) and make sure the CLI is **2.0.5 or later**; then restart the agent session. Name the next step after that one instead.
    - 401 / 403 on stdio / CLI: the `TESTCHIMP_API_KEY` in the project's MCP config is wrong or for another project — copy the `mcp.json` again from TestChimp (create-project wizard or the setup guide). Never ask the user to paste the key in chat.
    - 401 / 403 on hosted / plugin MCP: re-authenticate the TestChimp server in the host MCP UI (Claude Code: **`/mcp`**) and pick this repo's project.
    - Network error: check `TESTCHIMP_BACKEND_URL` (staging / enterprise) and the network, then run the command again.
