@@ -129,6 +129,7 @@ Suggested static defaults when creating scans (adjust to project norms): release
 2. **`get-qa-posture`**.
 3. Summarise for the user: release label/type/cut, scope, test-run status, suite coverage posture, ExploreChimp/perf/security highlights, open blockers, and next recommended action.
 4. **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — `ACTION_COMPLETED` with `WORKFLOW` + `create-release`.
+5. Hand back the next setup step ([`onboarding-next-step.md`](./onboarding-next-step.md)). If git integration is still missing (`LAUNCHPAD_STEP_CONNECT_REPO` skipped/todo, or project-init stuck on folder mapping), include that file’s **create-release-only** git nudge after the next-command line.
 
 ---
 
