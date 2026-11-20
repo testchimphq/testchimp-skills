@@ -46,6 +46,8 @@ When the workflow you just finished is **`create-release`**, after the normal ne
 
 If so, add **one** extra sentence nudging the gap, for example: "Git is still not connected — connect the repo in TestChimp (Project Settings → Integrations) so folder mapping and team sync can finish." Do **not** re-run project-init from this hand-back; do **not** add this nudge after any other workflow.
 
+CI executions can still bind without git (reporter path/title → stub SmartTests with empty script). Empty source in Studio after those runs means connect git + map the tests folder — see [`agent-quick-answers.md`](./agent-quick-answers.md#empty-smarttests-after-ci-when-git-was-skipped).
+
 ## Failure handling
 
 The call is best-effort. If the tool is missing (older CLI/MCP), returns an error, or the backend answers 404, skip the hand-back silently — never fail or retry the workflow because of it. Never call `update-*` tools as part of this step; it is read-only.

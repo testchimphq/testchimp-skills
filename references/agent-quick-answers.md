@@ -192,6 +192,16 @@ Plan path pattern: `knowledge/workflow_plans/<workflow-id>/<ulid>.plan.md`.
 
 ---
 
+## Empty SmartTests after CI when git was skipped
+
+| If | Then |
+| --- | --- |
+| Git connect / tests-folder map was **skipped**, and CI / local Playwright still reported runs | Platform creates **stub** SmartTests from the reporter path + title. **Script content is empty** — that is expected, not a broken project. |
+| User or you open a stub and see blank source | Do **not** invent file bodies to “fill” the stub. Remediation: **connect the repo** and map the tests folder in TestChimp (Project Settings → Integrations / project-init folder mapping). Sync fills content and merges stubs into the real files. |
+| Executions show under those stubs | Binding worked. Content and verification freshness still need git sync. |
+
+---
+
 ## What belongs here vs elsewhere
 
 | Normal planning | Quick answers below |
