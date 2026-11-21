@@ -1558,7 +1558,7 @@ Only **snake_case** is supported on **write**. Do **not** send camelCase (`platf
 
 ### `report-agent-action` (first row vs close)
 
-First successful RAA for a `workflowExecutionId` **creates** the run. Start with a non-`WORKFLOW` entity (`POLICY` + `CREATED` / `UPDATED` / `ANALYZED` and `entityIdentity` a real **`*.policy.md` filename**, e.g. `connect-to-test-env.policy.md`). Catalog ids such as `project-init` or `init` are **rejected** on `POLICY` (`POLICY entity_identity must be a *.policy.md filename`). Close with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity` equal to `workflowId`. **`WORKFLOW` + `ANALYZED` is rejected** by the MCP schema.
+First successful RAA for a `workflowExecutionId` **creates** the run. Prefer opening with `entityType: WORKFLOW`, `actionType: WORKFLOW_STARTED`, `entityIdentity` equal to `workflowId`. Legacy: start with a non-`WORKFLOW` entity (`POLICY` + `CREATED` / `UPDATED` / `ANALYZED` and `entityIdentity` a real **`*.policy.md` filename**, e.g. `connect-to-test-env.policy.md`). Catalog ids such as `project-init` or `init` are **rejected** on `POLICY`. Close with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity` equal to `workflowId`. **`WORKFLOW` + `ANALYZED` is rejected** by the MCP schema.
 
 ### `update-workflow-execution-assignees` (CLI ≥ **0.1.91**)
 

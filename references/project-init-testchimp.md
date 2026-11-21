@@ -144,21 +144,21 @@ Verify the **project** can talk to TestChimp APIs from this agent session (not e
 
 Do **not** emit an early `ACTION_COMPLETED` here — that would close the run before Plan/Execute.
 
-**What creates the run row:** the first successful **`report-agent-action`** (or a mutating call with inline **`agentTraceability`**) for this `workflow_execution_id`. `upsert-plans-support-file` alone does **not** create it. When you write the plan, send this first RAA (MCP camelCase field names):
+**What creates the run row:** the first successful **`report-agent-action`** (or a mutating call with inline **`agentTraceability`**) for this `workflow_execution_id`. `upsert-plans-support-file` alone does **not** create it. **Immediately after minting/reusing the ULID**, open the run (MCP camelCase field names):
 
 ```json
 {
   "workflowId": "project-init",
   "workflowExecutionId": "<ulid>",
-  "entityType": "POLICY",
-  "actionType": "ANALYZED",
-  "entityIdentity": "connect-to-test-env.policy.md"
+  "entityType": "WORKFLOW",
+  "actionType": "WORKFLOW_STARTED",
+  "entityIdentity": "project-init"
 }
 ```
 
-When `entityType` is **`POLICY`**, `entityIdentity` **must** be a real **`*.policy.md` filename** for the policy this step is acting on (here `connect-to-test-env.policy.md`). The server returns **400** `POLICY entity_identity must be a *.policy.md filename` for catalog ids such as `project-init` or `init`. Use `CREATED` / `UPDATED` instead of `ANALYZED` only when you created or updated that policy file in this step.
+Legacy first-row (still accepted): `POLICY` + `ANALYZED` with `entityIdentity: connect-to-test-env.policy.md` (a real `*.policy.md` filename — never `project-init` / `init` with `POLICY`).
 
-`entityType: WORKFLOW` is **only** valid with `ACTION_COMPLETED` / `ACTION_FAILED` (and `entityIdentity` must equal `workflowId`). That is the whole-run close — there is no non-`POLICY` entity type for a mid-run “we started project-init” row. **`WORKFLOW` + `ANALYZED` is rejected** — that is the MCP schema, not a retry-with-different-casing issue. `ANALYZED` is for `USER_STORY` / `SCENARIO` / `POLICY` / other non-`WORKFLOW` entities. Close at end of Execute with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity: project-init`. In ChimpHands, omit `userId` / prefer `actorType: CLOUD_AGENT` — MCP stamps `SESSION_ID` and the responsible user.
+`entityType: WORKFLOW` is valid with **`WORKFLOW_STARTED`** (open without closing), **`ACTION_COMPLETED`**, and **`ACTION_FAILED`** (`entityIdentity` must equal `workflowId`). **`WORKFLOW` + `ANALYZED` is rejected**. Close at end of Execute with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity: project-init`. In ChimpHands, omit `userId` / prefer `actorType: CLOUD_AGENT` — MCP stamps `SESSION_ID` and the responsible user.
 
 If **401** or tools are unavailable: the agent is not connected to this project. Ask the user to run **`/testchimp check connectivity`** ([`check-connectivity.md`](./check-connectivity.md)) and fix what it reports — authenticate the hosted server in the host MCP UI, or fix the key in the project's MCP config.
 
