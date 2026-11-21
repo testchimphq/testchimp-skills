@@ -158,7 +158,7 @@ Default when absent: **interactive** (pause for explicit user approval after Pla
 
 1. **Prompt `--mode=non-interactive`** — skip the chat approval pause (see below).
 2. **Policy** `allow-execute-without-approval: true` (frontmatter or `### Execution Mode` body) — skip pause; set `PlanApproved: policy-non-interactive`.
-3. **Interactive (default)** — stop and wait for explicit user approval; on consent set `PlanApproved: yes` (optionally `ApprovedBy: <user>`).
+3. **Interactive (default)** — stop and wait for explicit user approval; on consent set `PlanApproved: yes` (optionally `ApprovedBy: <user>`), **write the local plan**, then **`upsert-plans-support-file` again (blocking) before any Execute**. That second upsert is what moves the run **`PLANNED` → `PLAN_APPROVED`** (launchpad leaves “awaiting approval”). Chat approval alone does not update platform status.
 
 ### `--mode=non-interactive` agent behavior
 
