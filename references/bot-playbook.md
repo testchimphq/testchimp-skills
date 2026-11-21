@@ -58,7 +58,7 @@ The user just vibe-codes. You pick up the testing.
 
 ## Release DevX
 
-When the user says to **create a release**, follow the full compound workflow **[`create-release.md`](./create-release.md)** (`/testchimp create release`) — policy lock-in, `upsert-release` (with `gitCommitSha` / `focusAreas` / `releaseType`), named test run, nested suite / ExploreChimp / perf / security per policy, then GATE + `get-qa-posture` summary.
+When the user says to **create a release**, follow the full compound workflow **[`create-release.md`](./create-release.md)** (`/testchimp create release`) — policy lock-in, `upsert-release` (with `gitCommitSha` / `focusAreas` / `releaseType`), named test run, nested suite / ExploreChimp / perf / security per policy, then GATE + `get-qa-posture` summary. Default `focusAreas` to root **`plans/stories`** (`USER_STORY_ARTIFACT`) so the whole set is included — do not enumerate individual scenarios unless the user asks to narrow.
 
 Do **not** use a short-cut create-only path that skips policy and nested QA posture unless the user explicitly asks only to register a catalog label.
 

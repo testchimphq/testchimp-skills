@@ -466,7 +466,16 @@ Create a catalog release when `version` is new, or update fields and lifecycle s
 
 There is no `name`, `gitSha`, or `priorVersion` field on this API. CLI ≥ **2.0.3** for `focusAreas`.
 
-**Example:**
+**Agent default for “full” / include-all:** prefer an explicit root stories folder (do **not** list individual scenarios):
+
+```bash
+testchimp upsert-release --release '2026.10' --git-commit-sha abcdef1 --prior-release-version '2026.09' --release-type MAJOR \
+  --json-input '{"focusAreas":[{"folderPath":["plans","stories"],"artifactType":"USER_STORY_ARTIFACT"}]}'
+```
+
+Omitting `focusAreas` on create also means full, but agents following **`/testchimp create release`** should send the root `plans/stories` entry so the catalog shows an explicit whole-set scope. Narrow with story-area folders only when the user asks; never expand to per-scenario `ids` / file paths by default — see [`create-release.md`](./create-release.md).
+
+**Example (minimal create without focus areas):**
 
 ```bash
 testchimp upsert-release --release '2026.10' --git-commit-sha abcdef1 --prior-release-version '2026.09' --release-type MINOR
