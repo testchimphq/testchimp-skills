@@ -56,7 +56,7 @@ npm install -D @testchimp/cli@0.1.6
 # or: npm install -D @testchimp/cli@latest
 ```
 
-Invoke via `npx @testchimp/cli@latest <subcommand>` or the **`testchimp`** binary from `node_modules/.bin` after a local install.
+Invoke with the CLI resolved per [`agent-quick-answers.md`](./agent-quick-answers.md#resolving-the-cli-to-run): the version pinned in the project's MCP config, else the repo's `node_modules/.bin/testchimp`, else `npx -y @testchimp/cli@latest <subcommand>`. Never a global `testchimp` from `PATH`.
 
 **Minimum for platform execution reporting:** **`@testchimp/cli` ≥ 0.1.6** (this doc) and **`@testchimp/playwright` ≥ 0.2.0** on the SmartTests package (reporter sends `executionContext` on each test end).
 
@@ -466,7 +466,16 @@ Create a catalog release when `version` is new, or update fields and lifecycle s
 
 There is no `name`, `gitSha`, or `priorVersion` field on this API. CLI ≥ **2.0.3** for `focusAreas`.
 
-**Example:**
+**Agent default for “full” / include-all:** prefer an explicit root stories folder (do **not** list individual scenarios):
+
+```bash
+testchimp upsert-release --release '2026.10' --git-commit-sha abcdef1 --prior-release-version '2026.09' --release-type MAJOR \
+  --json-input '{"focusAreas":[{"folderPath":["plans","stories"],"artifactType":"USER_STORY_ARTIFACT"}]}'
+```
+
+Omitting `focusAreas` on create also means full, but agents following **`/testchimp create release`** should send the root `plans/stories` entry so the catalog shows an explicit whole-set scope. Narrow with story-area folders only when the user asks; never expand to per-scenario `ids` / file paths by default — see [`create-release.md`](./create-release.md).
+
+**Example (minimal create without focus areas):**
 
 ```bash
 testchimp upsert-release --release '2026.10' --git-commit-sha abcdef1 --prior-release-version '2026.09' --release-type MINOR
@@ -1543,9 +1552,13 @@ Only **snake_case** is supported on **write**. Do **not** send camelCase (`platf
 
 **Reading `get-project-init-status`:** prefer the snake_case keys above. If a snake_case key is absent, accept the camelCase twin. Treat `PROJECT_INIT_ITEM_STATUS_DONE` as complete (also accept bare `DONE` or boolean `true` on read).
 
+### `get-onboarding-status`
+
+**API:** `POST /api/mcp/get_onboarding_status`, body `{ "userId"?: string }` (CLI `--user-id`; defaults to `TESTCHIMP_USER_ID`). Read-only. Returns the project's setup launchpad: `steps[]` (`{ id: LAUNCHPAD_STEP_*, state: LAUNCHPAD_TODO | LAUNCHPAD_IN_PROGRESS | LAUNCHPAD_DONE | LAUNCHPAD_SKIPPED | LAUNCHPAD_STUCK }`), `completed`, and `nextStepCommand` (the `/testchimp …` command to suggest next; empty when the next step is in the UI). Works for every project, whether or not the dashboard shows the launchpad. Use at the end of workflows — [`onboarding-next-step.md`](./onboarding-next-step.md). Needs an MCP client with this tool; treat a missing tool or 404 as "skip".
+
 ### `report-agent-action` (first row vs close)
 
-First successful RAA for a `workflowExecutionId` **creates** the run. Start with a non-`WORKFLOW` entity (`POLICY` + `CREATED` / `UPDATED` / `ANALYZED` and `entityIdentity` a real **`*.policy.md` filename**, e.g. `connect-to-test-env.policy.md`). Catalog ids such as `project-init` or `init` are **rejected** on `POLICY` (`POLICY entity_identity must be a *.policy.md filename`). Close with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity` equal to `workflowId`. **`WORKFLOW` + `ANALYZED` is rejected** by the MCP schema.
+First successful RAA for a `workflowExecutionId` **creates** the run. Prefer opening with `entityType: WORKFLOW`, `actionType: WORKFLOW_STARTED`, `entityIdentity` equal to `workflowId`. Legacy: start with a non-`WORKFLOW` entity (`POLICY` + `CREATED` / `UPDATED` / `ANALYZED` and `entityIdentity` a real **`*.policy.md` filename**, e.g. `connect-to-test-env.policy.md`). Catalog ids such as `project-init` or `init` are **rejected** on `POLICY`. Close with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity` equal to `workflowId`. **`WORKFLOW` + `ANALYZED` is rejected** by the MCP schema.
 
 ### `update-workflow-execution-assignees` (CLI ≥ **0.1.91**)
 
@@ -1897,9 +1910,9 @@ testchimp workspace get --project-id "$PROJECT_ID" | jq -r '.folders[0].path'
 
 ### `invite-team-members`
 
-**API:** `POST /api/mcp/invite_team_members`. **Mutating** (sends invite emails). Invites teammates to the organisation; members can open every project in it. Used as the last step of project init ([`project-init-testchimp.md` § 7](./project-init-testchimp.md#7-final--invite-team-members)).
+**API:** `POST /api/mcp/invite_team_members`. **Mutating** (sends invite emails). Invites teammates to the organisation; members can open every project in it. Used by **`/testchimp invite team`** ([`invite-team.md`](./invite-team.md)).
 
-Needs an **OAuth user session** (hosted MCP, or a QA bot's connector) whose user is an **org admin**. A project API key can't invite, including with a `bot-id` header, so QA bots call the **MCP tool** with their binding arguments, not `testchimp --bot …`. API-key callers get 403 with the Team Settings link.
+The inviter must be an **org admin**: the OAuth user (hosted MCP, or a QA bot's connector), or — with a project API key (stdio MCP / CLI) — the user in **`TESTCHIMP_USER_ID`** (sent as the `user-id` header; CLI ≥ 2.0.5). Without `TESTCHIMP_USER_ID` an API-key call gets 400; a user id outside the project's organisation gets 403. QA bots keep using the **MCP tool** with their binding arguments.
 
 | Flag | Required | Maps to JSON field | Notes |
 |------|----------|-------------------|--------|

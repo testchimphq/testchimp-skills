@@ -158,7 +158,7 @@ Default when absent: **interactive** (pause for explicit user approval after Pla
 
 1. **Prompt `--mode=non-interactive`** — skip the chat approval pause (see below).
 2. **Policy** `allow-execute-without-approval: true` (frontmatter or `### Execution Mode` body) — skip pause; set `PlanApproved: policy-non-interactive`.
-3. **Interactive (default)** — stop and wait for explicit user approval; on consent set `PlanApproved: yes` (optionally `ApprovedBy: <user>`).
+3. **Interactive (default)** — stop and wait for explicit user approval; on consent set `PlanApproved: yes` (optionally `ApprovedBy: <user>`), **write the local plan**, then **`upsert-plans-support-file` again (blocking) before any Execute**. That second upsert is what moves the run **`PLANNED` → `PLAN_APPROVED`** (launchpad leaves “awaiting approval”). Chat approval alone does not update platform status.
 
 ### `--mode=non-interactive` agent behavior
 
@@ -235,25 +235,25 @@ Still use for analyze/completion and non-CRUD entities (SmartTest locator action
 | `cli_version` | `@testchimp/cli` package version (auto-filled by CLI when omitted) |
 | `entity_type` | e.g. `test`, `story`, `scenario`, `issue`, `test_execution`, `batch_invocation`, `workflow` |
 | `test` **or** `entityIdentity` | **Mutually exclusive** (camelCase on the wire). SmartTests → `test` TestLocator (`folderPath`, `fileName`, `testSuite`, `testName`). Stories / scenarios / issues → `entityIdentity` as project-scoped **ordinal id** (readable int string). **`POLICY`** → a real **`*.policy.md` filename** (not a catalog workflow id). Do **not** use platform UUIDs. Exception: execution/batch ids only when the prompt explicitly provided them. |
-| `action_type` | `created` / `updated` / `deleted` / `analyzed` / **`completed`** (`ACTION_COMPLETED`) / **`failed`** (`ACTION_FAILED`). Completing/failing marks the workflow execution done (`completedAtMillis`). Prefer `entity_type: workflow` for those. |
+| `action_type` | `created` / `updated` / `deleted` / `analyzed` / **`workflow_started`** (`WORKFLOW_STARTED`) / **`completed`** (`ACTION_COMPLETED`) / **`failed`** (`ACTION_FAILED`). `WORKFLOW_STARTED` opens the run as `RUNNING` without completing it. Completing/failing marks the workflow execution done (`completedAtMillis`). Prefer `entity_type: workflow` for lifecycle actions. |
 
 At end of every **standalone** Execute (or when aborting), report **`ACTION_COMPLETED`** or **`ACTION_FAILED`** so timelines leave `RUNNING` — see **[Report workflow execution](#report-workflow-execution)** (required gate, not optional).
 
-**`init` (bootstrap, not catalog):** During **`/testchimp init`**, after workstation-gate **`get-eaas-config`** succeeds, best-effort **close** with **`ACTION_COMPLETED`**, `entityType: WORKFLOW`, `workflow_id` / `entityIdentity` **`init`**, and a fresh ULID (no policy fields). That is the whole-run report (`WORKFLOW` is only valid on completion). To create the run earlier without closing it, first-row **`POLICY`** + **`ANALYZED`** + **`connect-to-test-env.policy.md`** (the policy this flow follows for local env). **Never** send `POLICY` + `entityIdentity: init` — the server requires a `*.policy.md` filename. For stdio mode, omit `user_id` because the MCP CLI injects `TESTCHIMP_USER_ID` from mcp.json when set. For hosted mode (OAuth), pass `userId` explicitly until the backend defaults it from the token (backend work planned separately). Report failure must not block init. See [`init-testchimp.md`](./init-testchimp.md)#workstation-gate-always-first.
+**`init` (bootstrap, not catalog):** During **`/testchimp init`**, after workstation-gate **`get-eaas-config`** succeeds, best-effort **close** with **`ACTION_COMPLETED`**, `entityType: WORKFLOW`, `workflow_id` / `entityIdentity` **`init`**, and a fresh ULID (no policy fields). That is the whole-run report. To create the run earlier without closing it, prefer **`WORKFLOW` + `WORKFLOW_STARTED`** + `entityIdentity: init` (or legacy first-row **`POLICY`** + **`ANALYZED`** + **`connect-to-test-env.policy.md`**). **Never** send `POLICY` + `entityIdentity: init` — the server requires a `*.policy.md` filename. For stdio mode, omit `user_id` because the MCP CLI injects `TESTCHIMP_USER_ID` from mcp.json when set. For hosted mode (OAuth), pass `userId` explicitly until the backend defaults it from the token (backend work planned separately). Report failure must not block init. See [`init-testchimp.md`](./init-testchimp.md)#workstation-gate-always-first.
 
-**First successful report** for a client-supplied `workflow_execution_id` **creates** the DB workflow execution (`execution_created: true`); later reports with that **same** id append actions. The server **requires** `workflow_execution_id` on every `report-agent-action` (no auto-mint). **`upsert-plans-support-file` alone does not create a workflow execution** — without RAA / inline `agentTraceability` (with both workflow id + execution id), the platform shows no run.
+**First successful report** for a client-supplied `workflow_execution_id` **creates** the DB workflow execution (`execution_created: true`); later reports with that **same** id append actions. The server **requires** `workflow_execution_id` on every `report-agent-action` (no auto-mint). **`upsert-plans-support-file` alone does not create a workflow execution`** — without RAA / inline `agentTraceability` (with both workflow id + execution id), the platform shows no run. Upsert of a `knowledge/workflow_plans/…/*.plan.md` **does** park an existing open execution as **`PLANNED`** when `PlanApproved` is still pending (plan-done for launchpad / automations). Re-upsert with `PlanApproved: yes` (or platform plan-Approve) moves it to **`PLAN_APPROVED`** (execution in progress for launchpad).
 
 **User input on a cloud run:** when the playbook is executing on a cloud agent and no live UI session is attached, call `ask-user-question-async` (CLI ≥ **2.0.2**) with that same `workflow_execution_id`. Do not call it from a local IDE. The user answers on the workflow execution page (or in the ChimpHands session when that is the invoke strategy); the platform sends the answer back to the agent.
 
-**First-row RAA (project-init and any catalog start):** send a **non-`WORKFLOW`** entity so the row is created without closing the run. When `entityType` is **`POLICY`**, the server requires `entityIdentity` to be a real **`*.policy.md` filename** for the policy this step is acting on — not a catalog workflow id. Example the server accepts:
+**First-row RAA (preferred — project-init and any catalog start):** immediately after minting/reusing the ULID, open the run without closing it:
 
-- `entityType`: **`POLICY`**
-- `actionType`: **`ANALYZED`** (or **`CREATED`** / **`UPDATED`** when you created/updated that policy this step)
-- `entityIdentity`: **`connect-to-test-env.policy.md`** (or whichever `*.policy.md` the step is acting on)
+- `entityType`: **`WORKFLOW`**
+- `actionType`: **`WORKFLOW_STARTED`**
+- `entityIdentity`: the catalog **`workflow_id`** (must equal `workflowId`)
 
-Do **not** send `entityIdentity: project-init` or `init` with `POLICY` — that returns **400** (`POLICY entity_identity must be a *.policy.md filename`). There is no non-`POLICY` entity type for a mid-run “whole workflow” row; `WORKFLOW` is only the close.
+**Legacy first-row** (still accepted): **`POLICY`** + **`ANALYZED`** (or `CREATED` / `UPDATED`) with `entityIdentity` a real **`*.policy.md` filename** (e.g. `connect-to-test-env.policy.md`). Do **not** send `entityIdentity: project-init` or `init` with `POLICY` — that returns **400**.
 
-`entityType: WORKFLOW` is **only** valid with `ACTION_COMPLETED` / `ACTION_FAILED` (and `entityIdentity` must equal `workflowId`). **`WORKFLOW` + `ANALYZED` is rejected** by the MCP client schema. `ANALYZED` is for `USER_STORY` / `SCENARIO` / `POLICY` / other non-workflow entities.
+`entityType: WORKFLOW` is valid with **`WORKFLOW_STARTED`** / **`ACTION_COMPLETED`** / **`ACTION_FAILED`** (and `entityIdentity` must equal `workflowId`). **`WORKFLOW` + `ANALYZED` is rejected** by the MCP client schema. `ANALYZED` is for `USER_STORY` / `SCENARIO` / `POLICY` / other non-workflow entities.
 
 **Since last run:** **`get-workflow-executions` (`workflowId` + `latestOnly=true`)** (`workflow_id`, optional `branch_name`, optional `user_id`).
 

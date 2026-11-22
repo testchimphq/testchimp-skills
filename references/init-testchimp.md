@@ -1,4 +1,6 @@
-# /testchimp init
+# /testchimp init (legacy)
+
+**Legacy / soft-retired.** New setups use **`/testchimp check connectivity`** ([`check-connectivity.md`](./check-connectivity.md)) per developer; TestChimp no longer suggests init. Run this playbook only when the user asks for `/testchimp init` explicitly (for example to wire a local test environment on a new machine).
 
 **Per developer / workstation** — confirm the TestChimp MCP connection, save a runner API key, and wire a **local test environment** for authoring. Runs even when project init is incomplete; offer to continue remaining project-setup gaps via [`project-init-testchimp.md`](./project-init-testchimp.md).
 

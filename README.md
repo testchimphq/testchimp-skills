@@ -2,7 +2,7 @@
 
 TestChimp is QA posture monitoring and feedback-loop orchestration for coding agents. This repository is the **Claude Code plugin** (skill + hosted MCP) and the same skill pack other agents install from Git. Agents run pre-defined playbooks under **`references/`**; project-specific decisions live in **`plans/knowledge/policies/*.policy.md`**. Bonobi is TestChimp's QA bot (the same bot, not a separate product) and lives in the skill's bot playbooks.
 
-The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth: you pick the TestChimp project on the consent screen, and every tool call is scoped to that project. Type **`/testchimp project-init`** and **`/testchimp init`** (same as other hosts). Claude Code’s `/` menu also lists **`/testchimp:<name>`** aliases for core QA commands (`commands/*.md`). One person runs project-init once per repo. Everyone else runs only init. Plain language such as “set up TestChimp for this repo” also starts the skill.
+The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth: you pick the TestChimp project on the consent screen, and every tool call is scoped to that project. Type **`/testchimp check connectivity`** and **`/testchimp project-init`** (same as other hosts). Claude Code’s `/` menu also lists **`/testchimp:<name>`** aliases for core QA commands (`commands/*.md`). One person runs project-init once per repo. Every developer runs check connectivity once. Plain language such as “set up TestChimp for this repo” also starts the skill.
 
 ## Claude Code plugin
 
@@ -33,8 +33,9 @@ Install from this marketplace, then sign in, then init. Do not invent extra comm
 
    | Who | Command | What it does |
    | --- | --- | --- |
-   | One person, once per project | `/testchimp project-init` | Folder mapping, shared test env, CI, optional imports, team invites |
-   | Every other teammate | `/testchimp init` | Confirm the plugin MCP, save a runner API key, wire the local stack |
+   | Every developer, first | `/testchimp check connectivity` | One call that confirms your agent can talk to TestChimp for this project |
+   | One person, once per project | `/testchimp project-init` | Folder mapping, shared test env, optional imports of existing plans and tests |
+   | Later, separately | `/testchimp configure execution of tests in CI`, `/testchimp invite team` | CI test execution (repo secret + workflow); inviting teammates |
 
    In Claude Code you can type those same commands, or pick **`/testchimp:project-init`** / **`/testchimp:init`** (and the other core QA **`/testchimp:<name>`** aliases) from the `/` menu. Other hosts use `/testchimp project init` / `/testchimp init`. Do not use `/testchimp:testchimp …`.
 
@@ -74,7 +75,9 @@ The plugin does not run a local MCP process and does not put an API key in Claud
 
 | Command | Workflow id | What it does |
 |---------|-------------|--------------|
-| `/testchimp init` (Claude Code menu: `/testchimp:init`) | `init` (One-Off) | Per-developer workstation: MCP sign-in, runner key, local env |
+| `/testchimp check connectivity` (Claude Code menu: `/testchimp:check-connectivity`) | — | Per-developer first step: one call proves the agent reaches TestChimp for this project |
+| `/testchimp invite team` (Claude Code menu: `/testchimp:invite-team`) | — | Invite teammates by email (`invite-team-members`) |
+| `/testchimp init` (Claude Code menu: `/testchimp:init`) | `init` (One-Off) | Legacy per-developer workstation setup; new setups use check connectivity |
 | `/testchimp project-init` (Claude Code menu: `/testchimp:project-init`) / `/testchimp project init` | `project-init` (One-Off) | One-time project setup: folder mapping, shared env, CI, optional imports |
 | `/testchimp import` (Claude Code menu: `/testchimp:import-tests`) | `import` (One-Off) | Import existing E2E into SmartTests (Playwright as-is or translate) |
 | `/testchimp import plans` (Claude Code menu: `/testchimp:import-plans`) | `import-plans` (One-Off) | Import existing plan markdown into mapped `plans/` |

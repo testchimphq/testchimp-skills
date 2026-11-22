@@ -1,18 +1,20 @@
 # /testchimp project init
 
-**One-time per project** (repo / team): **platform comms**, **folder mapping**, **connect-to-test-env**, **CI wiring**, plus optional imports and smoke validation. Runs in ChimpHands or a local agent workspace.
+**One-time per project** (repo / team), and deliberately small: **platform comms**, **folder mapping** (plans + tests folders reported to the platform), **connect-to-test-env**, plus optional **imports** of existing plans and tests. Runs in ChimpHands or a local agent workspace.
+
+**Not part of project init** (each is its own command, suggested afterwards): writing new plans (**`/testchimp author plans`**), writing new tests (**`/testchimp run-qa`**), CI test execution (**`/testchimp configure execution of tests in CI`**), inviting teammates (**`/testchimp invite team`**).
 
 **Claude Code plugin command:** **`/testchimp project-init`** (same as **`/testchimp project init`** on other hosts). The `/` menu alias is **`/testchimp:project-init`**. Do **not** tell users to run `/testchimp:testchimp project-init`. Canonical prompt still routes here.
 
-**Time:** with one-by-one tool approvals this typically takes about **20 minutes** and on the order of **60 approval prompts**. Tell the user that up front. **Claude Code:** point them at the README tip to pre-allow `mcp__plugin_testchimp_testchimp__*` in `.claude/settings.json`. If they decline a tool call, continue to the next step — do not stall or retry the same call in a loop.
+**Time:** with one-by-one tool approvals this typically takes about **10–15 minutes** and many approval prompts. Tell the user that up front. **Claude Code:** point them at the README tip to pre-allow `mcp__plugin_testchimp_testchimp__*` in `.claude/settings.json`. If they decline a tool call, continue to the next step — do not stall or retry the same call in a loop.
 
-**Not** the per-developer workstation setup — that is [`init-testchimp.md`](./init-testchimp.md) (`/testchimp init`).
+**Not** the per-developer setup — each developer runs **`/testchimp check connectivity`** ([`check-connectivity.md`](./check-connectivity.md)) once.
 
 ## Progress tracking (platform)
 
 Use MCP tools (CLI ≥ **0.1.35**):
 
-- **`get-project-init-status`** — read `ProjectInitStatus`. Prefer snake_case (`platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring`, optional `import_plans` / `import_tests` / `smoke_validation`, server-computed `overall_complete`). If a snake_case key is absent, accept the camelCase twin (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, `importPlans`, `importTests`, `smokeValidation`, `overallComplete`). Treat `PROJECT_INIT_ITEM_STATUS_DONE` (also accept bare `DONE` or boolean `true` on read) as complete for that item. **Do not** re-run init when overall is already complete.
+- **`get-project-init-status`** — read `ProjectInitStatus`. Prefer snake_case (`platform_comms`, `folder_mapping`, `connect_to_test_env`, optional `import_plans` / `import_tests`, server-computed `overall_complete`; `ci_wiring` / `smoke_validation` are legacy fields that project init no longer sets). If a snake_case key is absent, accept the camelCase twin (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, `importPlans`, `importTests`, `smokeValidation`, `overallComplete`). Treat `PROJECT_INIT_ITEM_STATUS_DONE` (also accept bare `DONE` or boolean `true` on read) as complete for that item. **Do not** re-run init when overall is already complete.
 - **`update-project-init-status`** — wrap fields in **`status`**. Only **snake_case** keys are supported on write. Always send the **full** status enum — never short values like `DONE` / `SKIPPED` / `NOT_APPLICABLE` / `INCOMPLETE` (a server alias for shorts is coming separately; docs and agents must use the canonical form now):
   - `PROJECT_INIT_ITEM_STATUS_DONE`
   - `PROJECT_INIT_ITEM_STATUS_SKIPPED`
@@ -25,23 +27,18 @@ Use MCP tools (CLI ≥ **0.1.35**):
       "platform_comms": "PROJECT_INIT_ITEM_STATUS_DONE",
       "folder_mapping": "PROJECT_INIT_ITEM_STATUS_DONE",
       "connect_to_test_env": "PROJECT_INIT_ITEM_STATUS_DONE",
-      "ci_wiring": "PROJECT_INIT_ITEM_STATUS_DONE",
       "import_plans": "PROJECT_INIT_ITEM_STATUS_DONE",
-      "import_tests": "PROJECT_INIT_ITEM_STATUS_DONE",
-      "smoke_validation": "PROJECT_INIT_ITEM_STATUS_DONE"
+      "import_tests": "PROJECT_INIT_ITEM_STATUS_DONE"
     }
   }
   ```
 
-  Send only the keys you are updating. Partial merge; server recomputes `overall_complete` when all **required** items are `PROJECT_INIT_ITEM_STATUS_DONE`. Do not send `overall_complete` (server-computed). Do **not** send camelCase keys (`platformComms`, `folderMapping`, `connectToTestEnv`, `ciWiring`, …). After every update, read the tool response (or re-call **`get-project-init-status`**) and **verify the returned status for those keys reflects the value you sent** before continuing.
+  Send only the keys you are updating. Partial merge; server recomputes `overall_complete` when all **required** items are `PROJECT_INIT_ITEM_STATUS_DONE`. Do not send `overall_complete` (server-computed). Do **not** send camelCase keys (`platformComms`, `folderMapping`, `connectToTestEnv`, …). Do **not** send `ci_wiring` or `smoke_validation` (no longer part of project init). After every update, read the tool response (or re-call **`get-project-init-status`**) and **verify the returned status for those keys reflects the value you sent** before continuing.
 - **`get-git-folder-mapping`** / **`update-git-folder-mapping`** — read/write mapped `plans/` and `tests/` paths on the platform after the agent scaffolds folders locally (branch prefix **`testchimp-`**). Do **not** wait for a PR merge before calling `update-git-folder-mapping` or continuing local steps.
-- **`invite-team-members`** (CLI ≥ **0.1.91**) — invite teammates by email; the **final** step of project init ([§ 7](#7-final--invite-team-members)).
 
-**Required** for `overall_complete`: `platform_comms`, `folder_mapping`, `connect_to_test_env`, `ci_wiring`.
+**Required** for `overall_complete`: `platform_comms`, `folder_mapping`, `connect_to_test_env`.
 
-**Optional** (do not block completion): `import_plans`, `import_tests`, `smoke_validation`.
-
-**Final step, always offered** (not in `ProjectInitStatus`): **invite team members**, after every other item is done, skipped or deferred.
+**Optional** (do not block completion): `import_plans`, `import_tests`.
 
 **Out of init scope** (separate workflows): TrueCoverage → **`/testchimp setup truecoverage`** / **`/testchimp instrument`**; mocking lock-down → during **`/testchimp test`** / create-tests per [`mocking_strategy.md`](./mocking_strategy.md); seed endpoint authoring → during test authoring per [`seeding-endpoints.md`](./seeding-endpoints.md).
 
@@ -59,7 +56,7 @@ Between phases, **stop and complete the phase’s completion gate** before conti
 
 ## Purpose
 
-Project init wires the **shared** TestChimp integration for a repo: Git folder mapping, test environment strategy, and CI. It usually runs with `plans/` and `tests/` in the **same repo as the product** (recommended). It may also run in a **plans/tests-only mapped repo** when the team chose separation — see [`split-repo-workspaces.md`](./split-repo-workspaces.md).
+Project init wires the **shared** TestChimp integration for a repo: Git folder mapping and test environment strategy (plus optional imports). It usually runs with `plans/` and `tests/` in the **same repo as the product** (recommended). It may also run in a **plans/tests-only mapped repo** when the team chose separation — see [`split-repo-workspaces.md`](./split-repo-workspaces.md).
 
 Agents must:
 
@@ -105,10 +102,10 @@ Keep decision files **project-level only** (no per-laptop MCP progress — that 
 
 | Scope | Command | What it covers |
 |--------|---------|----------------|
-| **Workstation** (per machine) | **`/testchimp init`** / **`/testchimp:init`** | Local MCP file, API key on this laptop, local stack smoke. See [`init-testchimp.md`](./init-testchimp.md). |
-| **Project** (repo / team) | **`/testchimp project-init`** / **`/testchimp:project-init`** / **`/testchimp project init`** | Platform comms verification, folder mapping, shared env strategy, CI, optional imports. |
+| **Per developer** | **`/testchimp check connectivity`** | Confirms this developer's agent can talk to TestChimp for the project. See [`check-connectivity.md`](./check-connectivity.md). (`/testchimp init` is legacy.) |
+| **Project** (repo / team) | **`/testchimp project-init`** / **`/testchimp:project-init`** / **`/testchimp project init`** | Platform comms verification, folder mapping, shared env strategy, optional imports. |
 
-A teammate may clone after project init is **`overall_complete`** and still need init on their machine (`/testchimp init`). Project init does **not** replace per-developer setup.
+A teammate who clones after project init runs **`/testchimp check connectivity`** once. Project init does **not** replace that.
 
 ---
 
@@ -116,19 +113,15 @@ A teammate may clone after project init is **`overall_complete`** and still need
 
 When project init starts, set expectations before deep work:
 
-- **During project init**, TestChimp wires **one-time project infrastructure**: Git **plans/tests folder mapping** (agent-driven via CLI), **test environment strategy** (`connect-to-test-env`), **CI execution**, then optional **import** of existing plans/tests and optional **smoke** authoring. Basic SmartTests scaffold (markers, Playwright/Mobilewright harness) lands with folder mapping — not a full test-authoring campaign. Expect about **20 minutes** and many tool approvals unless TestChimp MCP tools are pre-allowed (`mcp__plugin_testchimp_testchimp__*` in `.claude/settings.json`).
-- **Per developer**, each teammate runs **`/testchimp init`** (Claude Code menu **`/testchimp:init`**) once to register local MCP and verify their machine can run tests.
-- **After setup**, the user mainly runs **`/testchimp test`** when a PR is ready; the agent runs the full QA workflow on demand.
-- **Ongoing**, run **`/testchimp upkeep`** / **`/testchimp evolve`** for coverage gaps; **`/testchimp setup truecoverage`** when the team wants RUM analytics (not part of project init).
-- **At the end**, you'll offer to invite their teammates so the whole team can use the project.
+- **During project init**, TestChimp wires **one-time project infrastructure**: Git **plans/tests folder mapping** (reported to the platform), **how to reach the test environment** (`connect-to-test-env`), then optionally **imports** existing plans (Jira / Linear / Azure DevOps / markdown — work out the source with the user) and existing tests. Basic SmartTests scaffold (markers, Playwright/Mobilewright harness) lands with folder mapping. No new plans or tests are written here.
+- **Next**, the setup guide in TestChimp suggests **`/testchimp author plans`**, then **`/testchimp run-qa`**, then **`/testchimp create release`**. CI test execution (**`/testchimp configure execution of tests in CI`**) and team invites (**`/testchimp invite team`**) are separate, later steps.
+- **Per developer**, each teammate runs **`/testchimp check connectivity`** once.
 
 **Always** include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
 
 Then call **`get-project-init-status`** and report what is already **`PROJECT_INIT_ITEM_STATUS_DONE`** vs missing.
 
-**Do not** ask about smoke validation (or author smoke tests) at the start. Critical setup first (`platform_comms` → `folder_mapping` → `connect_to_test_env` → `ci_wiring`); offer smoke only as an optional step with imports (Phase 1 optionals / Phase 3).
-
-**Do not** ask for teammate emails at the start either. Team invites are the **last** step ([§ 7](#7-final--invite-team-members)).
+Critical setup first (`platform_comms` → `folder_mapping` → `connect_to_test_env`), then offer the optional imports. Do **not** author tests, set up CI or ask for teammate emails in project init.
 
 ---
 
@@ -151,23 +144,23 @@ Verify the **project** can talk to TestChimp APIs from this agent session (not e
 
 Do **not** emit an early `ACTION_COMPLETED` here — that would close the run before Plan/Execute.
 
-**What creates the run row:** the first successful **`report-agent-action`** (or a mutating call with inline **`agentTraceability`**) for this `workflow_execution_id`. `upsert-plans-support-file` alone does **not** create it. When you write the plan, send this first RAA (MCP camelCase field names):
+**What creates the run row:** the first successful **`report-agent-action`** (or a mutating call with inline **`agentTraceability`**) for this `workflow_execution_id`. `upsert-plans-support-file` alone does **not** create it. **Immediately after minting/reusing the ULID**, open the run (MCP camelCase field names):
 
 ```json
 {
   "workflowId": "project-init",
   "workflowExecutionId": "<ulid>",
-  "entityType": "POLICY",
-  "actionType": "ANALYZED",
-  "entityIdentity": "connect-to-test-env.policy.md"
+  "entityType": "WORKFLOW",
+  "actionType": "WORKFLOW_STARTED",
+  "entityIdentity": "project-init"
 }
 ```
 
-When `entityType` is **`POLICY`**, `entityIdentity` **must** be a real **`*.policy.md` filename** for the policy this step is acting on (here `connect-to-test-env.policy.md`). The server returns **400** `POLICY entity_identity must be a *.policy.md filename` for catalog ids such as `project-init` or `init`. Use `CREATED` / `UPDATED` instead of `ANALYZED` only when you created or updated that policy file in this step.
+Legacy first-row (still accepted): `POLICY` + `ANALYZED` with `entityIdentity: connect-to-test-env.policy.md` (a real `*.policy.md` filename — never `project-init` / `init` with `POLICY`).
 
-`entityType: WORKFLOW` is **only** valid with `ACTION_COMPLETED` / `ACTION_FAILED` (and `entityIdentity` must equal `workflowId`). That is the whole-run close — there is no non-`POLICY` entity type for a mid-run “we started project-init” row. **`WORKFLOW` + `ANALYZED` is rejected** — that is the MCP schema, not a retry-with-different-casing issue. `ANALYZED` is for `USER_STORY` / `SCENARIO` / `POLICY` / other non-`WORKFLOW` entities. Close at end of Execute with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity: project-init`. In ChimpHands, omit `userId` / prefer `actorType: CLOUD_AGENT` — MCP stamps `SESSION_ID` and the responsible user.
+`entityType: WORKFLOW` is valid with **`WORKFLOW_STARTED`** (open without closing), **`ACTION_COMPLETED`**, and **`ACTION_FAILED`** (`entityIdentity` must equal `workflowId`). **`WORKFLOW` + `ANALYZED` is rejected**. Close at end of Execute with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity: project-init`. In ChimpHands, omit `userId` / prefer `actorType: CLOUD_AGENT` — MCP stamps `SESSION_ID` and the responsible user.
 
-If **401** or tools are unavailable: the plugin / remote MCP is not signed in (or a stdio API key is missing). Ask the user to complete **`/testchimp init`** ([`init-testchimp.md`](./init-testchimp.md)) — authenticate the hosted server in the host MCP UI, not by pasting an API key.
+If **401** or tools are unavailable: the agent is not connected to this project. Ask the user to run **`/testchimp check connectivity`** ([`check-connectivity.md`](./check-connectivity.md)) and fix what it reports — authenticate the hosted server in the host MCP UI, or fix the key in the project's MCP config.
 
 Seed composite policies under **`plans/knowledge/policies/`** when missing (`run-qa.policy.md`, `upkeep.policy.md` from [`../assets/policies/`](../assets/policies/) — do not overwrite team policies).
 
@@ -188,7 +181,7 @@ Agent discovery (report findings first):
 1. Propose **`plans/`** and **`tests/`** paths (or team-preferred names) with the user.
 2. Scaffold the SmartTests tree per [`project-types-and-scaffolds.md`](./project-types-and-scaffolds.md) — markers, `playwright.config.*` / `mobilewright.config.ts`, fixture barrels ([`fixture-usage.md`](./fixture-usage.md)), deps ([`write-smarttests.md`](./write-smarttests.md)).
 3. Call **`update-git-folder-mapping`** with the **local** paths (`plans_folder_path`, `tests_folder_path`, `repository_full_name` when needed) as soon as markers exist on disk. Do **not** block on a merge.
-4. **Suggest** a commit / PR on branch prefix **`testchimp-`** so the team can review the scaffold — remaining local steps (env policy, CI file, status updates, invites) must continue even if the user defers or the PR is unmerged.
+4. **Suggest** a commit / PR on branch prefix **`testchimp-`** so the team can review the scaffold — remaining local steps (env policy, status updates, optional imports) must continue even if the user defers or the PR is unmerged.
 5. Confirm both markers exist locally. Use **`git -C <dir>`** rather than `cd <dir> && git …`.
 
 **Fallback (CLI blocked or no Git integration yet):** Ask the user to connect the repo in TestChimp → Project Settings → Integrations → Git and map folders in the UI. Pull platform sync PRs when they exist so markers appear locally, but keep going with a local scaffold if a merge is still pending. Retry **`get-git-folder-mapping`** after.
@@ -219,20 +212,9 @@ If no usable policy exists (and no legacy strategy to migrate), mark **Missing C
 
 Full playbook when executing: [`connect-to-test-env.md`](./connect-to-test-env.md).
 
-### Key Area 4 — CI setup
-
-Agent discovery:
-
-- Check `.github/workflows/` (or equivalent) for Playwright/Mobilewright/TestChimp CI.
-- Note whether jobs **`cd`** into the **mapped SmartTests folder** and set **`TESTCHIMP_API_KEY`**.
-
-Ask only when discovery is ambiguous: CI system, PR vs main triggers, env strategy alignment.
-
-**Detail reference:** [`configure-ci-test-execution.md`](./configure-ci-test-execution.md), [`import-existing-tests.md`](./import-existing-tests.md) when replacing legacy CI.
-
 ### Optional — Import existing plans
 
-When the team has requirement/plan markdown outside the mapped **`plans/`** tree:
+When the team already has requirements elsewhere — markdown outside the mapped **`plans/`** tree, or a tracker such as Jira, Linear or Azure DevOps (ask which, and how to reach it):
 
 - Offer nested **`/testchimp import plans <folder>`** ([`import-plans.md`](./import-plans.md)) — **one approval** with the parent init plan.
 - Or skip; user can run standalone later.
@@ -247,45 +229,26 @@ When the mapped SmartTests root looks **scaffold-only** (≤ 3 real `*.spec.{js,
 - If the mapped root already has a real suite: **N/A** or lightweight align-in-place (reporter/fixtures-first only) — do not re-ask full migration every run.
 - Defer optional **`markScreenState`** until **Key Area 3** / connect-to-test-env is done.
 
-### Optional — Smoke validation (author smoke tests)
-
-**After** the four required areas are planned — never before `connect-to-test-env` / folder mapping. Same posture as imports: offer once, skip freely, does not block `overall_complete`.
-
-When offering:
-
-- Author **2–3** critical-path SmartTests under the mapped SmartTests root (tag `@smoke` per `global.policy.md` when tags are defined).
-- Requires markers + a usable local-up / env contract from **Key Area 3** — if those are still missing in Phase 1 discovery, plan smoke for Phase 3 **after** connect-to-test-env executes; do not block on smoke now.
-- Follow [`write-smarttests.md`](./write-smarttests.md); local run guidance in [`init-testchimp.md`](./init-testchimp.md).
-- Or skip; user can author later via **`/testchimp create tests`** / **`/testchimp test`**.
-
-### Final — Invite team members
-
-Don't discover or ask anything here in Phase 1. Just list it as the last plan item; it runs in Phase 3 after everything else ([§ 7](#7-final--invite-team-members)).
-
 ### Phase 1 completion gate
 
 - [ ] **Key Area 1** — platform comms verified (`get-eaas-config` not 401); signed-in project matches this repo; init status baseline read.
 - [ ] **Key Area 2** — mapping state discovered; agent CLI path or fallback documented.
 - [ ] **Key Area 3** — env strategy decided enough for Phase 2; connect-to-test-env policy gate satisfied or authoring planned.
-- [ ] **Key Area 4** — CI discovery + intended direction recorded.
-- [ ] **Optional imports / smoke** — nested / skipped / **N/A** with one-line justification each (smoke offered only alongside optionals, not before required areas).
+- [ ] **Optional imports** — nested / skipped / **N/A** with one-line justification each.
 
 ---
 
-## Phase 2 — Plan phase (four required areas + optionals)
+## Phase 2 — Plan phase (three required areas + optionals)
 
 Create **`## Init action items`** in the project-init **`.plan.md`** checklist (preferred) — or in an **existing** `ai-test-instructions.md` if the team already uses that file — with **`status`**: `pending | in_progress | done | skipped | deferred`. Do not create `ai-test-instructions.md` just for this checklist.
 
-Your plan **must** include exactly these **four required** areas in order, plus optional items when applicable:
+Your plan **must** include exactly these **three required** areas in order, plus optional items when applicable:
 
 1. **Platform comms**
 2. **Folder mapping** (includes scaffold / harness when needed)
 3. **Connect to test environment**
-4. **CI setup**
 
-Optional (when planned): **Import plans**, **Import tests**, **Smoke validation**.
-
-**Always last:** **Invite team members** (offered once; the user may skip).
+Optional (when planned): **Import plans**, **Import tests**.
 
 ### Acceptance criteria
 
@@ -306,30 +269,15 @@ Optional (when planned): **Import plans**, **Import tests**, **Smoke validation*
 - **`connect-to-test-env.policy.md`** exists with local-up + health criteria (and CI/Cloud when applicable). Legacy Environment Provision Strategy in an **existing** `ai-test-instructions.md` may temporarily satisfy Missing Config until migrated — prefer the policy.
 - `update-project-init-status` with `connect_to_test_env: PROJECT_INIT_ITEM_STATUS_DONE` when complete. Verify the returned status.
 
-**CI setup**
-
-- Workflow authored, verified, or **N/A** with justification; runs from SmartTests root with `TESTCHIMP_API_KEY` and env strategy for `BASE_URL`.
-- User informed how to trigger CI runs.
-- `update-project-init-status` with `ci_wiring: PROJECT_INIT_ITEM_STATUS_DONE` when complete. Verify the returned status.
-
 **Optional imports**
 
 - Per [`import-plans.md`](./import-plans.md) / [`import-existing-tests.md`](./import-existing-tests.md); set `import_plans` / `import_tests` on platform when done.
-
-**Optional smoke validation**
-
-- 2–3 `@smoke` SmartTests authored and runnable against the documented local/test env, **or** skipped / **N/A** with justification.
-- `update-project-init-status` with `smoke_validation: PROJECT_INIT_ITEM_STATUS_DONE` when smoke finishes successfully (optional — does not affect `overall_complete`). Verify the returned status. Use `PROJECT_INIT_ITEM_STATUS_SKIPPED` or `PROJECT_INIT_ITEM_STATUS_NOT_APPLICABLE` when recording a skip / N/A.
-
-**Invite team members (last)**
-
-- Offered after every other item; invites sent for the emails the user confirmed, **or** skipped. Record the outcome in the plan (not tracked in `ProjectInitStatus`).
 
 After the plan is written, get **explicit user approval** before Phase 3.
 
 ### Phase 2 gate
 
-- [ ] Four required areas (+ optionals) listed with acceptance criteria.
+- [ ] Three required areas (+ optionals) listed with acceptance criteria.
 - [ ] User explicitly approved the plan.
 
 ---
@@ -338,7 +286,7 @@ After the plan is written, get **explicit user approval** before Phase 3.
 
 Execute in order; after each area, verify acceptance criteria, call **`update-project-init-status`**, and update **`connect-to-test-env.policy.md`** for env decisions (upsert-policy). Update an existing `ai-test-instructions.md` only for legacy non-env notes / FAQ — do not create it for env.
 
-**PR strategy:** Suggest a commit / PR (one combined or separate slices: mapping/scaffold, env docs, CI). Default to separate PRs when slices are large. Branch prefix **`testchimp-`**. **Do not** pause Execute for “waiting on merge” — local files, `update-git-folder-mapping`, `update-project-init-status`, CI template, and invites do not require the PR to land first.
+**PR strategy:** Suggest a commit / PR (one combined or separate slices: mapping/scaffold, env docs). Default to separate PRs when slices are large. Branch prefix **`testchimp-`**. **Do not** pause Execute for “waiting on merge” — local files, `update-git-folder-mapping` and `update-project-init-status` do not require the PR to land first.
 
 ### 1. Platform comms
 
@@ -382,51 +330,12 @@ Follow [`connect-to-test-env.md`](./connect-to-test-env.md) / [`environment-mana
 
 Mark `connect_to_test_env: PROJECT_INIT_ITEM_STATUS_DONE` when strategy is documented and verified (or policy + local-up contract exists for later provisioning). Verify the returned status.
 
-### 4. CI setup
-
-Follow [`configure-ci-test-execution.md`](./configure-ci-test-execution.md):
-
-- Copy [`../assets/template_smarttests.yml`](../assets/template_smarttests.yml) to **`.github/workflows/smarttests.yml`**. Replace `tests` with the mapped SmartTests folder if needed. Do **not** write a draft and then `sed` it — the template is already valid (`working-directory`, `TESTCHIMP_EXECUTION_SOURCE=CI`, `TESTCHIMP_API_KEY`, `BASE_URL`, skip plan-sync PRs).
-- Run from SmartTests root; `TESTCHIMP_API_KEY` in CI secrets; `TESTCHIMP_EXECUTION_SOURCE=CI` on pipeline jobs.
-- Pass `BASE_URL` per env strategy; exclude plan-sync PRs titled `TestChimp Platform Sync [Plans]`.
-- If nested import already authored CI — **verify only**, do not duplicate.
-- Git commands: **`git -C <dir> …`**, never `cd <dir> && git …`.
-- **ChimpHands:** Pushing `.github/workflows/*` requires the TestChimp GitHub App **Workflows: Read & write** permission (Actions `GITHUB_TOKEN` cannot modify workflow files). If push is rejected for missing workflows permission, tell the user to grant that App permission, accept the install update, then run `testchimp chimphands refresh-git-auth` and retry — do not suggest adding `permissions.workflows` to the workflow YAML (that key is invalid). If `chimphands.yml` is missing, install it from the TestChimp UI; do not overwrite a customized workflow.
-
-Mark `ci_wiring: PROJECT_INIT_ITEM_STATUS_DONE` when workflow exists, or `PROJECT_INIT_ITEM_STATUS_NOT_APPLICABLE` when N/A is justified. Verify the returned status.
-
-### 5. Optional — Import plans / Import tests
+### 4. Optional — Import plans / Import tests
 
 When approved in Phase 2:
 
 - **Plans:** [`import-plans.md`](./import-plans.md) → `import_plans: PROJECT_INIT_ITEM_STATUS_DONE` (verify the returned status). If import is already complete on the platform but local `plans/stories` and `plans/scenarios` are empty, tell the user and offer the pull-down in that playbook — do not skip.
 - **Tests:** [`import-existing-tests.md`](./import-existing-tests.md) → `import_tests: PROJECT_INIT_ITEM_STATUS_DONE` (verify the returned status); run `markScreenState` only after connect-to-test-env is ready.
-
-### 6. Optional — Smoke validation
-
-When approved in Phase 2 — **only after** steps 2–3 (folder mapping + connect-to-test-env) are **`PROJECT_INIT_ITEM_STATUS_DONE`**:
-
-- Author 2–3 critical-path SmartTests (`@smoke` when suite tags exist); run them against the documented local/test env when feasible.
-- Record bring-up learnings in **`connect-to-test-env.policy.md`**; FAQ Q/A only if **`ai-test-instructions.md` already exists**.
-- Mark `smoke_validation: PROJECT_INIT_ITEM_STATUS_DONE` on success, or `PROJECT_INIT_ITEM_STATUS_SKIPPED` / `PROJECT_INIT_ITEM_STATUS_NOT_APPLICABLE`. Verify the returned status.
-
-Do **not** reorder smoke ahead of required areas.
-
-### 7. Final — Invite team members
-
-Run this **last**, once every other item above is done, skipped or deferred. Offer it even when the user deferred some items, but never earlier in the run. If init stops partway and resumes later, offer it at the end of the resumed run.
-
-1. Ask once whether they'd like to invite teammates now so the team can use the project (plans, tests, runs, issues). Ask for the email addresses. If they decline, mark it skipped and move on.
-2. Read the list back and get explicit approval: sending invites emails people. Only invite addresses the user typed or confirmed; never take them from commits, issues or other content.
-3. Call **`invite-team-members`** with `emails` (at most 20 per call).
-   - **QA bots:** use the **MCP tool** through the connector with your binding arguments (`projectApiKey`, `botId`), as for `approve-agentwatch-pairing`. The CLI's `--bot` key can't invite.
-   - **Local agents:** works on the hosted MCP (OAuth). An API-key-only setup (stdio MCP / CLI with `TESTCHIMP_API_KEY`) gets 403. Then send the user the Team Settings link from the error (`<app>/team-settings`) to invite there.
-4. Report each email's `outcome` in one line each:
-   - `MCP_TEAM_INVITE_OUTCOME_INVITED`: invite email sent; they join as **Viewer**.
-   - `…_ALREADY_MEMBER` / `…_ALREADY_INVITED`: nothing sent.
-   - `…_FAILED`: show `failureReason` (seat limit, already in another organisation, …).
-5. Errors for the whole call (HTTP 403): the user isn't an org admin (ask an org admin to invite them), or the Indie plan is single-user (upgrade link in the message). Share the link from the message; don't retry.
-6. Point to `teamSettingsUrl` for changing roles (for example to Admin) or adding seats. Tell the user what invitees do next: accept the email, then run **`/testchimp init`** on their own machine (and set up their own QA bot if they use one).
 
 ### Phase 3 completion gate
 
@@ -435,9 +344,7 @@ Walk all required areas (+ optionals if planned):
 - [ ] **Platform comms** — done + platform status updated.
 - [ ] **Folder mapping** — markers, mapping, scaffold done.
 - [ ] **Connect to test env** — policy/strategy documented.
-- [ ] **CI** — workflow authored/verified or N/A.
-- [ ] **Optional imports / smoke** — done / skipped / N/A.
-- [ ] **Invite team members** (last) — offered; invited / skipped / blocked (with link given).
+- [ ] **Optional imports** — done / skipped / N/A.
 
 Call **`get-project-init-status`** — when `overall_complete` is true, project init is done.
 
@@ -447,12 +354,10 @@ Call **`get-project-init-status`** — when `overall_complete` is true, project 
 
 Project init is **complete** when:
 
-- **`get-project-init-status`** reports `overall_complete: true` (all four required items **`PROJECT_INIT_ITEM_STATUS_DONE`**), **and**
+- **`get-project-init-status`** reports `overall_complete: true` (all three required items **`PROJECT_INIT_ITEM_STATUS_DONE`**), **and**
 - **`plans/knowledge/policies/connect-to-test-env.policy.md`** documents the env strategy (local-up / health / URLs; CI/Cloud as applicable) and has been upserted.
 
-**Not required for completion:** `ai-test-instructions.md`, TrueCoverage, mocking plans, full seed endpoints, domain fixtures, ExploreChimp defaults — those land in later workflows (or remain optional legacy notes).
-
-The team-invite offer ([§ 7](#7-final--invite-team-members)) comes before closing the run, but doesn't block completion.
+**Not required for completion:** CI test execution, team invites, `ai-test-instructions.md`, TrueCoverage, mocking plans, full seed endpoints, domain fixtures, ExploreChimp defaults — those land in later workflows (or remain optional legacy notes).
 
 Before treating the run as done, **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** with `workflowId` / `entityIdentity` **`project-init`** and the plan ULID (`ACTION_COMPLETED` / `ACTION_FAILED`).
 
@@ -460,8 +365,9 @@ Before treating the run as done, **[Report workflow execution](./policies-and-tr
 
 ## Post-init guidance
 
-- Each developer: run **`/testchimp init`** on their machine. Teammates not invited yet: org admins invite from Team Settings (or ask an agent to use **`invite-team-members`**).
+- Hand back the next setup step ([`onboarding-next-step.md`](./onboarding-next-step.md)): usually **`/testchimp author plans`**, then **`/testchimp run-qa`**.
+- Later, separately: **`/testchimp configure execution of tests in CI`** ([`configure-ci-test-execution.md`](./configure-ci-test-execution.md)) and **`/testchimp invite team`** ([`invite-team.md`](./invite-team.md)).
+- Each teammate: **`/testchimp check connectivity`** once.
 - If you hit a TestChimp bug or docs gap during this run, you may call **`send-feedback`** after telling the user what you will send and why. Do not send a ritual end-of-init report. If they decline that tool, finish the summary and stop.
-- On demand: **`/testchimp test`** when a PR is ready.
 - TrueCoverage: **`/testchimp setup truecoverage`** / **`/testchimp instrument`** when the team opts in.
 - Ongoing: **`/testchimp upkeep`**; optional **`/testchimp cleanup`**.

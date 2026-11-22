@@ -22,7 +22,7 @@ This is the compound workflow for **creating a release and getting release QA po
 ## Purpose
 
 1. Lock release **label**, **type** (`MAJOR` \| `MINOR` \| `HOTFIX`), **tag convention**, **scope**, and **create-release policy**.
-2. Create the catalog release (`upsert-release`) with `gitCommitSha` and focus-area scope.
+2. Create the catalog release (`upsert-release`) with `gitCommitSha` and focus-area scope (default: root `plans/stories`).
 3. Create a named test run titled **`default`** on that release.
 4. Drive policy-selected nested QA actions so the suite has executed for the release (CI attach or local).
 5. Summarise release QA posture (`get-release` `detail=GATE` + `get-qa-posture`).
@@ -58,8 +58,15 @@ This is the compound workflow for **creating a release and getting release QA po
 3. If label missing: suggest the next tag from the latest catalog label + any locked **tag convention**; if convention unset, ask and lock it into the project policy (`### Tag convention`).
 4. **`gitCommitSha`:** current `HEAD` (or user-supplied SHA). Always send on create. Resolve **`priorReleaseVersion`** from the list (latest prior when sensible).
 5. **Scope** from locked policy (MAJOR `full` / MINOR+HOTFIX `changed`). If unlocked, include scope in the accept-defaults write.
-   - **`full`:** omit `focusAreas` on create (full scenario set). Do not send an empty array to “clear” on update — empty/omit leaves existing focus areas unchanged.
-   - **`changed` (best-effort):** prior SHA → cut SHA git diff → map touched plans/scenarios to `FileScope` focus areas (`folderPath` + `artifactType: SCENARIO_ARTIFACT` when known). **State clearly** that this is best-effort and that **MAJOR should prefer full**.
+   - **Prefer folder scope over individual scenarios (P0):** Never expand release `focusAreas` into per-scenario file paths or `ids` lists unless the user **explicitly** asks to narrow to specific scenarios. Listing individual scenarios under-scopes the release and misses linked coverage.
+   - **Canonical “include all” focus area** — root stories folder (resolves every story and its linked scenarios):
+
+     ```json
+     [{ "folderPath": ["plans", "stories"], "artifactType": "USER_STORY_ARTIFACT" }]
+     ```
+
+     Use this as the **default** on create for `full` scope (and whenever scope is ambiguous). Prefer sending this explicitly over omitting `focusAreas`. Do **not** send an empty array to “clear” on update — empty/omit leaves existing focus areas unchanged.
+   - **`changed` (best-effort):** prior SHA → cut SHA git diff → map to **story-area folders** under `plans/stories/…` (`artifactType: USER_STORY_ARTIFACT`), not individual scenario files. If the diff does not cleanly map to one or a few story folders, **fall back to the root `plans/stories` entry above** rather than enumerating scenarios. **State clearly** that changed-scope is best-effort and that **MAJOR should prefer full**.
 6. **Policy gate:** if unlocked → propose recommended defaults (table above) in plain language → Accept / Customize → write locked project policy (no banner) + **`upsert-policy`**.
 
 ---
@@ -75,7 +82,7 @@ This is the compound workflow for **creating a release and getting release QA po
 
 ## Phase C — Must-do Execute
 
-1. **`upsert-release`** with `version`, `gitCommitSha`, `priorReleaseVersion`, `releaseType`, and `focusAreas` when scoped. Check response `created`; if not created and user did not approve update, stop.
+1. **`upsert-release`** with `version`, `gitCommitSha`, `priorReleaseVersion`, `releaseType`, and `focusAreas` (default: root `plans/stories` — see Phase A §5; narrower only when the user asked). Check response `created`; if not created and user did not approve update, stop.
 2. **`manage-test-run`** omit `id`, pass `release` (= version), and **`title`: `default`**. Keep the returned **`id`** as `TESTCHIMP_TEST_RUN_ID` for later runs.
 
 ---
@@ -129,6 +136,7 @@ Suggested static defaults when creating scans (adjust to project norms): release
 2. **`get-qa-posture`**.
 3. Summarise for the user: release label/type/cut, scope, test-run status, suite coverage posture, ExploreChimp/perf/security highlights, open blockers, and next recommended action.
 4. **[Report workflow execution](./policies-and-traceability.md#report-workflow-execution)** — `ACTION_COMPLETED` with `WORKFLOW` + `create-release`.
+5. Hand back the next setup step ([`onboarding-next-step.md`](./onboarding-next-step.md)). If git integration is still missing (`LAUNCHPAD_STEP_CONNECT_REPO` skipped/todo, or project-init stuck on folder mapping), include that file’s **create-release-only** git nudge after the next-command line.
 
 ---
 
@@ -137,7 +145,7 @@ Suggested static defaults when creating scans (adjust to project norms): release
 - [ ] Label + type locked; existing label handled (inform / stop unless user confirmed update)
 - [ ] Tag convention locked when previously unset
 - [ ] Project `create-release.policy.md` locked (no seed banner) before nested actions
-- [ ] Release created/updated with `gitCommitSha` (+ `focusAreas` when changed-scope)
+- [ ] Release created/updated with `gitCommitSha` + `focusAreas` (default root `plans/stories`; no per-scenario enumeration unless user asked)
 - [ ] Named test run titled `default` created on the release
 - [ ] Suite coverage ensured (CI LINK and/or local execute / smart-smoke with release + test-run env tags)
 - [ ] Nested ExploreChimp / perf / security only when policy enables; DAST always confirmed
