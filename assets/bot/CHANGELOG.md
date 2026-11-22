@@ -2,6 +2,12 @@
 
 Versions of the Grok Bot template manifest (`grok-template.json` → `templateVersion`). Existing bots pick up skill and CLI releases automatically through the daily self-update routine (instructions and routines live in the bot host, so the bot asks the user to apply those); bump `templateVersion` when the manifest itself changes (connector, routines, minimum versions, instructions variables).
 
+## 1.0.12 — skill 2.0.7
+
+- Skill **2.0.7** requires **`@testchimp/cli` ≥ 2.0.5**. MCP API stays **2.0.0**.
+- CLI **2.0.5** adds **`get-onboarding-status`**, **`WORKFLOW_STARTED`** on `report-agent-action`, and `TESTCHIMP_USER_ID` as the `user-id` header on API-key calls (91 tools).
+- Existing bots: the daily self-update picks up the skill and the CLI on the bot's computer.
+
 ## 1.0.11 — skill 2.0.4
 
 - Skill **2.0.4** keeps **`@testchimp/cli` ≥ 2.0.3**. MCP API stays **2.0.0**.

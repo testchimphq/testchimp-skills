@@ -2,7 +2,7 @@
 
 Use the **CLI** when the agent runs **shell commands** (CI, scripts, or hosts without MCP). Use **MCP** when the IDE/agent host exposes MCP tools. Both call the same TestChimp **`/api/mcp/*`** HTTP APIs.
 
-**MCP API 2.0.0 / CLI ≥ 2.0.3:** this skill (`metadata.required_mcp_version` **2.0.0**, `metadata.required_cli_version` **2.0.3**) documents the **2.0.0** tool names, the **2.0.1** **`--release`** flag, **`ask-user-question-async`** (CLI **2.0.2**), and **`create-security-scan`** + `upsert-release` **`focusAreas`** (CLI **2.0.3**) (89 tools, kebab-case parity; includes **`get-eaas-config`** and **`ask-about-testchimp`**). Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release. Release-catalog CLI flags use **`--release <label>`** (alias **`--release-version`**) and map to MCP field **`version`**. Do not pass a release label as `--version` — that is the global CLI package-version flag.
+**MCP API 2.0.0 / CLI ≥ 2.0.5:** this skill (`metadata.required_mcp_version` **2.0.0**, `metadata.required_cli_version` **2.0.5**) documents the **2.0.0** tool names, the **2.0.1** **`--release`** flag, **`ask-user-question-async`** (CLI **2.0.2**), **`create-security-scan`** + `upsert-release` **`focusAreas`** (CLI **2.0.3**), and **`get-onboarding-status`** + **`WORKFLOW_STARTED`** + `user-id` header (CLI **2.0.5**) (91 tools, kebab-case parity; includes **`get-eaas-config`** and **`ask-about-testchimp`**). Hosted MCP at `https://mcp.testchimp.io/mcp` must be on **2.0.0**. Old `/api/mcp/*` paths remain hidden aliases for one client release. Release-catalog CLI flags use **`--release <label>`** (alias **`--release-version`**) and map to MCP field **`version`**. Do not pass a release label as `--version` — that is the global CLI package-version flag.
 
 This page lists **every subcommand and flag** as implemented in the CLI (kebab-case flags; request bodies use **camelCase**). **`--json-input`** is available on every tool subcommand below except where noted; it merges **over** flags (JSON wins on conflicts).
 
@@ -1953,7 +1953,7 @@ testchimp send-feedback --category USER_STRUGGLE --agent-name "Cursor" \
 
 ## MCP parity (tool names)
 
-MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (89 tools on CLI **2.0.3**, including **`get-eaas-config`**, last-resort **`ask-about-testchimp`** / **`ask-testchimp-question`**, **`ask-user-question-async`**, and **`create-security-scan`**). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names.
+MCP tool **names** match CLI **subcommands** (kebab-case) on **MCP API 2.0.0** (91 tools on CLI **2.0.5**, including **`get-eaas-config`**, last-resort **`ask-about-testchimp`** / **`ask-testchimp-question`**, **`ask-user-question-async`**, **`create-security-scan`**, and **`get-onboarding-status`**). See the [MCP 2.0.0 migration map](#mcp-200-migration-map) for old → new names.
 
 ## Related
 
