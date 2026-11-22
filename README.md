@@ -116,6 +116,10 @@ See [`llms-install.md`](llms-install.md) for copy-paste MCP config.
 
 ---
 
+## What’s new in 2.0.7
+
+Skill **2.0.7** requires **`@testchimp/cli` ≥ 2.0.5**. CLI **2.0.5** adds **`get-onboarding-status`**, **`WORKFLOW_STARTED`** on `report-agent-action`, and sends `TESTCHIMP_USER_ID` as the `user-id` header on API-key calls (91 tools). MCP API stays **2.0.0**.
+
 ## What’s new in 2.0.4
 
 Skill **2.0.4** keeps **`@testchimp/cli` ≥ 2.0.3**. Playwright scaffold templates enable always-on video at reduced resolution (`video: { mode: 'on', size: { width: 800, height: 450 } }`) so execution recordings upload to TestChimp for verification replay.
@@ -136,7 +140,7 @@ Skill **2.0.1** requires **`@testchimp/cli` ≥ 2.0.1**. The release-catalog CLI
 
 Skill **2.0.0** is a breaking MCP tool rename. Hosted / plugin MCP at `https://mcp.testchimp.io/mcp` must be **API 2.0.0** (`SKILL.md` `metadata.required_mcp_version`). `@testchimp/cli` **2.0.0** exposes **87** kebab-case tools (includes **`get-eaas-config`** and **`ask-about-testchimp`**). **`get-eaas-config` is kept unchanged** as the connectivity / first-run check (do not use `ephemeral-environment action=CONFIG` for that). Consolidated tools include `ephemeral-environment` (`PROVISION` | `STATUS`), `report-scan-findings` (`scanId`), `get-workflow-executions`, `get-policies`, `get-api-operations`, `list-meetings`, `set-entity-distinct`, `fetch-execution-report`, `get-execution-history`, `list-perf-runs`, `get-release` (omit `version` to list), `upsert-release` (`gitCommitSha`, `priorReleaseVersion`), `manage-test-run` (no `action`; `commitRange` FIND\|LINK), `upsert-issue` (`addLabels` / `removeLabels`), plus new **`list-issues`** (`statuses` / `severities` / `assignees` / `ordinalIds`). See [`references/cli.md`](references/cli.md).
 
-**Upgrade note:** If your installed skill is older than **2.0.0**, upgrade now (`/testchimp skill upgrade` / `git pull`). Tool names from skill 1.x will fail against MCP 2.0.0. Prefer **2.0.4** for Playwright video scaffold defaults (plus **2.0.3** release / security-scan features).
+**Upgrade note:** If your installed skill is older than **2.0.0**, upgrade now (`/testchimp skill upgrade` / `git pull`). Tool names from skill 1.x will fail against MCP 2.0.0. Prefer **2.0.7** for **`@testchimp/cli` ≥ 2.0.5** (`get-onboarding-status`, `WORKFLOW_STARTED`, `user-id` header).
 
 ## What’s new in 1.0.x (policy-aware skill)
 
@@ -146,7 +150,7 @@ From **v1.0.0** onward the skill is organized as a **modular workflow catalog**,
 2. **Policies** — team overrides in the mapped repo under **`plans/knowledge/policies/<workflow-id>.policy.md`**. Init seeds defaults from **`assets/policies/`**. When a policy is missing, **`plans/knowledge/ai-test-instructions.md`** remains the fallback.
 3. **Composites** — **`run-qa`** and **`upkeep`** declare **subflows** in their policy (e.g. author-plans → connect-to-test-env → create-tests → …). Agents follow the composite order and can still run a subflow alone.
 4. **Traceability** — Plan phases mint a **`workflow_execution_id`** (ULID); plans live under **`plans/knowledge/workflow_plans/<workflow-id>/`**; upload via **`upsert-plans-support-file`** before Execute; mutating work reports via **`report-agent-action`** / inline **`agentTraceability`**. Details: [`references/policies-and-traceability.md`](references/policies-and-traceability.md).
-5. **CLI/MCP** — MCP API **2.0.0** / **`@testchimp/cli` ≥ 2.0.3** workflow tools (`get-policies`, `upsert-policy`, `list-workflow-catalog`, `get-workflow-executions`, `list-issues`, `create-security-scan`, …) plus **API operation coverage** (`get-api-operations`). Pin **`@testchimp/cli`** to at least **`required_cli_version`** (**2.0.3**) in **`SKILL.md`**. Hosted MCP must be **2.0.0**. Release-catalog CLI flags use **`--release <label>`** (alias **`--release-version`**); MCP field names stay `version`.
+5. **CLI/MCP** — MCP API **2.0.0** / **`@testchimp/cli` ≥ 2.0.5** workflow tools (`get-policies`, `upsert-policy`, `list-workflow-catalog`, `get-workflow-executions`, `list-issues`, `create-security-scan`, `get-onboarding-status`, …) plus **API operation coverage** (`get-api-operations`). Pin **`@testchimp/cli`** to at least **`required_cli_version`** (**2.0.5**) in **`SKILL.md`**. Hosted MCP must be **2.0.0**. Release-catalog CLI flags use **`--release <label>`** (alias **`--release-version`**); MCP field names stay `version`.
 
 **Upgrade note (1.0):** If your installed skill is older than **1.0.0**, upgrade now. Policy and traceability tooling assume 1.0+. Prefer **2.0.2** for MCP API 2.0.0, the `--release` CLI flag, and `ask-user-question-async`.
 
@@ -347,7 +351,7 @@ Natural-language equivalents still route correctly (e.g. “Write tests for this
 
 During **`/testchimp init`**, agents keep a plugin-provided server if it is already connected. They do not write a second TestChimp entry. Full steps: **`references/init-testchimp.md`** (Workstation gate). Agents verify CLI compatibility via **Preamble checks** in **`SKILL.md`**.
 
-Policy / workflow MCP tools (skill **2.0.4** requires MCP API **2.0.0** and **`@testchimp/cli` ≥ 2.0.3**): **`get-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-workflow-executions`** (`workflowId` + `latestOnly=true` for last run), **`list-issues`**, **`create-security-scan`**, **`upsert-release`** (`focusAreas`).
+Policy / workflow MCP tools (skill **2.0.7** requires MCP API **2.0.0** and **`@testchimp/cli` ≥ 2.0.5**): **`get-policies`**, **`upsert-policy`**, **`list-workflow-catalog`**, **`report-agent-action`**, **`get-workflow-executions`** (`workflowId` + `latestOnly=true` for last run), **`list-issues`**, **`create-security-scan`**, **`upsert-release`** (`focusAreas`), **`get-onboarding-status`**.
 
 ---
 
