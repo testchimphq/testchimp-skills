@@ -19,5 +19,5 @@ Not a catalog workflow: no plan file. Sending invites emails people, so explicit
    - `…_ALREADY_MEMBER` / `…_ALREADY_INVITED`: nothing sent.
    - `…_FAILED`: show `failureReason` (seat limit, already in another organisation, …).
 5. Whole-call errors (HTTP 403): the inviter isn't an org admin (ask an org admin), or the plan is single-user (share the upgrade link from the message). Don't retry.
-6. Point to `teamSettingsUrl` for roles and seats. Tell the user what invitees do next: accept the email, then run **`/testchimp check connectivity`** in their own agent.
+6. Point to `teamSettingsUrl` for roles and seats. Tell the user what invitees do next: accept the email, then run **`/testchimp connect-project`** in their own agent.
 7. Then do the [hand-back](./onboarding-next-step.md).

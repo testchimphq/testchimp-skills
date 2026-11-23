@@ -8,7 +8,7 @@
 
 **Time:** with one-by-one tool approvals this typically takes about **10–15 minutes** and many approval prompts. Tell the user that up front. **Claude Code:** point them at the README tip to pre-allow `mcp__plugin_testchimp_testchimp__*` in `.claude/settings.json`. If they decline a tool call, continue to the next step — do not stall or retry the same call in a loop.
 
-**Not** the per-developer setup — each developer runs **`/testchimp check connectivity`** ([`check-connectivity.md`](./check-connectivity.md)) once.
+**Not** the per-developer setup — each developer runs **`/testchimp connect-project`** ([`connect-project.md`](./connect-project.md)) once.
 
 ## Progress tracking (platform)
 
@@ -102,10 +102,10 @@ Keep decision files **project-level only** (no per-laptop MCP progress — that 
 
 | Scope | Command | What it covers |
 |--------|---------|----------------|
-| **Per developer** | **`/testchimp check connectivity`** | Confirms this developer's agent can talk to TestChimp for the project. See [`check-connectivity.md`](./check-connectivity.md). (`/testchimp init` is legacy.) |
+| **Per developer** | **`/testchimp connect-project`** | Confirms this developer's agent can talk to TestChimp for the project. See [`connect-project.md`](./connect-project.md). (`/testchimp init` is legacy.) |
 | **Project** (repo / team) | **`/testchimp project-init`** / **`/testchimp:project-init`** / **`/testchimp project init`** | Platform comms verification, folder mapping, shared env strategy, optional imports. |
 
-A teammate who clones after project init runs **`/testchimp check connectivity`** once. Project init does **not** replace that.
+A teammate who clones after project init runs **`/testchimp connect-project`** once. Project init does **not** replace that.
 
 ---
 
@@ -115,7 +115,7 @@ When project init starts, set expectations before deep work:
 
 - **During project init**, TestChimp wires **one-time project infrastructure**: Git **plans/tests folder mapping** (reported to the platform), **how to reach the test environment** (`connect-to-test-env`), then optionally **imports** existing plans (Jira / Linear / Azure DevOps / markdown — work out the source with the user) and existing tests. Basic SmartTests scaffold (markers, Playwright/Mobilewright harness) lands with folder mapping. No new plans or tests are written here.
 - **Next**, the setup guide in TestChimp suggests **`/testchimp author plans`**, then **`/testchimp run-qa`**, then **`/testchimp create release`**. CI test execution (**`/testchimp configure execution of tests in CI`**) and team invites (**`/testchimp invite team`**) are separate, later steps.
-- **Per developer**, each teammate runs **`/testchimp check connectivity`** once.
+- **Per developer**, each teammate runs **`/testchimp connect-project`** once.
 
 **Always** include: [QA on Autopilot (TestChimp + Claude)](https://docs.testchimp.io/qa-autopilot-claude/intro).
 
@@ -138,9 +138,9 @@ If **`get-project-init-status`** shows required items already **`PROJECT_INIT_IT
 Verify the **project** can talk to TestChimp APIs from this agent session (not every teammate’s laptop). Prefer the **plugin/extension-provided** hosted MCP (`https://mcp.testchimp.io/mcp`) when TestChimp is already installed as a plugin — do **not** write a second project-level server or require a stdio API key for these calls.
 
 1. **`get-eaas-config`** `{}` — must **not** return **401** (empty config is OK). Do **not** use `ephemeral-environment action=CONFIG`.
-2. **`get-project-credentials`** (when the connection is OAuth) — confirm `projectName` / `projectId` with the user. That is the project picked on the consent screen; every later tool call is scoped to it. If **`<git root>/.testchimp/mcp.json`** already has a real key for this project, leave it. If it is missing and runners will need a key, save it now using [Save the runner key](./init-testchimp.md#save-the-runner-key) — do not put the key in a shell command.
+2. **`get-project-credentials`** (when the connection is OAuth) — confirm `projectName` / `projectId` with the user. Pass the repo's **`projectId`** (from `.testchimp/creds.json`) so the answer is for this repo's project. If **`<git root>/.testchimp/creds.json`** is missing, run **`/testchimp connect-project`** now ([`connect-project.md`](./connect-project.md)) — do not put the key in a shell command.
 3. **`get-project-init-status`** — baseline current progress.
-4. **Project mismatch (blocking)** — if this repo already has `.testchimp-plans` / `.testchimp-tests`, a gitignored `.testchimp/mcp.json` with a different `TESTCHIMP_PROJECT_ID`, or `get-git-folder-mapping` points at another `owner/repo` than this tree's remotes, the user signed in to the wrong project. Stop and tell them to re-authenticate via [Host MCP sign-in](./init-testchimp.md#workstation-gate-always-first), picking **this** repo's project. Then re-run this area.
+4. **Project mismatch (blocking)** — if this repo already has `.testchimp-plans` / `.testchimp-tests`, a gitignored `.testchimp/creds.json` (or legacy `mcp.json`) with a different project id, or `get-git-folder-mapping` points at another `owner/repo` than this tree's remotes, the repo is linked to the wrong project. Stop and tell them to re-run **`/testchimp connect-project`** and pick **this** repo's project. Then re-run this area.
 
 Do **not** emit an early `ACTION_COMPLETED` here — that would close the run before Plan/Execute.
 
@@ -160,7 +160,7 @@ Legacy first-row (still accepted): `POLICY` + `ANALYZED` with `entityIdentity: c
 
 `entityType: WORKFLOW` is valid with **`WORKFLOW_STARTED`** (open without closing), **`ACTION_COMPLETED`**, and **`ACTION_FAILED`** (`entityIdentity` must equal `workflowId`). **`WORKFLOW` + `ANALYZED` is rejected**. Close at end of Execute with `entityType: WORKFLOW`, `actionType: ACTION_COMPLETED` or `ACTION_FAILED`, `entityIdentity: project-init`. In ChimpHands, omit `userId` / prefer `actorType: CLOUD_AGENT` — MCP stamps `SESSION_ID` and the responsible user.
 
-If **401** or tools are unavailable: the agent is not connected to this project. Ask the user to run **`/testchimp check connectivity`** ([`check-connectivity.md`](./check-connectivity.md)) and fix what it reports — authenticate the hosted server in the host MCP UI, or fix the key in the project's MCP config.
+If **401** or tools are unavailable: the agent is not connected to this project. Ask the user to run **`/testchimp connect-project`** ([`connect-project.md`](./connect-project.md)) and fix what it reports — authenticate the hosted server in the host MCP UI, or fix the key in the project's MCP config.
 
 Seed composite policies under **`plans/knowledge/policies/`** when missing (`run-qa.policy.md`, `upkeep.policy.md` from [`../assets/policies/`](../assets/policies/) — do not overwrite team policies).
 
@@ -367,7 +367,7 @@ Before treating the run as done, **[Report workflow execution](./policies-and-tr
 
 - Hand back the next setup step ([`onboarding-next-step.md`](./onboarding-next-step.md)): usually **`/testchimp author plans`**, then **`/testchimp run-qa`**.
 - Later, separately: **`/testchimp configure execution of tests in CI`** ([`configure-ci-test-execution.md`](./configure-ci-test-execution.md)) and **`/testchimp invite team`** ([`invite-team.md`](./invite-team.md)).
-- Each teammate: **`/testchimp check connectivity`** once.
+- Each teammate: **`/testchimp connect-project`** once.
 - If you hit a TestChimp bug or docs gap during this run, you may call **`send-feedback`** after telling the user what you will send and why. Do not send a ritual end-of-init report. If they decline that tool, finish the summary and stop.
 - TrueCoverage: **`/testchimp setup truecoverage`** / **`/testchimp instrument`** when the team opts in.
 - Ongoing: **`/testchimp upkeep`**; optional **`/testchimp cleanup`**.

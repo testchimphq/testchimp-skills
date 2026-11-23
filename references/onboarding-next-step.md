@@ -6,7 +6,7 @@ New TestChimp projects show a setup guide on the dashboard: create project → c
 
 At the very end of these commands (for catalog workflows, after the closing `report-agent-action`):
 
-- `/testchimp check connectivity`
+- `/testchimp connect-project`
 - `/testchimp project-init` (`project-init`)
 - `/testchimp author plans` (`author-plans`)
 - `/testchimp run-qa` (`run-qa`)
@@ -34,7 +34,7 @@ Skip it in `--mode=non-interactive` runs and for any other workflow.
    - First **TODO** step is `LAUNCHPAD_STEP_VERIFY_TEST`: "Next: open a test in TestChimp, watch its run video and Verify it."
    - `completed` is true: "Setup is done — see the suggested next steps in TestChimp (release health, inviting the team, CI)." Say it once per session at most.
    - Never suggest `/testchimp init`.
-   - If you just ran `/testchimp check connectivity` and `nextStepCommand` is still `/testchimp check connectivity`, do not repeat it: follow [`check-connectivity.md`](./check-connectivity.md) (missing `TESTCHIMP_USER_ID` or an old CLI) and name the step after it.
+   - If you just ran `/testchimp connect-project` and `nextStepCommand` is still `/testchimp connect-project`, do not repeat it: follow [`connect-project.md`](./connect-project.md) (missing `TESTCHIMP_USER_ID` or an old CLI) and name the step after it.
 6. **Do not** invent lines like "run `/testchimp project-init` (folder mapping still open)" or "After that, …" when `nextStepCommand` already names a later step. Mid-launchpad hand-backs are only the immediate next command (or the UI step above).
 
 ## After `/testchimp create release` only — git integration gap

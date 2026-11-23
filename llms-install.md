@@ -2,6 +2,8 @@
 
 TestChimp works through an MCP server plus this agent skill. No local build is needed.
 
+**Any agent:** `npx skills add testchimphq/testchimp-skills -g -y` installs the skill at user level for every agent it finds.
+
 **Claude Code:** install the plugin, then sign in once. The plugin registers the hosted server at user level.
 
 ```
@@ -9,13 +11,13 @@ TestChimp works through an MCP server plus this agent skill. No local build is n
 /plugin install testchimp@testchimp
 ```
 
-Restart the Claude Code session so the plugin loads. Then `/mcp` → **plugin:testchimp:testchimp** → **Authenticate**. On the consent screen, pick this repository's TestChimp project and leave **Use this connection as my QA bot** unticked (that box is for Bonobi, TestChimp's QA bot). One person runs `/testchimp project-init`; everyone else runs `/testchimp init`. Claude Code’s `/` menu also lists `/testchimp:<name>` aliases for core QA commands (see `SKILL.md` Command routing). Other hosts: `/testchimp project init` / `/testchimp init`. Plain language such as “set up TestChimp for this repo” also starts the skill.
+Restart the Claude Code session so the plugin loads. Then `/mcp` → **plugin:testchimp:testchimp** → **Authenticate**, then run **`/testchimp connect-project`** in the repo to pick its TestChimp project (writes the gitignored `.testchimp/creds.json`). On the consent screen leave **Use this connection as my QA bot** unticked (that box is for Bonobi, TestChimp's QA bot). One person runs `/testchimp project-init`; everyone else runs `/testchimp init`. Claude Code’s `/` menu also lists `/testchimp:<name>` aliases for core QA commands (see `SKILL.md` Command routing). Other hosts: `/testchimp project init` / `/testchimp init`. Plain language such as “set up TestChimp for this repo” also starts the skill.
 
 ## Option A: hosted MCP server (recommended)
 
 - URL: `https://mcp.testchimp.io/mcp`
-- Auth: OAuth 2.1. The client opens a browser sign-in on first use, where you pick the TestChimp project; no API key is stored in config.
-- Plugin installs: the `.mcp.json`, `.cursor-plugin/plugin.json`, `gemini-extension.json`, and `.codex-plugin/plugin.json` files in this repo register that same global URL. The token is scoped to the project picked at consent. To work on a different project's repo, re-authenticate through the host's MCP UI and pick that project.
+- Auth: OAuth 2.1. The client opens a browser sign-in on first use, where you sign in as yourself; no API key is stored in config. The project for each repo is picked by `/testchimp connect-project` and stored in `.testchimp/creds.json`.
+- Plugin installs: the `.mcp.json`, `.cursor-plugin/plugin.json`, `gemini-extension.json`, and `.codex-plugin/plugin.json` files in this repo register that same global URL. The token names the user, not a project. To work on a different project's repo, run `/testchimp connect-project` in that repo; no re-authentication is needed.
 
 ```json
 {

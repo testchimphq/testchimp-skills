@@ -2,7 +2,19 @@
 
 TestChimp is QA posture monitoring and feedback-loop orchestration for coding agents. This repository is the **Claude Code plugin** (skill + hosted MCP) and the same skill pack other agents install from Git. Agents run pre-defined playbooks under **`references/`**; project-specific decisions live in **`plans/knowledge/policies/*.policy.md`**. Bonobi is TestChimp's QA bot (the same bot, not a separate product) and lives in the skill's bot playbooks.
 
-The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth: you pick the TestChimp project on the consent screen, and every tool call is scoped to that project. Type **`/testchimp check connectivity`** and **`/testchimp project-init`** (same as other hosts). Claude Code’s `/` menu also lists **`/testchimp:<name>`** aliases for core QA commands (`commands/*.md`). One person runs project-init once per repo. Every developer runs check connectivity once. Plain language such as “set up TestChimp for this repo” also starts the skill.
+The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth and names **you**, not a project: install once and use it across every TestChimp project. Each repo records its project in a gitignored **`.testchimp/creds.json`**, written by **`/testchimp connect-project`**. Type **`/testchimp connect-project`** and **`/testchimp project-init`** (same as other hosts). Claude Code’s `/` menu also lists **`/testchimp:<name>`** aliases for core QA commands (`commands/*.md`). One person runs project-init once per repo. Every developer runs connect-project once per repo. Plain language such as “set up TestChimp for this repo” also starts the skill.
+
+## Install the skill (any agent)
+
+```bash
+npx skills add testchimphq/testchimp-skills -g -y
+```
+
+This installs the skill for every agent it detects (Claude Code, Cursor, Codex, Kiro and others) at user level. Then add the hosted MCP server for your host (`https://mcp.testchimp.io/mcp`, OAuth) and run **`/testchimp connect-project`** in each repo you want to use.
+
+**If the `npx` route gets in the way**, copy the install prompt from TestChimp's create-project wizard ("copy prompt to install the skill") into your agent; it does the same install and ends by running `/testchimp connect-project`.
+
+**Manual link (no OAuth, or CI):** create `.testchimp/creds.json` yourself (see [`references/connect-project.md`](references/connect-project.md)) with `projectId`, `projectApiKey`, `userId` (and `backendUrl` / `ingressUrl` for non-production), `chmod 600`, and keep `.testchimp/` gitignored.
 
 ## Claude Code plugin
 
@@ -24,16 +36,16 @@ Install from this marketplace, then sign in, then init. Do not invent extra comm
    Run **`/mcp`**, choose **`plugin:testchimp:testchimp`**, then **Authenticate**. The browser opens `https://mcp.testchimp.io/mcp` (OAuth through `https://featureservice.testchimp.io`).
 
    On the consent screen:
-   - Pick the TestChimp project for **this** repository from the dropdown. That project is written into the token; every tool call is scoped to it. There is one global URL and no project IDs in the MCP config.
+   - The project dropdown only picks a default for the sign-in. The project for each repo is chosen later by `/testchimp connect-project` and stored in that repo, so one sign-in serves all your projects. There is one global URL and no project IDs in the MCP config.
    - Leave **Use this connection as my QA bot** **unticked**. That box is for Bonobi (TestChimp's QA bot, typically on Grok). Ticking it binds the connection as Bonobi instead of a normal coding-agent login.
 
-   If you later open a repo that belongs to a different TestChimp project, `/testchimp init` will detect the mismatch and tell you to re-authenticate through **`/mcp`** and pick that repo's project.
+   A repo that belongs to a different TestChimp project needs no new sign-in: run `/testchimp connect-project` in it and pick that project.
 
 3. **Init**
 
    | Who | Command | What it does |
    | --- | --- | --- |
-   | Every developer, first | `/testchimp check connectivity` | One call that confirms your agent can talk to TestChimp for this project |
+   | Every developer, first | `/testchimp connect-project` | Lists your projects, links this repo to one (writes `.testchimp/creds.json`), and confirms the agent is connected |
    | One person, once per project | `/testchimp project-init` | Folder mapping, shared test env, optional imports of existing plans and tests |
    | Later, separately | `/testchimp configure execution of tests in CI`, `/testchimp invite team` | CI test execution (repo secret + workflow); inviting teammates |
 
@@ -41,7 +53,7 @@ Install from this marketplace, then sign in, then init. Do not invent extra comm
 
    **Time:** project-init with one-by-one tool approvals typically takes about **20 minutes** and on the order of **60 approval prompts**. Init is shorter. Pre-allow TestChimp's MCP tools (below) so you are not clicking through every call.
 
-   Test runners (Playwright, k6, the CLI) still need a project API key. On hosted / plugin MCP, init calls `get-project-credentials` and writes the gitignored `.testchimp/mcp.json` with the file-write tool (never a shell command that contains the key). On local stdio MCP, it calls `save-workspace-creds` with only the folder. It does **not** write a second TestChimp server into the project's `.mcp.json`.
+   Test runners (Playwright, k6, the CLI) still need a project API key. On hosted / plugin MCP, `/testchimp connect-project` calls `get-project-credentials` for the project you pick and writes the gitignored `.testchimp/creds.json` with the file-write tool (never a shell command that contains the key). On local stdio MCP, it calls `save-workspace-creds` with only the folder. It does **not** write a second TestChimp server into the project's `.mcp.json`.
 
 ### Fewer approval prompts (Claude Code)
 
@@ -66,7 +78,7 @@ Update the plugin with `/plugin marketplace update testchimp`.
 Installing the plugin loads this skill (`SKILL.md` and `references/`) and one remote MCP server:
 
 - **Hosted MCP:** `https://mcp.testchimp.io/mcp` (Streamable HTTP). Claude Code signs in with OAuth. The authorization server is `https://featureservice.testchimp.io`. Tool calls send coverage, plans, issues, environments and similar QA data for the project you picked at consent.
-- **Test runners / CLI (optional, after init):** `@testchimp/cli` on npm when a workflow runs CLI commands, plus the project's TestChimp API key stored in gitignored `.testchimp/mcp.json`. Ingress for reporters is `https://ingress.testchimp.io` unless the project overrides it.
+- **Test runners / CLI (optional, after init):** `@testchimp/cli` on npm when a workflow runs CLI commands, plus the project's TestChimp API key stored in gitignored `.testchimp/creds.json`. Ingress for reporters is `https://ingress.testchimp.io` unless the project overrides it.
 - **Skill updates:** git fetch of `https://github.com/testchimphq/testchimp-skills` when you or the agent check for a newer skill version.
 
 The plugin does not run a local MCP process and does not put an API key in Claude Code config.
@@ -75,9 +87,9 @@ The plugin does not run a local MCP process and does not put an API key in Claud
 
 | Command | Workflow id | What it does |
 |---------|-------------|--------------|
-| `/testchimp check connectivity` (Claude Code menu: `/testchimp:check-connectivity`) | — | Per-developer first step: one call proves the agent reaches TestChimp for this project |
+| `/testchimp connect-project` (Claude Code menu: `/testchimp:connect-project`) | — | Per-developer first step: links the repo to a TestChimp project and proves the agent is connected. Replaces `/testchimp check connectivity` |
 | `/testchimp invite team` (Claude Code menu: `/testchimp:invite-team`) | — | Invite teammates by email (`invite-team-members`) |
-| `/testchimp init` (Claude Code menu: `/testchimp:init`) | `init` (One-Off) | Legacy per-developer workstation setup; new setups use check connectivity |
+| `/testchimp init` (Claude Code menu: `/testchimp:init`) | `init` (One-Off) | Legacy per-developer workstation setup; new setups use connect-project |
 | `/testchimp project-init` (Claude Code menu: `/testchimp:project-init`) / `/testchimp project init` | `project-init` (One-Off) | One-time project setup: folder mapping, shared env, CI, optional imports |
 | `/testchimp import` (Claude Code menu: `/testchimp:import-tests`) | `import` (One-Off) | Import existing E2E into SmartTests (Playwright as-is or translate) |
 | `/testchimp import plans` (Claude Code menu: `/testchimp:import-plans`) | `import-plans` (One-Off) | Import existing plan markdown into mapped `plans/` |
@@ -359,7 +371,7 @@ Policy / workflow MCP tools (skill **2.0.7** requires MCP API **2.0.0** and **`@
 
 The hosted MCP server at https://mcp.testchimp.io/mcp uses OAuth. You pick the TestChimp project on the consent page, so no API key goes in the IDE config.
 
-`/testchimp init` may save the project's runner API key to a gitignored `<repo>/.testchimp/mcp.json` (mode 600, never printed) so local Playwright runs can authenticate.
+`/testchimp init` may save the project's runner API key to a gitignored `<repo>/.testchimp/creds.json` (mode 600, never printed) so local Playwright runs can authenticate.
 
 Data is hosted in the US. The SOC 2 Type 2 audit is in progress.
 

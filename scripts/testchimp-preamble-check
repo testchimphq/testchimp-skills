@@ -99,6 +99,61 @@ if command -v git >/dev/null 2>&1; then
   TOP="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 fi
 
+# --- Repo project identity: .testchimp/creds.json (preferred over any mcp.json) ---
+# Walks up from $PWD to the git root. Nothing secret is printed; projectId is not a secret and is printed
+# because hosted/plugin MCP calls must pass it as the `projectId` argument.
+CREDS_FOUND="no"
+if command -v node >/dev/null 2>&1; then
+  eval "$(TOP_DIR="${TOP:-}" node - <<'NODE' 2>/dev/null || true
+const fs=require('fs'), path=require('path');
+const top=process.env.TOP_DIR ? path.resolve(process.env.TOP_DIR) : '';
+let dir=process.cwd();
+const out=(k,v)=>process.stdout.write(`${k}=${JSON.stringify(String(v))}\n`);
+for(;;){
+  const f=path.join(dir,'.testchimp','creds.json');
+  if(fs.existsSync(f)){
+    try{
+      const mode=fs.statSync(f).mode & 0o077;
+      const j=JSON.parse(fs.readFileSync(f,'utf8'));
+      const key=String(j.projectApiKey||'').trim();
+      const real=key && !/paste_your|placeholder|changeme|^\$\{?[A-Za-z_]/i.test(key);
+      if(mode && process.platform!=='win32'){ out('CREDS_IGNORED',f); }
+      else if(real){
+        out('CREDS_FOUND','yes'); out('CREDS_PATH',f);
+        const pid=String(j.projectId||'').trim();
+        if(/^[A-Za-z0-9_-]{1,64}$/.test(pid)) out('CREDS_PROJECT_ID',pid);
+        out('CREDS_HAS_USER_ID', String(j.userId||'').trim()?'yes':'no');
+        if(j.projectName) out('CREDS_PROJECT_NAME',String(j.projectName).replace(/[\r\n]/g,' ').slice(0,120));
+        if(j.backendUrl) out('CREDS_BACKEND_URL',String(j.backendUrl).trim());
+        if(j.ingressUrl) out('CREDS_INGRESS_URL',String(j.ingressUrl).trim());
+        if(/^[0-9A-Za-z.+-]{1,40}$/.test(String(j.cliVersion||''))) out('CREDS_CLI_VERSION',j.cliVersion);
+        break;
+      }
+    }catch{}
+  }
+  if(top && dir===top) break;
+  const parent=path.dirname(dir);
+  if(parent===dir) break;
+  dir=parent;
+}
+NODE
+  )"
+fi
+if [ -n "${CREDS_IGNORED:-}" ]; then
+  _warn "WARN: ignoring $CREDS_IGNORED: it must be private (chmod 600 .testchimp/creds.json, chmod 700 .testchimp)"
+fi
+if [ "${CREDS_FOUND}" = "yes" ]; then
+  _say "TESTCHIMP_CREDS: $CREDS_PATH"
+  _say "TESTCHIMP_PROJECT_ID: ${CREDS_PROJECT_ID:-missing}${CREDS_PROJECT_NAME:+ ($CREDS_PROJECT_NAME)} — pass as the projectId argument on every hosted/plugin MCP call"
+  [ "${CREDS_HAS_USER_ID:-no}" = "yes" ] || _warn "WARN: creds.json has no userId (needed for per-user attribution); re-run /testchimp connect-project"
+  [ -n "${CREDS_BACKEND_URL:-}" ] && _say "TESTCHIMP_BACKEND_URL: $CREDS_BACKEND_URL (from creds.json) — export into every CLI/runner shell"
+  [ -n "${CREDS_INGRESS_URL:-}" ] && _say "TESTCHIMP_INGRESS_URL: $CREDS_INGRESS_URL (from creds.json) — export into every runner shell"
+  [ -n "${CREDS_CLI_VERSION:-}" ] && _say "TESTCHIMP_CLI_VERSION: $CREDS_CLI_VERSION (from creds.json cliVersion — run npx @testchimp/cli@$CREDS_CLI_VERSION)"
+  _say "TESTCHIMP_API_KEY: present in creds.json (not printed)"
+else
+  _say "TESTCHIMP_CREDS: none (no .testchimp/creds.json — run /testchimp connect-project, or legacy mcp.json is used below)"
+fi
+
 # --- MCP config / TESTCHIMP_* discoverability (no printing) ---
 # Prefer a file that actually contains TestChimp MCP; search common paths then shallow find.
 MCP_JSON=""
@@ -394,13 +449,15 @@ NODE
       _say "TESTCHIMP_API_KEY: present in config (not needed for MCP but useful for test runners; not printed)"
     else
       _say "MCP: hosted / remote (OAuth) session${REMOTE_PROJECT_ID:+, projectId $REMOTE_PROJECT_ID} — no key in IDE config (expected)"
-      _warn "ACTION: runner key not saved yet — hosted/plugin: get-project-credentials then write .testchimp/mcp.json with the file-write tool; chmod 700 .testchimp && chmod 600 .testchimp/mcp.json; append only .testchimp/ to .gitignore (no markdown ---). stdio: save-workspace-creds {folder} if listed, else the hosted path. Never put the key in a shell command. Never print the key. See init-testchimp.md Save the runner key."
+      if [ "${CREDS_FOUND}" != "yes" ]; then
+        _warn "ACTION: this repo is not linked to a TestChimp project yet — run /testchimp connect-project (lists your projects, then writes .testchimp/creds.json with the file-write tool). Never put the key in a shell command. Never print the key. See references/connect-project.md."
+      fi
     fi
   else
     if [ "${HAS_KEY:-no}" = "yes" ]; then
       _say "TESTCHIMP_API_KEY: present (not printed)"
     else
-      _warn "BLOCKER: TESTCHIMP_API_KEY missing/blank/placeholder in MCP config (or unresolved \${TESTCHIMP_API_KEY} — set secret in process env / host; reload MCP after setting)"
+      [ "${CREDS_FOUND}" = "yes" ] || _warn "BLOCKER: TESTCHIMP_API_KEY missing/blank/placeholder in MCP config (or unresolved \${TESTCHIMP_API_KEY} — set secret in process env / host; reload MCP after setting)"
     fi
   fi
   if [ "${HAS_USER_ID:-no}" = "yes" ]; then
@@ -432,9 +489,9 @@ NODE
 else
   if [ "${USER_LEVEL_TESTCHIMP:-no}" = "yes" ] || [ "${HOSTED_MCP:-no}" = "yes" ]; then
     _say "TESTCHIMP_SERVER_MODE: hosted / plugin HTTP (session MCP)"
-    _say "NOTE: No project-level MCP config found, but plugin/user-level testchimp server detected ($PLUGIN_SOURCE). If testchimp MCP tools are available in your session, MCP is satisfied."
+    _say "NOTE: No project-level MCP config found (not needed with a plugin / connector), but plugin/user-level testchimp server detected ($PLUGIN_SOURCE). If testchimp MCP tools are available in your session, MCP is satisfied."
   else
-    _warn "WARN: project MCP config not found (.cursor/mcp.json, .mcp.json, or mcp.json with testchimp). If testchimp MCP tools are not available via a plugin, run /testchimp init to create project-level config from assets/sample-mcp.json"
+    [ "${CREDS_FOUND}" = "yes" ] || _warn "WARN: no TestChimp project link found (.testchimp/creds.json) and no project MCP config. Run /testchimp connect-project (plugin / connector users), or add the TestChimp server to your host MCP config and then run /testchimp connect-project"
   fi
 fi
 

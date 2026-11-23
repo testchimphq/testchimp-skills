@@ -1,6 +1,6 @@
 # /testchimp init (legacy)
 
-**Legacy / soft-retired.** New setups use **`/testchimp check connectivity`** ([`check-connectivity.md`](./check-connectivity.md)) per developer; TestChimp no longer suggests init. Run this playbook only when the user asks for `/testchimp init` explicitly (for example to wire a local test environment on a new machine).
+**Legacy / soft-retired.** New setups use **`/testchimp connect-project`** ([`connect-project.md`](./connect-project.md)) per developer; TestChimp no longer suggests init. Run this playbook only when the user asks for `/testchimp init` explicitly (for example to wire a local test environment on a new machine).
 
 **Per developer / workstation** — confirm the TestChimp MCP connection, save a runner API key, and wire a **local test environment** for authoring. Runs even when project init is incomplete; offer to continue remaining project-setup gaps via [`project-init-testchimp.md`](./project-init-testchimp.md).
 
@@ -64,76 +64,18 @@ Additive option when the Claude Code plugin is **not** already providing the ser
 
    Staging / enterprise: use that deployment's MCP host. **Claude Code with the TestChimp plugin:** skip this write. The plugin already registered the same URL; a second entry would load a duplicate server.
 2. Ask the user to reload MCP and complete the browser sign-in. On the consent page they pick the TestChimp project for this repo and leave **Use this connection as my QA bot** unticked.
-3. If tools come back for the wrong project, follow the **mismatch** step in the workstation gate (Host MCP sign-in, pick the correct project).
-4. Save the runner key once — [Save the runner key](#save-the-runner-key).
+3. The project is chosen by `/testchimp connect-project` and stored in `.testchimp/creds.json`, not by the consent screen; if tools reject the saved `projectId` (403), re-run `connect-project`.
+4. Link the repo and save the runner key once — run **`/testchimp connect-project`** ([`connect-project.md`](./connect-project.md)).
 
 ---
 
 ## Save the runner key
 
-Local Playwright / CLI / k6 need a project API key in gitignored **`<git root>/.testchimp/mcp.json`**. Never put the key in a shell command, and never echo or print it. Never run `testchimp workspace save-creds <key>` (no key on the command line). If the **`get-project-credentials`** tool description still mentions `testchimp workspace save-creds`, **ignore that line**.
+The runner key and project link now live in gitignored **`<git root>/.testchimp/creds.json`**, written by **`/testchimp connect-project`**. Follow [`connect-project.md`](./connect-project.md) (it lists the user's projects, calls `get-project-credentials` for the chosen one, and writes the file with the file-write tool). Never put the key in a shell command, never echo it, and never run `testchimp workspace save-creds <key>`.
 
-**Already saved — do not rewrite:** If **`<git root>/.testchimp/mcp.json`** already has a non-placeholder **`TESTCHIMP_API_KEY`** and a **`TESTCHIMP_PROJECT_ID`** that matches the signed-in project (`get-project-credentials`), **leave the file**. Do not rewrite it to add `schemaVersion` / `enabled`. Missing those fields is fine — TestChimp Studio and older skill writes omit them. The preamble and CLI read `mcpServers.testchimp.env` either way.
+**Already saved — do not rewrite:** a valid `.testchimp/creds.json`, or a legacy `.testchimp/mcp.json` with a real key and matching `TESTCHIMP_PROJECT_ID` (TestChimp Studio writes that one), is left alone. The preamble and CLI read both, `creds.json` first.
 
-### Hosted or plugin MCP (`https://mcp.testchimp.io/mcp`)
-
-`save-workspace-creds` is **not** listed on the hosted / plugin server (it cannot write the laptop). That is expected on current prod, before CLI **0.1.93**. Do not stall waiting for the tool. Do this instead:
-
-1. Call **`get-project-credentials`** (returns `projectId`, `projectName`, `projectApiKey`, `backendUrl`, `ingressUrl`).
-2. Read **`<git root>/.testchimp/mcp.json`** if it exists. If it already has a real key and matching project id, **stop** (see **Already saved** above). Otherwise keep any other **`mcpServers`** entries and any extra `env` keys on `testchimp` (`TESTCHIMP_USER_ID`, existing backend/ingress); only replace or add the **`testchimp`** server.
-3. Write the file with the **file-write tool** (not Bash / not a command that contains the key). **2-space JSON** and a **trailing newline**. Directory mode **0700**, file mode **0600** when the host can set them.
-
-   If this session has **no file-write tool**, call **`save-workspace-creds`** `{ "folder": "<git root>" }` when that tool is listed. If neither Write nor `save-workspace-creds` is available, tell the user to create the file in their editor from the shape below (they paste the key; you never echo it) and continue.
-
-   Production (`backendUrl` is `https://featureservice.testchimp.io` or omitted) — **omit** `TESTCHIMP_BACKEND_URL`:
-
-   ```json
-   {
-     "schemaVersion": 1,
-     "mcpServers": {
-       "testchimp": {
-         "command": "npx",
-         "args": ["-y", "@testchimp/cli@latest", "mcp"],
-         "env": {
-           "TESTCHIMP_API_KEY": "<projectApiKey>",
-           "TESTCHIMP_PROJECT_ID": "<projectId>",
-           "TESTCHIMP_INGRESS_URL": "https://ingress.testchimp.io"
-         },
-         "enabled": true
-       }
-     }
-   }
-   ```
-
-   Non-prod: set **`TESTCHIMP_BACKEND_URL`** to `backendUrl` with **no trailing slash**, and **`TESTCHIMP_INGRESS_URL`** to the matching `ingressUrl` from `get-project-credentials`.
-4. **Permissions (Unix / macOS / Git Bash):** from the git root, run (no key in this command):
-
-   ```bash
-   chmod 700 .testchimp && chmod 600 .testchimp/mcp.json
-   ```
-
-   If `chmod` is missing (**Windows** without Git Bash) or the command fails, **continue** — do not treat that as a hard stop. Do not invent an `icacls` line that might print the path into a prompt with the key. If this session has **no shell**, skip this step after the file-write.
-5. If `.gitignore` does not already ignore `.testchimp/`, append **exactly this one line and nothing else** — no extra paths, comments, or blanks added in the same edit:
-
-   ```
-   .testchimp/
-   ```
-
-   Do **not** add `mobilewright-report/`, `playwright-report/`, `test-results/`, `blob-report/`, or any other ignore in this step. Those report folders are a later, separate concern (SKILL.md Preamble checks #4). Never append markdown `---` (those are section breaks in this playbook).
-
-### Local-npm or stdio MCP
-
-If the MCP tool **`save-workspace-creds`** is listed (CLI / local `@testchimp/cli` ≥ **0.1.93**), call it with **only** the folder — never the key:
-
-```json
-{ "folder": "<git root>" }
-```
-
-Optional: `projectId`, `projectName`, `reassign`. The tool fetches the key from the current MCP auth and writes the same file (mode 0700 / 0600). The response must not include the key.
-
-If **`save-workspace-creds`** is **not** listed (current hosted/prod MCP, or CLI older than **0.1.93**), use the hosted path above (`get-project-credentials` + file-write tool). Do not stall.
-
----
+**Local-npm or stdio MCP:** `save-workspace-creds` `{ "folder": "<git root>" }` (when listed) still writes Studio's legacy `.testchimp/mcp.json`; prefer `connect-project` for new setups.
 
 ## Local test environment
 
