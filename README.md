@@ -27,7 +27,7 @@ Install from this marketplace, then sign in, then init. Do not invent extra comm
    /plugin install testchimp@testchimp
    ```
 
-   On Claude Code v2.1.275+ you can do both in one step: `/plugin install testchimp --marketplace testchimphq/testchimp-skills`.
+   Run them as two commands: the first registers this repository as a marketplace, the second installs from it. A single `/plugin install … --marketplace …` line opens Claude's official marketplace instead, which does not list TestChimp.
 
    **Restart the Claude Code session** after install. A session that is already running does not pick up the plugin until you quit and start it again.
 
