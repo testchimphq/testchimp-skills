@@ -64,7 +64,7 @@ Invoke with the CLI resolved per [`agent-quick-answers.md`](./agent-quick-answer
 
 The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.TESTCHIMP_BACKEND_URL`**. Agent-run shells often **do not** inherit the IDE MCP process environment. Playwright runners additionally use **`TESTCHIMP_INGRESS_URL`** (when set) for CI ingest — export it from the same MCP `env` into runner shells (see **`SKILL.md`** Preamble **#4**).
 
-**Before every CLI invoke** (and on any **401**), resolve env from the project MCP config:
+**Before every CLI invoke** (and on any **401**), resolve env from **`.testchimp/creds.json`** (walk up from the working directory; see the fallback below) or, when there is none, from the project MCP config:
 
 1. Resolve the **same project-scoped MCP config** used for TestChimp (the file where the user placed the key at init, or the cloud `mcp.json` that references `${TESTCHIMP_API_KEY}`). Paths are **host-specific** — see **Finding project MCP config** in **`SKILL.md`** (`.cursor/mcp.json`, `.mcp.json`, root `mcp.json`, etc.). **`.cursor` is an example, not universal.**
 2. From the **SmartTests root** (folder containing `.testchimp-tests`), walk **up** the directory tree and check each candidate MCP config file until you find `mcpServers` with a **`testchimp`** server entry (or any server whose `args` include `@testchimp/cli`). If walk-up fails, search the repo for `mcp.json` / `.mcp.json` as described in **`SKILL.md`**.
@@ -82,25 +82,18 @@ The CLI reads **`process.env.TESTCHIMP_API_KEY`** and, when set, **`process.env.
 
 **OAuth + bot identity (CLI ≥ 0.1.85):** `TESTCHIMP_OAUTH_TOKEN` (an OAuth access token issued by featureservice) is sent as `Authorization: Bearer`; when set, `TESTCHIMP_API_KEY` is optional. When both are sent, the bearer names the user and the key names the project. QA bots: see [QA bots § Project binding](#project-binding-cli--0188) (`--bot <botId>`). `TESTCHIMP_BOT_ID` (1–64 printable ASCII, no spaces) is sent as the `bot-id` header for QA-bot attribution; invalid values are ignored with a single stderr warning. Never print either value.
 
-**401 remediation order:** (1) export `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` from MCP if configured → (2) export `TESTCHIMP_API_KEY` from the same entry → (3) retry. Remote MCP setups: refresh `.testchimp/mcp.json` via [Save the runner key](./init-testchimp.md#save-the-runner-key) — never put the key on a command line.
+**401 remediation order:** (1) export `TESTCHIMP_BACKEND_URL` / `TESTCHIMP_INGRESS_URL` from MCP if configured → (2) export `TESTCHIMP_API_KEY` from the same entry → (3) retry. Remote MCP setups: re-run **`/testchimp connect-project`** ([`connect-project.md`](./connect-project.md)) to refresh `.testchimp/creds.json` — never put the key on a command line.
 
-**`.testchimp/mcp.json` fallback (CLI ≥ 0.1.90):** When neither `TESTCHIMP_API_KEY` nor `TESTCHIMP_OAUTH_TOKEN` is set (and no `--bot` / `TESTCHIMP_BOT_ID`), the CLI itself reads `TESTCHIMP_API_KEY`, `TESTCHIMP_PROJECT_ID`, `TESTCHIMP_BACKEND_URL` and `TESTCHIMP_INGRESS_URL` from the nearest `.testchimp/mcp.json` at or above the current directory (written by TestChimp Studio, `save-workspace-creds`, or the hosted file-write path) and notes the file on stderr. Exported variables always win. The file must be mode 0600 (directory 0700); other copies are ignored with a stderr warning. Playwright / Mobilewright / k6 do **not** read this file — keep exporting for runners per steps 1–4.
+**`.testchimp/creds.json` fallback (CLI ≥ 2.0.6; legacy `.testchimp/mcp.json` since 0.1.90):** When neither `TESTCHIMP_API_KEY` nor `TESTCHIMP_OAUTH_TOKEN` is set (and no `--bot` / `TESTCHIMP_BOT_ID`), the CLI itself reads the nearest `.testchimp/creds.json` at or above the current directory — else a legacy `.testchimp/mcp.json` in the same walk — and notes the file on stderr. creds.json fields map to env: `projectApiKey`→`TESTCHIMP_API_KEY`, `projectId`→`TESTCHIMP_PROJECT_ID`, `userId`→`TESTCHIMP_USER_ID`, `backendUrl`→`TESTCHIMP_BACKEND_URL`, `ingressUrl`→`TESTCHIMP_INGRESS_URL`; an optional `cliVersion` is read by the skill (run `npx @testchimp/cli@<version>`), not exported. Exported variables always win. The file must be mode 0600 (directory 0700); other copies are ignored with a stderr warning. Playwright / Mobilewright / k6 do **not** read the file — keep exporting for runners per steps 1–4.
 
-### Remote MCP (OAuth) and runner keys (CLI ≥ 0.1.90; `save-workspace-creds` ≥ 0.1.93)
+### Remote MCP (OAuth), the connector and the plugin
 
 Remote MCP is an **additional** way to connect; manual `npx` + `env` and Studio setups keep working unchanged.
 
-- **Global URL (plugin / extension and recommended remote setup):** `https://mcp.testchimp.io/mcp`. The user picks the project on the OAuth consent screen; that project is in the token payload and every tool call is scoped to it. Do not add a second project-level TestChimp server when the plugin already registered this URL. If the signed-in project is the wrong repo, re-authenticate through the host MCP UI (Claude Code: `/mcp`).
-- **Optional per-project URL (non-plugin hosts):** `https://mcp.testchimp.io/mcp?projectId=<id>` in a project MCP file (`url` entry, no `env`). Every tool call acts on that project; TestChimp checks the signed-in user is a member. A QA bot's `projectApiKey` argument still wins over the URL.
-- **Runner key:** remote entries carry no key, so local runners get it once per repo. Full agent procedure: [Save the runner key](./init-testchimp.md#save-the-runner-key).
-
-**Already saved:** if `.testchimp/mcp.json` already has a real `TESTCHIMP_API_KEY` and matching `TESTCHIMP_PROJECT_ID`, leave it — do not rewrite for missing `schemaVersion` / `enabled`.
-
-**Hosted or plugin MCP:** call **`get-project-credentials`**, then write **`<git root>/.testchimp/mcp.json`** with the file-write tool (2-space JSON, trailing newline, keep other `mcpServers` and extra `env` keys). On Unix run `chmod 700 .testchimp && chmod 600 .testchimp/mcp.json`; if `chmod` is missing (Windows) or there is no shell, continue. If `.gitignore` is missing `.testchimp/`, append **exactly** the line `.testchimp/` and no other paths (no `mobilewright-report/`, no markdown `---`). Omit `TESTCHIMP_BACKEND_URL` for prod; for non-prod set it (no trailing slash) and the matching ingress from `get-project-credentials`. Never put the key in a shell command. Never echo or print it. If the tool description still mentions `workspace save-creds`, ignore that line. If there is no file-write tool, use `save-workspace-creds` when listed, else ask the user to create the file in their editor.
-
-**Local-npm or stdio MCP:** call **`save-workspace-creds`** with `{ "folder": "<git root>" }` and never pass the key. If that tool is not listed (current hosted/prod MCP), use the hosted path — do not stall.
-
-**Never** run `testchimp workspace save-creds <key>` (no key as an argument). The CLI command (humans / scripts, CLI ≥ **0.1.93**) reads the key from stdin, `TESTCHIMP_API_KEY` in the environment, or `get-project-credentials` when `TESTCHIMP_OAUTH_TOKEN` is set. Agents should use the MCP tool or the file-write path above, not the CLI.
+- **Global URL (plugin, connector, extension):** `https://mcp.testchimp.io/mcp`. The sign-in names the **user**; one install serves every project. The **project comes from the repo**: pass `projectId` from `.testchimp/creds.json` as the tool argument on every hosted call (CLI: the file is read for you). TestChimp checks the user is a member of that project. A QA bot's `projectApiKey` argument still wins.
+- **Link a repo:** `/testchimp connect-project` ([`connect-project.md`](./connect-project.md)) lists the user's projects (`list-projects`), fetches the key (`get-project-credentials` with that `projectId`) and writes `.testchimp/creds.json`.
+- **Optional per-project URL (non-plugin hosts):** `https://mcp.testchimp.io/mcp?projectId=<id>` in a project MCP file still works; the `projectId` argument overrides it per call.
+- **Never** run `testchimp workspace save-creds <key>` (no key as an argument). Agents use the MCP tools and the file-write path, not that CLI command.
 
 ## Quick invoke
 
