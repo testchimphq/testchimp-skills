@@ -4,19 +4,26 @@ TestChimp is QA posture monitoring and feedback-loop orchestration for coding ag
 
 The plugin talks to the hosted MCP at **`https://mcp.testchimp.io/mcp`**. Sign-in is OAuth and names **you**, not a project: install once and use it across every TestChimp project. Each repo records its project in a gitignored **`.testchimp/creds.json`**, written by **`/testchimp connect-project`**. Type **`/testchimp connect-project`** and **`/testchimp project-init`** (same as other hosts). Claude Code’s `/` menu also lists **`/testchimp:<name>`** aliases for core QA commands (`commands/*.md`). One person runs project-init once per repo. Every developer runs connect-project once per repo. Plain language such as “set up TestChimp for this repo” also starts the skill.
 
-## Install the skill (any agent)
+## Install (any agent)
 
-```bash
-npx skills add testchimphq/testchimp-skills -g -y
-```
+1. **Add the hosted MCP server** (`https://mcp.testchimp.io/mcp`, OAuth). One sign-in covers all your TestChimp projects.
+   - **Claude Code:** `claude mcp add --transport http --scope user testchimp https://mcp.testchimp.io/mcp`, then run `/mcp`, choose `testchimp`, **Authenticate**.
+   - **Claude.ai desktop app:** Settings → Connectors → Add custom connector, URL `https://mcp.testchimp.io/mcp`.
+   - **Cursor / Codex / Kiro / others:** use your agent's own add-server flow with the same URL (Codex: `codex mcp add testchimp --url https://mcp.testchimp.io/mcp && codex mcp login testchimp`).
+2. **Install the skill** (for every agent it detects, at user level):
 
-This installs the skill for every agent it detects (Claude Code, Cursor, Codex, Kiro and others) at user level. Then add the hosted MCP server for your host (`https://mcp.testchimp.io/mcp`, OAuth) and run **`/testchimp connect-project`** in each repo you want to use.
+   ```bash
+   npx skills add testchimphq/testchimp-skills -g -y
+   ```
 
-**If the `npx` route gets in the way**, copy the install prompt from TestChimp's create-project wizard ("copy prompt to install the skill") into your agent; it does the same install and ends by running `/testchimp connect-project`.
+   If the `npx` route gets in the way, copy the install prompt from TestChimp's create-project wizard ("copy prompt to install the skill") into your agent; it does the same install and ends by running `/testchimp connect-project`.
+3. **Link each repo to its project:** run **`/testchimp connect-project`** in the repo.
 
 **Manual link (no OAuth, or CI):** create `.testchimp/creds.json` yourself (see [`references/connect-project.md`](references/connect-project.md)) with `projectId`, `projectApiKey`, `userId` (and `backendUrl` / `ingressUrl` for non-production), `chmod 600`, and keep `.testchimp/` gitignored.
 
-## Claude Code plugin
+## Claude Code plugin (optional alternative)
+
+The plugin bundles the skill and the hosted MCP server in one install, and adds the `/testchimp:<name>` menu aliases. Use it instead of steps 1 and 2 above if you prefer; you still run `/testchimp connect-project` per repo.
 
 Install from this marketplace, then sign in, then init. Do not invent extra commands.
 
@@ -27,7 +34,7 @@ Install from this marketplace, then sign in, then init. Do not invent extra comm
    /plugin install testchimp@testchimp
    ```
 
-   On Claude Code v2.1.275+ you can do both in one step: `/plugin install testchimp --marketplace testchimphq/testchimp-skills`.
+   Run them as two commands: the first registers this repository as a marketplace, the second installs from it. A single `/plugin install … --marketplace …` line opens Claude's official marketplace instead, which does not list TestChimp.
 
    **Restart the Claude Code session** after install. A session that is already running does not pick up the plugin until you quit and start it again.
 
