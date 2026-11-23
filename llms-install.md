@@ -4,14 +4,23 @@ TestChimp works through an MCP server plus this agent skill. No local build is n
 
 **Any agent:** `npx skills add testchimphq/testchimp-skills -g -y` installs the skill at user level for every agent it finds.
 
-**Claude Code:** install the plugin, then sign in once. The plugin registers the hosted server at user level.
+**Claude Code (connector + skill):**
+
+```
+claude mcp add --transport http --scope user testchimp https://mcp.testchimp.io/mcp
+npx skills add testchimphq/testchimp-skills -g -y
+```
+
+Then `/mcp` → **testchimp** → **Authenticate**, and run **`/testchimp connect-project`** in the repo to pick its TestChimp project (writes the gitignored `.testchimp/creds.json`). On the consent screen leave **Use this connection as my QA bot** unticked (that box is for Bonobi, TestChimp's QA bot). One person runs `/testchimp project-init`; everyone else runs `/testchimp init`. Other hosts: `/testchimp project init` / `/testchimp init`. Plain language such as “set up TestChimp for this repo” also starts the skill.
+
+**Claude Code plugin (optional alternative, bundles both):**
 
 ```
 /plugin marketplace add testchimphq/testchimp-skills
 /plugin install testchimp@testchimp
 ```
 
-Restart the Claude Code session so the plugin loads. Then `/mcp` → **plugin:testchimp:testchimp** → **Authenticate**, then run **`/testchimp connect-project`** in the repo to pick its TestChimp project (writes the gitignored `.testchimp/creds.json`). On the consent screen leave **Use this connection as my QA bot** unticked (that box is for Bonobi, TestChimp's QA bot). One person runs `/testchimp project-init`; everyone else runs `/testchimp init`. Claude Code’s `/` menu also lists `/testchimp:<name>` aliases for core QA commands (see `SKILL.md` Command routing). Other hosts: `/testchimp project init` / `/testchimp init`. Plain language such as “set up TestChimp for this repo” also starts the skill.
+Restart the session so the plugin loads, then `/mcp` → **plugin:testchimp:testchimp** → **Authenticate**.
 
 ## Option A: hosted MCP server (recommended)
 
