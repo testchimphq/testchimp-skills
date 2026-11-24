@@ -11,11 +11,22 @@
   "homepage": "https://docs.testchimp.io",
   "repository": "https://github.com/testchimphq/testchimp-skills",
   "license": "MIT",
-  "keywords": ["qa", "testing", "test-automation", "playwright", "test-coverage", "release-readiness", "mcp"],
+  "keywords": [
+    "qa",
+    "testing",
+    "test-automation",
+    "playwright",
+    "test-coverage",
+    "release-readiness",
+    "mcp"
+  ],
   "icon": "./assets/logo-512.png",
   "documentationUrl": "https://docs.testchimp.io/introduction/quick-start",
   "supportUrl": "https://testchimp.io/contact-us",
   "privacyPolicyUrl": "https://testchimp.io/privacy-policy",
   "termsOfServiceUrl": "https://testchimp.io/terms-conditions",
-  "skills": ["./"]
+  "skills": [
+    "./"
+  ],
+  "mcpServers": "./.mcp.json"
 }
