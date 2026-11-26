@@ -135,6 +135,10 @@ See [`llms-install.md`](llms-install.md) for copy-paste MCP config.
 
 ---
 
+## What’s new in 2.0.9
+
+Skill **2.0.9** requires **`@testchimp/cli` ≥ 2.0.7**. CLI **2.0.7** adds **`list-tests-with-verification-issues`**: tests a human reviewer flagged as not properly covering a scenario, with the reviewer's note. Fix the test, then call **`mark-tests-for-review`** so it returns to review. `get-qa-posture` reports **`testsWithVerificationIssuesCount`**. MCP API stays **2.0.0**.
+
 ## What’s new in 2.0.7
 
 Skill **2.0.7** requires **`@testchimp/cli` ≥ 2.0.5**. CLI **2.0.5** adds **`get-onboarding-status`**, **`WORKFLOW_STARTED`** on `report-agent-action`, and sends `TESTCHIMP_USER_ID` as the `user-id` header on API-key calls (91 tools). MCP API stays **2.0.0**.
