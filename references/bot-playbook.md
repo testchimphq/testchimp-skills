@@ -374,6 +374,14 @@ New SmartTests earn a **verified** badge only after a human verifies their execu
 2. Show the user the new tests awaiting verification (name, scenario, link) and ask them to review the executions in TestChimp and mark them verified.
 3. Mention any that are still pending in the next weekday reminder.
 
+### Tests a reviewer flagged (red badge)
+
+A reviewer can check a test and flag that it does **not** properly cover a scenario (`ISSUES_FOUND`, shown as a red badge with a note). Those tests leave the verification queue until the author acts:
+
+1. `list-tests-with-verification-issues` (MCP) / `testchimp list-tests-with-verification-issues --limit 20` lists the user's flagged tests with `verificationNote` (what is wrong), the scenario, and `latestJobId`.
+2. Read the note, fix the test so it covers the scenario, run it, then call `mark-tests-for-review` for that test. The flag resets to "needs re-review" (the old note stays visible as "previously flagged") and the test returns to human review.
+3. Never re-verify a flagged test yourself; only a human clears or replaces a flag. `get-qa-posture` reports `testsWithVerificationIssuesCount`.
+
 ## Scheduled routines
 
 Routines run only when the bot is **not paused** and the related capability is selected (on indie, all of them are). Use the time, timezone, and preferences captured in onboarding (bot memory) and honour changes ("move my reminder to 9:30 Sydney time", "skip Fridays", "tell me when batches pass").

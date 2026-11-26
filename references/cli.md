@@ -1845,6 +1845,7 @@ testchimp --bot 01JBOT... bot exec -- npx playwright test --project=chromium
 | --- | --- | --- |
 | `get-my-tasks [--user-id <id>]` | `/api/mcp/get_my_tasks` | `assignedScenarios`, `assignedIssues`, `testsAwaitingVerification`. OAuth → token's user; API key with a `bot-id` (`--bot`) → that bot's user; plain API key → `--user-id` required |
 | `list-tests-awaiting-verification [--user-id] [--limit]` | `/api/mcp/list_tests_awaiting_verification` | Tests whose executions need human verification for the verified badge |
+| `list-tests-with-verification-issues [--user-id] [--limit]` | `/api/mcp/list_tests_with_verification_issues` | Tests a reviewer flagged as not properly covering a scenario (red badge), with the reviewer's note. Fix the test, then `mark-tests-for-review` |
 | `get-qa-posture` | `/api/mcp/get_qa_posture` | Releases, issue counts by status/severity, active test runs, tests awaiting verification count |
 | `get-bot-compat` / `testchimp bot compat [--skill-version <v>]` | `/api/mcp/get_bot_compat` | `minSkillVersion`, `minCliVersion`, `eventSchemaVersion`; `bot compat` adds `cliUpgradeRequired` / `skillUpgradeRequired` |
 | `get-bot-profile` / `testchimp bot get-profile [--bot-id]` | `/api/mcp/get_bot_profile` | Identity, role, capabilities, subscriptions, paused, webhook health |
